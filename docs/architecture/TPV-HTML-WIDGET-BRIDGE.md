@@ -115,3 +115,6 @@ No se habilitan por este cambio cobros reales, devoluciones reales, facturas, no
 **Pendiente de ejecutar:** suite CI completa, Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed de `CajaActual`, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix.
 
 El código versionado no demuestra por sí solo sincronización del Editor ni ejecución runtime. No publicar ni ejecutar operaciones LIVE como parte de esta corrección.
+
+
+Las operaciones de escritura (apertura, venta, movimiento, devolución y X/Z) conservan el `requireAdmin` vigente; elegir un operador sintético solo atribuye la operación y no concede permisos. Las consultas usan `requireCajero`.
