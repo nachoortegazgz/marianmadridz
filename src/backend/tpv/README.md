@@ -208,7 +208,7 @@ La configuración se obtiene adicionalmente mediante `obtenerConfiguracionTPV`; 
 Conciliación de botones:
 - El controlador traduce el DTO HTML `lineItems/payments/subtotal/tax/total` al DTO backend `lineas/pagos/subtotalNeto/impuestosTotal/totalVenta`.
 - `PERSONALIZADA` se conserva como tipo de línea propio; no se falsea como servicio de catálogo.
-- La devolución requiere una asignación explícita por medio de pago original.
+- El botón Cliente consulta identidades sintéticas mediante `buscarClientesTPV` y la venta envía `customerContactId`, que el backend valida de nuevo. La devolución requiere una asignación explícita por medio de pago original.
 - Control X es informativo y no solicita efectivo contado; Cierre Z recibe efectivo contado y motivo de diferencia.
 - Las mutaciones usan claves estables por operación y sesión conservadas en `sessionStorage` (fallback en memoria); el controlador valida su formato. El `messageId` sirve para correlación y como fallback de idempotencia.
 - El campo global de impuestos permanece bloqueado hasta mapear las reglas Wix por línea. No se prorratea ni se inventa un tipo impositivo.
