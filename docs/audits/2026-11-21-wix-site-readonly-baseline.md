@@ -188,3 +188,16 @@ Se intentó aislar el fallo con un scan de una sola página para `https://www.ma
 
 - [#520 — Contener y auditar las 8 automatizaciones Wix ACTIVE antes de QA E2E](https://github.com/nachoortegazgz/marianmadridz/issues/520) (P0).
 - [#521 — Investigar fallo del escaneo de accesibilidad Wix en las 121 páginas](https://github.com/nachoortegazgz/marianmadridz/issues/521) (P1).
+
+
+## 13. Wix Bookings V2 ↔ ServiciosCatalogo — conciliación de solo lectura
+
+Consulta oficial de Query Services V2 y CMS Items:
+- Wix Bookings V2: 94 servicios, todos `APPOINTMENT`; 70 visibles, 24 ocultos; los 94 tienen `onlineBooking.enabled=true`.
+- `ServiciosCatalogo`: 95 filas; 94 `SERVICE` y 1 `PRICING_PLAN`.
+- Los 94 `serviceId` coinciden exactamente con los 94 IDs nativos: 0 faltantes, 0 huérfanos, 0 duplicados.
+- Precio y moneda coinciden en los 70 servicios de precio fijo; no hay discrepancias entre `clientHidden` y `Bookings.hidden`.
+- 16 servicios: `ServiciosCatalogo.onlinePayment=true`, pero `Bookings.payment.options.online=false`.
+- 8 servicios: `ServiciosCatalogo.inPersonPayment=false`, pero `Bookings.payment.options.inPerson=true`.
+
+Código: `reservas.web.js::_mapServiceImport2ToUX` construye ambos flags desde `ServiciosCatalogo`; `bookingSaga.js` decide el canal con esos flags y envía `selectedPaymentOption=ONLINE/OFFLINE`. La resolución del servicio no contrasta esos flags con `Bookings Services V2.payment.options`. Esto puede ofrecer ONLINE para servicios nativos que lo rechazan; la restricción de pago presencial puede ser una política de negocio más estricta, pero debe confirmarse. No modificar los servicios nativos ni CMS hasta resolver la autoridad del campo. Seguimiento: [#522](https://github.com/nachoortegazgz/marianmadridz/issues/522).
