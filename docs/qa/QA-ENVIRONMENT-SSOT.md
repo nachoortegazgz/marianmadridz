@@ -214,3 +214,7 @@ El scan individual de `https://www.marianmadrid.es/` devolvió HTTP 428 `SCAN_TA
 
 ### Personal Bookings — verificación read-only
 Wix Bookings V2 devuelve 3 proveedores de servicio; sus resourceId y staffMemberId coinciden con los tres registros STAFF de MapaStaff y con STAFF.IDS. Las otras dos filas de MapaStaff son GESTORIA y TERCERO/EMPRESA. Los 94 servicios tienen schedule, form, categoría y staffMemberIds. Pendientes permisos efectivos y disponibilidad en Preview.
+
+
+### Reservas — divergencia de estado
+Los seis bookingId de CitasF2 existen en Bookings Reader V2 y están CANCELED nativamente, pero CitasF2 conserva cinco CONFIRMED y una PENDING. No hay markers BOOKING_CANCELED para esos IDs en ControlOperativo. Issue #523; revisar delivery del evento y reconciliar proyección sin tocar el estado nativo.
