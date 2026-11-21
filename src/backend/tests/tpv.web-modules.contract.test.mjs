@@ -339,7 +339,7 @@ test("TPV controller imports the exact canonical WebMethods from their owning mo
             assert.match(moduleSource, new RegExp("export const " + name + " = webMethod\\("), fileName + " must export " + name);
             assert.match(controller, new RegExp("\\b" + name + "\\b"), "page controller must consume " + name);
         }
-        const moduleName = fileName.replace(/\\.web\\.js$/, ".web");
+        const moduleName = fileName.replace(/\.web\.js$/, ".web");
         assert.ok(controller.includes('from "backend/tpv/' + moduleName + '"'), "controller must import " + moduleName);
     }
 });
