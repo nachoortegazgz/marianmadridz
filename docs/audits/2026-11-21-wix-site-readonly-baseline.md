@@ -137,9 +137,9 @@ La existencia de una automatización ACTIVE significa que puede recibir nuevos e
 ## 6. Accesibilidad
 
 - Scan anterior: `e579dde7-de12-4bb6-9e27-9a6887fa01ce`, creado el 11/11. Resultado PARTIALLY_COMPLETED: 122 páginas descubiertas, 0 procesadas y 122 fallidas.
-- Scan nuevo: `aae3b411-81ff-4309-a767-6301164cb483`, iniciado el 21/11 para full-site. Último estado consultado: RUNNING, 121 páginas descubiertas, 0 procesadas, 51 fallidas, 70 pendientes; siguiente intervalo recomendado 5 segundos.
+- Scan nuevo: `aae3b411-81ff-4309-a767-6301164cb483`, iniciado el 21/11 para full-site. Estado terminal: PARTIALLY_COMPLETED, 121 páginas descubiertas, 0 procesadas, 121 fallidas, 0 pendientes. Los 121 fallos comparten `ACCESSIBILITY_SCAN_FAILURE_CODE_ANALYSIS_FAILED` / `This page could not be checked.`; 0 findings y 0 coverage útil. Las URLs descubiertas usan el host `nachoortegazgz.wixsite.com/marianmadrid`, no el dominio público personalizado. La causa no está identificada; el escaneo no prueba accesibilidad ni ausencia de problemas.
 
-No declarar el sitio accesible ni limpio. Seguir consultando el mismo scan ID; no iniciar un segundo scan. Cuando termine, recuperar resumen, todas las páginas (incluidas las fallidas) y findings. Una página fallida es estado desconocido, no página sin problemas.
+No declarar el sitio accesible ni limpio. Se recuperaron los 121 resúmenes de página y el listado de findings (cero). Una página fallida es estado desconocido, no página sin problemas. El siguiente paso es diagnosticar por qué Wix no puede analizar las URLs wixsite.com enumeradas y repetir el scan solo después de resolver el origen.
 
 ## 7. Código y contratos Wix que requieren revisión
 
@@ -173,3 +173,8 @@ No declarar el sitio accesible ni limpio. Seguir consultando el mismo scan ID; n
 - [Accessibility Scans API](https://dev.wix.com/docs/api-reference/site/accessibility/introduction)
 
 **Conclusión:** la auditoría no ha modificado el sitio. Se ha actualizado la evidencia del estado real: dos movimientos existen en ambos data planes, pero no hay identidades TPV; la caja LIVE no satisface el marcador sintético; ocho automatizaciones están activas y el escaneo de accesibilidad aún no ha procesado páginas. El siguiente trabajo debe ser contención de efectos, conciliación y prueba del data plane, no más cambios de interfaz ni publicación.
+
+
+## 10. SEO — Google Search Console readiness
+
+La consulta oficial `Get Site Readiness` devuelve `status=READY` y `blockingReason=UNKNOWN_BLOCKING_REASON`. Esto confirma que la conexión/propiedad de Google Search Console está lista según el endpoint de Wix; no demuestra indexación, rendimiento orgánico ni corrección de metadatos. No se realizaron cambios SEO.
