@@ -56,7 +56,14 @@ function numeric(value, field, { allowZero = true } = {}) {
     return Math.round((number + Number.EPSILON) * 100) / 100;
 }
 
-function idempotencyKey(message) {
+function idempotencyKey(message, payload = {}) {
+    const supplied = String(payload.idempotencyKey || "").trim();
+    if (supplied) {
+        if (!/^[A-Za-z0-9:_-]{8,100}$/.test(supplied)) {
+            throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
+        }
+        return supplied;
+    }
     const messageId = String(message?.messageId || "").replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 70);
     if (messageId.length < 8) throw new Error("TPV_MESSAGE_ID_REQUIRED_FOR_IDEMPOTENCY");
     return ("TPV_UI_" + String(message.type || "OP") + "_" + messageId).slice(0, 100);
@@ -66,7 +73,7 @@ async function dispatch(message) {
     const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
         ? message.payload
         : {};
-    const key = idempotencyKey(message);
+    const key = idempotencyKey(message, payload);
 
     switch (message.type) {
         case "CASHIER_STATE":
