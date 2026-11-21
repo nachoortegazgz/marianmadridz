@@ -52,6 +52,10 @@ function normalizeLine(line, index) {
         throw new Error("TPV_INVALID_LINE_TYPE");
     }
 
+    const varianteId = line.varianteId ? String(line.varianteId).trim() : null;
+    if (varianteId && tipoLinea !== "PRODUCTO") throw new Error("TPV_VARIANT_ONLY_FOR_PRODUCTS");
+    if (varianteId && !/^[A-Za-z0-9-]{1,64}$/.test(varianteId)) throw new Error("TPV_INVALID_VARIANT_ID");
+
     const concepto = String(line.concepto || "").trim();
     if (!concepto || concepto.length > 400) {
         throw new Error("TPV_INVALID_CONCEPT");
@@ -61,6 +65,7 @@ function normalizeLine(line, index) {
         lineaNumero: index + 1,
         tipoLinea,
         itemId: line.itemId ? String(line.itemId) : null,
+        varianteId,
         concepto,
         cantidad: quantity,
         precioUnitario: unitMinor / 100,
