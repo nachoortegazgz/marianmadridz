@@ -216,3 +216,6 @@ Conciliación de botones:
 El listado `obtenerMovimientosCaja` consulta los eventos lógicos de movimientos y no debe confundirse con `consultarAuditoriaTPV`, que representa auditoría de acciones. La colección física sigue siendo `MovimientosCaja`; `SANDBOX_LOGICAL_*` son namespaces lógicos internos.
 
 **Límite:** la TPV personalizada sigue siendo Sandbox sintético. No activa Wix Payments, checkout, captura, reembolso real, emisión fiscal ni hardware. El uso de APIs nativas de catálogo no convierte las escrituras de caja en operaciones LIVE. La validación de Wix Preview/E2E queda pendiente.
+
+
+No se descuenta inventario ni se escribe en Stores durante la simulación.
