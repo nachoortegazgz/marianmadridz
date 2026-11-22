@@ -195,7 +195,7 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
 
-test("MovimientosCaja accepts edits only for the exact active synthetic TPV test run", () => {
+test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     const item = {
         _id: "TPVSANDBOX_TEST_ROW",
         recordSource: "TPV_SYNTHETIC",
@@ -204,6 +204,10 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            sessionId: "SANDBOX-SESSION-1",
             sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
@@ -213,21 +217,12 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
         },
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
-    assert.doesNotThrow(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item));
-    assert.doesNotThrow(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item));
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item,
-        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+    assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
         payloadFiscal: { ...item.payloadFiscal, externalSideEffects: true },
     }), { code: "CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID" });
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        _id: "real-ledger-row",
-        movementType: "VENTA",
-        recordSource: "INTERNAL",
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
 
 test("WEBHOOK_EVENT is neither mutable nor removable", () => {
