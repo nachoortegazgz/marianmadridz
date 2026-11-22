@@ -242,3 +242,9 @@ La distribución de `payload.eventType` es BOOKING_CREATED=12, BOOKING_CONFIRMED
 
 ### Exposición pública — decisión pendiente
 Sitio Published; 70 servicios visibles y bookeables, ambos canales ONLINE/IN_PERSON permitidos, con 8 automatizaciones ACTIVE. El estado de conexión Wix Payments no está verificado por API read-only. Issue #526 P0: confirmar si las reservas públicas deben permanecer habilitadas durante QA o aplicar contención reversible.
+
+### Contenciones P0 2026-11-22
+1. Bookings V2: 94/94 servicios tienen onlineBooking.enabled=false; se preserva el resto de cada servicio. Snapshot reversible: docs/qa/snapshots/2026-11-22-bookings-online-booking-containment.json. No restaurar si la revision actual difiere de revisionAtContainment.
+2. Automatización Configuración de control laboral INACTIVE, revision 5. Siete automatizaciones PREINSTALLED permanecen ACTIVE porque Wix impide cambiar su estado; no intentar bypass.
+3. Código CajaActual: PR pendiente; los escritores fiscales, webhook y TPV se están unificando en el lock fiscal común. No habilitar E2E concurrente hasta CI y runtime.
+4. No modificar ledgers, caja LIVE, reservas existentes ni compensaciones PENDING_RECOVERY.
