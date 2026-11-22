@@ -253,3 +253,11 @@ Sitio Published; 70 servicios visibles y bookeables, ambos canales ONLINE/IN_PER
 - Order #10032: PAID 92,45 EUR, payment method Cash, sin refund. Compensación REC_bb1db… corresponde a webhook de pago.
 - REC_4b4d… es webhook de pago de #10033. Las dos filas LIVE de MovimientosCaja carecen de orderId/refundId correlacionados y de hash/previousRecordHash.
 - No reintentar ni crear rectificativos; mantener los registros inmutables hasta reconciliar evidencia financiera/fiscal.
+### Estado tras CI post-merge — 2026-11-22
+Main HEAD 7461dd5998c87379680128117194b0cb40dc6c79.
+- PR #528 integrada. Backend offline quality gates SUCCESS (45021242129) y secret scanning SUCCESS (45021242143).
+- El lock fiscal común de CajaActual ya está en main; no se considera validado en Wix Runtime.
+- No sincronizar ni publicar hasta validar SHA instalado y ejecutar E2E concurrente en Sandbox acreditado.
+- Bookings permanece onlineBooking.enabled=false en 94 servicios; snapshot reversible y restauración condicionada por revision.
+- Siete automatizaciones preinstaladas siguen ACTIVE por bloqueo nativo Wix; la automatización laboral de aplicación está INACTIVE.
+- #416 sigue sin escrituras correctivas.
