@@ -705,11 +705,11 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
 test('HOOK-CAJA-04 keeps MovimientosCaja append-only for synthetic TPV rows', async () => {
   const runId = IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
   const row = {
-    _id: 'TPVSANDBOX_HOOK_TEST_ROW',
+    _id: 'TPV_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),
     sequenceNumber: 0,
     transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
-    traceId: 'TPVSANDBOX:' + runId + ':SANDBOX-SESSION-TEST',
+    traceId: 'TPV:' + runId + ':SESSION-TEST',
     movementType: 'SIMULATED_TPV_PAYMENT',
     recordSource: 'TPV_SANDBOX_SYNTHETIC',
     payloadFiscal: {
