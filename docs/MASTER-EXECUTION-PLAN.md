@@ -311,3 +311,10 @@ Hasta completar estas condiciones, no ejecutar pruebas persistentes que puedan d
 - [Wix Bookings — visitor booking flow](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/book-an-appointment)
 - [Wix Automations V2](https://dev.wix.com/docs/api-reference/business-management/automations/automations/automations-v2/introduction)
 - [Wix Accessibility Scans API](https://dev.wix.com/docs/api-reference/site/accessibility/introduction)
+
+### Estado de contenciones P0 — 2026-11-22
+- #526: contención nativa de Bookings aplicada y verificada en 94/94 servicios; falta prueba negativa runtime y revisión de rutas custom.
+- #520: automatización LLM programada INACTIVE (revision 5); siete PREINSTALLED siguen ACTIVE por disableStatusChange=true; no se sortean restricciones Wix.
+- #525: código modificado en PR, pendiente de CI/merge y runtime.
+- #416: sin cambios de datos; las tres compensaciones PENDING_RECOVERY y la caja LIVE permanecen intactas hasta reconciliar evidencia de origen.
+- Release sigue NO-GO.
