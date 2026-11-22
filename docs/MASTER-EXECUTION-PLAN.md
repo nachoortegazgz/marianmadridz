@@ -318,3 +318,5 @@ Hasta completar estas condiciones, no ejecutar pruebas persistentes que puedan d
 - #525: código modificado en PR, pendiente de CI/merge y runtime.
 - #416: sin cambios de datos; las tres compensaciones PENDING_RECOVERY y la caja LIVE permanecen intactas hasta reconciliar evidencia de origen.
 - Release sigue NO-GO.
+### #416 — nueva evidencia de conciliación (22/11)
+Pedidos Wix: #10033 FULLY_REFUNDED por 18,15 EUR (refund SUCCEEDED) y #10032 PAID por 92,45 EUR (método Cash). Las tres compensaciones se correlacionan por orderId/refundId/transactionId; sin embargo, las dos filas actuales de MovimientosCaja no contienen esos orderId/refundId y no forman cadena hash fiscal. Mantener P0 abierto; no reintentar ni crear rectificaciones sin evidencia externa y fiscal.
