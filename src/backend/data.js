@@ -418,7 +418,7 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    if (item.recordSource === "TPV_SANDBOX_SYNTHETIC" ||
+    if (["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
         String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
@@ -492,7 +492,7 @@ function _isPlainRecord(value) {
 
 function _isCurrentSyntheticTpvRow(value) {
     const expectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    return value?.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
+    return ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
         (
