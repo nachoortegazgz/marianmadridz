@@ -169,7 +169,7 @@ test("update policy keeps operational projections mutable and append-only ledger
 });
 test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
     const identity = {
-        _id: "SANDBOX-CUSTOMER-01",
+        _id: "TPV-CUSTOMER-01",
         identityId: "SANDBOX-CUSTOMER-01",
         identityType: "CUSTOMER",
         displayName: "Cliente Sintético 01",
@@ -197,17 +197,17 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
 
 test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     const item = {
-        _id: "TPVSANDBOX_TEST_ROW",
+        _id: "TPV_TEST_ROW",
         recordSource: "TPV_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-1",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-            sessionId: "SANDBOX-SESSION-1",
+            sessionId: "SESSION-1",
             sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
