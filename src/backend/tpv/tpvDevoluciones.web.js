@@ -90,7 +90,7 @@ export const registrarDevolucion = webMethod(
                     changeMinor: 0,
                     status: "REEMBOLSO_SINTETICO",
                     provider: "SIMULATED",
-                    gatewayReference: "SANDBOX-NO-GATEWAY",
+                    gatewayReference: "NO-GATEWAY",
                     createdAt: new Date(),
                     payload: { sessionId: session.sessionId, refundId, traceId },
                 });
