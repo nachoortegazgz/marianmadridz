@@ -251,7 +251,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(repository, /CONSISTENCY\.STRONG/);
     assert.match(repository, /requestFingerprint/);
     assert.match(repository, /TPV_COLLECTIONS/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_SANDBOX_SESSION_LOCK/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
     const cashier = await source("tpv/tpvCaja.web.js");
     assert.match(cashier, /withSandboxSessionLock\(sessionId, traceId/);
