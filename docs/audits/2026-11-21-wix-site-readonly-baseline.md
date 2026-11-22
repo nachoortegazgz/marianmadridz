@@ -272,3 +272,27 @@ El handler `wixBookingsV2_onBookingCanceled` está exportado en `events.js` y ti
 GetSiteContext confirma estado Wix `Published`. La consulta de Bookings V2 confirma 94 servicios, 70 visibles y 24 ocultos; los 94 tienen `onlineBooking.enabled=true`. Los 70 servicios visibles permiten ONLINE e IN_PERSON tanto en `ServiciosCatalogo` como en `Bookings.payment.options`. Por tanto, el sitio está técnicamente expuesto a que visitantes públicos creen reservas en los 70 servicios visibles; el canal presencial puede permitir reserva sin un cobro online.
 
 Wix Payments está instalado, pero no se ha podido verificar la conexión mediante una API de lectura disponible; la desconexión se mantiene como declaración del propietario, no evidencia independiente. Ocho automatizaciones ACTIVE pueden producir notificaciones. La exposición pública contradice la clasificación QA sin actividad real si no se pretende recibir reservas. No se ha deshabilitado la reserva ni restringido el sitio porque afecta a la disponibilidad comercial. Decisión requerida: mantener reservas públicas o aplicar contención temporal soportada y reversible. Seguimiento [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526).
+
+## 22. Ejecución de contenciones P0 — 2026-11-22
+
+### Bookings: contención aplicada y verificada
+- Se consultaron 94 servicios Bookings V2: 70 visibles y 24 ocultos; los 94 tenían onlineBooking.enabled=true.
+- Bulk Update Services V2 cambió exclusivamente onlineBooking.enabled a false en los 94 servicios, usando la revisión vigente y field mask onlineBooking.enabled.
+- Respuesta Wix: 94 éxitos, 0 fallos. Read-back posterior: 94/94 deshabilitados, 0 habilitados, 0 ausentes.
+- No se modificaron precios, pagos, horarios, staff, visibilidad, sesiones ni reservas existentes. El sitio continúa Published; se bloquea la reserva online nativa, no se despublica la web.
+- Snapshot reversible: docs/qa/snapshots/2026-11-22-bookings-online-booking-containment.json. Para restaurar, solo actualizar cada servicio si su revisión actual coincide con revisionAtContainment; cualquier revisión distinta requiere conciliación manual.
+
+### Automatización programada
+- Configuración de control laboral, ID 6e80b403-4903-4c5a-bfb7-d3b40ed014be, pasó ACTIVE/revision 4 a INACTIVE/revision 5.
+- La actualización cambió exclusivamente configuration.status; read-back confirmó status INACTIVE y conservación de origin, settings, trigger, roots y action IDs.
+- Las otras siete automatizaciones PREINSTALLED siguen ACTIVE porque Wix devuelve settings.disableStatusChange=true (dos también readonly). No se intentó eludir el bloqueo ni desinstalar apps.
+- No hay evidencia de historial de ejecuciones ni de cancelación de una ejecución ya iniciada. El sitio permanece Published, por lo que otros eventos públicos podrían seguir activando automatizaciones preinstaladas.
+
+### CajaActual: corrección de código en PR
+- Se implementa el lock fiscal común en el helper de proyección, reutilizando el lock cuando el caller ya lo posee.
+- Los caminos idempotentes internos pasan el lock existente; el webhook de recuperación utiliza la envoltura que adquiere el lock.
+- Las escrituras de proyección y apertura de sesión TPV usan el mismo lock global que los escritores fiscales.
+- Se añaden pruebas offline de concurrencia y contratos de lock. Pendiente CI/merge y prueba Wix Runtime; no declarar resuelto todavía.
+
+### Integridad histórica
+No se modificaron CajaActual LIVE, MovimientosCaja, ControlOperativo, compensaciones PENDING_RECOVERY, pedidos ni reservas existentes. #416 continúa abierto: requiere conciliación documental y origen de las operaciones, no una escritura correctiva especulativa.
