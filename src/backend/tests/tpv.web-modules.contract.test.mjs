@@ -234,7 +234,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     const sales = await source("tpv/tpvVentas.web.js");
     assert.match(sales, /realPayment: false/);
     assert.match(sales, /fiscalLedgerWritten: false/);
-    assert.match(sales, /TPV_SANDBOX_SALE_MUST_BE_FULLY_PAID/);
+    assert.match(sales, /TPV_SALE_MUST_BE_FULLY_PAID/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -472,7 +472,11 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(movements, /SIMULATED_TPV_REFUND/);
     assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
     assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
-    assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);
+    assert.match(repository, /sandboxState\?\.sessionId/);
+    assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
+    assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
+    assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
+    assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
     assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
     assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
