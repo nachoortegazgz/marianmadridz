@@ -198,3 +198,5 @@ Wix Published; 70 servicios visibles permiten booking online e in-person; todos 
 - #525: implementación en PR para compartir lock fiscal entre proyección CajaActual, webhook y TPV; pendiente CI y runtime.
 - #416: no tocar la caja LIVE, ledgers ni compensaciones hasta reconciliar origen. No hay escrituras correctivas.
 - Sitio sigue Published; la reserva online nativa está contenida, pero no se ha cerrado acceso general ni verificado toda ruta custom. Release NO-GO.
+### #416 — correlación de origen añadida 2026-11-22
+Order #10033 FULLY_REFUNDED por 18,15 EUR, refund SUCCEEDED. Order #10032 PAID por 92,45 EUR, método Cash, sin refund. Tres compensaciones correlacionadas con orderId/refundId/transactionId. MovimientosCaja LIVE no contiene referencias a esos pedidos ni hash chain para ellos. No tocar órdenes, reembolsos, caja ni compensaciones. #416 permanece P0 abierto.
