@@ -191,3 +191,12 @@ ControlOperativo contiene 12 BOOKING_CREATED, 10 BOOKING_CONFIRMED, 2 BOOKING_RE
 
 ### Exposición pública de reservas — P0 #526
 Wix Published; 70 servicios visibles permiten booking online e in-person; todos los 94 servicios tienen onlineBooking.enabled=true. Ocho automatizaciones ACTIVE. El estado de conexión de Wix Payments no se ha verificado por API. Confirmar intención de negocio antes de dejar reservas públicas abiertas durante QA; no se cambió configuración.
+
+## Relevo 2026-11-22 — ejecución P0
+- Bookings V2: onlineBooking deshabilitado en los 94 servicios; 94/94 read-back OK. Snapshot y regla de restauración condicionada por revision en docs/qa/snapshots/2026-11-22-bookings-online-booking-containment.json.
+- Automatización LLM programada Configuración de control laboral: INACTIVE revision 5. Siete preinstaladas continúan ACTIVE por bloqueo nativo Wix; no intentar modificar.
+- #525: implementación en PR para compartir lock fiscal entre proyección CajaActual, webhook y TPV; pendiente CI y runtime.
+- #416: no tocar la caja LIVE, ledgers ni compensaciones hasta reconciliar origen. No hay escrituras correctivas.
+- Sitio sigue Published; la reserva online nativa está contenida, pero no se ha cerrado acceso general ni verificado toda ruta custom. Release NO-GO.
+### #416 — correlación de origen añadida 2026-11-22
+Order #10033 FULLY_REFUNDED por 18,15 EUR, refund SUCCEEDED. Order #10032 PAID por 92,45 EUR, método Cash, sin refund. Tres compensaciones correlacionadas con orderId/refundId/transactionId. MovimientosCaja LIVE no contiene referencias a esos pedidos ni hash chain para ellos. No tocar órdenes, reembolsos, caja ni compensaciones. #416 permanece P0 abierto.

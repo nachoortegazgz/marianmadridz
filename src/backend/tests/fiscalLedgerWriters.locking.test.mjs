@@ -107,6 +107,38 @@ test("FISCAL-CHAIN-07 Z closing never exposes raw internal exception messages", 
   assert.match(catchBlock, /normalized\.message/);
 });
 
+test("FISCAL-CHAIN-09 CajaActual projections and TPV Sandbox share the fiscal lock", async () => {
+  const [cajas, eventLog, tpv] = await Promise.all([
+    source("cajas.web.js"),
+    source("eventLog.js"),
+    source("tpv/tpvSandboxRepository.js"),
+  ]);
+
+  const projectionStart = cajas.indexOf("async function _updateCajaActual");
+  const projectionEnd = cajas.indexOf("export async function updateCajaActualFromMovement", projectionStart);
+  const projection = cajas.slice(projectionStart, projectionEnd);
+  const acquire = projection.indexOf("acquireFiscalLedgerLock(traceId)");
+  const assertBeforeRead = projection.indexOf("await assertFiscalLedgerLock(projectionLock)");
+  const write = projection.indexOf("await dalUpdate(CAJA_ACTUAL_COL, cashRegister)");
+  const assertBeforeWrite = projection.lastIndexOf("await assertFiscalLedgerLock(projectionLock)", write);
+
+  assert.ok(projectionStart >= 0);
+  assert.ok(acquire >= 0);
+  assert.ok(assertBeforeRead > acquire);
+  assert.ok(write > assertBeforeRead);
+  assert.ok(assertBeforeWrite > assertBeforeRead && assertBeforeWrite < write);
+  assert.match(cajas, /_updateCajaActual\(lockedExisting\.items\[0\], traceId, ledgerLock\)/);
+  assert.match(cajas, /_updateCajaActual\(saved, traceId, ledgerLock\)/);
+  assert.match(cajas, /updateCajaActualFromMovement\(movement, traceId, sharedLock = null\)/);
+  assert.match(eventLog, /updateCajaActualFromMovement\(savedMovement, traceId, ledgerLock\)/);
+
+  assert.match(tpv, /async function withCajaActualProjectionLock\(/);
+  assert.match(tpv, /acquireFiscalLedgerLock\(traceId/);
+  assert.match(tpv, /await assertFiscalLedgerLock\(lock\);[\s\S]*?await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
+  assert.match(tpv, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, updated\)/);
+  assert.match(tpv, /releaseFiscalLedgerLock\(lock\)/);
+});
+
 test("FISCAL-CHAIN-08 no active backend path creates the obsolete CAJA_SEQ singleton", async () => {
   const [cajas, eventLog, config, data, lock] = await Promise.all([
     source("cajas.web.js"),

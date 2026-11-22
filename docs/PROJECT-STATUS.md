@@ -303,3 +303,15 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - Sitio Published; 70 servicios visibles con `onlineBooking.enabled=true` y pagos ONLINE/IN_PERSON permitidos tanto por CMS como por Bookings V2.
 - El canal IN_PERSON puede permitir reservas sin pago online. Ocho automatizaciones ACTIVE pueden disparar notificaciones.
 - Confirmar si se deben aceptar reservas públicas durante QA. No se deshabilitó ni restringió el sitio sin decisión del propietario.
+
+### P0 — contenciones del 22/11/2026
+- Bookings: onlineBooking.enabled=false en los 94 servicios; 94 éxitos y 94 verificados en read-back. No se tocaron reservas existentes. Snapshot reversible documentado.
+- Automatizaciones: Configuración de control laboral INACTIVE (revision 5); siete automatizaciones preinstaladas continúan ACTIVE por restricción de Wix.
+- CajaActual: implementación del lock global compartido en PR, CI y runtime pendientes.
+- Integridad histórica: caja LIVE, ledgers y compensaciones sin modificar.
+- Estado release: NO-GO.
+### #416 — evidencia ampliada de conciliación (22/11/2026)
+- Pedido #10033: FULLY_REFUNDED, 18,15 EUR; reembolso Wix SUCCEEDED por el mismo importe.
+- Pedido #10032: PAID, 92,45 EUR, método Cash; sin reembolso.
+- Compensaciones identificadas y correlacionadas con esos IDs. MovimientosCaja LIVE no tiene orderId/refundId correlacionados ni hash chain para esos pedidos.
+- No se han modificado pedidos, pagos, reembolsos, caja ni compensaciones. P0 abierto.

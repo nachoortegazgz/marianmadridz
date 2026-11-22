@@ -1,0 +1,679 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-11-22",
+  "siteId": "188bed94-177c-4bc9-a9f0-35080d874f3e",
+  "purpose": "Reversible QA containment of Wix Bookings online booking.",
+  "method": "Bookings Services V2 Bulk Update Services",
+  "change": {
+    "field": "onlineBooking.enabled",
+    "before": true,
+    "after": false
+  },
+  "totals": {
+    "services": 94,
+    "visible": 70,
+    "hidden": 24,
+    "verifiedDisabled": 94
+  },
+  "restoreSafety": "Before restoring any item, re-read it and restore only when its current revision equals revisionAtContainment and the current onlineBooking.enabled remains false. If revision differs, stop and reconcile manually; do not overwrite intervening business changes.",
+  "items": [
+    {
+      "id": "00aba212-c9fa-42d3-8e53-eed4509d34f9",
+      "name": "Barba Perfecta: Arreglo y Perfilado",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "01066a4e-011f-4f03-8339-cd324a6b166f",
+      "name": "Pecho Sin Vello (Hombre)",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "064a278a-bf77-487d-9d3c-965a83cc6962",
+      "name": "Calma para Cuero Cabelludo Sensible",
+      "revisionAtContainment": "18",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "0f7da27a-402e-47ce-9ae1-42881656575d",
+      "name": "Coloración Raíces Perfectas",
+      "revisionAtContainment": "14",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1247a948-0860-47fb-ad16-e5daa94b5789",
+      "name": "Pack Madre e Hija (Día de Chicas)",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1383a39a-9b14-46c4-a8c2-bc9045534a1f",
+      "name": "Rayos V",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "18361410-a013-465f-869c-bde797a949ca",
+      "name": "Manicura Clásica (Limado y Esmaltado)",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1bb24273-8992-4d57-89c0-d294c7000b42",
+      "name": "Retoque de Flequillo Express",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1db0581b-0ac6-448f-8a52-377da260af58",
+      "name": "F2-Decoloración Total",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1e5a8730-4922-4848-a09b-daebbf0c121b",
+      "name": "Dedos de las Manos",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "1e9ec205-8dd9-4fdc-9116-9855eb282aba",
+      "name": "Glúteos Suaves",
+      "revisionAtContainment": "103",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "207cc0a6-514e-4f81-890f-f95fb847e541",
+      "name": "F2-Balayage Signature (Degradado Natural)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "21f58ffe-fce5-4f56-94fb-f722c68a20cc",
+      "name": "F2-Pedicura Semipermanente Larga Duración",
+      "revisionAtContainment": "9",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "23b8b7a6-9d1c-4df5-81a9-8ad9430ada71",
+      "name": "F2-Bótox Capilar Anti-Frizz",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "262bcc9a-7787-491f-af63-d8f086b5e1f7",
+      "name": "Labio Superior (Bozo) Perfecto",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "2b88b0d9-2b43-433e-a300-99e3694be4f2",
+      "name": "F2-Color para Barba",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "32f6ffde-dc1b-46b6-ba21-b2f999db9c99",
+      "name": "Manicura Semipermanente Flawless",
+      "revisionAtContainment": "95",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "337cf9c2-67de-40f6-9f7f-f5ae22b5968e",
+      "name": "Pack Corte + Mechas (Balayage o Babylights)",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "35db5fcf-c076-4221-81bf-953481d51079",
+      "name": "Balayage Signature (Degradado Natural)",
+      "revisionAtContainment": "127",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "3921b3d6-b781-4a5f-a5e0-e348150d9cd1",
+      "name": "Ritual Corte & Barba Premium",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "39306e9c-86de-447f-8188-d2a0c8844202",
+      "name": "Prueba de Peinado Nupcial",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "3b8a4803-ab8b-4ff9-b84b-67c5be0735cf",
+      "name": "Retoque de Raíces (Cobertura de Canas)",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "3d56cb50-dd24-4974-b2bd-1c6741117541",
+      "name": "F2-Hidratación Profunda Intensiva",
+      "revisionAtContainment": "9",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "42758409-67e1-4b04-a33f-7375a2d0fa68",
+      "name": "Peinado para Comunión o Evento Infantil",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "439131c5-d5ef-47e8-b5e5-98068ba54641",
+      "name": "Ingles Brasileña Completa",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "49df81fe-9817-4bd1-8b9b-edf285621000",
+      "name": "Semirecogido Romántico",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "4af73ce3-5036-4ade-b683-7dee7fbfc952",
+      "name": "Matizado / Toner (Corrección de Tonos)",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "4b68d8c8-ca2f-42b8-a6a9-a40b514b950f",
+      "name": "F2-Alisado Espejo Premium",
+      "revisionAtContainment": "104",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "56c1736b-b860-4ceb-b3ab-35687cbf55a9",
+      "name": "Mentón Sin Vello",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "5797690e-76d6-4119-a7e7-eac8937b646c",
+      "name": "Corte Refresh (Sin Lavado)",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "5c103b82-1d36-43bb-bae5-f58d15d23de9",
+      "name": "Lavado + Peinado de Revista",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "5d03ee5c-e9f7-414b-b252-5ed9c6071148",
+      "name": "F2-Ritual Corte de Autor + Raíces Perfectas",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "5d21eec8-60d3-4f65-9b2c-c60bc0b87178",
+      "name": "Extensiones de Uñas (Gel / Acrílico)",
+      "revisionAtContainment": "14",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "5fd69835-8a07-4864-ab6f-b5094bf2b548",
+      "name": "F2-Rescate Express para Cabello Dañado",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "605e5211-c2c2-48ae-832e-a88d84a1c540",
+      "name": "Prueba de Maquillaje Nupcial",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "61189915-210c-4c1c-ae4b-b34c2e239262",
+      "name": "Depilación Facial Completa",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "638cf40b-3579-45e1-9aae-7fcf6844e59e",
+      "name": "Medias Piernas (Rodilla a Pie)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "68e722a1-65c4-48cd-9908-154a55416055",
+      "name": "Corte Premium (Con Lavado y Styling)",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "68f31a72-a7dc-4fc1-8d82-f7eaac4ec3fd",
+      "name": "Corte de Pelo Niñas (Estilo y Cuidado)",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "6a747346-8b98-4a77-ad4b-cc0a4334c952",
+      "name": "Keratina Express (Alisado Temporal)",
+      "revisionAtContainment": "106",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "6b0f2bf2-1d77-43c2-a871-eaf87399498a",
+      "name": "Corte de Autor + Styling",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "6be9a83b-3298-41db-b119-303d18f93291",
+      "name": "F2-Pack Corte + Mechas (Balayage o Babylights)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "6f7a94ce-6469-4c0a-b941-81379b65e462",
+      "name": "F2-Keratina Express (Alisado Temporal)",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "7a97d3b2-0d94-4487-8309-7eb617c8dbd7",
+      "name": "Recogido Exclusivo Novias (Incluye Prueba)",
+      "revisionAtContainment": "94",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "7eca1256-4054-4b91-b333-0e84e7b71935",
+      "name": "Rescate Express para Cabello Dañado",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "7f9b42e0-53d9-4d45-a2c9-ee1ac219d833",
+      "name": "F2-Coloración Raíces Perfectas",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "805bdb16-5840-44c5-a3f1-33f05eebbe4e",
+      "name": "Peinado Especial para Niñas (Trenzas y Recogidos)",
+      "revisionAtContainment": "12",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "869ecfc8-f324-4f21-bcf7-1b6276ace4f0",
+      "name": "Piernas Completas Sedosas",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "87b13644-36b4-4679-b15b-307100ad3cae",
+      "name": "F2-Babylights: Mechas Naturales",
+      "revisionAtContainment": "108",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "89a9a9e3-ccc1-4282-810a-d76908175f9f",
+      "name": "F2-Calma para Cuero Cabelludo Sensible",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "8b8139a2-b4d2-4458-893b-d1b4ea8331f8",
+      "name": "F2-Pack Relax Capilar (Lavado + Tratamiento + Peinado)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "8efd394e-d7f0-4cd0-a6c3-292bb45c1932",
+      "name": "Pedicura Semipermanente Larga Duración",
+      "revisionAtContainment": "14",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "909208a3-7e22-45f7-9752-c5606a7b995e",
+      "name": "Bótox Capilar Anti-Frizz",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "90a9c895-d64a-449d-80df-a5ee3329a19a",
+      "name": "Pack Cuerpo Completo Hombre (Ahorro)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "949e3f52-94f3-46e1-ac95-9d7d8035f22e",
+      "name": "Axilas Suaves",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "959925cb-6ac1-48bf-85bf-31f35f0d22f4",
+      "name": "Permanente / Ondulación Duradera",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "971220df-b6d3-4d8b-8ba0-6ab4653fba16",
+      "name": "Fade Ejecutivo (Degradado Profesional)",
+      "revisionAtContainment": "94",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "98ac30dc-75d0-40c1-ac87-8023f038b4c1",
+      "name": "Pack Transformación Total (Corte + Color + Tratamiento)",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "999796d9-7375-4ff2-90f3-8c48f4041397",
+      "name": "F2-Olaplex: Reparación Molecular Profunda",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "9c98d417-c6ff-4ac0-a410-f7f953c98dbd",
+      "name": "Corte Clásico",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "9f58aeae-cd9f-4c2c-bc97-9de23106756f",
+      "name": "Línea Alba (Ombligo)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "a51c1eea-e8fb-4d08-81b5-07b7c42a7f05",
+      "name": "Pack Spa Manos y Pies",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "a8366df3-f9ad-4621-beaa-2e977a175e8b",
+      "name": "Pack Cuerpo Completo Mujer (Ahorro)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "a90462eb-dae7-4180-82ae-89aaa9cbb394",
+      "name": "Babylights: Mechas Naturales",
+      "revisionAtContainment": "14",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "ac073cf7-586e-4613-9e70-9abfc9ddbd10",
+      "name": "F2-Matizado / Toner (Corrección de Tonos)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "ac524b7d-7d8c-44d1-b75e-a16210917680",
+      "name": "F2-Retoque de Raíces (Cobertura de Canas)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "acd67fbb-c64d-414b-a74c-51599454e988",
+      "name": "Depilación Íntima Integral (Zona V)",
+      "revisionAtContainment": "95",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "ad2e248f-3846-4b64-9f7a-249ba3f36f7b",
+      "name": "Olaplex: Reparación Molecular Profunda",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "b1b22bde-37e0-4b9d-983a-8b199ddab79e",
+      "name": "F2-Coloración Global + Brillo Espejo",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "b372a7cb-02e1-41e9-b8c9-1029121bb701",
+      "name": "Ritual Corte de Autor + Raíces Perfectas",
+      "revisionAtContainment": "107",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "b49dcd9b-bd9e-44a9-a78e-41b7cc7fa827",
+      "name": "F2-Permanente / Ondulación Duradera",
+      "revisionAtContainment": "9",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "b78dc2a1-2b6e-4db2-b7db-b8cb61ab0400",
+      "name": "Corte de Pelo Niños (Rápido y Divertido)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "bb635690-9e9e-4f04-b22b-eebe035fc5b3",
+      "name": "Pedicura Clásica Spa",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "bb9ac758-c0cb-4117-9617-f3988456245c",
+      "name": "Decoloración Total",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "bd0425d5-4f9c-48bb-b56e-1eb41fe7ac22",
+      "name": "Ritual Detox & Anticaída",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "bf38879e-c4bc-4620-9979-e03c5df9f0cd",
+      "name": "Terapia de Alisado Espejo Premium",
+      "revisionAtContainment": "16",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "c0ae6499-7079-490b-bb35-17dfea436ccc",
+      "name": "F2-Pack Transformación Total (Corte + Color + Tratamiento)",
+      "revisionAtContainment": "8",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "c3b47ae1-eeed-490f-aca2-51bdc85e7dcf",
+      "name": "Brazos Sedosos (Sin Vello)",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "c579d8f6-5065-4a96-aad3-6ed4c234e917",
+      "name": "F2-Extensiones de Uñas (Gel / Acrílico)",
+      "revisionAtContainment": "9",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "c76ed098-5e92-4a3d-bf31-82f02da2e69f",
+      "name": "Pack Novia Completo (Peinado + Maquillaje + Prueba)",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "c980a222-fb30-4128-a51f-f6683b4a656c",
+      "name": "Corte Mini (Hasta 12 años)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "ca1f27de-5e24-4d95-b122-5430d95713e7",
+      "name": "Coloración Global + Brillo Espejo",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "d323daeb-3c29-4b85-b237-8363da5330d3",
+      "name": "Hidratación Profunda Intensiva",
+      "revisionAtContainment": "15",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "d73d4f1a-1842-48e5-b97e-4fc9d1476260",
+      "name": "Maquillaje Exclusivo para Novias",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "dcbc0064-d0b4-414f-9dd2-a3def75505a6",
+      "name": "Pack Relax Capilar (Lavado + Tratamiento + Peinado)",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "e636f61d-1840-4168-b16b-d1d9715bada5",
+      "name": "Diseño de Mirada (Cejas)",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "eed43902-8818-4e89-b050-a2c585df23d0",
+      "name": "F2-Terapia de Alisado Espejo Premium",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "f266b2f7-17c2-4c20-877d-b8401204975f",
+      "name": "Recogido Elegante para Eventos",
+      "revisionAtContainment": "9",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "f268d976-eb6c-44c5-9ed1-1e78233093c6",
+      "name": "Color para Barba",
+      "revisionAtContainment": "11",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "f304f5ec-fc07-41d3-b22d-cb1e9163319b",
+      "name": "Ondas Hollywood Glam",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "f357ce95-e3cf-4008-9102-afe43eaa33d7",
+      "name": "Trenzas Creativas y Duraderas",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "fc05f4c9-f118-4a07-bde3-a972c7b08a49",
+      "name": "Alisado Espejo Premium",
+      "revisionAtContainment": "13",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "fe7f58c3-bc06-4b96-9cab-af6b261451cf",
+      "name": "F2-Ritual Detox & Anticaída",
+      "revisionAtContainment": "10",
+      "hidden": true,
+      "onlineBookingEnabledBeforeContainment": true
+    },
+    {
+      "id": "ff5266fb-4a90-44ed-9f00-1b24df610e56",
+      "name": "Maquillaje Profesional (Eventos y Fotos)",
+      "revisionAtContainment": "10",
+      "hidden": false,
+      "onlineBookingEnabledBeforeContainment": true
+    }
+  ]
+}
