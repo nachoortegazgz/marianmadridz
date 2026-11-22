@@ -385,11 +385,12 @@ export function assertTpvSandboxIdentity(item) {
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
-    const expectedPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
+    const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
+    const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         item.identityType !== identityType ||
-        !identityId.startsWith(expectedPrefix) ||
+        (!identityId.startsWith(expectedPrefix) && !identityId.startsWith(legacyPrefix)) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
