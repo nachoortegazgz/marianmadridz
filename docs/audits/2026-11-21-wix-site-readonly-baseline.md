@@ -314,3 +314,5 @@ PR #528 integrada en main con commit 7461dd5998c87379680128117194b0cb40dc6c79.
 - Secret scanning: SUCCESS, run 45021242143.
 - La corrección del lock común para writers de CajaActual queda integrada y validada en CI offline.
 - Pendiente: sincronizar SHA a Wix Editor y ejecutar concurrencia/idempotencia en Runtime Sandbox acreditado. No afirmar validación Runtime ni desplegar a LIVE.
+## 25. HEAD definitivo y CI post-merge — 2026-11-22
+El HEAD actual de main es 544f3a5a984b79a6cf7c25208722136c7bd99111, commit documental de PR #529. El último commit funcional de código P0 es 7461dd5998c87379680128117194b0cb40dc6c79 (PR #528). En ambos commits, Backend offline quality gates y Secret scanning finalizaron SUCCESS; para HEAD 544f3a5, runs 45021632161 y 45021632072. No se ha sincronizado el código a Wix Editor ni probado en Runtime.
