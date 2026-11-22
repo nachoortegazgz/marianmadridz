@@ -822,6 +822,49 @@ test('FLOW-CAJA-05 CajaActual projects presencial cash movements and is idempote
   assert.deepStrictEqual(register.sequenceCounters.appliedMovementIds, [movement._id]);
 });
 
+test('FLOW-CAJA-05C concurrent distinct projections serialize through the shared CajaActual lock', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  const { cajas } = await freshImports();
+  const movements = [
+    {
+      _id: '33333333-3333-4333-8333-333333333331',
+      transactionId: 'cash-projection-concurrent-001',
+      accountingAmount: 35,
+      paymentMethod: 'EFECTIVO',
+      channelType: 'PRESENCIAL',
+      movementType: 'VENTA',
+      recordTimestamp: new Date(),
+      traceId: 'trace-caja-projection-concurrent-001',
+    },
+    {
+      _id: '44444444-4444-4444-8444-444444444442',
+      transactionId: 'cash-projection-concurrent-002',
+      accountingAmount: 17.5,
+      paymentMethod: 'EFECTIVO',
+      channelType: 'PRESENCIAL',
+      movementType: 'VENTA',
+      recordTimestamp: new Date(),
+      traceId: 'trace-caja-projection-concurrent-002',
+    },
+  ];
+
+  const results = await Promise.all(
+    movements.map((movement) => cajas.updateCajaActualFromMovement(movement, movement.traceId))
+  );
+  const register = wixDataMock._store.get('CajaActual').find((row) => row.singletonKey === 'CAJA_PRINCIPAL');
+
+  assert.deepEqual(results.map((result) => result.status), ['SUCCESS', 'SUCCESS']);
+  assert.equal(register.cashAmount, 352.5);
+  assert.equal(register.expectedCash, 352.5);
+  assert.equal(register.netAmount, 352.5);
+  assert.equal(register.salesCount, 2);
+  assert.deepEqual(
+    new Set(register.sequenceCounters.appliedMovementIds),
+    new Set(movements.map((movement) => movement._id))
+  );
+});
+
 test('FLOW-CAJA-05A projection never creates or opens CajaActual implicitly', async () => {
   wixDataMock._reset();
   const { cajas } = await freshImports();
