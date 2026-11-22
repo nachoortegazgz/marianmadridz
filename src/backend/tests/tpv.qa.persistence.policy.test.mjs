@@ -22,7 +22,8 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
-    makeSandboxTransactionId,\n    makeSandboxId,\n    makeSandboxId,
+    makeSandboxTransactionId,
+    makeSandboxId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
 
@@ -226,7 +227,8 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const legacyId = makeLegacySandboxTransactionId(key);
 
     assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
-    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
+    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
