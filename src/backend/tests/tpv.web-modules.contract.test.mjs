@@ -407,11 +407,11 @@ test("SANDBOX repository paginates reads and blocks Z close while sales are inco
     assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
     assert.match(closures, /input\.sessionId && input\.sessionId !== session\.sessionId/);
     assert.match(closures, /getPendingSandboxSales\(session\.sessionId\)/);
-    assert.match(closures, /TPV_SANDBOX_PENDING_SALES_PREVENT_CLOSE/);
+    assert.match(closures, /TPV_PENDING_SALES_PREVENT_CLOSE/);
     assert.match(closures, /getPendingSandboxRefunds\(session\.sessionId\)/);
-    assert.match(closures, /TPV_SANDBOX_PENDING_REFUNDS_PREVENT_CLOSE/);
+    assert.match(closures, /TPV_PENDING_REFUNDS_PREVENT_CLOSE/);
     assert.match(closures, /totals\.reconciliationOk !== true/);
-    assert.match(closures, /TPV_SANDBOX_RECONCILIATION_FAILED/);
+    assert.match(closures, /TPV_RECONCILIATION_FAILED/);
 });
 
 test("legacy TPV pages and direct operational writers are absent from the active site integration", async () => {
@@ -448,7 +448,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
-    assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SYNTHETIC"/);
+    assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
     assert.match(repository, /cmsMovementType: item\.movementType/);

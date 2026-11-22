@@ -47,7 +47,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     };
     assert.throws(
         () => assertSandboxCajaWritable(liveCaja, { allowBootstrap: true }),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
 
     const sandboxBootstrap = {
@@ -58,7 +58,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     };
     assert.throws(
         () => assertSandboxCajaWritable(sandboxBootstrap),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
     assert.doesNotThrow(() => assertSandboxCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
 
@@ -71,7 +71,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     assert.doesNotThrow(() => assertSandboxCajaWritable(activeSandboxCaja));
     assert.throws(
         () => assertSandboxCajaWritable({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
 });
 
@@ -237,12 +237,12 @@ test("SANDBOX policy remains synthetic and client idempotency keys are bounded",
     assert.equal(TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
     assert.equal(TPV_RUNTIME_POLICY.HARDWARE_ENABLED, false);
     assert.equal(normalizeClientIdempotencyKey("sandbox-client-key-0001"), "sandbox-client-key-0001");
-    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_SANDBOX_IDEMPOTENCY_KEY_INVALID/);
+    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_IDEMPOTENCY_KEY_INVALID/);
     assert.equal(normalizeIdempotencyKey("sandbox-client-key-0001:PAYMENT:001"), "sandbox-client-key-0001:PAYMENT:001");
     assert.equal(normalizePaymentMethod("bizum"), "BIZUM");
     assert.equal(toMinorUnits(12.34), 1234);
     assert.equal(fromMinorUnits(1234), 12.34);
-    assert.throws(() => toMinorUnits(12.345), /TPV_SANDBOX_INVALID_PRECISION/);
+    assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
     const payload = makeSyntheticPayload({ sample: true });
     assert.equal(payload.isSynthetic, true);
     assert.equal(payload.realPayment, false);
@@ -385,7 +385,7 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
     const identitiesBlock = repository.slice(identitiesStart, initializeStart);
     assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_CASH_REGISTER_NOT_PRESEEDED"\)/);
     assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
-    assert.match(identitiesBlock, /TPV_SANDBOX_IDENTITIES_NOT_PRESEEDED/);
+    assert.match(identitiesBlock, /TPV_IDENTITIES_NOT_PRESEEDED/);
     assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertSandboxEvent(");
@@ -411,7 +411,7 @@ test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing Cont
 
     const helper = repository.slice(helperStart, helperEnd);
     assert.match(helper, /const caja = await _getCajaActual\(\)/);
-    assert.match(helper, /TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(helper, /TPV_CASH_REGISTER_NOT_SEEDED/);
     assert.match(helper, /assertSandboxCajaWritable\(caja, \{ allowBootstrap: true \}\)/);
 
     const lock = repository.slice(lockStart, lockEnd);
