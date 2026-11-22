@@ -505,9 +505,6 @@ export const CONTROL_TYPE = Object.freeze({
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
   TPV_REFUND_LOCK: "TPV_SANDBOX_REFUND_LOCK",
   TPV_SESSION_LOCK: "TPV_SANDBOX_SESSION_LOCK",
-  // Deprecated property aliases; stored ControlOperativo values remain stable.
-  TPV_SANDBOX_REFUND_LOCK: "TPV_SANDBOX_REFUND_LOCK",
-  TPV_SANDBOX_SESSION_LOCK: "TPV_SANDBOX_SESSION_LOCK",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
