@@ -248,3 +248,8 @@ Sitio Published; 70 servicios visibles y bookeables, ambos canales ONLINE/IN_PER
 2. Automatización Configuración de control laboral INACTIVE, revision 5. Siete automatizaciones PREINSTALLED permanecen ACTIVE porque Wix impide cambiar su estado; no intentar bypass.
 3. Código CajaActual: PR pendiente; los escritores fiscales, webhook y TPV se están unificando en el lock fiscal común. No habilitar E2E concurrente hasta CI y runtime.
 4. No modificar ledgers, caja LIVE, reservas existentes ni compensaciones PENDING_RECOVERY.
+### Reconciliación P0 de pedidos y ledger — 2026-11-22
+- Order #10033: FULLY_REFUNDED 18,15 EUR; refund SUCCEEDED 18,15 EUR. Compensación REC_ecd49c… coincide con refundId y transactionId.
+- Order #10032: PAID 92,45 EUR, payment method Cash, sin refund. Compensación REC_bb1db… corresponde a webhook de pago.
+- REC_4b4d… es webhook de pago de #10033. Las dos filas LIVE de MovimientosCaja carecen de orderId/refundId correlacionados y de hash/previousRecordHash.
+- No reintentar ni crear rectificativos; mantener los registros inmutables hasta reconciliar evidencia financiera/fiscal.
