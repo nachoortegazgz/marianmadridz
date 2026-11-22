@@ -863,6 +863,11 @@ test('FLOW-CAJA-05C concurrent distinct projections serialize through the shared
     new Set(register.sequenceCounters.appliedMovementIds),
     new Set(movements.map((movement) => movement._id))
   );
+  assert.equal(
+    (wixDataMock._store.get('ControlOperativo') || []).filter((row) => row._id === 'FISCAL_LEDGER_CHAIN_LOCK').length,
+    0,
+    'the shared fiscal projection lock must be released after both writers complete'
+  );
 });
 
 test('FLOW-CAJA-05A projection never creates or opens CajaActual implicitly', async () => {
