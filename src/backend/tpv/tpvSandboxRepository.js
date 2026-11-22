@@ -21,9 +21,31 @@ import {
     makeSandboxTransactionId,
     makeLegacySandboxTransactionId,
 } from "backend/tpv/tpvUtils";
+import {
+    acquireFiscalLedgerLock,
+    assertFiscalLedgerLock,
+    releaseFiscalLedgerLock,
+} from "backend/fiscalLedgerLock";
 
 const ALLOWED_SANDBOX_COLLECTIONS = new Set(Object.values(TPV_SANDBOX_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
+
+async function withCajaActualProjectionLock(traceId, operation) {
+    const lock = await acquireFiscalLedgerLock(traceId || "TPV_SANDBOX_CAJA_PROJECTION");
+    let operationFailed = false;
+    try {
+        await assertFiscalLedgerLock(lock);
+        return await operation(lock);
+    } catch (error) {
+        operationFailed = true;
+        throw error;
+    } finally {
+        const released = await releaseFiscalLedgerLock(lock);
+        if (!released?.released && !operationFailed) {
+            throw new Error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED");
+        }
+    }
+}
 
 async function withSandboxScopedLock({
     lockId,
@@ -348,72 +370,78 @@ function _sessionFromCaja(caja) {
 }
 
 async function _writeCajaProjection(collection, record, eventId) {
-    const caja = await _getCajaActual();
-    if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_FOUND");
-    if (caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) {
-        throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE");
-    }
-    const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
-        ? { ...caja.conceptOperations }
-        : {};
-    const sandboxState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
-        ? { ...conceptOperations.tpvSandbox }
-        : {};
-    const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
-    if (eventId && appliedIds.includes(eventId)) return caja;
-    if (eventId && appliedIds.length >= MAX_SANDBOX_PROJECTION_EVENTS) {
-        throw new Error("TPV_SANDBOX_PROJECTION_IDEMPOTENCY_LIMIT");
-    }
-    const now = new Date();
-    const next = { ...caja, _updatedDate: now };
-    next.lastOperationId = eventId || caja.lastOperationId;
-    next.lastOperationAt = now;
-    next.lastOperationStatus = "SIMULATED";
-    next.traceId = SANDBOX_RUN_ID;
-    next.snapshotSource = SANDBOX_LEDGER_SOURCE;
-    next.cashRegisterStatus = "SIMULACION";
+    return withCajaActualProjectionLock(
+        String(record?.traceId || eventId || "TPV_SANDBOX_CAJA_PROJECTION"),
+        async (lock) => {
+            const caja = await _getCajaActual();
+            if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_FOUND");
+            if (caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) {
+                throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE");
+            }
+            const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
+                ? { ...caja.conceptOperations }
+                : {};
+            const sandboxState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
+                ? { ...conceptOperations.tpvSandbox }
+                : {};
+            const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
+            if (eventId && appliedIds.includes(eventId)) return caja;
+            if (eventId && appliedIds.length >= MAX_SANDBOX_PROJECTION_EVENTS) {
+                throw new Error("TPV_SANDBOX_PROJECTION_IDEMPOTENCY_LIMIT");
+            }
+            const now = new Date();
+            const next = { ...caja, _updatedDate: now };
+            next.lastOperationId = eventId || caja.lastOperationId;
+            next.lastOperationAt = now;
+            next.lastOperationStatus = "SIMULATED";
+            next.traceId = SANDBOX_RUN_ID;
+            next.snapshotSource = SANDBOX_LEDGER_SOURCE;
+            next.cashRegisterStatus = "SIMULACION";
 
-    if (collection === TPV_SANDBOX_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
-        next.salesCount = Number(caja.salesCount || 0) + 1;
-    }
-    if (collection === TPV_SANDBOX_COLLECTIONS.PAGOS) {
-        const method = String(record.paymentMethod || "").toUpperCase();
-        const amount = Number(record.amountMinor || 0) / 100;
-        if (method === "EFECTIVO") next.cashAmount = Number(caja.cashAmount || 0) + amount;
-        else if (method === "TARJETA") next.cardAmount = Number(caja.cardAmount || 0) + amount;
-        else if (method === "BIZUM") next.bizumAmount = Number(caja.bizumAmount || 0) + amount;
-        else next.otherAmount = Number(caja.otherAmount || 0) + amount;
-        next.expectedCash = Number(next.cashAmount || 0);
-    }
-    if (collection === TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA) {
-        const type = String(record.movementType || "").toUpperCase();
-        const amount = Number(record.amountMinor || 0) / 100;
-        if (type === "ENTRADA") next.cashAmount = Number(caja.cashAmount || 0) + amount;
-        if (type === "SALIDA" || type === "RETIRADA") next.cashAmount = Number(caja.cashAmount || 0) - amount;
-        if (type === "ARQUEO_PARCIAL") {
-            next.countedCash = amount;
-            next.difference = amount - Number(caja.cashAmount || 0);
-            next.differenceReason = String(record.reason || "");
+            if (collection === TPV_SANDBOX_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
+                next.salesCount = Number(caja.salesCount || 0) + 1;
+            }
+            if (collection === TPV_SANDBOX_COLLECTIONS.PAGOS) {
+                const method = String(record.paymentMethod || "").toUpperCase();
+                const amount = Number(record.amountMinor || 0) / 100;
+                if (method === "EFECTIVO") next.cashAmount = Number(caja.cashAmount || 0) + amount;
+                else if (method === "TARJETA") next.cardAmount = Number(caja.cardAmount || 0) + amount;
+                else if (method === "BIZUM") next.bizumAmount = Number(caja.bizumAmount || 0) + amount;
+                else next.otherAmount = Number(caja.otherAmount || 0) + amount;
+                next.expectedCash = Number(next.cashAmount || 0);
+            }
+            if (collection === TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA) {
+                const type = String(record.movementType || "").toUpperCase();
+                const amount = Number(record.amountMinor || 0) / 100;
+                if (type === "ENTRADA") next.cashAmount = Number(caja.cashAmount || 0) + amount;
+                if (type === "SALIDA" || type === "RETIRADA") next.cashAmount = Number(caja.cashAmount || 0) - amount;
+                if (type === "ARQUEO_PARCIAL") {
+                    next.countedCash = amount;
+                    next.difference = amount - Number(caja.cashAmount || 0);
+                    next.differenceReason = String(record.reason || "");
+                }
+                next.expectedCash = Number(next.cashAmount || 0);
+            }
+            if (collection === TPV_SANDBOX_COLLECTIONS.TICKET_Z) {
+                next.closedAt = record.generatedAt || now;
+                next.closedBy = TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID;
+                next.countedCash = Number(record.totals?.countedCashMinor || 0) / 100;
+                next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
+                next.difference = Number(record.totals?.differenceMinor || 0) / 100;
+                next.differenceReason = String(record.totals?.differenceReason || "");
+                next.lastOperationType = "TPV_SANDBOX_SESSION_CLOSE";
+            } else {
+                next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
+            }
+            sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
+            sandboxState.lastProjectedAt = now;
+            conceptOperations.tpvSandbox = sandboxState;
+            next.conceptOperations = conceptOperations;
+            await assertFiscalLedgerLock(lock);
+            await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
+            return next;
         }
-        next.expectedCash = Number(next.cashAmount || 0);
-    }
-    if (collection === TPV_SANDBOX_COLLECTIONS.TICKET_Z) {
-        next.closedAt = record.generatedAt || now;
-        next.closedBy = TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID;
-        next.countedCash = Number(record.totals?.countedCashMinor || 0) / 100;
-        next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
-        next.difference = Number(record.totals?.differenceMinor || 0) / 100;
-        next.differenceReason = String(record.totals?.differenceReason || "");
-        next.lastOperationType = "TPV_SANDBOX_SESSION_CLOSE";
-    } else {
-        next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
-    }
-    sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
-    sandboxState.lastProjectedAt = now;
-    conceptOperations.tpvSandbox = sandboxState;
-    next.conceptOperations = conceptOperations;
-    await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
-    return next;
+    );
 }
 
 function _shouldProject(collection, record) {
@@ -590,16 +618,22 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
     const fingerprint = _fingerprintOf(record);
 
     if (collection === TPV_SANDBOX_COLLECTIONS.SESIONES_CAJA) {
-        const caja = await _ensureCajaActualForSandbox();
-        assertSandboxCajaWritable(caja, { allowBootstrap: true });
-        const existing = await findByIdempotencyKey(collection, key);
-        if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
-        if (caja.snapshotSource === SANDBOX_LEDGER_SOURCE && !caja.closedAt) {
-            throw new Error("TPV_SANDBOX_PREVIOUS_SESSION_NOT_CLOSED");
-        }
-        const updated = _sessionCajaPatch(caja, record, fingerprint);
-        const saved = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
-        return { item: _sessionFromCaja(saved), replayed: false };
+        return withCajaActualProjectionLock(
+            "TPV_SANDBOX_SESSION:" + key,
+            async (lock) => {
+                const caja = await _ensureCajaActualForSandbox();
+                assertSandboxCajaWritable(caja, { allowBootstrap: true });
+                const existing = await findByIdempotencyKey(collection, key);
+                if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
+                if (caja.snapshotSource === SANDBOX_LEDGER_SOURCE && !caja.closedAt) {
+                    throw new Error("TPV_SANDBOX_PREVIOUS_SESSION_NOT_CLOSED");
+                }
+                const updated = _sessionCajaPatch(caja, record, fingerprint);
+                await assertFiscalLedgerLock(lock);
+                const saved = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
+                return { item: _sessionFromCaja(saved), replayed: false };
+            }
+        );
     }
 
     const caja = await _getCajaActual();
