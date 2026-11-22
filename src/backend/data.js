@@ -486,7 +486,8 @@ export function MovimientosCaja_beforeInsert(item) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    const legacyExpectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
     return ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
@@ -509,7 +510,8 @@ function _isCurrentSyntheticTpvRow(value) {
         Boolean(value?.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
         Number(value?.sequenceNumber) === 0 &&
-        String(value?.traceId || "").startsWith(expectedPrefix);
+        (String(value?.traceId || "").startsWith(expectedPrefix) ||
+            String(value?.traceId || "").startsWith(legacyExpectedPrefix));
 }
 
 export async function MovimientosCaja_beforeUpdate() {
