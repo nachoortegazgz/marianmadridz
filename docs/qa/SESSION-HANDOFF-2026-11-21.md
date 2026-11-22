@@ -208,3 +208,8 @@ Order #10033 FULLY_REFUNDED por 18,15 EUR, refund SUCCEEDED. Order #10032 PAID p
 - Automatización laboral LLM INACTIVE. Siete automatizaciones PREINSTALLED permanecen ACTIVE y no se pueden desactivar por API con settings.disableStatusChange=true.
 - #416: pedidos #10032/#10033 correlacionados con compensaciones, pero sin ledger fiscal fuente correlacionado. No tocar caja/ledger/compensaciones.
 - Release sigue NO-GO. Próximo paso técnico: validar Runtime Sandbox y rutas custom; no publicar.
+### Baseline definitivo al cierre de esta sesión
+- main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only PR #529).
+- Código funcional P0: 7461dd5998c87379680128117194b0cb40dc6c79 (PR #528).
+- CI post-merge del HEAD: backend offline quality gates SUCCESS y secret scanning SUCCESS (45021632161 / 45021632072).
+- No sincronizado a Wix Editor; falta prueba de Runtime Sandbox.
