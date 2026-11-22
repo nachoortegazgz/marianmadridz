@@ -10,6 +10,7 @@ import {
 } from "backend/dataAccess";
 import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_EVENT_MOVEMENT_TYPES, TPV_SANDBOX_RUNTIME_POLICY, TPV_SANDBOX_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
+import { logger } from "backend/logger";
 import {
 
     assertSandboxCajaWritable,
@@ -41,8 +42,15 @@ async function withCajaActualProjectionLock(traceId, operation) {
         throw error;
     } finally {
         const released = await releaseFiscalLedgerLock(lock);
-        if (!released?.released && !operationFailed) {
-            throw new Error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED");
+        if (!released?.released) {
+            logger.error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED", {
+                traceId,
+                reason: released?.reason || "UNKNOWN",
+                operationFailed,
+            });
+            if (!operationFailed) {
+                throw new Error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED");
+            }
         }
     }
 }
