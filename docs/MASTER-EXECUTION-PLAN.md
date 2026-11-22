@@ -322,3 +322,5 @@ Hasta completar estas condiciones, no ejecutar pruebas persistentes que puedan d
 Pedidos Wix: #10033 FULLY_REFUNDED por 18,15 EUR (refund SUCCEEDED) y #10032 PAID por 92,45 EUR (método Cash). Las tres compensaciones se correlacionan por orderId/refundId/transactionId; sin embargo, las dos filas actuales de MovimientosCaja no contienen esos orderId/refundId y no forman cadena hash fiscal. Mantener P0 abierto; no reintentar ni crear rectificaciones sin evidencia externa y fiscal.
 ### Estado de #525 tras merge — 2026-11-22
 PR #528 integrada en main (7461dd5998c87379680128117194b0cb40dc6c79). CI post-merge backend offline y secret scanning SUCCESS. La prueba offline concurrente y los contratos de lock han pasado. El issue permanece abierto hasta verificar el código sincronizado en Wix Editor y concurrencia en Runtime Sandbox.
+### Baseline Git definitivo — 2026-11-22
+main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only PR #529). Último commit funcional: 7461dd5998c87379680128117194b0cb40dc6c79 (PR #528). CI post-merge en ambos: backend offline y secret scanning SUCCESS. Runtime Wix sigue pendiente.
