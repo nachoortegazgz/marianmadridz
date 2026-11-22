@@ -170,7 +170,7 @@ test("update policy keeps operational projections mutable and append-only ledger
 test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
     const identity = {
         _id: "TPV-CUSTOMER-01",
-        identityId: "SANDBOX-CUSTOMER-01",
+        identityId: "TPV-CUSTOMER-01",
         identityType: "CUSTOMER",
         displayName: "Cliente Sintético 01",
         email: "cliente01@example.test",
@@ -217,6 +217,9 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
         },
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
+    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
+        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":LEGACY-SESSION",
+    }), "legacy trace IDs remain readable");
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
