@@ -22,7 +22,7 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
-    makeSandboxTransactionId,\n    makeSandboxId,
+    makeSandboxTransactionId,\n    makeSandboxId,\n    makeSandboxId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
 
@@ -97,7 +97,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         _id: "TPV_TEST_ROW",
         hash: "a".repeat(64),
         sequenceNumber: 0,
-        transactionId: "TPVSANDBOX_TEST_ROW",
+        transactionId: "TPV_TEST_ROW",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
@@ -226,7 +226,7 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const legacyId = makeLegacySandboxTransactionId(key);
 
     assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
-    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
+    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
