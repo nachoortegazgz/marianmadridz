@@ -121,7 +121,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     assert.doesNotThrow(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", {
         ...item,
-        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
+        payloadFiscal: { ...item.payloadFiscal, siteId: "00000000-0000-4000-8000-000000000000" },
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
 
