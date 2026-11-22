@@ -309,8 +309,8 @@ function _virtualRecord(item) {
 export async function seedSandboxIdentities() {
 
     const requiredIds = [
-        ...Array.from({ length: 3 }, (_, index) => "SANDBOX-CUSTOMER-" + String(index + 1).padStart(2, "0")),
-        ...Array.from({ length: 3 }, (_, index) => "SANDBOX-STAFF-" + String(index + 1).padStart(2, "0")),
+        ...Array.from({ length: 3 }, (_, index) => "TPV-CUSTOMER-" + String(index + 1).padStart(2, "0")),
+        ...Array.from({ length: 3 }, (_, index) => "TPV-STAFF-" + String(index + 1).padStart(2, "0")),
     ];
     const [customers, staff] = await Promise.all([
         listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER),
@@ -509,7 +509,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         salesCount: 0,
         snapshotSource: TPV_CASH_REGISTER_SOURCE,
         traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
-        lastOperationId: "TPVSANDBOX_SESSION_OPEN:" + record.sessionId,
+        lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
         lastOperationType: "TPV_SANDBOX_SESSION_OPEN",
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
@@ -583,7 +583,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
     const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
     const sessionId = String(record.sessionId || record.payload?.sessionId || "").trim();
-    const traceId = "TPVSANDBOX:" + SANDBOX_RUN_ID + ":" + String(sessionId || "GLOBAL");
+    const traceId = "TPV:" + SANDBOX_RUN_ID + ":" + String(sessionId || "GLOBAL");
     const envelope = {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
@@ -614,7 +614,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         _id: transactionId,
         hash,
         sequenceNumber: 0,
-        numSerieFactura: "SANDBOX-NO-FISCAL-" + transactionId.slice(-20),
+        numSerieFactura: "NO-FISCAL-" + transactionId.slice(-20),
         transactionId,
         previousRecordHash: SANDBOX_GENESIS_HASH,
         recordTimestamp: timestamp,
