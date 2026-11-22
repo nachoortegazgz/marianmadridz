@@ -5,8 +5,9 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_SANDBOX_RUNTIME_POLICY,
-    TPV_SANDBOX_EVENT_MOVEMENT_TYPES,
+    TPV_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
+    TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -73,17 +74,30 @@ function _isRecord(value) {
 
 function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
-        item.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
+        ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_SANDBOX_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
-        item.payloadFiscal?.sandboxRunId === TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID &&
+        TPV_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
+        (
+            (
+                item.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                item.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                item.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                (item.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
+                    Boolean(String(item.payloadFiscal?.sessionId || "").trim()))
+            ) ||
+            (
+                item.payloadFiscal?.sourceType == null &&
+                item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+            )
+        ) &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
         item.payloadFiscal?.externalSideEffects === false &&
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
-        String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":");
+        (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":") ||
+            String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":"));
 }
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -122,7 +136,7 @@ export function assertInsertAllowed(collection, item) {
     if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES &&
         (item.syntheticOnly !== true ||
          item.environment !== "SANDBOX" ||
-         item.testRunId !== TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID)) {
+         item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID)) {
         throw _policyError("CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -141,8 +155,6 @@ export function assertUpdateAllowed(collection, item) {
     if (!_isRecord(item) || !DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        _isSyntheticTpvRecord(item)) return;
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
@@ -180,9 +192,6 @@ export function assertSaveAllowed(collection, item) {
 export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
     if (!id || !DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    }
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && _isSyntheticTpvRecord(existingItem)) {
-        return;
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||

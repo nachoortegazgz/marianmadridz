@@ -130,17 +130,18 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
 
 test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and staff records", () => {
     const base = {
-        identityId: "SANDBOX-CUSTOMER-001",
+        identityId: "TPV-CUSTOMER-001",
         identityType: "CUSTOMER",
         displayName: "Cliente Sintético 01",
         email: "cliente.sandbox@example.test",
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: IC.TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         metadata: {},
     };
     assert.equal(V.assertTpvSandboxIdentity(base), true);
+    assert.equal(V.assertTpvSandboxIdentity({ ...base, identityId: "SANDBOX-CUSTOMER-001" }), true, "legacy IDs remain readable");
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
@@ -149,7 +150,7 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
     assert.equal(V.assertTpvSandboxIdentity({
         ...base,
-        identityId: "SANDBOX-STAFF-001",
+        identityId: "TPV-STAFF-001",
         identityType: "STAFF",
         displayName: "Profesional Sintético 01",
         email: "staff.sandbox@example.test",

@@ -16,8 +16,8 @@ import {
     CONTROL_TYPE as T,
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
-    TPV_SANDBOX_RUNTIME_POLICY,
-    TPV_SANDBOX_COLLECTIONS,
+    TPV_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
     BOOKING_TYPE,
     CITAS_BOOKING_STATUS,
     CITAS_PAYMENT_STATUS,
@@ -169,15 +169,15 @@ test("update policy keeps operational projections mutable and append-only ledger
 });
 test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
     const identity = {
-        _id: "SANDBOX-CUSTOMER-01",
-        identityId: "SANDBOX-CUSTOMER-01",
+        _id: "TPV-CUSTOMER-01",
+        identityId: "TPV-CUSTOMER-01",
         identityType: "CUSTOMER",
         displayName: "Cliente Sintético 01",
         email: "cliente01@example.test",
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         metadata: {},
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
@@ -195,17 +195,21 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
 
-test("MovimientosCaja accepts edits only for the exact active synthetic TPV test run", () => {
+test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     const item = {
-        _id: "TPVSANDBOX_TEST_ROW",
-        recordSource: "TPV_SANDBOX_SYNTHETIC",
+        _id: "TPV_TEST_ROW",
+        recordSource: "TPV_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-1",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
-            sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
-            logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            sessionId: "SESSION-1",
+            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,
@@ -213,21 +217,15 @@ test("MovimientosCaja accepts edits only for the exact active synthetic TPV test
         },
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
-    assert.doesNotThrow(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item));
-    assert.doesNotThrow(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item));
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item,
-        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
+        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":LEGACY-SESSION",
+    }), "legacy trace IDs remain readable");
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+    assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
         payloadFiscal: { ...item.payloadFiscal, externalSideEffects: true },
     }), { code: "CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID" });
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, {
-        _id: "real-ledger-row",
-        movementType: "VENTA",
-        recordSource: "INTERNAL",
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
 
 test("WEBHOOK_EVENT is neither mutable nor removable", () => {

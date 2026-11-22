@@ -64,7 +64,7 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
 
 // Logical event types only; these values are NOT Wix CMS collection IDs.
 // The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
-export const TPV_SANDBOX_COLLECTIONS = Object.freeze({
+export const TPV_COLLECTIONS = Object.freeze({
   VENTAS: "SANDBOX_LOGICAL_VENTAS",
   VENTA_LINEAS: "SANDBOX_LOGICAL_VENTA_LINEAS",
   PAGOS: "SANDBOX_LOGICAL_PAGOS",
@@ -76,21 +76,27 @@ export const TPV_SANDBOX_COLLECTIONS = Object.freeze({
   AUDITORIA: "SANDBOX_LOGICAL_AUDITORIA",
 });
 
-export const TPV_SANDBOX_EVENT_MOVEMENT_TYPES = Object.freeze({
-  [TPV_SANDBOX_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
-  [TPV_SANDBOX_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
-  [TPV_SANDBOX_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
-  [TPV_SANDBOX_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
-  [TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
-  [TPV_SANDBOX_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
-  [TPV_SANDBOX_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
-  [TPV_SANDBOX_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
+export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
+  [TPV_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
+  [TPV_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
+  [TPV_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
+  [TPV_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
+  [TPV_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
+  [TPV_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
+  [TPV_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
+  [TPV_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 
-export const TPV_SANDBOX_RUNTIME_POLICY = Object.freeze({
+export const TPV_RUNTIME_POLICY = Object.freeze({
   // Enabled for the isolated Wix Sandbox data plane. Every CajaActual mutation
   // still requires the exact synthetic Sandbox run marker; fiscal/payment side effects stay disabled.
   ENABLED: true,
+  SOURCE_TYPE: "SYNTHETIC",
+  ALLOW_REAL_PAYMENTS: false,
+  ALLOW_NATIVE_WRITES: false,
+  CURRENCY: "EUR",
+  SITE_ID: "188bed94-177c-4bc9-a9f0-35080d874f3e",
+  LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
   ENVIRONMENT: "SANDBOX",
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
@@ -99,9 +105,14 @@ export const TPV_SANDBOX_RUNTIME_POLICY = Object.freeze({
   FISCAL_WRITES_ENABLED: false,
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
-  ACTOR_ID: "SANDBOX_ACTOR",
+  ACTOR_ID: "TPV_SYSTEM",
   SANDBOX_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
 });
+
+// Compatibility aliases retained for historical imports and persisted contracts.
+export const TPV_SANDBOX_COLLECTIONS = TPV_COLLECTIONS;
+export const TPV_SANDBOX_EVENT_MOVEMENT_TYPES = TPV_EVENT_MOVEMENT_TYPES;
+export const TPV_SANDBOX_RUNTIME_POLICY = TPV_RUNTIME_POLICY;
 
 export const TPV_SANDBOX_IDENTITY_TYPES = Object.freeze({
   CUSTOMER: "CUSTOMER",
@@ -492,8 +503,8 @@ export const CONTROL_TYPE = Object.freeze({
   SYSTEM_FLAG: "SYSTEM_FLAG",
   WEBHOOK_CLAIM: "WEBHOOK_CLAIM",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
-  TPV_SANDBOX_REFUND_LOCK: "TPV_SANDBOX_REFUND_LOCK",
-  TPV_SANDBOX_SESSION_LOCK: "TPV_SANDBOX_SESSION_LOCK",
+  TPV_REFUND_LOCK: "TPV_SANDBOX_REFUND_LOCK",
+  TPV_SESSION_LOCK: "TPV_SANDBOX_SESSION_LOCK",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -555,7 +566,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         traceId: Object.freeze(["SET_FIELD"]),
       }),
     }),
-    [CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK]: Object.freeze({
+    [CONTROL_TYPE.TPV_REFUND_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
       anyConditionFields: Object.freeze([]),
       allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
@@ -567,7 +578,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
-    [CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK]: Object.freeze({
+    [CONTROL_TYPE.TPV_SESSION_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
       anyConditionFields: Object.freeze([]),
       allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),

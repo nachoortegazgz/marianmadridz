@@ -28,7 +28,7 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
-    TPV_SANDBOX_RUNTIME_POLICY,
+    TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -385,11 +385,12 @@ export function assertTpvSandboxIdentity(item) {
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
-    const expectedPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
+    const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
+    const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         item.identityType !== identityType ||
-        !identityId.startsWith(expectedPrefix) ||
+        (!identityId.startsWith(expectedPrefix) && !identityId.startsWith(legacyPrefix)) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
@@ -398,7 +399,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
-        item.testRunId !== TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID) {
+        item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
     }
     if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {

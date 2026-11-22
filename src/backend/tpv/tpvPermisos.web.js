@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 export const obtenerPermisosTPV = webMethod(
     Permissions.SiteMember,
@@ -24,10 +24,10 @@ export const obtenerPermisosTPV = webMethod(
                     closeSession: isAdmin,
                     issueTicketX: isAdmin,
                     issueTicketZ: isAdmin,
-                    realPayments: TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED,
-                    fiscalWrites: TPV_SANDBOX_RUNTIME_POLICY.FISCAL_WRITES_ENABLED,
-                    customerNotifications: TPV_SANDBOX_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
-                    physicalHardware: TPV_SANDBOX_RUNTIME_POLICY.HARDWARE_ENABLED,
+                    realPayments: TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS,
+                    fiscalWrites: TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES,
+                    customerNotifications: TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
+                    physicalHardware: TPV_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
             },
             error: null,

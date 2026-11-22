@@ -8,8 +8,8 @@ import {
     assertRemoveAllowed,
 } from "../dataAccessPolicy.js";
 import {
-    TPV_SANDBOX_COLLECTIONS,
-    TPV_SANDBOX_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
+    TPV_RUNTIME_POLICY,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
@@ -23,6 +23,7 @@ import {
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
     makeSandboxTransactionId,
+    makeSandboxId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
 
@@ -30,14 +31,14 @@ import {
 
 test("Sandbox runtime is enabled for synthetic records only; fiscal and external side effects remain disabled", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
-    assert.match(source, /TPV_SANDBOX_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
+    assert.match(source, /TPV_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true,[\s\S]*?ENVIRONMENT: "SANDBOX"/);
+    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true, "offline loader enables the policy only inside tests");
+    assert.equal(TPV_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
 
 });
 
 test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
-    const sandboxRunId = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
+    const sandboxRunId = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
     const liveCaja = {
         singletonKey: "CAJA_PRINCIPAL",
         cashRegisterStatus: "ABIERTA",
@@ -47,7 +48,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     };
     assert.throws(
         () => assertSandboxCajaWritable(liveCaja, { allowBootstrap: true }),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
 
     const sandboxBootstrap = {
@@ -58,7 +59,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     };
     assert.throws(
         () => assertSandboxCajaWritable(sandboxBootstrap),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
     assert.doesNotThrow(() => assertSandboxCajaWritable(sandboxBootstrap, { allowBootstrap: true }));
 
@@ -71,26 +72,43 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
     assert.doesNotThrow(() => assertSandboxCajaWritable(activeSandboxCaja));
     assert.throws(
         () => assertSandboxCajaWritable({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
-        /TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE/
+        /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
+    assert.doesNotThrow(() => assertSandboxCajaWritable({
+        cashRegisterStatus: "SIMULACION",
+        snapshotSource: "TPV_SYNTHETIC",
+        traceId: "TPV_SESSION:SESSION-EXPLICIT",
+        conceptOperations: {
+            tpvSandbox: {
+                sourceType: "SYNTHETIC",
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                sessionId: "SESSION-EXPLICIT",
+            },
+        },
+    }), "explicit source/site/version/session markers must not depend on the static run ID");
 });
 
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
-    const logicalTypes = Object.values(TPV_SANDBOX_COLLECTIONS);
+    const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
     assert.ok(logicalTypes.every((value) => value.startsWith("SANDBOX_LOGICAL_")));
 
     const item = {
-        _id: "TPVSANDBOX_TEST_ROW",
+        _id: "TPV_TEST_ROW",
         hash: "a".repeat(64),
         sequenceNumber: 0,
-        transactionId: "TPVSANDBOX_TEST_ROW",
-        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-TEST",
+        transactionId: "TPV_TEST_ROW",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
-            sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
-            logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            sessionId: "SESSION-TEST",
+            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
@@ -100,12 +118,8 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     };
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
-    assert.doesNotThrow(() => assertUpdateAllowed("MovimientosCaja", item));
-    assert.doesNotThrow(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item));
-    assert.throws(() => assertUpdateAllowed("MovimientosCaja", {
-        ...item,
-        payloadFiscal: { ...item.payloadFiscal, sandboxRunId: "TPVSANDBOX-DEV-20990101-OTHER" },
-    }), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
 
     for (const logicalType of logicalTypes) {
@@ -117,7 +131,7 @@ test("SANDBOX refund lock allows only scoped compare-and-swap fields", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.doesNotThrow(() => assertInsertAllowed(collection, {
         _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
-        controlType: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK,
+        controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
         dedupeKey: "TPV_SANDBOX_REFUND:SANDBOX-SALE-TEST",
         traceId: "test",
         status: "ACTIVE",
@@ -131,21 +145,21 @@ test("SANDBOX refund lock allows only scoped compare-and-swap fields", () => {
         { fieldPath: "payload", action: "SET_FIELD", value: { environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_REFUND_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }));
     assert.throws(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "payloadJson", action: "SET_FIELD", value: "{}" },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_REFUND_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }), /DATA_ACCESS_ERROR/);
 });
 
 test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
-    const saleId = "SANDBOX-SALE-" + "x".repeat(100);
+    const saleId = "SALE-" + "x".repeat(100);
     const first = makeSandboxRefundLockId(saleId);
     assert.equal(first, makeSandboxRefundLockId(saleId));
     assert.equal(first.length, 36);
@@ -156,7 +170,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.throws(() => assertUpdateAllowed(collection, {
         _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
-        controlType: CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK,
+        controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
         dedupeKey: "TPV_SANDBOX_REFUND:SANDBOX-SALE-TEST",
         traceId: "test",
         version: 0,
@@ -165,12 +179,12 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
     assert.throws(() => assertRemoveAllowed(
         collection,
         "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
-        CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK
+        CONTROL_TYPE.TPV_REFUND_LOCK
     ), /DATA_ACCESS_ERROR/);
 });
 
 test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
-    const sessionId = "SANDBOX-SESSION-20261116";
+    const sessionId = "SESSION-20261116";
     const lockId = makeSandboxSessionLockId(sessionId);
     assert.equal(lockId, makeSandboxSessionLockId(sessionId));
     assert.equal(lockId.length, 36);
@@ -179,7 +193,7 @@ test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.doesNotThrow(() => assertInsertAllowed(collection, {
         _id: lockId,
-        controlType: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK,
+        controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         dedupeKey: "TPV_SANDBOX_SESSION:" + lockId.slice(4),
         traceId: "test",
         status: "ACTIVE",
@@ -193,32 +207,33 @@ test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
         { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "SANDBOX" } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK },
+        controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
         version: { $eq: 0 },
         status: { $eq: "ACTIVE" },
     }));
     assert.throws(() => assertUpdateAllowed(collection, {
         _id: lockId,
-        controlType: CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK,
+        controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), /DATA_ACCESS_ERROR/);
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
     const key = "sandbox-arqueo-reintento-0001";
-    const cashCountId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key);
-    const ticketId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.TICKET_Z, key);
-    const auditId = makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key);
+    const cashCountId = makeSandboxTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
+    const ticketId = makeSandboxTransactionId(TPV_COLLECTIONS.TICKET_Z, key);
+    const auditId = makeSandboxTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
     const legacyId = makeLegacySandboxTransactionId(key);
 
-    assert.match(cashCountId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
     assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
     assert.notEqual(cashCountId, legacyId);
-    assert.equal(cashCountId, makeSandboxTransactionId(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key));
+    assert.equal(cashCountId, makeSandboxTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key));
     assert.equal(legacyId, makeLegacySandboxTransactionId(key));
 });
 
@@ -229,20 +244,27 @@ test("legacy transaction IDs remain discoverable for same-collection idempotent 
 });
 
 test("SANDBOX policy remains synthetic and client idempotency keys are bounded", () => {
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
-    assert.equal(TPV_SANDBOX_RUNTIME_POLICY.HARDWARE_ENABLED, false);
+    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
+    assert.equal(TPV_RUNTIME_POLICY.ENVIRONMENT, "SANDBOX");
+    assert.equal(TPV_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
+    assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
+    assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, false);
+    assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, false);
+    assert.equal(TPV_RUNTIME_POLICY.CURRENCY, "EUR");
+    assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
+    assert.match(TPV_RUNTIME_POLICY.SITE_ID, /^[0-9a-f-]{36}$/i);
+    assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_SYNTHETIC_LEDGER_V1");
+    assert.equal(TPV_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
+    assert.equal(TPV_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
+    assert.equal(TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
+    assert.equal(TPV_RUNTIME_POLICY.HARDWARE_ENABLED, false);
     assert.equal(normalizeClientIdempotencyKey("sandbox-client-key-0001"), "sandbox-client-key-0001");
-    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_SANDBOX_IDEMPOTENCY_KEY_INVALID/);
+    assert.throws(() => normalizeClientIdempotencyKey("short"), /TPV_IDEMPOTENCY_KEY_INVALID/);
     assert.equal(normalizeIdempotencyKey("sandbox-client-key-0001:PAYMENT:001"), "sandbox-client-key-0001:PAYMENT:001");
     assert.equal(normalizePaymentMethod("bizum"), "BIZUM");
     assert.equal(toMinorUnits(12.34), 1234);
     assert.equal(fromMinorUnits(1234), 12.34);
-    assert.throws(() => toMinorUnits(12.345), /TPV_SANDBOX_INVALID_PRECISION/);
+    assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
     const payload = makeSyntheticPayload({ sample: true });
     assert.equal(payload.isSynthetic, true);
     assert.equal(payload.realPayment, false);
@@ -383,9 +405,9 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
     assert.notEqual(getCajaStart, -1);
     const initializeBlock = repository.slice(initializeStart, getCajaStart);
     const identitiesBlock = repository.slice(identitiesStart, initializeStart);
-    assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_SANDBOX_CASH_REGISTER_NOT_PRESEEDED"\)/);
+    assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_CASH_REGISTER_NOT_PRESEEDED"\)/);
     assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
-    assert.match(identitiesBlock, /TPV_SANDBOX_IDENTITIES_NOT_PRESEEDED/);
+    assert.match(identitiesBlock, /TPV_IDENTITIES_NOT_PRESEEDED/);
     assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertSandboxEvent(");
@@ -411,7 +433,7 @@ test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing Cont
 
     const helper = repository.slice(helperStart, helperEnd);
     assert.match(helper, /const caja = await _getCajaActual\(\)/);
-    assert.match(helper, /TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(helper, /TPV_CASH_REGISTER_NOT_SEEDED/);
     assert.match(helper, /assertSandboxCajaWritable\(caja, \{ allowBootstrap: true \}\)/);
 
     const lock = repository.slice(lockStart, lockEnd);

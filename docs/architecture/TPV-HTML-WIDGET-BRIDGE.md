@@ -132,7 +132,7 @@ Los únicos IDs físicos de CMS para la caja son `CajaActual`, `MovimientosCaja`
 
 ## 6. Persistencia y colecciones
 
-`TPV_SANDBOX_COLLECTIONS` contiene tipos de evento internos, no IDs ni nombres de colecciones físicas. La persistencia actual proyecta eventos sintéticos sobre:
+`TPV_COLLECTIONS` contiene tipos de evento internos, no IDs ni nombres de colecciones físicas. La persistencia actual proyecta eventos sintéticos sobre:
 - `MovimientosCaja`: ledger append-only de eventos sintéticos.
 - `CajaActual`: proyección operativa de la sesión, protegida por marcador Sandbox y preseed.
 - `ControlOperativo`: locks compare-and-swap de sesión/devolución.

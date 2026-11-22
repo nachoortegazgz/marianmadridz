@@ -12,10 +12,10 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 
 ## Límites de seguridad
 
-- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_SANDBOX_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
-- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_SANDBOX_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash SANDBOX y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
+- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
+- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_SANDBOX_SYNTHETIC` (marcador persistido histórico conservado por compatibilidad), `movementType=SIMULATED_TPV_*`, `sandboxRunId`, hash y secuencia fiscal cero. Los IDs de entidad/transacción generados son neutrales (`TPV-*` / `TPV_<sha256>`); el origen sintético se identifica por metadatos, no por el prefijo del ID. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
 - La idempotencia se aplica mediante índice CMS único `idempotencyKey`, lectura fuerte previa y reconciliación del resultado de inserción concurrente.
-- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_SANDBOX_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_SANDBOX_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
+- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
 - Clientes y profesionales se consultan exclusivamente en `TpvSandboxIdentities`; no se consultan CRM, Members, Bookings Staff, reservas ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión SANDBOX y nunca cierra el periodo fiscal u operativo.
@@ -89,10 +89,10 @@ PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislam
 
 - Clientes y profesionales se leen exclusivamente desde `TpvSandboxIdentities`; no se consultan CRM, Members ni Bookings Staff para resolver identidades TPV.
 - La colección CMS tiene permisos ADMIN para lectura/escritura y sus hooks validan `identityType`, ID sintético, `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` activo y correo `@example.test`. No admite teléfono, NIF, dirección ni IDs nativos.
-- Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
+- Los IDs nuevos son neutrales (`TPV-CUSTOMER-*` / `TPV-STAFF-*`); `syntheticOnly`, `environment`, `testRunId` y el correo `@example.test` identifican el carácter sintético. El validador conserva lectura compatible de IDs históricos `SANDBOX-*`. Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
 - El esquema CMS está creado; la carga de filas sintéticas debe hacerse desde el entorno Sandbox de Wix, nunca mediante la API REST de gestión que no acredita selección de Sandbox.
 - La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
-- Los eventos de auditoría usan el actor sintético `SANDBOX_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
+- Los eventos de auditoría usan el actor sintético `TPV_SYSTEM`; la identidad real solo se usa para autorización backend y no se persiste.
 
 
 ## Contrato del widget HTML
@@ -106,12 +106,12 @@ La colección se ha creado vacía. Cuando Wix Editor permita editar explícitame
 
 | identityId | identityType | displayName | email |
 |---|---|---|---|
-| `SANDBOX-CUSTOMER-01` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
-| `SANDBOX-CUSTOMER-02` | `CUSTOMER` | Cliente Sintético 02 | `cliente02@example.test` |
-| `SANDBOX-CUSTOMER-03` | `CUSTOMER` | Cliente Sintético 03 | `cliente03@example.test` |
-| `SANDBOX-STAFF-01` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
-| `SANDBOX-STAFF-02` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
-| `SANDBOX-STAFF-03` | `STAFF` | Profesional Sintético 03 | `staff03@example.test` |
+| `TPV-CUSTOMER-01` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
+| `TPV-CUSTOMER-02` | `CUSTOMER` | Cliente Sintético 02 | `cliente02@example.test` |
+| `TPV-CUSTOMER-03` | `CUSTOMER` | Cliente Sintético 03 | `cliente03@example.test` |
+| `TPV-STAFF-01` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
+| `TPV-STAFF-02` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+| `TPV-STAFF-03` | `STAFF` | Profesional Sintético 03 | `staff03@example.test` |
 
 En las seis filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
 
@@ -234,3 +234,13 @@ No se descuenta inventario ni se escribe en Stores durante la simulación.
 El HTML Component consume el contrato documentado en `docs/architecture/TPV-HTML-WIDGET-BRIDGE.md`. Los IDs físicos son `CajaActual`, `MovimientosCaja` y `ControlOperativo`; `SANDBOX_LOGICAL_*` son discriminadores de eventos internos, no colecciones. Bookings y Stores V3 se usan solo para lectura del catálogo. No se crea pedido eCommerce, no se ejecuta pago/refund nativo, ni se modifica inventario. Clientes y operadores proceden de `TpvSandboxIdentities`, no de Wix Contacts ni Wix Staff.
 
 El handshake `MM_CONTEXT` confirma autorización y contexto funcional, sin inspeccionar variables de entorno o flags sintéticos. Los WebMethods conservan autorización de backend, validación de DTO, idempotencia y locks CAS. La persistencia escribe eventos en `MovimientosCaja`, proyecta estado en `CajaActual` y coordina concurrencia mediante `ControlOperativo`.
+
+
+## Estado de Bloque A — 2026-11-22
+La neutralización parcial del dominio TPV está implementada en PR #533 (Draft, no fusionada): el repositorio usa `TPV_COLLECTIONS`, `TPV_EVENT_MOVEMENT_TYPES` y `TPV_RUNTIME_POLICY`; se mantienen aliases de compatibilidad en configuración para imports históricos. Los valores persistidos de los locks de ControlOperativo se conservan para no romper registros existentes.
+
+**Integridad:** `MovimientosCaja` es append-only sin excepción para filas TPV sintéticas. No actualizar ni borrar filas históricas o sintéticas; emitir nuevos eventos rectificativos con trazabilidad. Los hooks CMS y la política de acceso rechazan update/remove.
+
+**CI verificado para PR #533:** Layer 1 343/343; Layer 2 270/270; suite completa 726/726 en 77 suites; SDK contracts y ESLint SUCCESS; secret scanning SUCCESS. Esto valida únicamente las pruebas offline y contratos estáticos. No acredita Wix Preview/Runtime ni escrituras CMS en Sandbox.
+
+**Pendiente antes de cerrar Bloque A:** normalizar generadores de IDs visibles (sin cambiar IDs ya persistidos), verificar idempotencia con reintentos y payload conflictivo, compatibilidad de lectura/migración, y ejecutar E2E en Wix Preview con prueba negativa Published. Pagos reales, operaciones nativas y emisión fiscal permanecen deshabilitados.

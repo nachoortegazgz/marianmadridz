@@ -192,7 +192,7 @@ describe("ControlOperativo hooks", () => {
   it("accepts the scoped TPV SANDBOX refund lock as a canonical mutable control type", async () => {
     const original = {
       _id: "tpv-refund-lock-1",
-      ...base(CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK),
+      ...base(CONTROL_TYPE.TPV_REFUND_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
       payload: { environment: "SANDBOX" },
@@ -204,7 +204,7 @@ describe("ControlOperativo hooks", () => {
       status: "RELEASED",
       version: 1,
     });
-    assert.equal(updated.controlType, CONTROL_TYPE.TPV_SANDBOX_REFUND_LOCK);
+    assert.equal(updated.controlType, CONTROL_TYPE.TPV_REFUND_LOCK);
     assert.equal(updated.status, "RELEASED");
     assert.equal(updated.version, 1);
   });
@@ -212,7 +212,7 @@ describe("ControlOperativo hooks", () => {
   it("accepts the scoped TPV SANDBOX session lock as a canonical mutable control type", async () => {
     const original = {
       _id: "tpv-session-lock-1",
-      ...base(CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK),
+      ...base(CONTROL_TYPE.TPV_SESSION_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
       payload: { sessionId: "SANDBOX-SESSION-20261116", environment: "SANDBOX" },
@@ -224,7 +224,7 @@ describe("ControlOperativo hooks", () => {
       status: "RELEASED",
       version: 1,
     });
-    assert.equal(updated.controlType, CONTROL_TYPE.TPV_SANDBOX_SESSION_LOCK);
+    assert.equal(updated.controlType, CONTROL_TYPE.TPV_SESSION_LOCK);
     assert.equal(updated.status, "RELEASED");
     assert.equal(updated.version, 1);
   });
