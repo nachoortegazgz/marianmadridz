@@ -310,3 +310,8 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - CajaActual: implementación del lock global compartido en PR, CI y runtime pendientes.
 - Integridad histórica: caja LIVE, ledgers y compensaciones sin modificar.
 - Estado release: NO-GO.
+### #416 — evidencia ampliada de conciliación (22/11/2026)
+- Pedido #10033: FULLY_REFUNDED, 18,15 EUR; reembolso Wix SUCCEEDED por el mismo importe.
+- Pedido #10032: PAID, 92,45 EUR, método Cash; sin reembolso.
+- Compensaciones identificadas y correlacionadas con esos IDs. MovimientosCaja LIVE no tiene orderId/refundId correlacionados ni hash chain para esos pedidos.
+- No se han modificado pedidos, pagos, reembolsos, caja ni compensaciones. P0 abierto.
