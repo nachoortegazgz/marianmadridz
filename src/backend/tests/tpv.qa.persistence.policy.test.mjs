@@ -22,7 +22,7 @@ import {
     makeSyntheticPayload,
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
-    makeSandboxTransactionId,
+    makeSandboxTransactionId,\n    makeSandboxId,
     makeLegacySandboxTransactionId,
     assertSandboxCajaWritable,
 
@@ -94,18 +94,18 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
     assert.ok(logicalTypes.every((value) => value.startsWith("SANDBOX_LOGICAL_")));
 
     const item = {
-        _id: "TPVSANDBOX_TEST_ROW",
+        _id: "TPV_TEST_ROW",
         hash: "a".repeat(64),
         sequenceNumber: 0,
         transactionId: "TPVSANDBOX_TEST_ROW",
-        traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-TEST",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-            sessionId: "SANDBOX-SESSION-TEST",
+            sessionId: "SESSION-TEST",
             sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
@@ -158,7 +158,7 @@ test("SANDBOX refund lock allows only scoped compare-and-swap fields", () => {
 });
 
 test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
-    const saleId = "SANDBOX-SALE-" + "x".repeat(100);
+    const saleId = "SALE-" + "x".repeat(100);
     const first = makeSandboxRefundLockId(saleId);
     assert.equal(first, makeSandboxRefundLockId(saleId));
     assert.equal(first.length, 36);
@@ -183,7 +183,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
 });
 
 test("SANDBOX session lock is deterministic, bounded and CAS-only", () => {
-    const sessionId = "SANDBOX-SESSION-20261116";
+    const sessionId = "SESSION-20261116";
     const lockId = makeSandboxSessionLockId(sessionId);
     assert.equal(lockId, makeSandboxSessionLockId(sessionId));
     assert.equal(lockId.length, 36);
@@ -225,8 +225,8 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const auditId = makeSandboxTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
     const legacyId = makeLegacySandboxTransactionId(key);
 
-    assert.match(cashCountId, /^TPVSANDBOX_[a-f0-9]{64}$/);
-    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
+    assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
+    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);\n    assert.match(makeSandboxId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
