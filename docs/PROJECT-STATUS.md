@@ -321,3 +321,8 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - CajaActual: writers fiscal, webhook y TPV comparten lock fiscal; suite offline, regresión Layer 1/2, contratos Wix SDK y lint pasan.
 - No se ha sincronizado ni desplegado este SHA a Wix Editor/Published. Runtime concurrente pendiente.
 - #416 sigue abierto por conciliación fiscal incompleta; #520 por automatizaciones preinstaladas; #526 por prueba negativa de rutas custom.
+### Baseline Git definitivo — 2026-11-22
+- main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (documentación PR #529).
+- Último commit funcional: 7461dd5998c87379680128117194b0cb40dc6c79 (corrección P0 PR #528).
+- CI post-merge del HEAD 544f3a5: backend offline quality gates SUCCESS (45021632161), secret scanning SUCCESS (45021632072).
+- Wix Runtime/Editor no sincronizado ni probado.
