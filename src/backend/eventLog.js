@@ -522,7 +522,7 @@ export async function registrarEventoEconomico(input) {
                 .find({ consistencyMode: "strong" });
             if (existing?.items?.length === 1) {
                 const savedMovement = existing.items[0];
-                const cashProjection = await updateCajaActualFromMovement(savedMovement, traceId);
+                const cashProjection = await updateCajaActualFromMovement(savedMovement, traceId, ledgerLock);
                 return {
                     status: cashProjection?.status === "SUCCESS" ? "SUCCESS" : "PARTIAL",
                     data: {
