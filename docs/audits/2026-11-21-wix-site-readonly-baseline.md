@@ -296,3 +296,14 @@ Wix Payments está instalado, pero no se ha podido verificar la conexión median
 
 ### Integridad histórica
 No se modificaron CajaActual LIVE, MovimientosCaja, ControlOperativo, compensaciones PENDING_RECOVERY, pedidos ni reservas existentes. #416 continúa abierto: requiere conciliación documental y origen de las operaciones, no una escritura correctiva especulativa.
+## 23. Correlación read-only de compensaciones con Wix Orders — 2026-11-22
+
+Se consultaron Get Order, List Transactions For Single Order y ControlOperativo, sin modificar pedidos ni transacciones.
+
+- Pedido #10033 (orderId d3a4ada9-6720-4816-bcef-51b7a0b64403): FULLY_REFUNDED, total 18,15 EUR. Payment 1ea7816c… REFUNDED, método Other Payment Method. Refund c7a5266c… por 18,15 EUR, refundStatus SUCCEEDED, pending=false, externalRefund=false.
+- Pedido #10032 (orderId 0749bb38-34b6-4255-988b-34e42138dab7): PAID, total 92,45 EUR. Payment 1dadc834… APPROVED, método Cash, sin refunds. El pedido contiene productos físicos y un servicio, consistente con la clasificación UNSUPPORTED_ORDER_COMPOSITION.
+- REC_ecd49c… coincide exactamente con el refundId c7a5266c… del pedido #10033 y transactionId REFUND-d3a4…; permanece WAIT_FOR_ORIGINAL_ORDER_LEDGER / ORIGINAL_ORDER_LEDGER_MISSING.
+- REC_4b4d0… es el webhook de pago del pedido #10033, sin refundId. REC_bb1db… es el webhook de pago del pedido #10032, sin refundId. Ambos continúan PENDING_RECOVERY con attempts=0.
+- MovimientosCaja LIVE mantiene dos filas sin orderId/refundId: CARD / TPV-SIM-1795231772367 y CASH / TPV-FUNC-1795212435904-1. La lectura actual no devuelve hash ni previousRecordHash; la evidencia previa registra importes 25 EUR y 20 EUR. No correlacionan con los pedidos de 18,15 EUR y 92,45 EUR.
+
+Conclusión: la correlación de registros Wix está probada, pero no el movimiento externo de fondos ni un ledger fiscal fuente que respalde esos pedidos. No cerrar compensaciones, no generar movimientos/rectificaciones y no tocar pedidos o reembolsos. #416 continúa P0 abierto.
