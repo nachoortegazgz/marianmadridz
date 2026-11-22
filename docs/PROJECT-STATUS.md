@@ -337,3 +337,25 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - **No verificado:** ejecución Wix Runtime/Preview, sincronización Editor, persistencia CMS real, aislamiento Sandbox/Online, concurrencia runtime, devoluciones/cierres E2E ni pruebas negativas en Published.
 - **Neutralización de IDs completada en código/fixtures:** nuevos IDs de identidad `TPV-CUSTOMER-*` / `TPV-STAFF-*`, venta/devolución `TPV-*`, tickets `TPV-X-*` / `TPV-Z-*`, movimientos `TPV_<sha256>`, trazas `TPV:<runId>:...`, actor `TPV_SYSTEM` y referencias `NO-GATEWAY` / `NO-FISCAL-*`. Se mantiene lectura compatible de IDs y trazas históricos `SANDBOX-*` / `TPVSANDBOX*`. No se han renombrado registros CMS. Los marcadores persistidos de entorno/origen (`environment`, `testRunId`, `recordSource`, `snapshotSource`, `SANDBOX_LOGICAL_*`, tipos de lock) se conservan deliberadamente porque son contratos de aislamiento, no IDs de entidades.
 - La fusión solo integró código y documentación en GitHub: no se modificaron datos Wix/CMS, no se ejecutaron pagos ni reembolsos y no se desplegó. No hay evidencia de CI post-merge asociada al merge commit en la consulta realizada. Release TPV permanece NO-GO hasta runtime y E2E.
+
+
+---
+
+## Addendum vigente — depuración del backlog 2026-11-23
+
+**main HEAD documental:** `7f4649d3a760a98031816b5f2ec07a301bf63672` (actualización del plan maestro). El último commit funcional previo sigue siendo PR #533 / `e19bf9c30227f5401d54e8187f8af5503a3bea4d`; PR #528 aporta el lock compartido de CajaActual.
+
+- Se revisaron las 25 issues abiertas del repositorio y la única PR abierta. La matriz vigente, estado de cada issue, prioridad, acción mínima y dependencias está en [BACKLOG-RECONCILIATION-2026-11-23.md](qa/BACKLOG-RECONCILIATION-2026-11-23.md).
+- Se actualizó [MASTER-EXECUTION-PLAN.md](MASTER-EXECUTION-PLAN.md) para sustituir la matriz antigua que aún listaba #495 como trabajo TPV.
+- Retiradas como tareas de implementación: migración desde `TPV_QA_*` (#435), retirada del inventario custom (#237) y reimplementación de código ya integrado (#159, #164, #290, #291, #441, #525). Las validaciones Wix Runtime/Preview pendientes siguen en el backlog; no se han declarado terminadas.
+- #520: automatización APPLICATION laboral INACTIVE revisión 5; siete automatizaciones PREINSTALLED permanecen ACTIVE por restricción Wix.
+- #526: reservas online deshabilitadas y verificadas en 94/94 servicios; falta prueba negativa Runtime y rutas custom.
+- #525: lock fiscal compartido integrado y CI post-merge SUCCESS; concurrencia Runtime y SHA instalado en Editor pendientes.
+- #416: tres compensaciones PENDING_RECOVERY y conciliación fiscal no resuelta; no reintentar ni modificar datos.
+- #435 queda superseded como migración; su aceptación Sandbox/E2E se transfiere a F2/#434. #237 queda superseded como retirada de código; solo conserva aceptación Stores Runtime.
+- PR #495 permanece intacta y excluida por instrucción del propietario; no se ha cerrado, actualizado, rebasado ni fusionado.
+
+### Baseline CI actual consultada
+En `main` SHA `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`, los checks Layer 1/2, regresión offline, SDK contracts y lint finalizaron SUCCESS (run 45082870340); Gitleaks full-history SUCCESS (run 45082870366). Estos checks son offline/estáticos y no prueban Wix Runtime ni Editor sync.
+
+**Estado global:** release **NO-GO**. No se ejecutaron escrituras CMS, pagos, reembolsos, cambios de automatizaciones, publicación ni despliegue durante esta depuración.
