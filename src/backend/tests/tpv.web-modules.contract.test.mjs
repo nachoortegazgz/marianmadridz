@@ -473,6 +473,10 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
     assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /conceptOperations\?\.tpvSandbox\?\.sessionId/);
+    assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
+    assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
+    assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
+    assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);

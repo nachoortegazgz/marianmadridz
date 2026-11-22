@@ -10,11 +10,17 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
         caja?.cashRegisterStatus === "CERRADA" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
-    const synthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
+    const explicitSynthetic = caja?.snapshotSource === "TPV_SYNTHETIC" &&
+        caja?.cashRegisterStatus === "SIMULACION" &&
+        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Boolean(String(sandboxState?.sessionId || "").trim());
+    const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
-    if (!bootstrap && !synthetic) {
+    if (!bootstrap && !explicitSynthetic && !legacySynthetic) {
         throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
     }
     return true;
@@ -110,6 +116,9 @@ export function makeSandboxSessionLockId(sessionId) {
 export function makeSyntheticPayload(payload = {}) {
     return {
         ...payload,
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
         sourceEnvironment: TPV_RUNTIME_POLICY.ENVIRONMENT,
         isSynthetic: true,
         realPayment: false,

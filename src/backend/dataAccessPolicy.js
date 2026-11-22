@@ -6,6 +6,7 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     TPV_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
@@ -76,7 +77,19 @@ function _isSyntheticTpvRecord(item) {
         item.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
-        item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID &&
+        (
+            (
+                item.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                item.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                item.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                (item.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
+                    Boolean(String(item.payloadFiscal?.sessionId || "").trim()))
+            ) ||
+            (
+                item.payloadFiscal?.sourceType == null &&
+                item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+            )
+        ) &&
         item.payloadFiscal?.isSynthetic === true &&
         item.payloadFiscal?.realPayment === false &&
         item.payloadFiscal?.externalSideEffects === false &&

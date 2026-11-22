@@ -73,6 +73,19 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
         () => assertSandboxCajaWritable({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
         /TPV_CASH_REGISTER_NOT_IN_TEST_MODE/
     );
+    assert.doesNotThrow(() => assertSandboxCajaWritable({
+        cashRegisterStatus: "SIMULACION",
+        snapshotSource: "TPV_SYNTHETIC",
+        traceId: "TPV_SESSION:SESSION-EXPLICIT",
+        conceptOperations: {
+            tpvSandbox: {
+                sourceType: "SYNTHETIC",
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                sessionId: "SESSION-EXPLICIT",
+            },
+        },
+    }), "explicit source/site/version/session markers must not depend on the static run ID");
 });
 
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
@@ -89,6 +102,10 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            sessionId: "SANDBOX-SESSION-TEST",
             sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",

@@ -18,6 +18,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
@@ -494,7 +495,19 @@ function _isCurrentSyntheticTpvRow(value) {
     return value?.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
-        value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID &&
+        (
+            (
+                value?.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                value?.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                value?.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                (value?.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
+                    Boolean(String(value?.payloadFiscal?.sessionId || "").trim()))
+            ) ||
+            (
+                value?.payloadFiscal?.sourceType == null &&
+                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+            )
+        ) &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
         value?.payloadFiscal?.externalSideEffects === false &&
@@ -527,6 +540,10 @@ export async function MovimientosCaja_beforeUpdate(item) {
     if (
         logicalCollection !== previousEnvelope?.logicalCollection ||
         envelope?.sandboxRunId !== previousEnvelope?.sandboxRunId ||
+        envelope?.sourceType !== previousEnvelope?.sourceType ||
+        envelope?.siteId !== previousEnvelope?.siteId ||
+        envelope?.ledgerVersion !== previousEnvelope?.ledgerVersion ||
+        envelope?.sessionId !== previousEnvelope?.sessionId ||
         envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
         envelope?.isSynthetic !== true ||
         envelope?.realPayment !== false ||
@@ -568,6 +585,10 @@ export async function MovimientosCaja_beforeUpdate(item) {
         sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
     };
     const hashPayload = stableSerialize({
+        sourceType: envelope.sourceType,
+        siteId: envelope.siteId,
+        ledgerVersion: envelope.ledgerVersion,
+        sessionId: envelope.sessionId,
         sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         logicalCollection,
         transactionId: item.transactionId,

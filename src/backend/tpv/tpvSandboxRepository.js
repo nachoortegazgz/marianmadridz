@@ -245,6 +245,7 @@ function stripVolatile(value) {
 }
 
 const SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
+const TPV_CASH_REGISTER_SOURCE = "TPV_SYNTHETIC";
 const SANDBOX_GENESIS_HASH = "0".repeat(64);
 
 const SANDBOX_RUN_ID = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
@@ -350,8 +351,17 @@ async function _ensureCajaActualForSandbox() {
 }
 
 function _sessionFromCaja(caja) {
-    if (!caja || caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) return null;
-    const sessionId = String(caja.conceptOperations?.tpvSandbox?.sessionId || "").trim();
+    const sandboxState = caja?.conceptOperations?.tpvSandbox;
+    const sessionId = String(sandboxState?.sessionId || "").trim();
+    const explicitSynthetic = caja?.snapshotSource === TPV_CASH_REGISTER_SOURCE &&
+        caja?.cashRegisterStatus === "SIMULACION" &&
+        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Boolean(sessionId);
+    const legacySynthetic = caja?.snapshotSource === SANDBOX_LEDGER_SOURCE &&
+        caja?.traceId === SANDBOX_RUN_ID && Boolean(sessionId);
+    if (!explicitSynthetic && !legacySynthetic) return null;
     if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
     const closedAt = caja.closedAt ? (caja.closedAt instanceof Date ? caja.closedAt : new Date(caja.closedAt)) : null;
@@ -366,9 +376,10 @@ function _sessionFromCaja(caja) {
         conceptOperations: caja.conceptOperations,
         payloadFiscal: { requestFingerprint: caja.conceptOperations?.tpvSandbox?.requestFingerprint },
         payload: makeSyntheticPayload({
-            sandboxRunId: SANDBOX_RUN_ID,
+            sessionId,
+            traceId: caja.traceId || "",
             dayKey: openedAt.toISOString().slice(0, 10).replace(/-/g, ""),
-            source: SANDBOX_LEDGER_SOURCE,
+            source: explicitSynthetic ? TPV_CASH_REGISTER_SOURCE : SANDBOX_LEDGER_SOURCE,
         }),
         _createdDate: caja._createdDate,
         _updatedDate: caja._updatedDate,
@@ -383,7 +394,16 @@ async function _writeCajaProjection(collection, record, eventId) {
         async (lock) => {
             const caja = await _getCajaActual();
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
-            if (caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) {
+            assertSandboxCajaWritable(caja);
+            const preflightSandboxState = caja.conceptOperations?.tpvSandbox || {};
+            const explicitSynthetic = caja.snapshotSource === TPV_CASH_REGISTER_SOURCE &&
+                preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                Boolean(String(preflightSandboxState.sessionId || "").trim());
+            const legacySynthetic = caja.snapshotSource === SANDBOX_LEDGER_SOURCE &&
+                caja.traceId === SANDBOX_RUN_ID;
+            if (!explicitSynthetic && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
             }
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
@@ -402,8 +422,8 @@ async function _writeCajaProjection(collection, record, eventId) {
             next.lastOperationId = eventId || caja.lastOperationId;
             next.lastOperationAt = now;
             next.lastOperationStatus = "SIMULATED";
-            next.traceId = SANDBOX_RUN_ID;
-            next.snapshotSource = SANDBOX_LEDGER_SOURCE;
+            next.traceId = String(record.traceId || caja.traceId || "");
+            next.snapshotSource = TPV_CASH_REGISTER_SOURCE;
             next.cashRegisterStatus = "SIMULACION";
 
             if (collection === TPV_SANDBOX_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
@@ -441,6 +461,10 @@ async function _writeCajaProjection(collection, record, eventId) {
             } else {
                 next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
             }
+            sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
+            sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
+            sandboxState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
+            sandboxState.sessionId = String(sandboxState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
             sandboxState.lastProjectedAt = now;
             conceptOperations.tpvSandbox = sandboxState;
@@ -483,8 +507,8 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         difference: 0,
         differenceReason: "",
         salesCount: 0,
-        snapshotSource: SANDBOX_LEDGER_SOURCE,
-        traceId: SANDBOX_RUN_ID,
+        snapshotSource: TPV_CASH_REGISTER_SOURCE,
+        traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
         lastOperationId: "TPVSANDBOX_SESSION_OPEN:" + record.sessionId,
         lastOperationType: "TPV_SANDBOX_SESSION_OPEN",
         lastOperationAmount: openingCash,
@@ -493,7 +517,15 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         lastOperationStatus: "SIMULATED",
         conceptOperations: {
             ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
-            tpvSandbox: { sandboxRunId: SANDBOX_RUN_ID, sessionId: record.sessionId, requestFingerprint: fingerprint, openedAt, appliedMovementIds: [] },
+            tpvSandbox: {
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                sessionId: record.sessionId,
+                requestFingerprint: fingerprint,
+                openedAt,
+                appliedMovementIds: [],
+            },
         },
         _updatedDate: new Date(),
     };
@@ -547,8 +579,13 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
     const dateYmd = timestamp.toLocaleDateString("en-CA", { timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE });
     const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
-    const traceId = "TPVSANDBOX:" + SANDBOX_RUN_ID + ":" + String(record.sessionId || record.payload?.sessionId || "GLOBAL");
+    const sessionId = String(record.sessionId || record.payload?.sessionId || "").trim();
+    const traceId = "TPVSANDBOX:" + SANDBOX_RUN_ID + ":" + String(sessionId || "GLOBAL");
     const envelope = {
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+        sessionId: sessionId || null,
         sandboxRunId: SANDBOX_RUN_ID,
         logicalCollection: collection,
         idempotencyKey: key,
@@ -559,6 +596,10 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         externalSideEffects: false,
     };
     const hashPayload = stableSerialize({
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+        sessionId: sessionId || null,
         sandboxRunId: SANDBOX_RUN_ID,
         logicalCollection: collection,
         transactionId,
