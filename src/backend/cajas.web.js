@@ -754,7 +754,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     .limit(1)
                     .find(STRONG_READ);
                 if (lockedExisting?.items?.length === 1) {
-                    const cashProjection = await _updateCajaActual(lockedExisting.items[0], traceId);
+                    const cashProjection = await _updateCajaActual(lockedExisting.items[0], traceId, ledgerLock);
                     return {
                         status: cashProjection?.status === "SUCCESS" ? "SUCCESS" : "PARTIAL",
                         data: lockedExisting.items[0],
@@ -1034,7 +1034,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             }
         }
 
-        const cashProjection = await _updateCajaActual(saved, traceId);
+        const cashProjection = await _updateCajaActual(saved, traceId, ledgerLock);
         if (cashProjection?.status !== "SUCCESS") {
             return {
                 status: "PARTIAL",
@@ -1090,7 +1090,8 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
 // CajaActual's singletonKey is the logical identity. Wix may assign a
 // different physical _id to the collection's singleton item, so never use
 // CAJA_PRINCIPAL as a getItem(_id) argument. Fail closed on duplicates.
-async function _updateCajaActual(movement, traceId) {
+async function _updateCajaActual(movement, traceId, sharedLock = null) {
+    let ownedLock = null;
     try {
         const method = _safeTrim(movement?.paymentMethod).toUpperCase();
         const channelType = _safeTrim(movement?.channelType).toUpperCase();
@@ -1117,9 +1118,16 @@ async function _updateCajaActual(movement, traceId) {
             throw new Error("CAJA_MOVEMENT_TIMESTAMP_REQUIRED");
         }
 
+        // CajaActual is a shared projection: all fiscal, webhook and TPV
+        // writers must serialize through the same ControlOperativo lock.
+        if (!sharedLock) ownedLock = await acquireFiscalLedgerLock(traceId);
+        const projectionLock = sharedLock || ownedLock;
+        await assertFiscalLedgerLock(projectionLock);
+
         // A movement may contribute to a session only after an explicit
         // opening. Never create or reopen CajaActual as a side effect of a sale.
         for (let attempt = 0; attempt < 4; attempt += 1) {
+            await assertFiscalLedgerLock(projectionLock);
             const cashRegister = await getCashRegisterSingleton();
             if (_isSimulationCashRegister(cashRegister)) {
                 throw new Error("CAJA_ACTUAL_SIMULATION_STATE");
@@ -1176,6 +1184,7 @@ async function _updateCajaActual(movement, traceId) {
             cashRegister._updatedDate = new Date();
 
             try {
+                await assertFiscalLedgerLock(projectionLock);
                 await dalUpdate(CAJA_ACTUAL_COL, cashRegister);
                 return { status: "SUCCESS", idempotent: false, movementId: movementKey, paymentMethod: method };
             } catch (writeError) {
@@ -1202,10 +1211,24 @@ async function _updateCajaActual(movement, traceId) {
             log.error("_updateCajaActual: failed to queue resync", { traceId, error: queueErr?.message });
         }
         return { status: "PENDING_RECONCILIATION", error: err?.message || "UNKNOWN" };
+    } finally {
+        if (ownedLock) {
+            const released = await releaseFiscalLedgerLock(ownedLock);
+            if (!released?.released) {
+                log.error("CAJA_ACTUAL_PROJECTION_LOCK_RELEASE_FAILED", {
+                    traceId,
+                    reason: released?.reason || "UNKNOWN",
+                });
+            }
+        }
     }
 }
-export async function updateCajaActualFromMovement(movement, traceId) {
-    return _updateCajaActual(movement, traceId || movement?.traceId || makeTraceId("caja-projection"));
+export async function updateCajaActualFromMovement(movement, traceId, sharedLock = null) {
+    return _updateCajaActual(
+        movement,
+        traceId || movement?.traceId || makeTraceId("caja-projection"),
+        sharedLock
+    );
 }
 
 // ============================================================================
