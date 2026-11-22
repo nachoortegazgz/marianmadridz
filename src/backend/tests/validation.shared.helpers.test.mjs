@@ -141,6 +141,7 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
         metadata: {},
     };
     assert.equal(V.assertTpvSandboxIdentity(base), true);
+    assert.equal(V.assertTpvSandboxIdentity({ ...base, identityId: "SANDBOX-CUSTOMER-001" }), true, "legacy IDs remain readable");
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
     assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
