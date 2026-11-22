@@ -485,3 +485,27 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });
+
+
+test("new TPV synthetic identifiers are neutral while historical Sandbox markers remain compatible", async () => {
+    const utilities = await source("tpv/tpvUtils.js");
+    const validation = await source("validation.js");
+    const repository = await source("tpv/tpvSandboxRepository.js");
+    const closures = await source("tpv/tpvCierres.web.js");
+    const sales = await source("tpv/tpvVentas.web.js");
+    const refunds = await source("tpv/tpvDevoluciones.web.js");
+    const config = await source("internalConfig.js");
+
+    assert.match(utilities, /return "TPV-" \+ String\(prefix/);
+    assert.match(utilities, /return "TPV_" \+ digest/);
+    assert.match(utilities, /return "TPVSANDBOX_" \+ digest/);
+    assert.match(validation, /legacyPrefix = identityType === "CUSTOMER" \? "SANDBOX-CUSTOMER-"/);
+    assert.match(repository, /"TPV-CUSTOMER-" \+ String/);
+    assert.match(repository, /"TPV-STAFF-" \+ String/);
+    assert.match(repository, /const traceId = "TPV:" \+ SANDBOX_RUN_ID/);
+    assert.match(closures, /reportId = "TPV-X-"/);
+    assert.match(closures, /reportId = "TPV-Z-"/);
+    assert.match(sales, /gatewayReference: "NO-GATEWAY"/);
+    assert.match(refunds, /gatewayReference: "NO-GATEWAY"/);
+    assert.match(config, /ACTOR_ID: "TPV_SYSTEM"/);
+});
