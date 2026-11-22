@@ -34,7 +34,7 @@ export function makeSandboxTransactionId(collection, idempotencyKey) {
     const digest = createHash("sha256")
         .update(TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + collection + ":" + key, "utf8")
         .digest("hex");
-    return "TPVSANDBOX_" + digest;
+    return "TPV_" + digest;
 }
 
 export function makeLegacySandboxTransactionId(idempotencyKey) {
@@ -96,7 +96,7 @@ export function stableSerialize(value) {
 
 export function makeSandboxId(prefix, idempotencyKey) {
     const safe = normalizeIdempotencyKey(idempotencyKey).replace(/[^A-Za-z0-9_-]/g, "-");
-    return "SANDBOX-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
+    return "TPV-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
 }
 
 export function makeSandboxRefundLockId(saleId) {
