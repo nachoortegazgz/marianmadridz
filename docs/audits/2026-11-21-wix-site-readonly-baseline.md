@@ -307,3 +307,10 @@ Se consultaron Get Order, List Transactions For Single Order y ControlOperativo,
 - MovimientosCaja LIVE mantiene dos filas sin orderId/refundId: CARD / TPV-SIM-1795231772367 y CASH / TPV-FUNC-1795212435904-1. La lectura actual no devuelve hash ni previousRecordHash; la evidencia previa registra importes 25 EUR y 20 EUR. No correlacionan con los pedidos de 18,15 EUR y 92,45 EUR.
 
 Conclusión: la correlación de registros Wix está probada, pero no el movimiento externo de fondos ni un ledger fiscal fuente que respalde esos pedidos. No cerrar compensaciones, no generar movimientos/rectificaciones y no tocar pedidos o reembolsos. #416 continúa P0 abierto.
+## 24. CI post-merge de la corrección P0 — 2026-11-22
+
+PR #528 integrada en main con commit 7461dd5998c87379680128117194b0cb40dc6c79.
+- Backend offline quality gates: SUCCESS, run 45021242129. Job Layer 1 and 2 QA, offline regression, SDK contract and lint: SUCCESS; sin pasos fallidos.
+- Secret scanning: SUCCESS, run 45021242143.
+- La corrección del lock común para writers de CajaActual queda integrada y validada en CI offline.
+- Pendiente: sincronizar SHA a Wix Editor y ejecutar concurrencia/idempotencia en Runtime Sandbox acreditado. No afirmar validación Runtime ni desplegar a LIVE.
