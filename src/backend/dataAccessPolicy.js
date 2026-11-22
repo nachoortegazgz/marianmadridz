@@ -96,7 +96,8 @@ function _isSyntheticTpvRecord(item) {
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
-        String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":");
+        (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":") ||
+            String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":"));
 }
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
