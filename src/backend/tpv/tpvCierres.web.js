@@ -63,7 +63,7 @@ export const generarControlX = webMethod(
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             const totals = await buildSandboxSessionSummary(session);
-            const reportId = "SANDBOX-X-" + session.sessionId + "-" + key.slice(0, 20);
+            const reportId = "TPV-X-" + session.sessionId + "-" + key.slice(0, 20);
             const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
                 sessionId: session.sessionId,
                 reportId,
@@ -157,7 +157,7 @@ export const generarCierreZ = webMethod(
             const existing = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
             if (existing.length && existing[0].closed !== true) throw new Error("TPV_Z_RECORD_INVALID");
             const idempotencyKey = "SANDBOX_TICKET_Z:" + session.sessionId;
-            const reportId = "SANDBOX-Z-" + session.sessionId;
+            const reportId = "TPV-Z-" + session.sessionId;
             const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.TICKET_Z, idempotencyKey, {
                 sessionId: session.sessionId,
                 reportId,
