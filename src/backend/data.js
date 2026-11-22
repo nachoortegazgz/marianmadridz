@@ -9,7 +9,6 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 =============================================================================
 */
 
-import { createHash } from "node:crypto";
 import {
     BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
@@ -484,10 +483,6 @@ export function MovimientosCaja_beforeInsert(item) {
     assertMovimientosCajaRequiredFields(item);
     _normalizeMovimientosCajaPhysicalFields(item, true);
     return item;
-}
-
-function _isPlainRecord(value) {
-    return Boolean(value) && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date);
 }
 
 function _isCurrentSyntheticTpvRow(value) {
