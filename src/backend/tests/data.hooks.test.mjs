@@ -702,7 +702,7 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
-test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {
+test('HOOK-CAJA-04 keeps MovimientosCaja append-only for synthetic TPV rows', async () => {
   const runId = IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
   const row = {
     _id: 'TPVSANDBOX_HOOK_TEST_ROW',
@@ -725,15 +725,9 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
   };
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
-  const updated = await H.MovimientosCaja_beforeUpdate({
-    ...row,
-    payloadFiscal: {
-      ...row.payloadFiscal,
-      sandboxRecord: { ...row.payloadFiscal.sandboxRecord, amountMinor: 7500 },
-    },
-  });
-  assert.equal(updated.totalAmount, 75);
-  assert.notEqual(updated.hash, row.hash);
-  assert.equal(updated.sequenceNumber, 0);
-  assert.equal(await H.MovimientosCaja_beforeRemove(row._id), row._id);
+  await assert.rejects(
+    () => H.MovimientosCaja_beforeUpdate({ ...row, payloadFiscal: { ...row.payloadFiscal, sandboxRecord: { amountMinor: 7500 } } }),
+    /append-only/
+  );
+  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /append-only/);
 });
