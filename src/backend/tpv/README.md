@@ -237,10 +237,10 @@ El handshake `MM_CONTEXT` confirma autorización y contexto funcional, sin inspe
 
 
 ## Estado de Bloque A — 2026-11-22
-La neutralización parcial del dominio TPV está implementada en PR #533 (Draft, no fusionada): el repositorio usa `TPV_COLLECTIONS`, `TPV_EVENT_MOVEMENT_TYPES` y `TPV_RUNTIME_POLICY`; se mantienen aliases de compatibilidad en configuración para imports históricos. Los valores persistidos de los locks de ControlOperativo se conservan para no romper registros existentes.
+La neutralización parcial del dominio TPV está integrada en `main` mediante PR #533 (merge commit `e19bf9c30227f5401d54e8187f8af5503a3bea4d`): el repositorio usa `TPV_COLLECTIONS`, `TPV_EVENT_MOVEMENT_TYPES` y `TPV_RUNTIME_POLICY`; se mantienen aliases de compatibilidad en configuración para imports históricos. Los valores persistidos de los locks de ControlOperativo se conservan para no romper registros existentes.
 
 **Integridad:** `MovimientosCaja` es append-only sin excepción para filas TPV sintéticas. No actualizar ni borrar filas históricas o sintéticas; emitir nuevos eventos rectificativos con trazabilidad. Los hooks CMS y la política de acceso rechazan update/remove.
 
-**CI verificado para PR #533:** Layer 1 343/343; Layer 2 270/270; suite completa 726/726 en 77 suites; SDK contracts y ESLint SUCCESS; secret scanning SUCCESS. Esto valida únicamente las pruebas offline y contratos estáticos. No acredita Wix Preview/Runtime ni escrituras CMS en Sandbox.
+**CI verificado antes del merge para PR #533**, commit `73f23c34287031dc90b73b2f077d5ea1abd1b45c`: Layer 1 344/344; Layer 2 270/270; suite completa 727/727 en 77 suites; contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS. Esto valida únicamente pruebas offline y contratos estáticos. No se ha acreditado CI post-merge para el merge commit ni Wix Preview/Runtime ni escrituras CMS en Sandbox.
 
-**Pendiente antes de cerrar Bloque A:** normalizar generadores de IDs visibles (sin cambiar IDs ya persistidos), verificar idempotencia con reintentos y payload conflictivo, compatibilidad de lectura/migración, y ejecutar E2E en Wix Preview con prueba negativa Published. Pagos reales, operaciones nativas y emisión fiscal permanecen deshabilitados.
+**Pendiente antes de cerrar Bloque A:** revisar idempotencia frontend/backend con reintentos y payload conflictivo, compatibilidad de lectura/migración y ejecutar E2E en Wix Preview con prueba negativa Published. La neutralización de nuevos IDs ya está integrada; los IDs históricos siguen admitidos en lectura. Pagos reales, operaciones nativas y emisión fiscal permanecen deshabilitados.
