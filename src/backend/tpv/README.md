@@ -89,10 +89,10 @@ PR #397, PR #398 y PR #399 están integradas en `main`. PR #399 aplica el aislam
 
 - Clientes y profesionales se leen exclusivamente desde `TpvSandboxIdentities`; no se consultan CRM, Members ni Bookings Staff para resolver identidades TPV.
 - La colección CMS tiene permisos ADMIN para lectura/escritura y sus hooks validan `identityType`, ID sintético, `environment=SANDBOX`, `syntheticOnly=true`, `testRunId` activo y correo `@example.test`. No admite teléfono, NIF, dirección ni IDs nativos.
-- Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
+- Los IDs nuevos son neutrales (`TPV-CUSTOMER-*` / `TPV-STAFF-*`); `syntheticOnly`, `environment`, `testRunId` y el correo `@example.test` identifican el carácter sintético. El validador conserva lectura compatible de IDs históricos `SANDBOX-*`. Los registros son append-only; la identidad no se reutiliza como `contactId`, `memberId` o `resourceId` de Wix. La vinculación con reservas reales sigue deshabilitada y la venta rechaza cualquier `bookingId`.
 - El esquema CMS está creado; la carga de filas sintéticas debe hacerse desde el entorno Sandbox de Wix, nunca mediante la API REST de gestión que no acredita selección de Sandbox.
 - La consulta de saldo de Gift Cards reales está deshabilitada; no se envía ni persiste ningún código. Emisión, canje y reembolso siguen bloqueados.
-- Los eventos de auditoría usan el actor sintético `SANDBOX_ACTOR`; la identidad real solo se usa para autorización backend y no se persiste.
+- Los eventos de auditoría usan el actor sintético `TPV_SYSTEM`; la identidad real solo se usa para autorización backend y no se persiste.
 
 
 ## Contrato del widget HTML
@@ -106,12 +106,12 @@ La colección se ha creado vacía. Cuando Wix Editor permita editar explícitame
 
 | identityId | identityType | displayName | email |
 |---|---|---|---|
-| `SANDBOX-CUSTOMER-01` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
-| `SANDBOX-CUSTOMER-02` | `CUSTOMER` | Cliente Sintético 02 | `cliente02@example.test` |
-| `SANDBOX-CUSTOMER-03` | `CUSTOMER` | Cliente Sintético 03 | `cliente03@example.test` |
-| `SANDBOX-STAFF-01` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
-| `SANDBOX-STAFF-02` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
-| `SANDBOX-STAFF-03` | `STAFF` | Profesional Sintético 03 | `staff03@example.test` |
+| `TPV-CUSTOMER-01` | `CUSTOMER` | Cliente Sintético 01 | `cliente01@example.test` |
+| `TPV-CUSTOMER-02` | `CUSTOMER` | Cliente Sintético 02 | `cliente02@example.test` |
+| `TPV-CUSTOMER-03` | `CUSTOMER` | Cliente Sintético 03 | `cliente03@example.test` |
+| `TPV-STAFF-01` | `STAFF` | Profesional Sintético 01 | `staff01@example.test` |
+| `TPV-STAFF-02` | `STAFF` | Profesional Sintético 02 | `staff02@example.test` |
+| `TPV-STAFF-03` | `STAFF` | Profesional Sintético 03 | `staff03@example.test` |
 
 En las seis filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `testRunId=TPVSANDBOX-DEV-20261120-01` y `metadata={}`. No añadir teléfono, NIF, dirección, `contactId`, `memberId` ni `resourceId`. El hook valida el contrato antes de aceptar la inserción.
 
