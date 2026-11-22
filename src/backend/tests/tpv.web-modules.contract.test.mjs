@@ -457,10 +457,10 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
     assert.match(repository, /_ensureCajaActualForSandbox/);
-    assert.match(repository, /TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED/);
+    assert.match(repository, /TPV_CASH_REGISTER_NOT_SEEDED/);
     assert.match(repository, /assertSandboxCajaWritable/);
     assert.match(repository, /export async function initializeSandboxCaja\(/);
-    assert.match(repository, /TPV_SANDBOX_CASH_REGISTER_NOT_PRESEEDED/);
+    assert.match(repository, /TPV_CASH_REGISTER_NOT_PRESEEDED/);
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
     assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
     assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
