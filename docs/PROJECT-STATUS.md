@@ -151,7 +151,7 @@ Este bloque prevalece sobre los snapshots y addenda TPV anteriores cuando exista
 
 ### Precondiciones sintéticas
 - Caja: `_id=SINGLE_ITEM_ID`, `singletonKey=CAJA_PRINCIPAL`, `cashRegisterStatus=CERRADA`, `snapshotSource=TPV_SANDBOX_INITIALIZED`, `traceId=TPVSANDBOX-DEV-20261120-01`, `sequenceCounters` objeto y `conceptOperations.tpvSandbox.sandboxRunId` coincidente.
-- Identidades: tres clientes y tres profesionales, IDs `SANDBOX-CUSTOMER-01..03` y `SANDBOX-STAFF-01..03`, `environment=SANDBOX`, `syntheticOnly=true`, `active=true`, `testRunId` igual al run ID y correos `@example.test`. No añadir PII ni referencias de CRM/Bookings/Members.
+- Identidades: tres clientes y tres profesionales, IDs nuevos `TPV-CUSTOMER-01..03` y `TPV-STAFF-01..03` (los históricos `SANDBOX-*` siguen admitidos en lectura), `environment=SANDBOX`, `syntheticOnly=true`, `active=true`, `testRunId` igual al run ID y correos `@example.test`. No añadir PII ni referencias de CRM/Bookings/Members.
 - Última lectura read-only documentada: `TpvSandboxIdentities=0` en ambos data planes. No se ha demostrado que la presemilla exista ni se ha ejecutado.
 
 ### Corrección adicional en revisión
@@ -328,12 +328,12 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - Wix Runtime/Editor no sincronizado ni probado.
 
 ### TPV — Bloque A, neutralización de contratos y ledger (22/11/2026)
-- PR #533 abierta en Draft: [fix(tpv): complete Bloque A and restore contract checks](https://github.com/nachoortegazgz/marianmadridz/pull/533). Rama `fix/tpv-block-a-completion`, HEAD `539f8ae6b66d028d2fae4334838af44846a5bcc6`. No fusionada ni desplegada.
+- PR #533 abierta en Draft: [fix(tpv): complete Bloque A and restore contract checks](https://github.com/nachoortegazgz/marianmadridz/pull/533). Rama `fix/tpv-block-a-completion`; revisión de neutralización aplicada sobre el código de la PR y documentada en esta rama. No fusionada ni desplegada.
 - Nombres de dominio neutralizados en el repositorio TPV: `TPV_COLLECTIONS`, `TPV_EVENT_MOVEMENT_TYPES`, `TPV_RUNTIME_POLICY`; locks consumen claves canónicas manteniendo sus valores persistidos históricos.
 - Contrato de origen sintético incorpora `sourceType`, `siteId`, `ledgerVersion` y `sessionId`, con compatibilidad de lectura para registros históricos Sandbox.
 - Identidades no presembradas y códigos de error de sesión/operación usan nomenclatura TPV neutral. Se añade contexto de operador autenticado sin sustituir autorización backend.
 - `MovimientosCaja` queda append-only también para registros TPV sintéticos: actualización y borrado denegados en política de acceso y hooks CMS. Rectificaciones mediante nuevos eventos trazables.
-- CI del HEAD de PR #533: Backend offline quality gates SUCCESS (run 45080970640): Layer 1 343/343, Layer 2 270/270, suite completa 726/726 (77 suites), contratos SDK y ESLint SUCCESS. Secret scanning SUCCESS (run 45080970601).
+- CI previo a la neutralización (commit `539f8ae6b66d028d2fae4334838af44846a5bcc6`): Backend offline quality gates SUCCESS (run 45080970640), Layer 1 343/343, Layer 2 270/270, suite 726/726 (77 suites), SDK contracts y ESLint SUCCESS; secret scanning SUCCESS (run 45080970601). En la revisión con IDs neutrales, secret scanning SUCCESS (run 45081966178); backend offline quality gates run 45081966188 pendiente al corte. No declarar la nueva revisión validada hasta que finalice SUCCESS.
 - **No verificado:** ejecución Wix Runtime/Preview, sincronización Editor, persistencia CMS real, aislamiento Sandbox/Online, concurrencia runtime, devoluciones/cierres E2E ni pruebas negativas en Published.
 - **Neutralización de IDs completada en código/fixtures:** nuevos IDs de identidad `TPV-CUSTOMER-*` / `TPV-STAFF-*`, venta/devolución `TPV-*`, tickets `TPV-X-*` / `TPV-Z-*`, movimientos `TPV_<sha256>`, trazas `TPV:<runId>:...`, actor `TPV_SYSTEM` y referencias `NO-GATEWAY` / `NO-FISCAL-*`. Se mantiene lectura compatible de IDs y trazas históricos `SANDBOX-*` / `TPVSANDBOX*`. No se han renombrado registros CMS. Los marcadores persistidos de entorno/origen (`environment`, `testRunId`, `recordSource`, `snapshotSource`, `SANDBOX_LOGICAL_*`, tipos de lock) se conservan deliberadamente porque son contratos de aislamiento, no IDs de entidades.
 - No se han modificado datos Wix/CMS, no se han ejecutado pagos ni reembolsos y no se ha desplegado. Release TPV permanece NO-GO hasta runtime y E2E.
