@@ -137,7 +137,7 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: IC.TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         metadata: {},
     };
     assert.equal(V.assertTpvSandboxIdentity(base), true);

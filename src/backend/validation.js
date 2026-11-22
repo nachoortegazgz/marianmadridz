@@ -28,7 +28,7 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
-    TPV_SANDBOX_RUNTIME_POLICY,
+    TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -398,7 +398,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
-        item.testRunId !== TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID) {
+        item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
     }
     if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {

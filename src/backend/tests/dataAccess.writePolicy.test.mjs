@@ -16,8 +16,8 @@ import {
     CONTROL_TYPE as T,
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
-    TPV_SANDBOX_RUNTIME_POLICY,
-    TPV_SANDBOX_COLLECTIONS,
+    TPV_RUNTIME_POLICY,
+    TPV_COLLECTIONS,
     BOOKING_TYPE,
     CITAS_BOOKING_STATUS,
     CITAS_PAYMENT_STATUS,
@@ -177,7 +177,7 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         metadata: {},
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
@@ -198,14 +198,14 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
 test("MovimientosCaja accepts edits only for the exact active synthetic TPV test run", () => {
     const item = {
         _id: "TPVSANDBOX_TEST_ROW",
-        recordSource: "TPV_SANDBOX_SYNTHETIC",
+        recordSource: "TPV_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-1",
+        traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
-            sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
-            logicalCollection: TPV_SANDBOX_COLLECTIONS.PAGOS,
+            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,

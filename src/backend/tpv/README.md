@@ -12,10 +12,10 @@ Este directorio implementa el TPV en modo SANDBOX persistente y sintético para 
 
 ## Límites de seguridad
 
-- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_SANDBOX_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
-- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_SANDBOX_SYNTHETIC`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash SANDBOX y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
+- Los eventos TPV sintéticos se persisten como filas marcadas en `MovimientosCaja`; `CajaActual` conserva la proyección de la sesión Sandbox. `TPV_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
+- `MovimientosCaja` conserva su contrato de ledger: las filas sintéticas se distinguen por `recordSource=TPV_SANDBOX_SYNTHETIC (valor persistido histórico; pendiente neutralización del dato)`, `movementType=SIMULATED_TPV_*`, `testRunId`, hash SANDBOX y secuencia fiscal cero. Los ledgers fiscal/contable y `HistoricoCierresZ` no reciben escrituras TPV.
 - La idempotencia se aplica mediante índice CMS único `idempotencyKey`, lectura fuerte previa y reconciliación del resultado de inserción concurrente.
-- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_SANDBOX_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_SANDBOX_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
+- Los reembolsos sintéticos se serializan por venta mediante compare-and-swap en `ControlOperativo`, tipo `TPV_REFUND_LOCK`. Ventas, devoluciones, movimientos, arqueos y cierres comparten además `TPV_SESSION_LOCK` para evitar carreras con Ticket Z. Los locks no son ledgers ni almacenan importes.
 - Clientes y profesionales se consultan exclusivamente en `TpvSandboxIdentities`; no se consultan CRM, Members, Bookings Staff, reservas ni saldos de Gift Cards. No se llama a Wix Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` solo se actualiza como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
 - Ticket Z cierra solo la sesión SANDBOX y nunca cierra el periodo fiscal u operativo.

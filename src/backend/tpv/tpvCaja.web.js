@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendSandboxAudit, initializeSandboxCaja, seedSandboxIdentities, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
@@ -13,7 +13,7 @@ function errorResult(code) {
 
 function madridDayKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
     }).formatToParts(date);
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
@@ -47,7 +47,7 @@ export const inicializarCaja = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_SANDBOX_BOOTSTRAP_FAILED") },
+                error: { code: String(error?.message || "TPV_BOOTSTRAP_FAILED") },
                 traceId,
                 persisted: false,
                 isSynthetic: true,
@@ -79,7 +79,7 @@ export const obtenerEstadoCaja = webMethod(
                 otherAmount: fromMinorUnits(summary.otherMinor),
                 totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
-                environment: TPV_SANDBOX_RUNTIME_POLICY.ENVIRONMENT,
+                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 isSynthetic: true,
             },
             error: null,
@@ -102,11 +102,11 @@ export const abrirSesionCaja = webMethod(
             return await withSandboxSessionLock(sessionId, traceId, async () => {
                 const idempotencyKey = "SANDBOX_SESSION_OPEN:" + dayKey;
                 const current = await latestOpenSandboxSession();
-                if (current && current.sessionId !== sessionId) return errorResult("TPV_SANDBOX_PREVIOUS_SESSION_NOT_CLOSED");
-                const alreadyClosed = await querySandboxRecords(TPV_SANDBOX_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
-                if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_SANDBOX_SESSION_ALREADY_CLOSED_TODAY");
+                if (current && current.sessionId !== sessionId) return errorResult("TPV_PREVIOUS_SESSION_NOT_CLOSED");
+                const alreadyClosed = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
+                if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_SESSION_ALREADY_CLOSED_TODAY");
                 const { item, replayed } = await insertSandboxEvent(
-                    TPV_SANDBOX_COLLECTIONS.SESIONES_CAJA,
+                    TPV_COLLECTIONS.SESIONES_CAJA,
                     idempotencyKey,
                     {
                         sessionId,
@@ -114,7 +114,7 @@ export const abrirSesionCaja = webMethod(
                         openedAt: new Date(),
                         openingCashMinor,
                         expectedCashMinor: openingCashMinor,
-                        cashierMemberId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                        cashierMemberId: TPV_RUNTIME_POLICY.ACTOR_ID,
                         payload: makeSyntheticPayload({
                             dayKey,
                             openingReason: String(input.reason || "Apertura de SANDBOX").slice(0, 200),
@@ -124,13 +124,13 @@ export const abrirSesionCaja = webMethod(
                     }
                 );
                 persisted = true;
-                await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
+                await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                     action: "APERTURA_CAJA_SANDBOX",
-                    actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
                     occurredAt: new Date(),
-                    source: "TPV_SANDBOX_WEB_METHOD",
+                    source: "TPV_WEB_METHOD",
                     payload: makeSyntheticPayload({ traceId, replayed }),
                 });
                 return {
@@ -150,7 +150,7 @@ export const abrirSesionCaja = webMethod(
             });
 
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_SANDBOX_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );
@@ -164,12 +164,12 @@ export const registrarArqueoParcial = webMethod(
 
         try {
             const session = await latestOpenSandboxSession();
-            if (!session) return errorResult("TPV_SANDBOX_SESSION_NOT_OPEN");
+            if (!session) return errorResult("TPV_SESSION_NOT_OPEN");
 
             return await withSandboxSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenSandboxSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_SANDBOX_SESSION_CLOSED");
+                    throw new Error("TPV_SESSION_CLOSED");
                 }
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const summary = await buildSandboxSessionSummary(session);
@@ -177,11 +177,11 @@ export const registrarArqueoParcial = webMethod(
             const differenceMinor = countedMinor - expectedMinor;
             const reason = differenceMinor === 0 ? "" : String(input.reason || "").trim();
             if (differenceMinor !== 0 && reason.length < 3) {
-                throw new Error("TPV_SANDBOX_COUNT_DIFFERENCE_REASON_REQUIRED");
+                throw new Error("TPV_COUNT_DIFFERENCE_REASON_REQUIRED");
             }
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const { item, replayed } = await insertSandboxEvent(
-                TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA,
+                TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
                 key,
                 {
                     sessionId: session.sessionId,
@@ -195,7 +195,7 @@ export const registrarArqueoParcial = webMethod(
                         expectedCashMinor: expectedMinor,
                         countedCashMinor: countedMinor,
                         differenceMinor,
-                        actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                        actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
                         traceId,
                     }),
                 }
@@ -204,7 +204,7 @@ export const registrarArqueoParcial = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL_SANDBOX",
-                actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
                 traceId,
@@ -218,7 +218,7 @@ export const registrarArqueoParcial = webMethod(
             };
             });
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_SANDBOX_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
         }
     }
 );

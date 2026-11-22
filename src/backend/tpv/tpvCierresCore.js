@@ -1,4 +1,4 @@
-import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import {
     getCommittedSandboxSales,
     getSandboxCashMovements,
@@ -8,18 +8,18 @@ import {
 } from "backend/tpv/tpvSandboxRepository";
 
 export async function buildSandboxSessionSummary(session) {
-    if (!session?.sessionId) throw new Error("TPV_SANDBOX_SESSION_REQUIRED");
+    if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
     const [sales, payments, refunds, movements, lines] = await Promise.all([
         getCommittedSandboxSales(session.sessionId),
         getSandboxPayments(session.sessionId),
         getSandboxRefunds(session.sessionId),
         getSandboxCashMovements(session.sessionId),
-        querySandboxRecords(TPV_SANDBOX_COLLECTIONS.VENTA_LINEAS, undefined),
+        querySandboxRecords(TPV_COLLECTIONS.VENTA_LINEAS, undefined),
     ]);
 
     const totals = {
         sessionId: session.sessionId,
-        currency: TPV_SANDBOX_RUNTIME_POLICY.CURRENCY_CODE,
+        currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
         ticketCount: sales.length,
         refundCount: refunds.length,
         grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
@@ -45,7 +45,7 @@ export async function buildSandboxSessionSummary(session) {
         case "TARJETA": totals.cardMinor += amount; break;
         case "BIZUM": totals.bizumMinor += amount; break;
         case "OTROS": totals.otherMinor += amount; break;
-        default: throw new Error("TPV_SANDBOX_PAYMENT_METHOD_CORRUPTED");
+        default: throw new Error("TPV_PAYMENT_METHOD_CORRUPTED");
         }
     }
 

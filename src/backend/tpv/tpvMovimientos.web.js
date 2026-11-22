@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_SANDBOX_COLLECTIONS, TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -22,21 +22,21 @@ export const registrarMovimientoCaja = webMethod(
 
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
-            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_SANDBOX_CASH_MOVEMENT_TYPE_INVALID");
+            if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
             const session = await latestOpenSandboxSession();
-            if (!session) throw new Error("TPV_SANDBOX_SESSION_NOT_OPEN");
+            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
 
             return await withSandboxSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenSandboxSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_SANDBOX_SESSION_CLOSED");
+                    throw new Error("TPV_SESSION_CLOSED");
                 }
             const amountMinor = toMinorUnits(input.amount, "CASH_MOVEMENT");
-            if (amountMinor <= 0) throw new Error("TPV_SANDBOX_CASH_MOVEMENT_AMOUNT_INVALID");
+            if (amountMinor <= 0) throw new Error("TPV_CASH_MOVEMENT_AMOUNT_INVALID");
             const reason = String(input.reason || "").trim();
-            if (reason.length < 3 || reason.length > 500) throw new Error("TPV_SANDBOX_REASON_REQUIRED");
+            if (reason.length < 3 || reason.length > 500) throw new Error("TPV_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const { item, replayed } = await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
+            const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,
                 amountMinor,
@@ -45,26 +45,26 @@ export const registrarMovimientoCaja = webMethod(
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
-                    actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
-                    authorizedBy: movementType === "ENTRADA" ? null : TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                    authorizedBy: movementType === "ENTRADA" ? null : TPV_RUNTIME_POLICY.ACTOR_ID,
                     affectsPhysicalCash: true,
                     traceId,
                 },
             });
             persisted = true;
-            await insertSandboxEvent(TPV_SANDBOX_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
+            await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
-                actorId: TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID,
+                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
                 occurredAt: new Date(),
-                source: "TPV_SANDBOX_WEB_METHOD",
+                source: "TPV_WEB_METHOD",
                 payload: { amountMinor, reason, traceId },
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
         }
     }
 );
@@ -134,7 +134,7 @@ export const obtenerMovimientosCaja = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_SANDBOX_CASH_MOVEMENTS_READ_FAILED") },
+                error: { code: String(error?.message || "TPV_CASH_MOVEMENTS_READ_FAILED") },
                 traceId,
             };
         }

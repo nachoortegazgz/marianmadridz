@@ -17,8 +17,8 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
-    TPV_SANDBOX_RUNTIME_POLICY,
-    TPV_SANDBOX_EVENT_MOVEMENT_TYPES,
+    TPV_RUNTIME_POLICY,
+    TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -490,11 +490,11 @@ function _isPlainRecord(value) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPVSANDBOX:" + TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    const expectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
     return value?.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_SANDBOX_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
-        value?.payloadFiscal?.sandboxRunId === TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID &&
+        TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
+        value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID &&
         value?.payloadFiscal?.isSynthetic === true &&
         value?.payloadFiscal?.realPayment === false &&
         value?.payloadFiscal?.externalSideEffects === false &&
@@ -531,7 +531,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
         envelope?.isSynthetic !== true ||
         envelope?.realPayment !== false ||
         envelope?.externalSideEffects !== false ||
-        item.movementType !== TPV_SANDBOX_EVENT_MOVEMENT_TYPES[logicalCollection] ||
+        item.movementType !== TPV_EVENT_MOVEMENT_TYPES[logicalCollection] ||
         !_isPlainRecord(envelope?.sandboxRecord)
     ) {
         _fiscalError("Payload lógico TPV SANDBOX no editable o incoherente.");
@@ -548,7 +548,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
     const timestamp = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
     if (Number.isNaN(timestamp.getTime())) _fiscalError("Fecha sintética TPV inválida.");
     const dateYmd = timestamp.toLocaleDateString("en-CA", {
-        timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE,
+        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
     });
 
     item.recordTimestamp = timestamp;
@@ -561,14 +561,14 @@ export async function MovimientosCaja_beforeUpdate(item) {
     item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
     item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
     item.operationDescription = "SIMULATED TPV SANDBOX " + logicalCollection;
-    item.staffResourceId = String(record.staffResourceId || TPV_SANDBOX_RUNTIME_POLICY.ACTOR_ID);
+    item.staffResourceId = String(record.staffResourceId || TPV_RUNTIME_POLICY.ACTOR_ID);
     item.lineItems = { sandboxRecord: record.lineItems || [] };
     item.desgloseDetallado = {
         accountCode: "SIMULATED",
-        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
     };
     const hashPayload = stableSerialize({
-        sandboxRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         logicalCollection,
         transactionId: item.transactionId,
         traceId: item.traceId,

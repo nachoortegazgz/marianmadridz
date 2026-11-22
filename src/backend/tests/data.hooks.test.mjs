@@ -703,7 +703,7 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
 });
 
 test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV test-run row', async () => {
-  const runId = IC.TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
+  const runId = IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
   const row = {
     _id: 'TPVSANDBOX_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),
@@ -711,11 +711,11 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
     transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
     traceId: 'TPVSANDBOX:' + runId + ':SANDBOX-SESSION-TEST',
     movementType: 'SIMULATED_TPV_PAYMENT',
-    recordSource: 'TPV_SANDBOX_SYNTHETIC',
+    recordSource: 'TPV_SYNTHETIC',
     payloadFiscal: {
       sandboxRunId: runId,
       requestFingerprint: 'f'.repeat(64),
-      logicalCollection: IC.TPV_SANDBOX_COLLECTIONS.PAGOS,
+      logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
       idempotencyKey: 'SANDBOX-PAYMENT-1',
       sandboxRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
       isSynthetic: true,

@@ -32,7 +32,7 @@ const ALLOWED_SANDBOX_COLLECTIONS = new Set(Object.values(TPV_SANDBOX_COLLECTION
 const REFUND_LOCK_TTL_MS = 300000;
 
 async function withCajaActualProjectionLock(traceId, operation) {
-    const lock = await acquireFiscalLedgerLock(traceId || "TPV_SANDBOX_CAJA_PROJECTION");
+    const lock = await acquireFiscalLedgerLock(traceId || "TPV_CAJA_PROJECTION");
     let operationFailed = false;
     try {
         await assertFiscalLedgerLock(lock);
@@ -43,13 +43,13 @@ async function withCajaActualProjectionLock(traceId, operation) {
     } finally {
         const released = await releaseFiscalLedgerLock(lock);
         if (!released?.released) {
-            logger.error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED", {
+            logger.error("TPV_CASH_REGISTER_LOCK_RELEASE_FAILED", {
                 traceId,
                 reason: released?.reason || "UNKNOWN",
                 operationFailed,
             });
             if (!operationFailed) {
-                throw new Error("TPV_SANDBOX_CASH_REGISTER_LOCK_RELEASE_FAILED");
+                throw new Error("TPV_CASH_REGISTER_LOCK_RELEASE_FAILED");
             }
         }
     }
@@ -205,7 +205,7 @@ export async function withSandboxSaleLock(saleId, traceId, operation, sessionId 
         scopeId: saleId,
         traceId,
         operation,
-        errorPrefix: "TPV_SANDBOX_REFUND",
+        errorPrefix: "TPV_REFUND",
     });
     return sessionId
         ? withSandboxSessionLock(sessionId, traceId, executeSaleLock)
@@ -224,7 +224,7 @@ export async function withSandboxSessionLock(sessionId, traceId, operation) {
         scopeId: sessionId,
         traceId,
         operation,
-        errorPrefix: "TPV_SANDBOX_SESSION",
+        errorPrefix: "TPV_SESSION",
     });
 }
 
@@ -244,14 +244,14 @@ function stripVolatile(value) {
     return result;
 }
 
-const SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
+const SANDBOX_LEDGER_SOURCE = "TPV_SYNTHETIC";
 const SANDBOX_GENESIS_HASH = "0".repeat(64);
 
 const SANDBOX_RUN_ID = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
 const MAX_SANDBOX_PROJECTION_EVENTS = 1000;
 
 function _assertLogicalCollection(collection) {
-    if (!ALLOWED_SANDBOX_COLLECTIONS.has(collection)) throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
+    if (!ALLOWED_SANDBOX_COLLECTIONS.has(collection)) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
 }
 
 function _fingerprintOf(record) {
@@ -326,7 +326,7 @@ export async function seedSandboxIdentities() {
 export async function initializeSandboxCaja() {
 
     const existing = await _getCajaActual();
-    if (!existing) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_PRESEEDED");
+    if (!existing) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
     assertSandboxCajaWritable(existing, { allowBootstrap: true });
     return { item: existing, created: false };
 }
@@ -338,13 +338,13 @@ async function _getCajaActual() {
         limit: 2,
         consistency: CONSISTENCY.STRONG,
     });
-    if (result.items.length > 1) throw new Error("TPV_SANDBOX_CASH_REGISTER_SINGLETON_DUPLICATE");
+    if (result.items.length > 1) throw new Error("TPV_CASH_REGISTER_SINGLETON_DUPLICATE");
     return result.items[0] || null;
 }
 
 async function _ensureCajaActualForSandbox() {
     const caja = await _getCajaActual();
-    if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_SEEDED");
+    if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_SEEDED");
     assertSandboxCajaWritable(caja, { allowBootstrap: true });
     return caja;
 }
@@ -352,7 +352,7 @@ async function _ensureCajaActualForSandbox() {
 function _sessionFromCaja(caja) {
     if (!caja || caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) return null;
     const sessionId = String(caja.conceptOperations?.tpvSandbox?.sessionId || "").trim();
-    if (!sessionId) throw new Error("TPV_SANDBOX_SESSION_ID_MISSING");
+    if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
     const closedAt = caja.closedAt ? (caja.closedAt instanceof Date ? caja.closedAt : new Date(caja.closedAt)) : null;
     return {
@@ -379,12 +379,12 @@ function _sessionFromCaja(caja) {
 
 async function _writeCajaProjection(collection, record, eventId) {
     return withCajaActualProjectionLock(
-        String(record?.traceId || eventId || "TPV_SANDBOX_CAJA_PROJECTION"),
+        String(record?.traceId || eventId || "TPV_CAJA_PROJECTION"),
         async (lock) => {
             const caja = await _getCajaActual();
-            if (!caja) throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_FOUND");
+            if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             if (caja.snapshotSource !== SANDBOX_LEDGER_SOURCE || caja.traceId !== SANDBOX_RUN_ID) {
-                throw new Error("TPV_SANDBOX_CASH_REGISTER_NOT_IN_TEST_MODE");
+                throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
             }
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
@@ -395,7 +395,7 @@ async function _writeCajaProjection(collection, record, eventId) {
             const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
             if (eventId && appliedIds.length >= MAX_SANDBOX_PROJECTION_EVENTS) {
-                throw new Error("TPV_SANDBOX_PROJECTION_IDEMPOTENCY_LIMIT");
+                throw new Error("TPV_PROJECTION_IDEMPOTENCY_LIMIT");
             }
             const now = new Date();
             const next = { ...caja, _updatedDate: now };
@@ -437,7 +437,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
                 next.difference = Number(record.totals?.differenceMinor || 0) / 100;
                 next.differenceReason = String(record.totals?.differenceReason || "");
-                next.lastOperationType = "TPV_SANDBOX_SESSION_CLOSE";
+                next.lastOperationType = "TPV_SESSION_CLOSE";
             } else {
                 next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
             }
@@ -486,7 +486,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         snapshotSource: SANDBOX_LEDGER_SOURCE,
         traceId: SANDBOX_RUN_ID,
         lastOperationId: "TPVSANDBOX_SESSION_OPEN:" + record.sessionId,
-        lastOperationType: "TPV_SANDBOX_SESSION_OPEN",
+        lastOperationType: "TPV_SESSION_OPEN",
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
         lastOperationAt: openedAt,
@@ -507,7 +507,7 @@ async function findByIdempotencyKey(collection, key) {
         return session && session.sessionId ? session : null;
     }
     const movementType = TPV_SANDBOX_EVENT_MOVEMENT_TYPES[collection];
-    if (!movementType) throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
+    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const transactionIds = [
         _testTransactionId(collection, key),
         makeLegacySandboxTransactionId(key),
@@ -524,7 +524,7 @@ async function findByIdempotencyKey(collection, key) {
             limit: 2,
             consistency: CONSISTENCY.STRONG,
         });
-        if (result.items.length > 1) throw new Error("TPV_SANDBOX_IDEMPOTENCY_INDEX_VIOLATION");
+        if (result.items.length > 1) throw new Error("TPV_IDEMPOTENCY_INDEX_VIOLATION");
         if (result.items[0]) return _virtualRecord(result.items[0]);
     }
     return null;
@@ -534,16 +534,16 @@ function assertSameRequest(existing, fingerprint) {
     const existingFingerprint = existing?.payloadFiscal?.requestFingerprint ||
         existing?.payload?.requestFingerprint ||
         existing?.conceptOperations?.tpvSandbox?.requestFingerprint;
-    if (existingFingerprint !== fingerprint) throw new Error("TPV_SANDBOX_IDEMPOTENCY_CONFLICT");
+    if (existingFingerprint !== fingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
     return { item: existing, replayed: true };
 }
 
 function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
     const movementType = TPV_SANDBOX_EVENT_MOVEMENT_TYPES[collection];
-    if (!movementType) throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
+    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
     const timestamp = now instanceof Date ? now : new Date(now);
-    if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_SANDBOX_RECORD_TIMESTAMP_INVALID");
+    if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_RECORD_TIMESTAMP_INVALID");
     const dateYmd = timestamp.toLocaleDateString("en-CA", { timeZone: TPV_SANDBOX_RUNTIME_POLICY.TIME_ZONE });
     const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
@@ -574,7 +574,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash: SANDBOX_GENESIS_HASH,
         recordTimestamp: timestamp,
-        schemaVersion: "TPV_SANDBOX_SYNTHETIC_V1",
+        schemaVersion: "TPV_SYNTHETIC_V1",
         traceId,
         movementType,
         totalAmount: amount,
@@ -634,7 +634,7 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
                 if (caja.snapshotSource === SANDBOX_LEDGER_SOURCE && !caja.closedAt) {
-                    throw new Error("TPV_SANDBOX_PREVIOUS_SESSION_NOT_CLOSED");
+                    throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 }
                 const updated = _sessionCajaPatch(caja, record, fingerprint);
                 await assertFiscalLedgerLock(lock);
@@ -690,7 +690,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
         return sessions.filter((item) => _matchesFilter(item, filter));
     }
     const movementType = TPV_SANDBOX_EVENT_MOVEMENT_TYPES[collection];
-    if (!movementType) throw new Error("TPV_SANDBOX_COLLECTION_NOT_ALLOWED");
+    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
@@ -714,7 +714,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
             item.payloadFiscal?.sandboxRunId === SANDBOX_RUN_ID && _matchesFilter(item, filter)
         ));
     }
-    if (page.hasNext) throw new Error("TPV_SANDBOX_QUERY_LIMIT_EXCEEDED");
+    if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     if (Array.isArray(options.sort) && options.sort.length) {
         const [field, direction = "ASC"] = String(options.sort[0]).split(/\s+/);
         records.sort((a, b) => {
@@ -731,7 +731,7 @@ export async function querySandboxLedgerRecords(options = {}) {
 
     const limit = Number(options.limit ?? 100);
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
-        throw new Error("TPV_SANDBOX_LEDGER_INVALID_LIMIT");
+        throw new Error("TPV_LEDGER_INVALID_LIMIT");
     }
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
@@ -764,7 +764,7 @@ export async function appendSandboxAudit({
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
             occurredAt: new Date(),
-            source: "TPV_SANDBOX_WEB_METHOD",
+            source: "TPV_WEB_METHOD",
             payload: { ...payload, traceId: String(traceId || "") },
         }
     );

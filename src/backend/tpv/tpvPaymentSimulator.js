@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TPV_SANDBOX_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { normalizeClientIdempotencyKey, stableSerialize, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const PAYMENT_SCENARIOS = Object.freeze(["APPROVED", "DECLINED", "REQUIRES_ACTION", "PENDING"]);
@@ -17,10 +17,10 @@ function baseEnvelope(operation, requestFingerprint) {
     return {
         provider: "WIX_PAYMENTS_SIMULATOR",
         operation,
-        currency: TPV_SANDBOX_RUNTIME_POLICY.CURRENCY_CODE,
+        currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
         environment: "SIMULATOR",
         dataPlane: "NO_CMS_ACCESS",
-        testRunId: TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
         requestFingerprint,
         providerCalled: false,
         realPayment: false,
@@ -34,7 +34,7 @@ function baseEnvelope(operation, requestFingerprint) {
 export function simulateGatewayPayment(input = {}) {
 
     const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
-    const currency = String(input.currency || TPV_SANDBOX_RUNTIME_POLICY.CURRENCY_CODE).toUpperCase();
+    const currency = String(input.currency || TPV_RUNTIME_POLICY.CURRENCY_CODE).toUpperCase();
     if (currency !== "EUR") throw new Error("TPV_PAYMENT_SIMULATOR_CURRENCY_UNSUPPORTED");
     const amountMinor = toMinorUnits(input.amount, "PAYMENT_AMOUNT");
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) throw new Error("TPV_PAYMENT_SIMULATOR_AMOUNT_INVALID");
