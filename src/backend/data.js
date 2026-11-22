@@ -517,98 +517,12 @@ function _isCurrentSyntheticTpvRow(value) {
         String(value?.traceId || "").startsWith(expectedPrefix);
 }
 
-export async function MovimientosCaja_beforeUpdate(item) {
-    const previous = item?._id
-        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, item._id, CONSISTENCY.STRONG)
-        : null;
-    if (!_isCurrentSyntheticTpvRow(item) || !_isCurrentSyntheticTpvRow(previous)) {
-        _fiscalError("Modificacion de MovimientosCaja prohibida: solo se admite editar un registro TPV SANDBOX del test-run activo.");
-    }
-
-    const immutableFields = [
-        "_id", "recordSource", "movementType", "traceId", "transactionId",
-        "sequenceNumber", "previousRecordHash", "schemaVersion",
-        "numSerieFactura", "tipoFactura",
-    ];
-    if (immutableFields.some((field) => item[field] !== previous[field])) {
-        _fiscalError("Identidad del registro TPV SANDBOX inmutable.");
-    }
-
-    const envelope = item.payloadFiscal;
-    const previousEnvelope = previous.payloadFiscal;
-    const logicalCollection = envelope?.logicalCollection;
-    if (
-        logicalCollection !== previousEnvelope?.logicalCollection ||
-        envelope?.sandboxRunId !== previousEnvelope?.sandboxRunId ||
-        envelope?.sourceType !== previousEnvelope?.sourceType ||
-        envelope?.siteId !== previousEnvelope?.siteId ||
-        envelope?.ledgerVersion !== previousEnvelope?.ledgerVersion ||
-        envelope?.sessionId !== previousEnvelope?.sessionId ||
-        envelope?.idempotencyKey !== previousEnvelope?.idempotencyKey ||
-        envelope?.isSynthetic !== true ||
-        envelope?.realPayment !== false ||
-        envelope?.externalSideEffects !== false ||
-        item.movementType !== TPV_EVENT_MOVEMENT_TYPES[logicalCollection] ||
-        !_isPlainRecord(envelope?.sandboxRecord)
-    ) {
-        _fiscalError("Payload lógico TPV SANDBOX no editable o incoherente.");
-    }
-
-    const record = envelope.sandboxRecord;
-    const rawAmountMinor = Number(
-        record.totalMinor || record.amountMinor || record.paidMinor || record.countedCashMinor || 0
-    );
-    if (!Number.isSafeInteger(rawAmountMinor)) {
-        _fiscalError("Importe sintético TPV inválido.");
-    }
-    const timestampValue = record.createdAt || record.generatedAt || record.occurredAt || new Date();
-    const timestamp = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
-    if (Number.isNaN(timestamp.getTime())) _fiscalError("Fecha sintética TPV inválida.");
-    const dateYmd = timestamp.toLocaleDateString("en-CA", {
-        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-    });
-
-    item.recordTimestamp = timestamp;
-    item.fechaExpedicionFactura = dateYmd;
-    item.fiscalPeriod = dateYmd.slice(0, 7);
-    item.totalAmount = rawAmountMinor / 100;
-    item.amount = rawAmountMinor / 100;
-    item.taxBase = Number(record.taxBaseMinor || 0) / 100;
-    item.taxAmount = Number(record.taxMinor || record.taxAmountMinor || 0) / 100;
-    item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
-    item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
-    item.operationDescription = "SIMULATED TPV SANDBOX " + logicalCollection;
-    item.staffResourceId = String(record.profesionalId || record.professionalId || record.operatorResourceId || record.staffResourceId || item.staffResourceId || "").trim();
-    item.lineItems = { sandboxRecord: record.lineItems || [] };
-    item.desgloseDetallado = {
-        accountCode: "SIMULATED",
-        sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
-    };
-    const hashPayload = stableSerialize({
-        sourceType: envelope.sourceType,
-        siteId: envelope.siteId,
-        ledgerVersion: envelope.ledgerVersion,
-        sessionId: envelope.sessionId,
-        sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
-        logicalCollection,
-        transactionId: item.transactionId,
-        traceId: item.traceId,
-        record,
-    });
-    item.hash = createHash("sha256").update(hashPayload).digest("hex");
-    item.payloadFiscal = {
-        ...envelope,
-        requestFingerprint: stableSerialize(record),
-    };
-    return item;
+export async function MovimientosCaja_beforeUpdate() {
+    _fiscalError("Modificacion de MovimientosCaja prohibida (append-only). Registre un nuevo evento rectificativo trazable.");
 }
 
-export async function MovimientosCaja_beforeRemove(itemId) {
-    const previous = itemId
-        ? await getItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, itemId, CONSISTENCY.STRONG)
-        : null;
-    if (_isCurrentSyntheticTpvRow(previous)) return itemId;
-    _fiscalError("Borrado de MovimientosCaja prohibido salvo filas TPV SANDBOX sintéticas del test-run activo.");
+export async function MovimientosCaja_beforeRemove() {
+    _fiscalError("Borrado de MovimientosCaja prohibido: ledger append-only.");
 }
 
 export function LibroAsientosContablesDetalle_beforeInsert(item) {
