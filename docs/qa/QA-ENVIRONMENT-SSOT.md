@@ -261,3 +261,5 @@ Main HEAD 7461dd5998c87379680128117194b0cb40dc6c79.
 - Bookings permanece onlineBooking.enabled=false en 94 servicios; snapshot reversible y restauración condicionada por revision.
 - Siete automatizaciones preinstaladas siguen ACTIVE por bloqueo nativo Wix; la automatización laboral de aplicación está INACTIVE.
 - #416 sigue sin escrituras correctivas.
+### HEAD definitivo — 2026-11-22
+main HEAD 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only). Código funcional P0 en 7461dd5998c87379680128117194b0cb40dc6c79. CI post-merge en el HEAD actual: backend offline SUCCESS 45021632161 y secret scanning SUCCESS 45021632072. No afirmar sincronización o ejecución Runtime.
