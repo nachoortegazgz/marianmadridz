@@ -326,3 +326,14 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - Último commit funcional: 7461dd5998c87379680128117194b0cb40dc6c79 (corrección P0 PR #528).
 - CI post-merge del HEAD 544f3a5: backend offline quality gates SUCCESS (45021632161), secret scanning SUCCESS (45021632072).
 - Wix Runtime/Editor no sincronizado ni probado.
+
+### TPV — Bloque A, neutralización de contratos y ledger (22/11/2026)
+- PR #533 abierta en Draft: [fix(tpv): complete Bloque A and restore contract checks](https://github.com/nachoortegazgz/marianmadridz/pull/533). Rama `fix/tpv-block-a-completion`, HEAD `539f8ae6b66d028d2fae4334838af44846a5bcc6`. No fusionada ni desplegada.
+- Nombres de dominio neutralizados en el repositorio TPV: `TPV_COLLECTIONS`, `TPV_EVENT_MOVEMENT_TYPES`, `TPV_RUNTIME_POLICY`; locks consumen claves canónicas manteniendo sus valores persistidos históricos.
+- Contrato de origen sintético incorpora `sourceType`, `siteId`, `ledgerVersion` y `sessionId`, con compatibilidad de lectura para registros históricos Sandbox.
+- Identidades no presembradas y códigos de error de sesión/operación usan nomenclatura TPV neutral. Se añade contexto de operador autenticado sin sustituir autorización backend.
+- `MovimientosCaja` queda append-only también para registros TPV sintéticos: actualización y borrado denegados en política de acceso y hooks CMS. Rectificaciones mediante nuevos eventos trazables.
+- CI del HEAD de PR #533: Backend offline quality gates SUCCESS (run 45080970640): Layer 1 343/343, Layer 2 270/270, suite completa 726/726 (77 suites), contratos SDK y ESLint SUCCESS. Secret scanning SUCCESS (run 45080970601).
+- **No verificado:** ejecución Wix Runtime/Preview, sincronización Editor, persistencia CMS real, aislamiento Sandbox/Online, concurrencia runtime, devoluciones/cierres E2E ni pruebas negativas en Published.
+- **Pendiente del Bloque A:** terminar neutralización de identificadores generados (actualmente persisten prefijos `SANDBOX-` en IDs sintéticos y `SANDBOX-X/Z`), revisar contrato de idempotencia frontend→backend y migración de marcadores/lectura histórica. No renombrar identificadores ya persistidos sin estrategia de compatibilidad.
+- No se han modificado datos Wix/CMS, no se han ejecutado pagos ni reembolsos y no se ha desplegado. Release TPV permanece NO-GO hasta runtime y E2E.
