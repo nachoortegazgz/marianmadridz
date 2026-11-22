@@ -324,3 +324,8 @@ Pedidos Wix: #10033 FULLY_REFUNDED por 18,15 EUR (refund SUCCEEDED) y #10032 PAI
 PR #528 integrada en main (7461dd5998c87379680128117194b0cb40dc6c79). CI post-merge backend offline y secret scanning SUCCESS. La prueba offline concurrente y los contratos de lock han pasado. El issue permanece abierto hasta verificar el código sincronizado en Wix Editor y concurrencia en Runtime Sandbox.
 ### Baseline Git definitivo — 2026-11-22
 main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only PR #529). Último commit funcional: 7461dd5998c87379680128117194b0cb40dc6c79 (PR #528). CI post-merge en ambos: backend offline y secret scanning SUCCESS. Runtime Wix sigue pendiente.
+
+### TPV — Bloque A (22/11/2026)
+PR #533 contiene la primera entrega controlada de neutralización del dominio TPV y endurecimiento append-only de `MovimientosCaja`. CI completo del commit `539f8ae6b66d028d2fae4334838af44846a5bcc6`: Layer 1 343/343, Layer 2 270/270, suite 726/726 (77 suites), SDK contracts, ESLint y secret scanning SUCCESS. PR sigue Draft y no está fusionada.
+
+No declarar Bloque A cerrado: quedan prefijos de IDs sintéticos heredados (`SANDBOX-*`), revisión integral de claves idempotentes frontend/backend y migración/lectura compatible de marcadores. Requiere pruebas Preview/Runtime y aislamiento antes de autorizar persistencia. No publicar ni activar pagos nativos.
