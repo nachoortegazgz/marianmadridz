@@ -58,7 +58,7 @@ export const registrarMovimientoCaja = webMethod(
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
                 occurredAt: new Date(),
-                source: "TPV_WEB_METHOD",
+                source: "TPV_SANDBOX_WEB_METHOD",
                 payload: { amountMinor, reason, traceId },
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };

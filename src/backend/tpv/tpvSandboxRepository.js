@@ -244,7 +244,7 @@ function stripVolatile(value) {
     return result;
 }
 
-const SANDBOX_LEDGER_SOURCE = "TPV_SYNTHETIC";
+const SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
 const SANDBOX_GENESIS_HASH = "0".repeat(64);
 
 const SANDBOX_RUN_ID = TPV_SANDBOX_RUNTIME_POLICY.SANDBOX_RUN_ID;
@@ -437,7 +437,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
                 next.difference = Number(record.totals?.differenceMinor || 0) / 100;
                 next.differenceReason = String(record.totals?.differenceReason || "");
-                next.lastOperationType = "TPV_SESSION_CLOSE";
+                next.lastOperationType = "TPV_SANDBOX_SESSION_CLOSE";
             } else {
                 next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
             }
@@ -486,7 +486,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         snapshotSource: SANDBOX_LEDGER_SOURCE,
         traceId: SANDBOX_RUN_ID,
         lastOperationId: "TPVSANDBOX_SESSION_OPEN:" + record.sessionId,
-        lastOperationType: "TPV_SESSION_OPEN",
+        lastOperationType: "TPV_SANDBOX_SESSION_OPEN",
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
         lastOperationAt: openedAt,
@@ -574,7 +574,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash: SANDBOX_GENESIS_HASH,
         recordTimestamp: timestamp,
-        schemaVersion: "TPV_SYNTHETIC_V1",
+        schemaVersion: "TPV_SANDBOX_SYNTHETIC_V1",
         traceId,
         movementType,
         totalAmount: amount,
@@ -764,7 +764,7 @@ export async function appendSandboxAudit({
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
             occurredAt: new Date(),
-            source: "TPV_WEB_METHOD",
+            source: "TPV_SANDBOX_WEB_METHOD",
             payload: { ...payload, traceId: String(traceId || "") },
         }
     );

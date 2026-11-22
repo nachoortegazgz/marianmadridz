@@ -52,7 +52,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
 
     const sandboxBootstrap = {
         cashRegisterStatus: "CERRADA",
-        snapshotSource: "TPV_INITIALIZED",
+        snapshotSource: "TPV_SANDBOX_INITIALIZED",
         traceId: sandboxRunId,
         conceptOperations: { tpvSandbox: { sandboxRunId } },
     };
@@ -64,7 +64,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
 
     const activeSandboxCaja = {
         cashRegisterStatus: "SIMULACION",
-        snapshotSource: "TPV_SYNTHETIC",
+        snapshotSource: "TPV_SANDBOX_SYNTHETIC",
         traceId: sandboxRunId,
         conceptOperations: { tpvSandbox: { sandboxRunId } },
     };
@@ -87,7 +87,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         transactionId: "TPVSANDBOX_TEST_ROW",
         traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SANDBOX-SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
-        recordSource: "TPV_SYNTHETIC",
+        recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
             sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,

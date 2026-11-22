@@ -130,7 +130,7 @@ export const abrirSesionCaja = webMethod(
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
                     occurredAt: new Date(),
-                    source: "TPV_WEB_METHOD",
+                    source: "TPV_SANDBOX_WEB_METHOD",
                     payload: makeSyntheticPayload({ traceId, replayed }),
                 });
                 return {

@@ -6,11 +6,11 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
     const sandboxRunId = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
     const sandboxState = caja?.conceptOperations?.tpvSandbox;
     const bootstrap = allowBootstrap === true &&
-        caja?.snapshotSource === "TPV_INITIALIZED" &&
+        caja?.snapshotSource === "TPV_SANDBOX_INITIALIZED" &&
         caja?.cashRegisterStatus === "CERRADA" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
-    const synthetic = caja?.snapshotSource === "TPV_SYNTHETIC" &&
+    const synthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;

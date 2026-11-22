@@ -711,7 +711,7 @@ test('HOOK-CAJA-04 allows edit and removal only for the active synthetic TPV tes
     transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
     traceId: 'TPVSANDBOX:' + runId + ':SANDBOX-SESSION-TEST',
     movementType: 'SIMULATED_TPV_PAYMENT',
-    recordSource: 'TPV_SYNTHETIC',
+    recordSource: 'TPV_SANDBOX_SYNTHETIC',
     payloadFiscal: {
       sandboxRunId: runId,
       requestFingerprint: 'f'.repeat(64),
