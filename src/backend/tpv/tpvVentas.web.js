@@ -153,7 +153,7 @@ export const registrarVenta = webMethod(
                     changeMinor: Math.round(payment.importeCambio * 100),
                     status: "CONFIRMADO_SINTETICO",
                     provider: "SIMULATED",
-                    gatewayReference: "SANDBOX-NO-GATEWAY",
+                    gatewayReference: "NO-GATEWAY",
                     createdAt,
                     payload: { ...commonPayload, paymentIndex: index + 1, traceId },
                 });
