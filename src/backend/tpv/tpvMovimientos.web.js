@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -19,6 +20,7 @@ export const registrarMovimientoCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-cash-movement");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
@@ -45,8 +47,9 @@ export const registrarMovimientoCaja = webMethod(
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
-                    actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
-                    authorizedBy: movementType === "ENTRADA" ? null : TPV_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: operator.actorId,
+                    operatorId: operator.operatorId,
+                    authorizedBy: movementType === "ENTRADA" ? null : operator.operatorId,
                     affectsPhysicalCash: true,
                     traceId,
                 },
@@ -54,7 +57,7 @@ export const registrarMovimientoCaja = webMethod(
             persisted = true;
             await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
                 occurredAt: new Date(),

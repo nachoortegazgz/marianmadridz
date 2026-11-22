@@ -578,7 +578,7 @@ export async function MovimientosCaja_beforeUpdate(item) {
     item.paymentMethod = String(record.paymentMethod || "OTROS").toUpperCase();
     item.channelType = String(record.channelType || "PRESENCIAL").toUpperCase();
     item.operationDescription = "SIMULATED TPV SANDBOX " + logicalCollection;
-    item.staffResourceId = String(record.staffResourceId || TPV_RUNTIME_POLICY.ACTOR_ID);
+    item.staffResourceId = String(record.profesionalId || record.professionalId || record.operatorResourceId || record.staffResourceId || item.staffResourceId || "").trim();
     item.lineItems = { sandboxRecord: record.lineItems || [] };
     item.desgloseDetallado = {
         accountCode: "SIMULATED",

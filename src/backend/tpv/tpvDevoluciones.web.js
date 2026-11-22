@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -12,6 +13,7 @@ export const registrarDevolucion = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-refund");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
@@ -74,7 +76,7 @@ export const registrarDevolucion = webMethod(
                 reason,
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
-                payload: { sessionId: session.sessionId, allocations, actorId: TPV_RUNTIME_POLICY.ACTOR_ID, traceId },
+                payload: { sessionId: session.sessionId, allocations, actorId: operator.actorId, operatorId: operator.operatorId, traceId },
             });
             persisted = true;
 
@@ -109,7 +111,7 @@ export const registrarDevolucion = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "DEVOLUCION_SANDBOX_CONFIRMADA",
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "DEVOLUCION",
                 entityId: refundId,
                 traceId,

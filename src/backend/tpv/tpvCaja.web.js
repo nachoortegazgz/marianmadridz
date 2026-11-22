@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -94,6 +95,7 @@ export const abrirSesionCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-session-open");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
@@ -114,7 +116,10 @@ export const abrirSesionCaja = webMethod(
                         openedAt: new Date(),
                         openingCashMinor,
                         expectedCashMinor: openingCashMinor,
-                        cashierMemberId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                        cashierMemberId: operator.operatorId,
+                        actorId: operator.actorId,
+                        operatorId: operator.operatorId,
+                        operatorResourceId: operator.operatorResourceId,
                         payload: makeSyntheticPayload({
                             dayKey,
                             openingReason: String(input.reason || "Apertura de SANDBOX").slice(0, 200),
@@ -126,7 +131,7 @@ export const abrirSesionCaja = webMethod(
                 persisted = true;
                 await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                     action: "APERTURA_CAJA_SANDBOX",
-                    actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                    actorId: operator.operatorId,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
                     occurredAt: new Date(),
@@ -161,6 +166,7 @@ export const registrarArqueoParcial = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-partial-count");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const session = await latestOpenSandboxSession();
@@ -195,7 +201,7 @@ export const registrarArqueoParcial = webMethod(
                         expectedCashMinor: expectedMinor,
                         countedCashMinor: countedMinor,
                         differenceMinor,
-                        actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                        actorId: operator.operatorId,
                         traceId,
                     }),
                 }
@@ -204,7 +210,7 @@ export const registrarArqueoParcial = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL_SANDBOX",
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
                 traceId,

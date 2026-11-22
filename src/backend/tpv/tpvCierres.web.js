@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -49,6 +50,7 @@ export const generarControlX = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-x");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
@@ -74,7 +76,7 @@ export const generarControlX = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "TICKET_X_SANDBOX_GENERADO",
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "TICKET_X",
                 entityId: reportId,
                 traceId,
@@ -94,6 +96,7 @@ export const generarCierreZ = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-z");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const session = await latestOpenSandboxSession();
@@ -106,7 +109,7 @@ export const generarCierreZ = webMethod(
                             await appendSandboxAudit({
                         idempotencyKey: "SANDBOX_TICKET_Z:" + prior.sessionId + ":AUDIT",
                         action: "TICKET_Z_SANDBOX_CERRADO",
-                        actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                        actorId: operator.operatorId,
                         entityType: "TICKET_Z",
                         entityId: prior.reportId,
                         traceId,
@@ -166,7 +169,9 @@ export const generarCierreZ = webMethod(
                     countedCashMinor: countedMinor,
                     differenceMinor,
                     differenceReason: reason,
-                    closedByMemberId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                    closedByMemberId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operatorId: operator.operatorId,
                 },
                 payload: { traceId, sourceEnvironment: TPV_RUNTIME_POLICY.ENVIRONMENT, immutableAfterCreation: true },
             });
@@ -174,7 +179,7 @@ export const generarCierreZ = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
                 action: "TICKET_Z_SANDBOX_CERRADO",
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "TICKET_Z",
                 entityId: reportId,
                 traceId,

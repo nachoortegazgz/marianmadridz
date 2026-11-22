@@ -1,4 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
+import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -39,6 +40,7 @@ export const registrarVenta = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-sale");
         await requireAdmin(traceId);
+        const operator = await getTpvOperatorContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
@@ -109,7 +111,11 @@ export const registrarVenta = webMethod(
                 totalMinor: Math.round(sale.totalVenta * 100),
                 paidMinor: Math.round(sale.importePagado * 100),
                 pendingMinor: 0,
-                cashierMemberId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                cashierMemberId: operator.operatorId,
+                actorId: operator.actorId,
+                operatorId: operator.operatorId,
+                operatorResourceId: operator.operatorResourceId,
+                profesionalId: requestedProfessionalId,
                 createdAt,
                 traceId,
                 environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
@@ -163,7 +169,7 @@ export const registrarVenta = webMethod(
                 totalMinor: Math.round(sale.totalVenta * 100),
                 paidMinor: Math.round(sale.importePagado * 100),
                 pendingMinor: 0,
-                cashierMemberId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                cashierMemberId: operator.operatorId,
                 createdAt,
                 traceId,
                 environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
@@ -179,7 +185,7 @@ export const registrarVenta = webMethod(
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "VENTA_SANDBOX_CONFIRMADA",
-                actorId: TPV_RUNTIME_POLICY.ACTOR_ID,
+                actorId: operator.operatorId,
                 entityType: "VENTA",
                 entityId: saleId,
                 traceId,
