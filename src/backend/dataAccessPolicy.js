@@ -74,7 +74,7 @@ function _isRecord(value) {
 
 function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
-        item.recordSource === "TPV_SANDBOX_SYNTHETIC" &&
+        ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
         (
