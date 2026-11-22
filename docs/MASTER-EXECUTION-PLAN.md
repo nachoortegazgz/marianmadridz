@@ -1,9 +1,9 @@
 # Plan maestro de ejecución — Marian Madrid Wix
 
-**Fecha de baseline:** 2026-11-21  
+**Fecha de baseline:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` — https://www.marianmadrid.es/  
 **Repositorio:** `nachoortegazgz/marianmadridz`  
-**HEAD main:** `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8`  
+**HEAD main:** `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`  
 **Estado:** desarrollo/QA; release **NO-GO**.  
 **Auditoría Wix read-only:** [baseline 2026-11-21](audits/2026-11-21-wix-site-readonly-baseline.md).
 
@@ -329,3 +329,16 @@ main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only PR #529). Último
 PR #533 contiene la primera entrega controlada de neutralización del dominio TPV y endurecimiento append-only de `MovimientosCaja`. Fue fusionada en `main` el 2026-11-22 mediante merge commit `e19bf9c30227f5401d54e8187f8af5503a3bea4d`. CI de la revisión previa a merge (commit `73f23c34287031dc90b73b2f077d5ea1abd1b45c`): Layer 1 344/344, Layer 2 270/270, suite 727/727 (77 suites), SDK contracts, ESLint y secret scanning SUCCESS. No se ha acreditado CI post-merge del merge commit.
 
 Neutralización de nuevos IDs implementada en PR #533: IDs TPV neutrales para identidades, ventas/devoluciones, tickets X/Z, ledger, trazas y actor; fixtures y validadores adaptados. Se conserva lectura compatible de IDs/trazas históricos y se mantienen intactos los marcadores de entorno/origen y los valores persistidos de locks. No se renombraron registros CMS. Bloque A sigue abierto por idempotencia frontend/backend, migración/lectura histórica y E2E Preview/Runtime con prueba negativa Published. La fusión en GitHub no supone despliegue ni validación Wix Runtime. No publicar ni activar pagos nativos.
+
+
+---
+
+## Addendum vigente — reconciliación del backlog 2026-11-23
+
+La matriz de issues anterior queda supersedida por [Reconciliación del backlog 2026-11-23](qa/BACKLOG-RECONCILIATION-2026-11-23.md). Ese documento es la lista activa de tareas: clasifica las 25 issues abiertas, separa implementación integrada de aceptación runtime, identifica tareas superseded y define el orden de ejecución.
+
+**Baseline:** `main` = `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`. CI post-merge SUCCESS: run 45082870340 (Layer 1/2, regresión offline, contratos SDK y lint) y run 45082870366 (Gitleaks full-history). No acredita Wix Runtime, Editor sync ni E2E.
+
+**Retirado de implementación activa:** migración TPV QA collections (#435), retirada de inventario custom (#237) y reimplementación de código ya integrado en #159, #164, #290, #291, #441 y #525. Sus validaciones runtime residuales permanecen en la matriz. PR #495 excluida por instrucción expresa; no modificarla.
+
+**Bloqueos prioritarios vigentes:** #416 compensaciones/ledger; #520 automatizaciones preinstaladas; #526 prueba negativa de rutas de reservas; #525 concurrencia Runtime; #209/#415 fiscalidad; #434 release gate. Mantener **NO-GO** hasta cerrar los criterios verificables del dossier.
