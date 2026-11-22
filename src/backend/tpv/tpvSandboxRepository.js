@@ -319,7 +319,7 @@ export async function seedSandboxIdentities() {
     const existing = new Map([...customers, ...staff].map((item) => [item.identityId, item]));
     const missing = requiredIds.filter((identityId) => !existing.has(identityId));
     if (missing.length) {
-        throw new Error("TPV_SANDBOX_IDENTITIES_NOT_PRESEEDED:" + missing.join(","));
+        throw new Error("TPV_IDENTITIES_NOT_PRESEEDED:" + missing.join(","));
     }
     return { created: 0, total: requiredIds.length };
 }
