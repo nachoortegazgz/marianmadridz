@@ -154,8 +154,6 @@ export function assertUpdateAllowed(collection, item) {
     if (!_isRecord(item) || !DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        _isSyntheticTpvRecord(item)) return;
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
@@ -193,9 +191,6 @@ export function assertSaveAllowed(collection, item) {
 export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
     if (!id || !DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    }
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && _isSyntheticTpvRecord(existingItem)) {
-        return;
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
