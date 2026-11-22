@@ -315,3 +315,9 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 - Pedido #10032: PAID, 92,45 EUR, método Cash; sin reembolso.
 - Compensaciones identificadas y correlacionadas con esos IDs. MovimientosCaja LIVE no tiene orderId/refundId correlacionados ni hash chain para esos pedidos.
 - No se han modificado pedidos, pagos, reembolsos, caja ni compensaciones. P0 abierto.
+### P0 — CI post-merge 2026-11-22
+- PR #528 integrada en main: 7461dd5998c87379680128117194b0cb40dc6c79.
+- Backend offline quality gates SUCCESS (run 45021242129); secret scanning SUCCESS (run 45021242143).
+- CajaActual: writers fiscal, webhook y TPV comparten lock fiscal; suite offline, regresión Layer 1/2, contratos Wix SDK y lint pasan.
+- No se ha sincronizado ni desplegado este SHA a Wix Editor/Published. Runtime concurrente pendiente.
+- #416 sigue abierto por conciliación fiscal incompleta; #520 por automatizaciones preinstaladas; #526 por prueba negativa de rutas custom.

@@ -200,3 +200,11 @@ Wix Published; 70 servicios visibles permiten booking online e in-person; todos 
 - Sitio sigue Published; la reserva online nativa está contenida, pero no se ha cerrado acceso general ni verificado toda ruta custom. Release NO-GO.
 ### #416 — correlación de origen añadida 2026-11-22
 Order #10033 FULLY_REFUNDED por 18,15 EUR, refund SUCCEEDED. Order #10032 PAID por 92,45 EUR, método Cash, sin refund. Tres compensaciones correlacionadas con orderId/refundId/transactionId. MovimientosCaja LIVE no contiene referencias a esos pedidos ni hash chain para ellos. No tocar órdenes, reembolsos, caja ni compensaciones. #416 permanece P0 abierto.
+## Relevo — 2026-11-22 post-merge
+- main HEAD: 7461dd5998c87379680128117194b0cb40dc6c79.
+- PR #528 integrada. Backend offline quality gates y secret scanning post-merge SUCCESS (45021242129 / 45021242143).
+- CajaActual: lock compartido aplicado en writers fiscales, webhook y TPV; no sincronizado ni probado en Wix Runtime.
+- Bookings: onlineBooking deshabilitado en 94/94; no se tocaron reservas existentes. Snapshot reversible guardado.
+- Automatización laboral LLM INACTIVE. Siete automatizaciones PREINSTALLED permanecen ACTIVE y no se pueden desactivar por API con settings.disableStatusChange=true.
+- #416: pedidos #10032/#10033 correlacionados con compensaciones, pero sin ledger fiscal fuente correlacionado. No tocar caja/ledger/compensaciones.
+- Release sigue NO-GO. Próximo paso técnico: validar Runtime Sandbox y rutas custom; no publicar.
