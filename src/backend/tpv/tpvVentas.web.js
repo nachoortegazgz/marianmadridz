@@ -38,7 +38,7 @@ export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-sale");
+        const traceId = makeTraceId("tpv-sale");
         await requireAdmin(traceId);
         const operator = await resolveTpvContext(traceId);
 
