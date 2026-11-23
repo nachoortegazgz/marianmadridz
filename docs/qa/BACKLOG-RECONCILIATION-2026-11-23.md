@@ -107,3 +107,6 @@ CMS devuelve siete registros con prefijo TPV-QA-1795437582366: tres movimientos 
 Los movimientos carecen de schemaVersion/hash/previousRecordHash. Los asientos incumplen assertAccountingLedgerRecord (journalEntryId, recordSource, documentId, sequenceNumber, desgloseDetallado y hashes ausentes). El cierre no cumple assertHistoricoCierresZ por fiscalPeriod/campos fiscales ausentes. El código actual en main rechazaría esos payloads; posible writer legacy, escritura CMS REST que elude hooks o desincronización Wix. Origen no acreditado.
 
 No tocar ni borrar: son colecciones append-only. Mantener #435/#434 abiertos; identificar el escritor, demostrar aislamiento y exclusión de lectores fiscales. Estos registros no están correlacionados con #10032/#10033 y no resuelven #416.
+
+
+Correlación de autoría: los siete registros TPV-QA comparten un único CMS owner, coincidente con el creador de los pedidos POS #10032/#10033; ambos pedidos comparten creador. Es una correlación de actor, no prueba de que los pedidos sean sintéticos ni de que no hubiera efecto económico. Mantenerlos como posibles hechos económicos hasta acreditación.
