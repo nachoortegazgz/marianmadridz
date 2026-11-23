@@ -808,9 +808,10 @@ body {
         })),
         payments: state.payments.map((payment) => ({
           method: payment.method,
-          amount: payment.amount,
-          change: 0,
+          amount: payment.amountMinor / 100,
+          change: payment.changeMinor / 100,
         })),
+        paymentBreakdown: paymentTotals(),
         subtotal: total,
         tax: 0,
         total,
