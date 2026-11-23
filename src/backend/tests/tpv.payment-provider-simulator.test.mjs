@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { assertTpvIdentity } from "../validation.js";
 import { simulateGatewayPayment, simulateGatewayRefund } from "../tpv/tpvPaymentSimulator.js";
 
 test("approved payment returns deterministic captured synthetic transaction", () => {
@@ -71,14 +70,21 @@ test("refund rejects foreign transaction references and amounts over original", 
     }), /REFUND_AMOUNT_INVALID/);
 });
 
-test("historical synthetic identity fixture is accepted only by the explicit legacy-read validator", async () => {
+test("historical synthetic identity fixture is documentation-only and unused by TPV runtime", async () => {
     const fixtureUrl = new URL("../../../docs/qa/fixtures/tpv-sandbox-identities.json", import.meta.url);
     const identities = JSON.parse(await readFile(fixtureUrl, "utf8"));
     assert.equal(identities.length, 6);
-    assert.equal(identities.filter((item) => item.identityType === "CUSTOMER").length, 3);
-    assert.equal(identities.filter((item) => item.identityType === "STAFF").length, 3);
-    for (const identity of identities) {
-        assert.throws(() => assertTpvIdentity(identity));
-        assert.equal(assertTpvIdentity(identity, { allowLegacyRead: true }), true);
+    const runtimePaths = [
+        "../tpv/tpvNativeDirectory.js",
+        "../tpv/tpvCatalogo.web.js",
+        "../tpv/tpvVentas.web.js",
+        "../tpv/tpvMovimientos.web.js",
+        "../tpv/tpvDevoluciones.web.js",
+    ];
+    const runtime = await Promise.all(runtimePaths.map((path) =>
+        readFile(new URL(path, import.meta.url), "utf8")
+    ));
+    for (const source of runtime) {
+        assert.doesNotMatch(source, /TpvSandboxIdentities|tpv-sandbox-identities|assertTpvIdentity/);
     }
 });
