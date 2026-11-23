@@ -54,7 +54,7 @@ PR #543 integró la corrección de test y documentación técnica; PR #544 conso
 - Los cambios se integraron mediante PR #543 y #544; no se realizaron pushes directos a main durante la estabilización.
 - No se modifica CMS, Wix Editor, automatizaciones, reservas, pagos, fiscalidad ni datos.
 - main continúa sin protección efectiva hasta que un administrador resuelva #210.
-- Existe una discrepancia de estado de publicación Wix: un contexto de sitio indica Draft, mientras que las issues #520/#526 documentan Published. No considerar resuelta sin nueva lectura de Wix Site Context.
+- Read-back directo de Wix Site Context (2026-11-23) confirma **Draft**, Wix Editor, Velo Enabled, plan Premium y dominio personalizado. Las referencias Published de #520/#526 son evidencia histórica y no describen el estado actual devuelto por Wix. No se ha publicado ni modificado el sitio.
 
 ## Criterio de cierre de Fase 1
 
