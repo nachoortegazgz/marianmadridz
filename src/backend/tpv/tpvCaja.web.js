@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, initializeSandboxCaja, seedSandboxIdentities, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, initializeTpvCaja, seedTpvIdentities, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -27,8 +27,8 @@ export const inicializarCaja = webMethod(
         await requireCajero(traceId);
 
         try {
-            const result = await initializeSandboxCaja();
-            const identities = await seedSandboxIdentities();
+            const result = await initializeTpvCaja();
+            const identities = await seedTpvIdentities();
             return {
                 status: "SUCCESS",
                 data: {
@@ -64,7 +64,7 @@ export const obtenerEstadoCaja = webMethod(
         const traceId = makeTraceId("tpv-sandbox-session-read");
         await requireCajero(traceId);
 
-        const session = await latestOpenSandboxSession();
+        const session = await latestOpenTpvSession();
         if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
         const summary = await buildSandboxSessionSummary(session);
         return {
@@ -100,13 +100,13 @@ export const abrirSesionCaja = webMethod(
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "TPV-SESSION-" + dayKey;
-            return await withSandboxSessionLock(sessionId, traceId, async () => {
+            return await withTpvSessionLock(sessionId, traceId, async () => {
                 const idempotencyKey = "SESSION_OPEN:" + dayKey;
-                const current = await latestOpenSandboxSession();
+                const current = await latestOpenTpvSession();
                 if (current && current.sessionId !== sessionId) return errorResult("TPV_PREVIOUS_SESSION_NOT_CLOSED");
-                const alreadyClosed = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
+                const alreadyClosed = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
                 if (alreadyClosed.some((item) => item.closed === true)) return errorResult("TPV_SESSION_ALREADY_CLOSED_TODAY");
-                const { item, replayed } = await insertSandboxEvent(
+                const { item, replayed } = await insertTpvEvent(
                     TPV_COLLECTIONS.SESIONES_CAJA,
                     idempotencyKey,
                     {
@@ -128,7 +128,7 @@ export const abrirSesionCaja = webMethod(
                     }
                 );
                 persisted = true;
-                await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
+                await insertTpvEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                     action: "APERTURA_CAJA",
                     actorId: operator.operatorId,
                     entityType: "SESION_CAJA",
@@ -168,11 +168,11 @@ export const registrarArqueoParcial = webMethod(
         const operator = await resolveTpvContext(traceId);
 
         try {
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) return errorResult("TPV_SESSION_NOT_OPEN");
 
-            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenSandboxSession();
+            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
@@ -185,7 +185,7 @@ export const registrarArqueoParcial = webMethod(
                 throw new Error("TPV_COUNT_DIFFERENCE_REASON_REQUIRED");
             }
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const { item, replayed } = await insertSandboxEvent(
+            const { item, replayed } = await insertTpvEvent(
                 TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
                 key,
                 {
@@ -206,7 +206,7 @@ export const registrarArqueoParcial = webMethod(
                 }
             );
             persisted = true;
-            await appendSandboxAudit({
+            await appendTpvAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "ARQUEO_PARCIAL",
                 actorId: operator.operatorId,
