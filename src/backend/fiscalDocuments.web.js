@@ -1,44 +1,12 @@
 /*
 =============================================================================
 MODULE: backend/fiscalDocuments.web.js
-VERSION: v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT
-BASE: v5017-ALIGNED-DATOSFISCALES
-RESPONSIBILITY: Previsualiza, crea, verifica y consulta snapshots trimestrales
- append-only. El despacho a gestoría permanece deshabilitado.
-STANDARDS: G10 ASCII Strict. Cero suppressAuth. Colecciones canonicas.
-
-CAMBIOS v5018-IDEMPOTENT-IMMUTABLE-SNAPSHOT (respecto a v5017):
-  PKG-01: createManagerPackageVersion persiste snapshots trimestrales con
-          hash canonico, limite 450 KiB y versionado create-only concurrente.
-  PKG-02: ControlOperativo.IDEMPOTENCY deduplica operationId; las inserciones
-          inciertas conservan el claim para recuperar por traceId sin duplicar.
-  PKG-03: preview usa agregadores internos autorizados por requireMarianManager
-          y rechaza cualquier fuente incompleta.
-  PKG-04: listado devuelve solo metadatos; descarga verifica snapshotHash.
-  PKG-05: envio a gestoria permanece deshabilitado. Agregacion mensual pendiente.
-
-CAMBIOS v5019-ALIGNED-MAPASTAFF (respecto a v5016):
-  ALN-DF-01: Eliminada la dependencia de BUSINESS_COLLECTIONS.GESTORES_FISCALES
-             (coleccion no declarada en internalConfig v12). El origen de
-             verdad de destinatarios es BUSINESS_COLLECTIONS.MAPA_STAFF.
-  ALN-DF-02: listAccountantRecipients consulta solo recordType=GESTORIA y
-             proyecta los campos fisicos emailFiscal, displayName, taxId,
-             phoneFiscal y address. No lee campos legacy no declarados.
-  ALN-DF-03: _resolveRecipientById acepta solo el _id del registro MapaStaff.
-             Si emailFiscal no existe o no es valido, el registro no es
-             destinatario; no se inventa ni se deriva un email.
-
-CAMBIOS v5016-ALIGNED-WITH-SEND (heredados):
-  NEW-01..04: listAccountantRecipients, sendManagerPackageToAccountant,
-              sendSpecificDocumentToAccountant, _dispatchEmailViaResend.
-
-CAMBIOS DE ALINEACION v5015-ALIGNED (heredados):
-  ALN-01..05: BUSINESS_COLLECTIONS, dalQuery/dalGet/dalInsert, paginacion
-              { items, hasNext(), next() }, HistoricoCierresZ para
-              paquetes de gestoria.
-
-FIXES APLICADOS v5009-FISCAL-V20.1 (heredados):
-  V20-01, V20-02, SSOT-V2 (v5011).
+VERSION: v5020-CMS-PACKAGE-STORE-REMOVED
+RESPONSIBILITY: Fiscal package preview and accountant recipient directory.
+CMS CONTRACT: PaquetesGestoria was removed; no package snapshot read/write remains.
+BEHAVIOR: Package create/history/download/dispatch methods fail closed with
+          PACKAGE_STORAGE_REMOVED. Preview remains read-only.
+SAFETY: No writes to fiscal ledgers, no email dispatch, no collection recreation.
 =============================================================================
 */
 
