@@ -406,7 +406,7 @@ test('DTO-04 getMovimientoByBooking exposes only receipt-safe fields', async () 
         serviceProvider: true,
         resource: { workingHoursSchedules: [] },
         associatedWixIdentity: {
-          identificationData: { contactId: STAFF_CONTACT_ID },
+          identificationData: { contactId: STAFF_CONTACT_ID, memberId: 'member-admin-dto-0001' },
           connection: { status: 'CONNECTED' },
         },
       }],
@@ -461,7 +461,7 @@ test('DTO-05 non-cashier staff cannot read fiscal movement by bookingId', async 
         serviceProvider: true,
         resource: { workingHoursSchedules: [] },
         associatedWixIdentity: {
-          identificationData: { contactId: STYLIST_CONTACT_ID },
+          identificationData: { contactId: STYLIST_CONTACT_ID, memberId: 'member-stylist-dto-0001' },
           connection: { status: 'CONNECTED' },
         },
       }],

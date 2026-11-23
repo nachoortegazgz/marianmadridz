@@ -6,6 +6,13 @@ RATE LIMITING: persistent per-requester state in ControlOperativo (RATE_LIMIT),
 using atomic conditional bulkPatch compare-and-set. Fail closed on storage errors.
 */
 
+/*
+P2 OFFICIAL REFERENCE: dev.wix.com — Bookings Staff Member Object.
+A connected status is not proof of the current session identity: resolve by
+resourceId and require associatedWixIdentity.identificationData.memberId to
+equal members.getCurrentMember()._id.
+*/
+
 import { members } from "@wix/members";
 
 import {
@@ -18,6 +25,7 @@ import {
 
 import {
     findStaffByContactId,
+    findStaffByResourceId,
 } from "backend/staff";
 
 import { makeTraceId } from "public/mmUtils";
@@ -106,8 +114,32 @@ async function _resolveStaffByIdentity(memberInfo, traceId) {
     const contactId = _safeString(memberInfo?.contactId);
     if (!contactId || !_isValidGuid(contactId)) return null;
 
+    const currentMemberId = _safeString(memberInfo?.memberId);
+    if (!currentMemberId) return null;
+
     try {
-        return await findStaffByContactId(contactId, traceId);
+        const candidate = await findStaffByContactId(contactId, traceId);
+        if (!candidate?.resourceId ||
+            candidate.memberId !== currentMemberId) {
+            log.warn("Staff identity does not match current Wix member", {
+                traceId,
+                resourceId: candidate?.resourceId || null,
+            });
+            return null;
+        }
+
+        // Re-resolve using the Bookings resourceId, never the staffMember _id.
+        const staff = await findStaffByResourceId(candidate.resourceId, traceId, { fresh: true });
+        if (!staff ||
+            staff.resourceId !== candidate.resourceId ||
+            staff.memberId !== currentMemberId) {
+            log.warn("Bookings resource identity mismatch", {
+                traceId,
+                resourceId: candidate.resourceId,
+            });
+            return null;
+        }
+        return staff;
     } catch (error) {
         log.error("Active staff lookup failed", {
             traceId,

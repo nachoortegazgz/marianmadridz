@@ -1,4 +1,9 @@
 /*
+P4 OFFICIAL REFERENCE: dev.wix.com — Velo Wix Data beforeInsert API.
+The hook is a CMS and Data API write boundary: reject invalid TPV runtime
+metadata before persistence and normalize canonical enum tokens.
+*/
+/*
 =============================================================================
 MODULE: backend/data.js
 VERSION: v5017-SYNTHETIC-TPV-EDIT
@@ -657,11 +662,42 @@ function _clearStaleCajaClosedAt(item) {
     return item;
 }
 
+function _normalizeCajaTpvRuntime(item) {
+    const runtime = item?.conceptOperations?.tpvRuntime;
+    const isTpvRuntime = item?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE ||
+        runtime !== undefined;
+    if (!isTpvRuntime) return item;
+
+    if (!item.conceptOperations || typeof item.conceptOperations !== "object" ||
+        Array.isArray(item.conceptOperations) ||
+        !runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
+        _schemaError("CajaActual TPV runtime requiere conceptOperations.tpvRuntime");
+    }
+
+    runtime.sourceType = _safeTrim(runtime.sourceType).toUpperCase();
+    runtime.processingMode = _safeTrim(runtime.processingMode).toUpperCase();
+    runtime.reconciliationStatus = _safeTrim(runtime.reconciliationStatus).toUpperCase();
+
+    if (runtime.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+        runtime.processingMode !== TPV_RUNTIME_POLICY.PROCESSING_MODE ||
+        runtime.reconciliationStatus !== TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) {
+        _schemaError("CajaActual TPV runtime sourceType/processingMode/reconciliationStatus invalidos");
+    }
+    if (_safeTrim(runtime.siteId) !== TPV_RUNTIME_POLICY.SITE_ID ||
+        _safeTrim(runtime.ledgerVersion) !== TPV_RUNTIME_POLICY.LEDGER_VERSION ||
+        Number(runtime.schemaVersion) !== TPV_RUNTIME_POLICY.SCHEMA_VERSION ||
+        runtime.externalSideEffects !== false) {
+        _schemaError("CajaActual TPV runtime metadata obligatoria o aislamiento invalido");
+    }
+    return item;
+}
+
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     _normalizeCajaSequenceCounters(item);
     _clearStaleCajaClosedAt(item);
+    _normalizeCajaTpvRuntime(item);
     assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {

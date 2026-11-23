@@ -1,3 +1,10 @@
+/*
+P1/P3 OFFICIAL REFERENCES:
+- Wix Studio Forum: "Handling concurrent requests…" — deterministic insert key and
+  duplicate-key recovery; Wix Data conditional bulkPatch compare-and-set.
+- Wix Payments API: "Processing Payments" — idempotent transaction identity
+  (wixTransactionId / stable transaction key).
+*/
 import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
@@ -56,6 +63,18 @@ async function withCajaActualProjectionLock(traceId, operation) {
     }
 }
 
+function _isDuplicateTpvKeyError(error) {
+    const code = String(
+        error?.code ||
+        error?.details?.applicationError?.code ||
+        error?.details?.code ||
+        ""
+    ).toUpperCase();
+    return code === "DUPLICATE_KEY" ||
+        code === "WDE0023" ||
+        /DUPLICATE[_ ]KEY|WDE0023|ALREADY EXISTS/i.test(String(error?.message || ""));
+}
+
 async function withTpvScopedLock({
     lockId,
     controlType,
@@ -96,6 +115,7 @@ async function withTpvScopedLock({
             await insertItem(collection, initial);
             heldVersion = 0;
         } catch (error) {
+            if (!_isDuplicateTpvKeyError(error)) throw error;
             record = await getItem(collection, lockId, CONSISTENCY.STRONG);
             if (!record) throw error;
         }
@@ -788,6 +808,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
     try {
         saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
     } catch (error) {
+        if (!_isDuplicateTpvKeyError(error)) throw error;
         const winner = await findByIdempotencyKey(collection, key);
         if (!winner) throw error;
         const replay = assertSameRequest(winner, fingerprint);
