@@ -95,3 +95,26 @@ No verificado:
 - [Issue #523 — CitasF2 y cancelaciones](https://github.com/nachoortegazgz/marianmadridz/issues/523)
 - [Issue #522 — canales de pago de servicios](https://github.com/nachoortegazgz/marianmadridz/issues/522)
 - [Issue #416 — compensaciones fiscales](https://github.com/nachoortegazgz/marianmadridz/issues/416)
+
+
+## 5. Contrato arquitectónico preciso de reserva dual — F1 + gap + F2
+
+**Aclaración del propietario:** la personalización de Wix Bookings V2 no utiliza multiservicio nativo. El backend Marian Madrid crea dos bookings individuales e independientes y coordina la relación entre ellos. Entre F1 y F2 existe un gap de exposición; no es una tercera reserva ni un servicio adicional.
+
+**Evidencia estática inspeccionada:**
+- `src/backend/booking/bookingSaga.js`: cabecera del módulo declara responsabilidad de orquestación transaccional de reservas simples y duales con gap.
+- `src/backend/reservas.web.js`: cabecera documenta `DUAL-GAP-01` y `DUAL-GAP-02`: F2 se busca en el instante local exacto `F1.end + exposureDuration`; el slot elegido debe coincidir exactamente, sin aceptar el primer slot posterior aproximado.
+- El mismo módulo documenta `DUAL-PERF-01`: disponibilidad F1/F2 consultada una vez por jornada y en paralelo; el contrato dual requiere `resourceId` común.
+
+**Aceptación Runtime pendiente (no ejecutada en esta auditoría):**
+1. Se crean dos bookings nativos individuales, F1 y F2, con IDs independientes y asociación dual persistida.
+2. `F2.start` coincide exactamente con `F1.end + exposureDuration` en la zona horaria del sitio, sin redondeo ni sustitución por el primer slot posterior.
+3. El intervalo de exposición no genera booking y no queda ocupado por F1/F2 como servicio; sin embargo, el algoritmo debe impedir que otro booking incompatible lo ocupe mientras se confirma la pareja.
+4. Ambas fases conservan el mismo `resourceId`/profesional.
+5. Conflictos concurrentes sobre F1, F2 o el gap no producen parejas parciales ni doble asignación.
+6. F2 se escribe `OFFLINE`, con importe cero y sin segundo checkout/cobro.
+7. Cancelación, reprogramación, timeout incierto y replay son idempotentes y preservan la trazabilidad de pareja y compensaciones.
+
+**Regla de clasificación:** la ausencia de fila en `CitasF2` no convierte una reserva nativa en reserva dual huérfana. Primero se clasifica el servicio por su relación con el catálogo dual y el origen del booking. Las reservas individuales ordinarias no pertenecen a esta reconciliación. No inferir que las 348 reservas nativas fuera de `CitasF2` deban proyectarse.
+
+**Decisión:** mantener #522 y #523 abiertas hasta completar pruebas Runtime específicas. No usar Wix Bookings multiservicio, no crear bookings de prueba sobre datos operativos, no cambiar flags masivamente y no reconciliar proyecciones por inferencia.
