@@ -80,7 +80,6 @@ export const obtenerEstadoCaja = webMethod(
                 otherAmount: fromMinorUnits(summary.otherMinor),
                 totalOperations: summary.ticketCount,
                 openedAt: session.openedAt,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 isSynthetic: true,
             },
             error: null,
@@ -100,9 +99,9 @@ export const abrirSesionCaja = webMethod(
         try {
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
-            const sessionId = "SANDBOX-SESSION-" + dayKey;
+            const sessionId = "TPV-SESSION-" + dayKey;
             return await withSandboxSessionLock(sessionId, traceId, async () => {
-                const idempotencyKey = "SANDBOX_SESSION_OPEN:" + dayKey;
+                const idempotencyKey = "SESSION_OPEN:" + dayKey;
                 const current = await latestOpenSandboxSession();
                 if (current && current.sessionId !== sessionId) return errorResult("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 const alreadyClosed = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", sessionId));
@@ -122,20 +121,20 @@ export const abrirSesionCaja = webMethod(
                         operatorResourceId: operator.operatorResourceId,
                         payload: makeSyntheticPayload({
                             dayKey,
-                            openingReason: String(input.reason || "Apertura de SANDBOX").slice(0, 200),
+                            openingReason: String(input.reason || "Apertura de TPV").slice(0, 200),
                             traceId,
-                            terminalId: String(input.terminalId || "TPV_SANDBOX").slice(0, 80),
+                            terminalId: String(input.terminalId || "TPV").slice(0, 80),
                         }),
                     }
                 );
                 persisted = true;
                 await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
-                    action: "APERTURA_CAJA_SANDBOX",
+                    action: "APERTURA_CAJA",
                     actorId: operator.operatorId,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
                     occurredAt: new Date(),
-                    source: "TPV_SANDBOX_WEB_METHOD",
+                    source: "TPV_WEB_METHOD",
                     payload: makeSyntheticPayload({ traceId, replayed }),
                 });
                 return {
@@ -209,7 +208,7 @@ export const registrarArqueoParcial = webMethod(
             persisted = true;
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "ARQUEO_PARCIAL_SANDBOX",
+                action: "ARQUEO_PARCIAL",
                 actorId: operator.operatorId,
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
