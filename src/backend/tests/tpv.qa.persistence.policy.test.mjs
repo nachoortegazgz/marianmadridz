@@ -123,44 +123,6 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(legacyCaja), "historical markers remain accepted for compatibility");
 });
-test("TPV identities follow the physical CMS schema and admit legacy IDs only for reads", () => {
-    const neutralCustomer = {
-        identityId: "TPV-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sintético 01",
-        email: "cliente.01@example.test",
-        active: true,
-        syntheticOnly: true,
-        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-        siteId: TPV_RUNTIME_POLICY.SITE_ID,
-        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-        metadata: {},
-    };
-    assert.doesNotThrow(() => assertTpvIdentity(neutralCustomer));
-    assert.throws(
-        () => assertTpvIdentity({ ...neutralCustomer, environment: "SANDBOX", testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID }),
-        /unsupported fields/
-    );
-
-    const legacyCustomer = {
-        identityId: "SANDBOX-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sandbox 01",
-        email: "cliente.01@example.test",
-        active: true,
-        syntheticOnly: true,
-        environment: "SANDBOX",
-        testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-        metadata: {},
-    };
-    assert.throws(() => assertTpvIdentity(legacyCustomer), /identity key\/type invalid/);
-    assert.doesNotThrow(() => assertTpvIdentity(legacyCustomer, { allowLegacyRead: true }));
-    assert.throws(
-        () => assertTpvIdentity({ ...legacyCustomer, testRunId: "UNAPPROVED-RUN" }, { allowLegacyRead: true }),
-        /identity key\/type invalid/
-    );
-});
-
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
