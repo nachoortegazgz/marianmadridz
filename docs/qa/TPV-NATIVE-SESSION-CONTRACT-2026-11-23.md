@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-23  
 **PR:** #569  
-**Estado:** implementación propuesta en rama; pendiente CI y Wix Preview/Runtime.  
+**Estado:** integrada en `main` por PR #569; CI offline SUCCESS; pendiente verificación en Local Editor/Preview Runtime.  
 **Entorno:** código sintético interno; sin pagos, devoluciones nativas, fiscalidad, notificaciones ni hardware.
 
 ## Objetivo
@@ -68,7 +68,7 @@ El backend emite `now` como ISO UTC y `timeZone=Europe/Madrid`. El widget format
 
 ## Pruebas pendientes
 
-- [ ] CI: npm ci, lint, suite completa, layer1 y layer2.
+- [x] CI pre-merge: npm ci, lint, suite completa, layer1 y layer2 (79 suites / 732 PASS / 0 FAIL).
 - [ ] Usuario no autenticado: rechazo real en Wix Preview.
 - [ ] Usuario autenticado sin sesión: SIN_SESION.
 - [ ] Apertura sintética: operador, actor, hora y sessionId persistidos.
@@ -81,8 +81,18 @@ El backend emite `now` como ISO UTC y `timeZone=Europe/Madrid`. El widget format
 - [ ] Consultas históricas: no mezclan sesiones.
 - [ ] Repetición idempotente: no duplica escrituras.
 - [ ] Notificaciones, pagos nativos, devoluciones nativas, emisión fiscal y hardware siguen desactivados.
-- [ ] Verificar sincronización Git SHA ↔ Wix Draft.
+- [ ] Confirmar en el panel GitHub Integration que el SHA `bf6e9966526716eef00ff1e304eb22459e2ef46e` ya aparece en Wix Editor.
+- [ ] Clonar el repo conectado y ejecutar `wix dev` para abrir el Local Editor y probar el código en tiempo real; no ejecutar `wix publish`.
+- [ ] Validar UI version `15941` de `wix.config.json` contra la UI version del sitio en Wix.
+
+## Integración GitHub ↔ Wix Editor
+
+- Repositorio: `nachoortegazgz/marianmadridz`; rama por defecto verificada: `main`.
+- `wix.config.json`: `siteId=188bed94-177c-4bc9-a9f0-35080d874f3e`, `uiVersion=15941`.
+- El `siteId` coincide con el Wix Site Context. Wix documenta que, con Git Integration, el código del Editor se sincroniza con la rama por defecto; los cambios aparecen en el Editor tras un posible retraso.
+- El Local Editor se abre desde el clon local con `wix dev`; su Preview ejecuta el código sin publicar. La CLI requiere Node.js 24.22.1 o superior, Git, npm/yarn y clave SSH añadida a GitHub.
+- No se ha ejecutado `wix dev` desde esta sesión por no disponer del clon autenticado y sesión local Wix CLI. No ejecutar `wix publish` en este hito.
 
 ## Restricciones
 
-No se ejecutaron mutaciones CMS en esta intervención. No se ha sincronizado ni publicado Wix. No se han alterado ledgers históricos. Los pedidos POS #10032 y #10033 se consideran operaciones sintéticas según confirmación del titular; no se reescriben sus registros históricos. La integración con Wix Payments/Stores/Invoices continúa deshabilitada.
+No se ejecutaron mutaciones CMS ni operaciones económicas en esta intervención. El repo contiene `wix.config.json` con el mismo `siteId` del sitio y el commit se fusionó en la rama por defecto `main`; según el contrato oficial de Git Integration, el código debe sincronizarse al Editor. La propagación efectiva del SHA no se ha leído en el panel GitHub Integration ni se ha ejecutado Local Editor/Runtime. El sitio sigue en estado Draft y no se ha publicado. Los pedidos POS #10032 y #10033 se consideran operaciones sintéticas según confirmación del titular; no se reescriben sus registros históricos. La integración con Wix Payments/Stores/Invoices continúa deshabilitada.
