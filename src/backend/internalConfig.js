@@ -108,7 +108,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
     fiscalEmission: false,
     hardware: false,
   }),
-  ENVIRONMENT: "SANDBOX",
+  
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
   SYNTHETIC_ONLY: true,
@@ -116,7 +116,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   FISCAL_WRITES_ENABLED: false,
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
-  SANDBOX_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
+  LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
 });
 
 export const TPV_IDENTITY_TYPES = Object.freeze({
