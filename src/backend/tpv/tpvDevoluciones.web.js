@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSaleLock } from "backend/tpv/tpvSandboxRepository";
+import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSaleLock } from "backend/tpv/tpvRepository";
 import { makeSandboxId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
