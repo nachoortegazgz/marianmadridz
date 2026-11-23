@@ -269,7 +269,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
-    assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, sales, closures]) {
         assert.match(writer, /requireAdmin/);
@@ -394,7 +394,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /action\("TICKET_Z"/);
 });
  
-test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
+test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
@@ -448,21 +448,21 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
-    assert.match(repository, /SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
+    assert.match(repository, /LEGACY_TPV_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
     assert.match(repository, /cmsMovementType: item\.movementType/);
     assert.doesNotMatch(repository, /movementType: item\.movementType/);
-    assert.match(repository, /previousRecordHash: SANDBOX_GENESIS_HASH/);
+    assert.match(repository, /previousRecordHash: TPV_GENESIS_HASH/);
     assert.match(repository, /createHash\("sha256"\)/);
     assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
-    assert.match(repository, /_ensureCajaActualForSandbox/);
+    assert.match(repository, /async function _ensureCajaActual\(/);
     assert.match(repository, /TPV_CASH_REGISTER_NOT_SEEDED/);
     assert.match(repository, /assertTpvCajaIntegrity/);
     assert.match(repository, /export async function initializeTpvCaja\(/);
     assert.match(repository, /TPV_CASH_REGISTER_NOT_PRESEEDED/);
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
-    assert.match(utilities, /TPV_SANDBOX_INITIALIZED/);
+    assert.match(utilities, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
     assert.match(repository, /export async function queryTpvLedgerRecords\(/);
     assert.match(repository, /dataCollectionId: BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
@@ -470,9 +470,9 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(movements, /queryTpvLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.match(movements, /SIMULATED_TPV_SALE/);
     assert.match(movements, /SIMULATED_TPV_REFUND/);
-    assert.match(repository, /payloadFiscal\?\.sandboxRunId === SANDBOX_RUN_ID/);
-    assert.match(repository, /MAX_SANDBOX_PROJECTION_EVENTS = 1000/);
-    assert.match(repository, /sandboxState\?\.sessionId/);
+    assert.match(repository, /envelope\.sourceType === TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
+    assert.match(repository, /MAX_TPV_PROJECTION_EVENTS = 1000/);
+    assert.match(repository, /sourceState\?\.sessionId/);
     assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
     assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
@@ -482,7 +482,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
     assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });
 
@@ -502,10 +502,19 @@ test("new TPV synthetic identifiers are neutral while historical Sandbox markers
     assert.match(validation, /legacyPrefix = identityType === "CUSTOMER" \? "SANDBOX-CUSTOMER-"/);
     assert.match(repository, /"TPV-CUSTOMER-" \+ String/);
     assert.match(repository, /"TPV-STAFF-" \+ String/);
-    assert.match(repository, /const traceId = "TPV:" \+ SANDBOX_RUN_ID/);
+    assert.match(repository, /const traceId = "TPV:" \+ TPV_RUNTIME_POLICY\.SITE_ID/);
     assert.match(closures, /reportId = "TPV-X-"/);
-    assert.match(closures, /reportId = "TPV-Z-"/);
-    assert.match(sales, /gatewayReference: "NO-GATEWAY"/);
-    assert.match(refunds, /gatewayReference: "NO-GATEWAY"/);
-    assert.match(config, /ACTOR_ID: "TPV_SYSTEM"/);
+    assert.match(closures, /reportId = "Z-"/);
+    assert.match(sales, /gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY"/);
+    assert.match(refunds, /gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY"/);
+    assert.doesNotMatch(config, /ACTOR_ID: "TPV_SYSTEM"/);
+});
+
+
+test("Ticket X and Z use neutral status values and explicit synthetic source metadata", async () => {
+    const closures = await source("tpv/tpvCierres.web.js");
+    assert.match(closures, /status: "GENERADO",\s*sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
+    assert.match(closures, /status: "CERRADO",\s*sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
+    assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
+    assert.match(closures, /toMinorUnits\(input\.countedCash, "COUNTED_CASH"\)/);
 });
