@@ -9,7 +9,7 @@ import {
     assertBulkUpdateAllowed,
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
-import { insertItem } from "backend/dataAccess";
+import { insertItem, bulkUpdate, bulkRemove } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS as C,
     OPERATIONAL_COLLECTIONS as O,
@@ -317,6 +317,22 @@ test("bulk update is disabled and bulk remove requires an allowlisted conditiona
         } } }
     ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
 });
+test("DATAACCESS-MOVIMIENTOS-APPEND-01 public bulk mutation APIs reject MovimientosCaja", () => {
+    assert.throws(
+        () => bulkUpdate(C.MOVIMIENTOS_CAJA, [{ _id: "synthetic-row", totalAmount: 1 }]),
+        { code: "CMS_BULK_UPDATE_SCOPE_DENIED" }
+    );
+    assert.throws(
+        () => bulkRemove(C.MOVIMIENTOS_CAJA, ["synthetic-row"], {
+            condition: { filter: {
+                controlType: { $eq: T.DUAL_CACHE },
+                expiresAt: { $lt: new Date("2026-11-14T00:00:00.000Z") },
+            } },
+        }),
+        { code: "CMS_BULK_REMOVE_SCOPE_DENIED" }
+    );
+});
+
 test("bulk insert remains disabled during isolated-site mutation window", () => {
     assert.throws(() => assertBulkMutationDisabled("BULK_INSERT"), {
         code: "CMS_BULK_INSERT_DISABLED_NO_APPROVED_CONSUMERS",
