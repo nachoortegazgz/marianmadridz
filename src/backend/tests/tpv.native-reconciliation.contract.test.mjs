@@ -10,10 +10,11 @@ async function source(path) {
 }
 
 test("TPV identity is resolved from the authenticated Wix member, not client-supplied actor IDs", async () => {
-    const [security, operatorContext, context, controller, html] = await Promise.all([
+    const [security, operatorContext, context, catalog, controller, html] = await Promise.all([
         source("security.js"),
         source("tpv/tpvOperatorContext.js"),
         source("tpv/tpvContext.js"),
+        source("tpv/tpvCatalogo.web.js"),
         readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
         readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
     ]);
@@ -26,6 +27,9 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(operatorContext, /operatorId: memberId/);
     assert.match(context, /getTpvOperatorContext\(traceId\)/);
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
+    assert.match(catalog, /profesionalId: staff\.identityId/);
+    assert.match(catalog, /resourceId: staff\.identityId/);
+    assert.match(operatorContext, /operatorResourceId: String\(staff\?\.resourceId/);
 
     // The UI currently selects a Bookings professional/resource ID. The controller
     // forwards it, but the backend actor context is independently resolved from Wix.
@@ -145,7 +149,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(summary, /reconciliationOk = totals\.totalCollectedMinor === totals\.netSalesMinor/);
 });
 
-test.todo("Wix Preview: prove the selected profesionalId matches the authenticated Staff operatorResourceId; reject a mismatch");
+test.todo("Wix Preview: map synthetic TPV staff identity to the real Wix Bookings resourceId and reject a cross-operator mismatch");
 test.todo("Wix Preview: open one session, verify authenticated member/operator/resource IDs, terminal, timestamps and opening balance in CMS");
 test.todo("Wix Preview: complete split-payment sales and reconcile Wix-native order/receipt IDs when native integration is authorized");
 test.todo("Wix Preview: verify payment-method totals, cash drawer balance, cash-only movements and partial refunds against CMS ledger");
