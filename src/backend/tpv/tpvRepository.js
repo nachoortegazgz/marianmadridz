@@ -9,7 +9,7 @@ import {
     wql,
 } from "backend/dataAccess";
 import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
-import { listTpvIdentities } from "backend/tpv/tpvSandboxIdentities";
+import { listTpvIdentities } from "backend/tpv/tpvIdentities";
 import { logger } from "backend/logger";
 import {
 
