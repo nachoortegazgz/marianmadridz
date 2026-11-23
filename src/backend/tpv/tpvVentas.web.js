@@ -5,7 +5,7 @@ import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listAuthorizedProfessionals, resolveTpvContact } from "backend/tpv/tpvNativeDirectory";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
-import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
@@ -47,7 +47,10 @@ export const registrarVenta = webMethod(
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
             if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             const sale = validateSaleDraft({
