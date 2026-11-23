@@ -5,7 +5,7 @@
 **PR de trabajo:** [#541](https://github.com/nachoortegazgz/marianmadridz/pull/541) — abierta, no integrada  
 **Rama:** `feat/tpv-payment-exports-after-p0-20261123`  
 **HEAD de código validado:** `1d7e99d66fcc14165bf2482885e583176c2b06ef`  
-**Último commit documental:** `e3357fbb1170242d3d9276db2cf567c117445e5c`
+Los commits posteriores a ese SHA son únicamente documentación; el HEAD actual de la rama se consulta en [PR #541](https://github.com/nachoortegazgz/marianmadridz/pull/541).
 
 ## Objetivo
 Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompatibilidades entre widget, WebMethods, validadores y contratos de persistencia, y mantener el release bloqueado hasta obtener evidencia Wix Runtime.
