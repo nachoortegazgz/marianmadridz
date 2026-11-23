@@ -136,7 +136,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
 test("TPV refund lock allows only scoped compare-and-swap fields", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.doesNotThrow(() => assertInsertAllowed(collection, {
-        _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        _id: "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
         dedupeKey: "TPV_REFUND:TPV-SALE-TEST",
         traceId: "test",
@@ -175,7 +175,7 @@ test("refund lock IDs are deterministic and respect Wix CMS _id length", () => {
 test("refund lock is mutable only through its scoped compare-and-swap policy", () => {
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
     assert.throws(() => assertUpdateAllowed(collection, {
-        _id: "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        _id: "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
         dedupeKey: "TPV_REFUND:TPV-SALE-TEST",
         traceId: "test",
@@ -184,7 +184,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
     }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed(
         collection,
-        "TPVSANDBOX_REFUND_LOCK_SANDBOX-SALE-TEST",
+        "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         CONTROL_TYPE.TPV_REFUND_LOCK
     ), /DATA_ACCESS_ERROR/);
 });
@@ -205,12 +205,12 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
         status: "ACTIVE",
         version: 0,
         expiresAt: new Date(),
-        payload: { sessionId, environment: "SANDBOX" },
+        payload: { sessionId, sourceType: "SYNTHETIC", siteId: TPV_RUNTIME_POLICY.SITE_ID },
     }));
     assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
         { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
         { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
-        { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, environment: "SANDBOX" } },
+        { fieldPath: "payload", action: "SET_FIELD", value: { sessionId, sourceType: "SYNTHETIC", siteId: TPV_RUNTIME_POLICY.SITE_ID } },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
     ], {
         controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
