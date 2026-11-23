@@ -2,7 +2,7 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**main HEAD:** `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739` (merge PR #545).  
+**Integración documental:** PR #545 y PR #546 fusionadas en `main`. El SHA actual se consulta en la referencia viva de la rama `main`, no se fija en este resumen para evitar snapshots obsoletos.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
@@ -10,7 +10,7 @@
 | Área | Estado verificado | Límite |
 |---|---|---|
 | Código TPV / contratos | Integrados en main por PR #543 | Aceptación Wix Runtime/E2E pendiente. |
-| CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR HEAD `57013eed25a5f8c755a2e5cd3434c792b3dec78c`: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). main HEAD `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). |
+| CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR #545: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). Post-merge PR #545: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). PR #546: backend [45112483802](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483802), Gitleaks [45112483786](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483786); post-merge PR #546: backend [45112587480](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587480), Gitleaks [45112587474](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587474). |
 | Calidad offline | Layer 1 364/364; Layer 2 255/255; suite 736/736; npm audit 0; contratos SDK Wix/eCommerce/TPV y ESLint SUCCESS | No prueba CMS live, Wix Runtime, E2E, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
@@ -25,7 +25,7 @@
 
 - Corrección de aserciones TPV desactualizadas mediante PR #543.
 - Consolidación documental previa en PR #544.
-- Estabilización documental consolidada y fusionada mediante PR #545 en merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`; CI pre-merge y post-merge SUCCESS.
+- Estabilización documental consolidada mediante PR #545 y trazabilidad post-merge corregida por PR #546; ambas fusionadas en main con CI pre-merge y post-merge SUCCESS.
 - Read-back Wix Site Context actual que devuelve Draft; la lectura resuelve el estado en el momento consultado, no la sincronización del código.
 
 ## Bloqueos prioritarios
