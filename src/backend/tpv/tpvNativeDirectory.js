@@ -115,43 +115,37 @@ export async function listAuthorizedProfessionals() {
     const nativeStaff = Array.isArray(nativeResult?.staffMembers)
         ? nativeResult.staffMembers
         : [];
-    const nativeById = new Map();
+    const nativeByResourceId = new Map();
     for (const person of nativeStaff) {
         const staffMemberId = _cleanText(person?._id, 64);
-        if (!GUID_RE.test(staffMemberId) || nativeById.has(staffMemberId)) {
+        const resourceId = _cleanText(person?.resourceId, 64);
+        if (!GUID_RE.test(staffMemberId) || !GUID_RE.test(resourceId) ||
+            nativeByResourceId.has(resourceId)) {
             throw new Error("TPV_NATIVE_STAFF_ID_INVALID_OR_DUPLICATE");
         }
-        nativeById.set(staffMemberId, person);
+        nativeByResourceId.set(resourceId, person);
     }
 
-    const mappingsByStaffId = new Map();
-    const resourceIds = new Set();
+    // resourceId is the verified cross-system key. The current MapaStaff
+    // staffMemberId values do not match the native Bookings _id values, so
+    // they are not used as an authorization key or copied into the TPV DTO.
+    const mappingsByResourceId = new Map();
     for (const mapping of mappingResult.items || []) {
-        const staffMemberId = _cleanText(mapping?.staffMemberId, 64);
-        if (!nativeById.has(staffMemberId)) continue;
-
         const resourceId = _cleanText(mapping?.resourceId, 64);
-        if (!GUID_RE.test(staffMemberId) || !GUID_RE.test(resourceId)) {
-            throw new Error("TPV_STAFF_MAPPING_INVALID");
-        }
-        if (mappingsByStaffId.has(staffMemberId) || resourceIds.has(resourceId)) {
+        if (!nativeByResourceId.has(resourceId)) continue;
+        if (!GUID_RE.test(resourceId) || mappingsByResourceId.has(resourceId)) {
             throw new Error("TPV_STAFF_MAPPING_AMBIGUOUS");
         }
-        mappingsByStaffId.set(staffMemberId, mapping);
-        resourceIds.add(resourceId);
+        mappingsByResourceId.set(resourceId, mapping);
     }
 
     const professionals = [];
-    for (const [staffMemberId, mapping] of mappingsByStaffId) {
-        const native = nativeById.get(staffMemberId);
-        const resourceId = _cleanText(mapping.resourceId, 64);
-        if (_cleanText(native?.resourceId, 64) !== resourceId) {
-            throw new Error("TPV_STAFF_MAPPING_MISMATCH");
-        }
+    for (const [resourceId, mapping] of mappingsByResourceId) {
+        const native = nativeByResourceId.get(resourceId);
         professionals.push({
             profesionalId: resourceId,
             resourceId,
-            staffMemberId,
+            staffMemberId: _cleanText(native?._id, 64),
             nombre: _cleanText(native?.name || mapping?.displayName, 120) || "Profesional",
             esProveedorServicio: true,
         });
