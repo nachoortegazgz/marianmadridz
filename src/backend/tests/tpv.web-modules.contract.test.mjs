@@ -500,13 +500,14 @@ test("new TPV synthetic identifiers are neutral while historical Sandbox markers
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const config = await source("internalConfig.js");
+    const directory = await source("tpv/tpvNativeDirectory.js");
 
     assert.match(utilities, /return "TPV-" \+ String\(prefix/);
     assert.match(utilities, /return "TPV_" \+ digest/);
     assert.match(utilities, /return "TPVSANDBOX_" \+ digest/);
     assert.doesNotMatch(validation, /legacyPrefix|SANDBOX-CUSTOMER|TPV_IDENTITIES/);
-    assert.match(repository, /"TPV-CUSTOMER-" \+ String/);
-    assert.match(repository, /"TPV-STAFF-" \+ String/);
+    assert.match(directory, /identityId: contact\\._id/);
+    assert.match(directory, /profesionalId: resourceId/);
     assert.match(repository, /const traceId = "TPV:" \+ TPV_RUNTIME_POLICY\.SITE_ID/);
     assert.match(closures, /reportId = "TPV-X-"/);
     assert.match(closures, /reportId = "Z-"/);
