@@ -169,13 +169,14 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
 });
 
 test("TPV operational session contract exposes authenticated identity, Madrid time and distinct lifecycle states", async () => {
-    const [cash, repository, movements, sales, refunds, closures, controller, widget] = await Promise.all([
+    const [cash, repository, movements, sales, refunds, closures, audit, controller, widget] = await Promise.all([
         source("tpv/tpvCaja.web.js"),
         source("tpv/tpvRepository.js"),
         source("tpv/tpvMovimientos.web.js"),
         source("tpv/tpvVentas.web.js"),
         source("tpv/tpvDevoluciones.web.js"),
         source("tpv/tpvCierres.web.js"),
+        source("tpv/tpvAuditoria.web.js"),
         readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
         readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
     ]);
@@ -193,6 +194,10 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(sales, /TPV_SESSION_CLOSED/);
     assert.match(sales, /realPayment: false/);
+    assert.match(sales, /paymentStatus: "SIMULATED_ONLY"/);
+    assert.match(refunds, /paymentStatus: "SIMULATED_ONLY"/);
+    assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
+    assert.match(closures, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
     assert.match(movements, /return recordSessionId === sessionId/);
     assert.match(movements, /integrationStatus: "NO_ENVIADO"/);
@@ -200,6 +205,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(refunds, /withTpvSaleLock\(saleId, traceId, async \(\) =>/);
     assert.match(closures, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(closures, /operationalStatus: "CERRADA"/);
+    assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
+    assert.match(audit, /recordSessionId === sessionId/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
     assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
