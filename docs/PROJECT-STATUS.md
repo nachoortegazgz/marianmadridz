@@ -80,6 +80,7 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - [Backlog GitHub reconciliado](qa/BACKLOG-RECONCILIATION-2026-11-23.md)
 - [Aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
 - [Auditoría de contexto Wix](qa/2026-11-23-tpv-wix-audit-validation.md)
+- [Conciliación TPV con Wix POS/eCommerce/CMS](qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md)
 - [Revalidación Bookings V2 y dual](audits/2026-11-23-bookings-revalidation.md)
 - [Índice y jerarquía documental](README.md)
 - [README backend TPV](../src/backend/tpv/README.md)
@@ -148,7 +149,7 @@ Los siete carecen de testRunId/siteId/sourceType/sessionId y no hay ControlOpera
 No limpiar ni actualizar: MovimientosCaja, LibroAsientosContablesDetalle e HistoricoCierresZ son append-only. Separar estos registros del caso económico #10032/#10033; no contienen orderId/bookingId y no resuelven compensaciones. Investigar writer/data plane y demostrar que lectores/agregadores excluyen SIMULATED_ONLY antes de habilitar TPV Runtime. Incidencias #435 y #434 actualizadas.
 
 
-Propietario/origen ampliado: los siete registros TPV-QA tienen un único CMS _owner y ese propietario coincide con el createdBy.userId de los pedidos POS #10032/#10033. Los dos pedidos comparten también el mismo creador. Esto acredita un actor común entre el test-run y los pedidos, pero no demuestra que los pedidos sean sintéticos ni que las operaciones no tuvieran efecto económico. No se exponen identificadores personales; la clasificación QA/real sigue pendiente de evidencia del titular/recibos/adquirente.
+Confirmación del titular (2026-11-23): los pedidos POS #10032 y #10033 son operaciones sintéticas de QA. La coincidencia del actor común no demuestra por sí sola ausencia de movimiento externo. La auditoría nativa posterior de pedidos y transacciones se documenta en [TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23](qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md): ambos existen como pedidos POS nativos, con transacciones registradas y sin providerTransactionId informado. No se reintentan compensaciones ni se crean asientos reales.
 
 
 ## Discrepancia histórica de MovimientosCaja — 2026-11-23
@@ -160,3 +161,13 @@ Seguimiento tras PR #566: isExplicitSimulationLedgerRecord() ahora reconoce los 
 
 
 Auditoría de ControlOperativo para explicar el delta: 63 registros, sin controlType/kind/status/operationType/traceId con términos CLEANUP/RESET/MIGRAT/PURGE/DELETE/TRUNCAT/RESTORE. No hay handler dataItemDeleted ni wixData_onDataItemDeleted en src/. Wix ofrece el webhook REST Data Item Deleted, pero no hay evidencia de suscripción ni historial en la conexión actual. Esto no prueba que no existiera limpieza; la autoría sigue sin resolver.
+
+
+## Conciliación TPV personalizado ↔ Wix nativo — 2026-11-23
+
+- Auditoría de solo lectura de pedidos POS #10032/#10033, historial de transacciones Wix Payments y colecciones CajaActual, MovimientosCaja, ControlOperativo, HistoricoCierresZ, LibroAsientosContablesDetalle, CitasF2 y MapaStaff.
+- Los eventos TPV sintéticos (20 € efectivo, 35 € tarjeta, −35 € devolución) concilian internamente a 20 € y coinciden con el Z_SIMULATED y tres proyecciones SIMULATED_ONLY. No enlazan con los pedidos POS nativos #10032/#10033.
+- Los tres registros COMPENSATION vinculados a #10032/#10033 permanecen PENDING_RECOVERY; no reintentar ni generar ledger real por confirmación del titular de que son QA.
+- CajaActual permanece ABIERTA (300 € apertura / 320 € esperado), con referencias nativas nulas y envelope TPV V2 no acreditado. No mutar.
+- CitasF2 mantiene dos proyecciones CONFIRMED/PENDING_LEDGER para bookings nativos documentados como CANCELED/PAID. #523 sigue abierta.
+- Sin cambios Wix/CMS, pedidos, transacciones, pagos, refunds ni ledgers. Release NO-GO.
