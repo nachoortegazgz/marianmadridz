@@ -75,3 +75,10 @@ No se dispone de log de autoría ni de evidencia de ejecución del Editor/Previe
 **Pendiente:** autoría, data plane, exclusión de agregadores, sincronización Wix, Preview E2E.
 
 Mantener NO-GO TPV/producción. Incidencias de seguimiento: #435 y #434. No modificar ledgers.
+
+
+### 4.1 Correlación de autoría con pedidos POS
+
+Los siete registros TPV-QA comparten un único valor CMS _owner. Ese owner coincide con createdBy.userId de los pedidos POS #10032 y #10033; ambos pedidos tienen el mismo creador. Se ha comprobado por comparación booleana y no se exponen identificadores personales.
+
+**Interpretación limitada:** existe un actor común entre el grupo TPV sintético y los pedidos POS. Esto hace plausible que los pedidos formen parte de una sesión de pruebas, pero no lo demuestra: el mismo usuario puede crear operaciones reales o de prueba. No hay checkoutId/externalId ni marcador QA verificable en los pedidos, y la actividad MERCHANT_COMMENT no contiene indicadores textuales de test/QA/demo/prueba. Mantener #10032/#10033 como posibles hechos económicos hasta que el titular aporte evidencia de prueba, recibo/caja o trazas del adquirente.
