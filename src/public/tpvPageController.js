@@ -175,6 +175,7 @@ async function dispatch(message) {
         case "TICKET_Z":
             return generarCierreZ({
                 sessionId: String(payload.sessionId || ""),
+                idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
                 differenceReason: String(payload.differenceReason || "").trim(),
             });
