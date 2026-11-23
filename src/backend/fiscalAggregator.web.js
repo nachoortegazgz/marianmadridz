@@ -443,31 +443,40 @@ async function _getBusinessTaxId(traceId) {
   const config = await withTimeout(
     dalQuery(MAPA_STAFF_COL)
       .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
-      .limit(1)
+      .limit(2)
       .find(),
     CMS_TIMEOUT_MS,
     "getBusinessTaxId"
   );
-  const item = config?.items?.[0];
-  const taxId = _safeTrim(item?.taxId);
-  if (taxId) return taxId.toUpperCase();
-  // REVIEW-BY: 2027-01-31. Retirar tras normalizar la fila EMISOR a
-  // CONFIG_SISTEMA y verificar cero lecturas historical-config-read.
-  // Solo lectura historica; nunca crea ni modifica configuracion.
-  const historicalConfig = await withTimeout(
-    dalQuery(MAPA_STAFF_COL).eq("recordType", RECORD_TYPE.TERCERO)
-      .eq("thirdPartyType", "EMISOR").limit(1).find(),
-    CMS_TIMEOUT_MS,
-    "getBusinessTaxIdHistorical"
-  );
-  const historicalTaxId = _safeTrim(historicalConfig?.items?.[0]?.taxId);
-  if (historicalTaxId) {
-    log.warn("historical-config-read: MapaStaff EMISOR.taxId en uso; normalizar a recordType=CONFIG_SISTEMA", { traceId });
-    return historicalTaxId.toUpperCase();
+  const items = Array.isArray(config?.items) ? config.items : [];
+  if (items.length === 0) {
+    throw new Error(
+      "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA"
+    );
   }
-  throw new Error(
-    "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA con taxId"
-  );
+  if (items.length !== 1) {
+    throw new Error(
+      "FISCAL_CONFIG_NOT_UNIQUE: existe más de un MapaStaff CONFIG_SISTEMA"
+    );
+  }
+
+  const item = items[0];
+  if (
+    _safeTrim(item?.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
+    _safeTrim(item?._id) !== "CONFIG_SISTEMA_FISCAL"
+  ) {
+    throw new Error(
+      "FISCAL_CONFIG_MISSING: el registro CONFIG_SISTEMA no usa el singleton canónico"
+    );
+  }
+
+  const taxId = _safeTrim(item.taxId);
+  if (!taxId) {
+    throw new Error(
+      "FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de taxId verificado"
+    );
+  }
+  return taxId.toUpperCase();
 }
 
 // =============================================================================
