@@ -1244,6 +1244,7 @@ async function _revalidateDualInputSlots(
         resourceId: selectedResourceId,
         nativeAddonIds: f2Addons,
         traceId,
+        internalPhase: true,
     });
 
     if (
@@ -1776,6 +1777,7 @@ export const rescheduleExistingBooking = webMethod(
                 resourceId,
                 nativeAddonIds: _getAddOnIdsForRevalidation(cita),
                 traceId,
+                internalPhase: cita?.bookingType === BOOKING_TYPE.DUAL_F2,
             });
 
             if (revalidated?.status !== "SUCCESS") {
