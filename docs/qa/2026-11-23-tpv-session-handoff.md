@@ -4,7 +4,7 @@
 **main:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536)  
 **PR de trabajo:** [#541](https://github.com/nachoortegazgz/marianmadridz/pull/541) — abierta, no integrada  
 **Rama:** `feat/tpv-payment-exports-after-p0-20261123`  
-**HEAD validado:** `651faa2775d8733d465cea5f33ab9d4a41f80f69`
+**HEAD validado:** `1d7e99d66fcc14165bf2482885e583176c2b06ef`
 
 ## Objetivo
 Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompatibilidades entre widget, WebMethods, validadores y contratos de persistencia, y mantener el release bloqueado hasta obtener evidencia Wix Runtime.
@@ -19,11 +19,12 @@ Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompat
 6. **Widget/contratos:** selección de variantes, DTO de venta, búsqueda de cliente, Control X read-only, cierre Z idempotente y operaciones de caja comparten las aserciones contractuales correspondientes.
 7. **Concurrencia CajaActual:** el test FLOW-CAJA-05C ahora verifica que el lock CAS queda en estado RELEASED y expirado. El registro no se elimina: la implementación lo conserva para compare-and-swap; la expectativa antigua de borrar la fila no correspondía al contrato actual.
 8. **Fixtures y validación:** el ledger de test incorpora schemaVersion/reconciliationStatus; el simulador diario inicializa todos los métodos canónicos (incluidos BONO y TARJETA_REGALO); las pruebas de identidad distinguen escritura neutral y lectura legacy.
-9. **Documentación:** backlog, README TPV y este relevo reflejan el baseline real de main, PR, Wix y CI.
+9. **Contrato de módulos:** la revisión manual detectó que `tpvCaja.web.js` y `tpvCierres.web.js` importaban una función de resumen con nombre distinto al export; se renombró el export y todas las llamadas a `buildTpvSessionSummary`, y se añadió una aserción import/export al contrato WebMethods. La suite offline ahora cubre este fallo de carga estática.
+10. **Documentación:** backlog, README TPV y este relevo reflejan el baseline real de main, PR, Wix y CI.
 
 ## Evidencia CI — HEAD validado
 
-<badge color="success">SUCCESS</badge> **Backend offline quality gates — run 45100503963**  
+<badge color="success">SUCCESS</badge> **Backend offline quality gates — run 45100967570**  
 - Layer 1: 30 suites, 364/364 pruebas, 0 fallos.
 - Layer 2: 17 suites, 255/255 pruebas, 0 fallos.
 - Suite offline completa: 77 suites, 732/732 pruebas, 0 fallos.
@@ -31,7 +32,7 @@ Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompat
 - Contratos Wix SDK, Wix eCommerce Order Transactions y Wix TPV Catalog: SUCCESS.
 - ESLint: SUCCESS.
 
-<badge color="success">SUCCESS</badge> **Secret scanning — run 45100503949**.
+<badge color="success">SUCCESS</badge> **Secret scanning — run 45100967567**.
 
 ## Estado Wix verificado
 
