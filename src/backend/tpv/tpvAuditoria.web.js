@@ -33,8 +33,9 @@ export const obtenerAuditoriaTPV = webMethod(
                     const recordSessionId = String(
                         record.payload?.sessionId || record.sessionId || ""
                     ).trim();
-                    const belongsToSession = recordSessionId === sessionId ||
-                        String(record.entityId || "") === sessionId;
+                    const belongsToSession = recordSessionId
+                        ? recordSessionId === sessionId
+                        : String(record.entityId || "") === sessionId;
                     const matchesEntity = !entityId ||
                         String(record.entityId || "") === entityId;
                     return belongsToSession && matchesEntity;
