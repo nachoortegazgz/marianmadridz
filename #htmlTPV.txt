@@ -568,8 +568,8 @@ body {
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
     const operatorId = state.session?.operatorId || state.session?.authenticatedOperatorId || "—";
-    const resourceId = state.session?.operatorResourceId;
-    $("operatorLabel").textContent = "Operador: " + operatorId + (resourceId ? " · Staff: " + resourceId : "");
+    const operatorName = state.session?.operatorDisplayName || state.session?.authenticatedDisplayName || operatorId;
+    $("operatorLabel").textContent = "Operador: " + operatorName + " · Usuario: " + operatorId;
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
