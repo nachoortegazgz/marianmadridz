@@ -416,14 +416,14 @@ export function assertTpvIdentity(item, options = {}) {
 
     const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
+    const identitySuffix = identityId.startsWith(expectedPrefix) ? identityId.slice(expectedPrefix.length) : "";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         item.identityType !== identityType ||
-        !identityId.startsWith(expectedPrefix) ||
+        !["01", "02", "03"].includes(identitySuffix) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
-    if (!displayName.startsWith(expectedNamePrefix) ||
-        !/^\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
+    if (displayName !== expectedNamePrefix + identitySuffix) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true) {
