@@ -67,7 +67,7 @@ async function withTpvScopedLock({
     errorPrefix,
 }) {
 
-    await _ensureCajaActualForSandbox();
+    await _ensureCajaActual();
     const cleanScopeId = String(scopeId || "").trim();
     if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -295,6 +295,8 @@ function _isRecognizedSyntheticLedgerItem(item) {
         envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(envelope.schemaVersion) === 2 &&
+        envelope.reconciliationStatus === "NOT_RECONCILED" &&
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
     const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
@@ -380,7 +382,9 @@ function _sessionFromCaja(caja) {
         sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(sandboxState?.schemaVersion) === 2 &&
         sandboxState?.externalSideEffects === false &&
+        /^[a-f0-9]{64}$/i.test(String(sandboxState?.eventHash || "")) &&
         Boolean(sessionId);
     const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
         caja?.traceId === LEGACY_RUN_ID && Boolean(sessionId);
@@ -411,7 +415,7 @@ function _sessionFromCaja(caja) {
     };
 }
 
-async function _writeCajaProjection(collection, record, eventId) {
+async function _writeCajaProjection(collection, record, eventId, eventHash) {
     return withCajaActualProjectionLock(
         String(record?.traceId || eventId || "TPV_CAJA_PROJECTION"),
         async (lock) => {
@@ -424,6 +428,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
                 preflightSandboxState.schemaVersion === 2 &&
                 preflightSandboxState.externalSideEffects === false &&
+                /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
             const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
                 caja.traceId === LEGACY_RUN_ID;
@@ -491,6 +496,7 @@ async function _writeCajaProjection(collection, record, eventId) {
             sandboxState.externalSideEffects = false;
             sandboxState.schemaVersion = 2;
             sandboxState.reconciliationStatus = "NOT_RECONCILED";
+            sandboxState.eventHash = String(eventHash || sandboxState.eventHash || "");
             sandboxState.sessionId = String(sandboxState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
             sandboxState.lastProjectedAt = now;
@@ -511,7 +517,7 @@ function _shouldProject(collection, record) {
         record?.status === "CONFIRMADA_SINTETICA";
 }
 
-function _sessionCajaPatch(caja, record, fingerprint) {
+function _sessionCajaPatch(caja, record, eventHash) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
     return {
@@ -551,11 +557,12 @@ function _sessionCajaPatch(caja, record, fingerprint) {
                 schemaVersion: 2,
                 externalSideEffects: false,
                 reconciliationStatus: "NOT_RECONCILED",
+                eventHash: String(eventHash || ""),
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorId: String(record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorResourceId: String(record.operatorResourceId || "").trim() || null,
-                requestFingerprint: fingerprint,
+                requestFingerprint: record.requestFingerprint || null,
                 openedAt,
                 appliedMovementIds: [],
             },
@@ -622,6 +629,8 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
+        schemaVersion: 2,
+        reconciliationStatus: "NOT_RECONCILED",
         sandboxRecord: record,
         isSynthetic: true,
         realPayment: false,
@@ -722,7 +731,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
         if (_shouldProject(collection, existing)) {
-            await _writeCajaProjection(collection, existing, existing._id);
+            await _writeCajaProjection(collection, existing, existing._id, existing.hash);
         }
         return replay;
     }
@@ -736,7 +745,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         if (!winner) throw error;
         const replay = assertSameRequest(winner, fingerprint);
         if (_shouldProject(collection, winner)) {
-            await _writeCajaProjection(collection, winner, winner._id);
+            await _writeCajaProjection(collection, winner, winner._id, winner.hash);
         }
         return replay;
     }
@@ -748,7 +757,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         _updatedDate: saved?._updatedDate || new Date(),
     });
     if (_shouldProject(collection, record)) {
-        await _writeCajaProjection(collection, record, item._id);
+        await _writeCajaProjection(collection, record, item._id, item.hash);
     }
     return { item, replayed: false };
 }
