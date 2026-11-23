@@ -93,6 +93,15 @@ El backend emite `now` como ISO UTC y `timeZone=Europe/Madrid`. El widget format
 - El Local Editor se abre desde el clon local con `wix dev`; su Preview ejecuta el código sin publicar. La CLI requiere Node.js 24.22.1 o superior, Git, npm/yarn y clave SSH añadida a GitHub.
 - No se ha ejecutado `wix dev` desde esta sesión por no disponer del clon autenticado y sesión local Wix CLI. No ejecutar `wix publish` en este hito.
 
+
+
+### HTML Component / iframe TPV
+
+- `#htmlTPV.txt` está en la raíz del repositorio, no en las carpetas Velo mapeadas `src/pages`, `src/backend` o `src/public`. No se debe asumir que Git Integration lo sincroniza con el contenido de un HTML Component.
+- Wix documenta que el código del embed HTML se introduce en el Editor seleccionando el elemento, **Enter Code**, pegando el snippet y pulsando **Apply**. Por tanto, el cambio de `#htmlTPV.txt` es un artefacto de código revisado en Git; la actualización del HTML Component real en Draft sigue pendiente.
+- El controlador `src/public/tpvPageController.js` y el backend están en la estructura Velo del repositorio y deben sincronizarse con la rama por defecto si la integración está activa. La interfaz HTML aún no debe considerarse aplicada ni probada.
+- Antes de usar el TPV en Preview, aplicar manualmente el contenido revisado de `#htmlTPV.txt` al HTML Component de la página TPV en el sitio Draft y comprobar el bridge/request contract.
+
 ## Restricciones
 
 No se ejecutaron mutaciones CMS ni operaciones económicas en esta intervención. El repo contiene `wix.config.json` con el mismo `siteId` del sitio y el commit se fusionó en la rama por defecto `main`; según el contrato oficial de Git Integration, el código debe sincronizarse al Editor. La propagación efectiva del SHA no se ha leído en el panel GitHub Integration ni se ha ejecutado Local Editor/Runtime. El sitio sigue en estado Draft y no se ha publicado. Los pedidos POS #10032 y #10033 se consideran operaciones sintéticas según confirmación del titular; no se reescriben sus registros históricos. La integración con Wix Payments/Stores/Invoices continúa deshabilitada.

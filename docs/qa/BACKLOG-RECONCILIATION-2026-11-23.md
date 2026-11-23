@@ -9,7 +9,7 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | Issue | Estado GitHub verificado | Acción pendiente | Restricción |
 |---|---|---|---|
 | [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | PR #528 ya integra lock compartido; falta prueba concurrente/recuperación en Wix Runtime. | No mutar singleton live durante auditoría. |
-| [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · actualizado 2026-11-23 | Conciliar cada compensación con pedido/ledger/transacción fuente y definir recuperación trazable. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
+| [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · titular confirma #10032/#10033 como sintéticos QA | No generar asientos reales ni reintentar; verificar ausencia de efectos externos y resolver las compensaciones QA de forma trazable. CajaActual sigue pendiente. | No borrar, sobrescribir ni mutar ledgers; no ejecutar writers fiscales. |
 | [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open · PR #556 integrada | MapaStaff/consumidores alineados; no existe CONFIG_SISTEMA canónico. Falta configuración legal verificada y Runtime. | No recrear DatosFiscales ni CONFIG_SISTEMA sin datos verificados. |
 | [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Última actualización: 7 PREINSTALLED ACTIVE; la APPLICATION «Configuración de control laboral» está INACTIVE, revisión 5. Inspeccionar efectos/historial de las siete preinstaladas y definir contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
 | [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Open | Validación normativa, técnica, proveedor y asesoría; contrato común de huella y pruebas. | Mantener writers, firma, QR, emisión y remisión deshabilitados. |
@@ -24,6 +24,10 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | `3f02e5bb125fbb20d10d40e614c7c3eb3202b106` | Backend `45170094804` y secret scanning `45170094802`: SUCCESS tras rebase | Configuración fiscal legal verificada y lectura Runtime; mantener fail-closed |
 | [#569](https://github.com/nachoortegazgz/marianmadridz/pull/569) | `bf6e9966526716eef00ff1e304eb22459e2ef46e` | HEAD pre-merge: 79 suites / 732 PASS; Layer 1 364 PASS; Layer 2 244 PASS; SDK, ESLint y Gitleaks SUCCESS | Confirmar GitHub Integration SHA en Editor; Wix Local Editor/Runtime, concurrencia e idempotencia E2E |
 
+
+
+Confirmación del titular 2026-11-23: pedidos POS #10032 y #10033 son operaciones sintéticas de QA. Las tres compensaciones vinculadas no representan una obligación de crear asientos fiscales reales. Se mantiene #416 abierta hasta verificar ausencia de efectos externos y documentar resolución QA; no reintentar ni modificar datos CMS.
+
 ## P1 — gobierno y aceptación funcional
 
 | Issue / área | Estado GitHub | Acción pendiente |
@@ -32,7 +36,7 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Closed · 2026-11-23 | No reactivar sin read-back y prueba negativa Runtime. Issue conserva evidencia histórica Published que contradice el read-back actual Draft; no asumir el estado de reservas solo por el cierre. |
 | [#523 Cancelaciones CitasF2](https://github.com/nachoortegazgz/marianmadridz/issues/523) | Open · revalidado 2026-11-23 | 6/6 bookings nativos CANCELED; CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos native PAID vs CMS PENDING_LEDGER. Verificar event delivery/runtime y correlacionar #416. | No corregir proyección, reenviar eventos ni tocar pagos/ledgers por inferencia. |
 | [#522 Canales de pago Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522) | Open · revalidado 2026-11-23 | 70 servicios visibles sin discrepancias; 24 hijos duales ocultos, F2 OFFLINE/noFee y native inPerson=true. Probar Writer con onlineBooking deshabilitado en Runtime. | No modificar masivamente flags ni servicios nativos. |
-| TPV E2E | Pendiente · PR #569 integrada | Identidad Staff, roles, sesión, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS en Local Editor/Preview/Runtime. Confirmar SHA sincronizado antes de probar. |
+| TPV E2E | Pendiente · PR #569 integrada | Confirmar SHA de backend/public en Editor; aplicar manualmente `#htmlTPV.txt` al HTML Component de Draft; después probar identidad Staff, sesión, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS en Local Editor/Preview/Runtime. |
 | Bookings/Payments E2E | Pendiente | Checkout, reserva, webhook, cancelación y devolución en Sandbox sin efectos externos reales. |
 
 ## P2 — integraciones
