@@ -10,9 +10,11 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(state?.schemaVersion) === 2 &&
         state?.externalSideEffects === false;
+    const validEventHash = /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
     const bootstrap = allowBootstrap === true &&
         caja?.cashRegisterStatus === "CERRADA" &&
-        validNeutralMetadata;
+        validNeutralMetadata &&
+        !String(state?.sessionId || "").trim();
     const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
         validNeutralMetadata &&
         Boolean(String(state?.sessionId || "").trim()) &&
