@@ -5,7 +5,7 @@ import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
-import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvRepository";
 import { makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
