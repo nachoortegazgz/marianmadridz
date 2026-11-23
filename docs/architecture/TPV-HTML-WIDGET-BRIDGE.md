@@ -144,13 +144,13 @@ No se modifica la estructura ni se elimina el índice único `transactionId_uniq
 
 El HTML Component no contiene verificaciones de `environment`, `previewOnly` ni flags sintéticos true/false. El backend mantiene `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`; los pagos/reembolsos nativos, escrituras nativas y efectos fiscales siguen deshabilitados. El aislamiento funcional se establece por `siteId`, `sessionId`, versión de esquema e idempotencia, no por sufijos de entorno en identificadores nuevos.
 
-No se habilitan por este cambio cobros reales, devoluciones reales, facturas, notificaciones, hardware ni sincronización de colecciones Wix Apps. Las colecciones de Wix Apps no heredan el aislamiento de Sandbox CMS.
+No se habilitan por este cambio cobros reales, devoluciones reales, facturas, notificaciones, hardware ni sincronización de colecciones Wix Apps. Las colecciones de Wix Apps no heredan automáticamente las restricciones de escritura de las colecciones CMS propias.
 
 ## 8. Validación y pendientes
 
 **Baseline CI anterior:** los resultados históricos indicados a continuación pertenecen al commit `e790f7ed361e822fbbca1de8298456a80172b9e1`; no validan esta rama ni su contrato actualizado. Para esta corrección, la validación de CI queda pendiente de la PR de neutralización. Los contratos estáticos confirman las doce exportaciones y sus imports `.web`.
 
-**Pendiente de ejecutar:** Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed de `CajaActual`/identidades, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix. La CI offline no acredita ejecución runtime ni separación efectiva Sandbox/Live.
+**Pendiente de ejecutar:** Wix Local Editor, Preview, permisos con roles reales, disponibilidad de catálogo real en el sitio, preseed válido de `CajaActual`, ventas/devoluciones/cierres E2E y verificación de que el HTML fuente está instalado en el componente Wix. La CI offline no acredita ejecución runtime ni aislamiento efectivo por `siteId`/`sessionId`/`schemaVersion` ni reconciliación CMS.
 
 El código versionado no demuestra por sí solo sincronización del Editor ni ejecución runtime. No publicar ni ejecutar operaciones LIVE como parte de esta corrección.
 
