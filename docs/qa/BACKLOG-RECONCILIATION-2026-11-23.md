@@ -110,3 +110,8 @@ No tocar ni borrar: son colecciones append-only. Mantener #435/#434 abiertos; id
 
 
 Correlación de autoría: los siete registros TPV-QA comparten un único CMS owner, coincidente con el creador de los pedidos POS #10032/#10033; ambos pedidos comparten creador. Es una correlación de actor, no prueba de que los pedidos sean sintéticos ni de que no hubiera efecto económico. Mantenerlos como posibles hechos económicos hasta acreditación.
+
+
+## Discrepancia de recuento MovimientosCaja
+
+Snapshot auditado 2026-11-12: 10 filas (4 SMOKE_TEST, 1 INTERNAL/VENTA_ONLINE no sintética, 5 SIMULATED_PAYMENT secuencia 1–5). Lectura consistente actual 2026-11-23: 5 filas, todas sintéticas, totalCount=5 y hasNext=false. Diferencia de -5; la fila no sintética del snapshot no está presente. No se registraron IDs en el snapshot anterior y no hay historial CMS disponible en la consulta actual; causa desconocida. No limpiar ni reconstruir. Revisar backup/Activity Logs y confirmar si hubo reset autorizado. Mantener P0 de integridad abierto.
