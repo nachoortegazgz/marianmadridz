@@ -1,4 +1,8 @@
-> **Estado vigente — 2026-11-23:** main permanece en `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536). PR #541 está abierta sobre `main`; la rama `feat/tpv-payment-exports-after-p0-20261123` alcanza `f799e5e56ad0bf9d10cdb5958a964641f8576118`. Secret scanning del HEAD actual finalizó SUCCESS; Backend offline quality gates sigue en ejecución. No está integrado ni validado en Wix Runtime. **Release NO-GO.** Las notas fechadas más abajo son snapshots históricos y no sustituyen este estado.
+> **Estado vigente — 2026-11-23:** main permanece en `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536). PR #541 está abierta sobre `main`; la rama `feat/tpv-payment-exports-after-p0-20261123` alcanza `651faa2775d8733d465cea5f33ab9d4a41f80f69`. CI del HEAD actual SUCCESS: Layer 1 364/364, Layer 2 255/255, suite offline completa 732/732; npm audit sin vulnerabilidades, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS (runs 45100503963 y 45100503949). El sitio Wix Marian Madrid sigue en estado Draft, Velo Enabled y Stores Catalog V3. No está integrado en `main` ni validado en Wix Preview/Runtime. **Release NO-GO.** Las notas fechadas más abajo son snapshots históricos y no sustituyen este estado.
+
+
+
+> **Wix site context verificado (solo lectura, 2026-11-23):** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; estado Draft, editor clásico, Velo Enabled, EUR y zona horaria Europe/Madrid. Apps instaladas: Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Payments, Wix Stores Catalog V3, Wix Invoices V1, Wix Members Area, Wix Blog y Promote SEO. La lectura de contexto no demuestra sincronización del HEAD Git con Wix Editor ni ejecución de Preview.
 
 ## Contrato TPV vigente — escritura neutral, lectura legacy controlada
 
