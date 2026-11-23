@@ -136,12 +136,13 @@ test("CajaActual writes neutral tpvRuntime metadata and reads historical tpvSand
     ]);
     assert.match(repository, /conceptOperations\.tpvRuntime = sourceState/);
     assert.match(repository, /tpvRuntime: \{/);
-    assert.match(repository, /const legacy = operations\?\.tpvSandbox/);
+    assert.match(repository, /getTpvRuntimeState\(caja\)/);
     assert.doesNotMatch(repository, /conceptOperations\.tpvSandbox\s*=/);
     assert.match(repository, /processingMode: TPV_RUNTIME_POLICY\.PROCESSING_MODE/);
     assert.match(repository, /reconciliationStatus: TPV_RUNTIME_POLICY\.RECONCILIATION_STATUS/);
     assert.match(repository, /allowNativePayments: TPV_RUNTIME_POLICY\.CAPABILITIES\.allowNativePayments/);
     assert.match(repository, /allowNativeRefunds: TPV_RUNTIME_POLICY\.CAPABILITIES\.allowNativeRefunds/);
+    assert.match(utilities, /export function getTpvRuntimeState\(caja\)/);
     assert.match(utilities, /const current = operations\?\.tpvRuntime/);
     assert.match(utilities, /const legacy = operations\?\.tpvSandbox/);
     assert.doesNotMatch(utilities, /schemaVersion:\s*2/);
