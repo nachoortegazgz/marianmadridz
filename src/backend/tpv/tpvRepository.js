@@ -912,17 +912,34 @@ export async function appendTpvAudit({
     return { item, replayed };
 }
 
-export async function latestOpenTpvSession() {
+export async function latestTpvSession() {
     const sessions = await queryTpvRecords(
         TPV_COLLECTIONS.SESIONES_CAJA,
         undefined,
         { sort: ["_createdDate DESC"], limit: 1000 }
     );
-    const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
-    const closedSessionIds = new Set(closures.filter((item) => item.closed === true).map((item) => item.sessionId));
-    return sessions.find((session) =>
-        session.status === "ABIERTA" && !closedSessionIds.has(session.sessionId)
-    ) || null;
+    const session = sessions[0] || null;
+    if (!session) return null;
+
+    const closures = await queryTpvRecords(
+        TPV_COLLECTIONS.TICKET_Z,
+        wql.eq("sessionId", session.sessionId)
+    );
+    const closure = closures.find((item) => item.closed === true);
+    if (closure) {
+        return {
+            ...session,
+            status: "CERRADA",
+            closedAt: session.closedAt || closure.generatedAt || closure._createdDate || null,
+            closureReportId: closure.reportId || null,
+        };
+    }
+    return session;
+}
+
+export async function latestOpenTpvSession() {
+    const session = await latestTpvSession();
+    return session?.status === "ABIERTA" ? session : null;
 }
 
 
