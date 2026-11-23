@@ -301,7 +301,7 @@ La corrección elimina la desalineación temporal conocida en el código version
 ## Reconciliación documental de estado — 2026-11-23 (corte posterior a PR #580/#582)
 
 ### Código y GitHub
-- main tiene como último commit verificado d2debad0b0ed39e94d0c91019f2d60552394ecec (PR #582, actualización documental).
+- La base de main inmediatamente anterior a esta reconciliación era d2debad0b0ed39e94d0c91019f2d60552394ecec; PR #584 quedó integrada mediante squash con merge commit 4f2ede38f8d25129d8478cbfd3df00e121c43b4a.
 - PR #580 está integrada en main, merge commit 180c69d9e200266e85f6f0974f1b6a01a7c172a3. El HTML fuente #htmlTPV.txt usa HANDSHAKE_RETRY_MS=500 y HANDSHAKE_MAX_ATTEMPTS=120; el controlador mantiene handshakeTimeoutMs=65000. La prueba src/backend/tests/tpv-widget.contract.test.mjs comprueba que el producto intervalo × intentos es positivo y menor que el watchdog.
 - CI de la PR #580: Layer 1 30 suites / 369 PASS; Layer 2 17 suites / 245 PASS; suite offline 79 suites / 740 PASS; SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning SUCCESS. Es CI de PR; no se afirma una ejecución Wix Preview/Runtime ni una ejecución independiente post-merge.
 - PR #582 integra la actualización documental del merge y los resultados de CI. PR #581 y #583 se cerraron sin merge como duplicadas/sustituidas por esta reconciliación documental; su contenido relevante se ha incorporado aquí.
