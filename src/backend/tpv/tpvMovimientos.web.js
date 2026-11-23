@@ -2,8 +2,8 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES } from "backend/internalConfig";
-import { insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { listTpvIdentities } from "backend/tpv/tpvIdentities";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -14,6 +14,51 @@ const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     SIMULATED_TPV_TICKET_X: "CONTROL_X",
     SIMULATED_TPV_TICKET_Z: "CIERRE_Z",
 });
+
+function sessionOf(record) {
+    return String(record?.sessionId || record?.payload?.sessionId || "").trim();
+}
+
+function mapMovementRecord(record) {
+    const sourceType = String(record?.cmsMovementType || "");
+    if (!Object.prototype.hasOwnProperty.call(TPV_LEDGER_DISPLAY_TYPES, sourceType)) return null;
+    if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return null;
+    const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
+        ? Number(record.amountMinor)
+        : Number.isSafeInteger(Number(record.totalMinor))
+            ? Number(record.totalMinor)
+            : null;
+    return {
+        movementId: record._id,
+        sessionId: sessionOf(record) || null,
+        movementType: TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA"),
+        sourceType,
+        amount: amountMinor === null ? null : fromMinorUnits(amountMinor),
+        paymentMethod: record.paymentMethod || null,
+        reason: record.reason || record.totals?.differenceReason || "",
+        reference: record.saleId || record.refundId || record.reportId || record._id,
+        status: record.status || null,
+        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
+        totals: record.totals || null,
+        currency: record.currency || "EUR",
+        isSynthetic: true,
+        persisted: true,
+    };
+}
+
+function sessionIdFromInput(input) {
+    const sessionId = String(input?.sessionId || "").trim();
+    if (!sessionId || sessionId.length > 128) throw new Error("TPV_SESSION_REQUIRED");
+    return sessionId;
+}
+
+function exportSuccess(data, traceId) {
+    return { status: "SUCCESS", data, error: null, traceId };
+}
+
+function exportFailure(error, fallback, traceId) {
+    return { status: "ERROR", data: null, error: { code: String(error?.message || fallback) }, traceId };
+}
 
 export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
@@ -26,8 +71,11 @@ export const registrarMovimientoCaja = webMethod(
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
+            const paymentMethod = String(input.paymentMethod || TPV_PAYMENT_METHOD.EFECTIVO).trim().toUpperCase();
+            if (paymentMethod !== TPV_PAYMENT_METHOD.EFECTIVO) throw new Error("TPV_CASH_MOVEMENT_REQUIRES_CASH");
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
+            if (input.sessionId && String(input.sessionId) !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
@@ -50,12 +98,13 @@ export const registrarMovimientoCaja = webMethod(
                 sessionId: session.sessionId,
                 movementType,
                 amountMinor,
-                paymentMethod: "EFECTIVO",
+                paymentMethod,
                 profesionalId: profesionalId || null,
                 reason,
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
+                    sessionId: session.sessionId,
                     actorId: operator.actorId,
                     operatorId: operator.operatorId,
                     profesionalId: profesionalId || null,
@@ -65,14 +114,14 @@ export const registrarMovimientoCaja = webMethod(
                 },
             });
             persisted = true;
-            await insertTpvEvent(TPV_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
+            await appendTpvAudit({
+                idempotencyKey: key + ":AUDIT",
                 action: "MOVIMIENTO_CAJA_" + movementType,
                 actorId: operator.operatorId,
                 entityType: "MOVIMIENTO_CAJA",
                 entityId: item._id || key,
-                occurredAt: new Date(),
-                source: "TPV_WEB_METHOD",
-                payload: { amountMinor, reason, traceId },
+                traceId,
+                payload: { sessionId: session.sessionId, operatorId: operator.operatorId, amountMinor, reason },
             });
             return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
             });
@@ -105,32 +154,8 @@ export const obtenerMovimientosCaja = webMethod(
                     const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
                     return !sessionId || recordSessionId === sessionId;
                 })
-                .map((record) => {
-                    let amountMinor = null;
-                    if (record.amountMinor !== undefined && record.amountMinor !== null && Number.isSafeInteger(Number(record.amountMinor))) {
-                        amountMinor = Number(record.amountMinor);
-                    } else if (record.totalMinor !== undefined && record.totalMinor !== null && Number.isSafeInteger(Number(record.totalMinor))) {
-                        amountMinor = Number(record.totalMinor);
-                    }
-                    const sourceType = String(record.cmsMovementType || "");
-                    const movementType = TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA");
-                    return {
-                        movementId: record._id,
-                        sessionId: record.sessionId || record.payload?.sessionId || null,
-                        movementType,
-                        sourceType,
-                        amount: amountMinor === null ? null : fromMinorUnits(amountMinor),
-                        paymentMethod: record.paymentMethod || null,
-                        reason: record.reason || record.totals?.differenceReason || "",
-                        reference: record.saleId || record.refundId || record.reportId || record._id,
-                        status: record.status || null,
-                        createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
-                        totals: record.totals || null,
-                        currency: record.currency || "EUR",
-                        isSynthetic: true,
-                        persisted: true,
-                    };
-                })
+                .map(mapMovementRecord)
+                .filter(Boolean)
                 .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
                 .slice(0, limit);
             return {
@@ -150,6 +175,137 @@ export const obtenerMovimientosCaja = webMethod(
                 error: { code: String(error?.message || "TPV_CASH_MOVEMENTS_READ_FAILED") },
                 traceId,
             };
+        }
+    }
+);
+
+
+export const exportarMovimientosCaja = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-synthetic-movements-export");
+        await requireCajero(traceId);
+        const operator = await resolveTpvContext(traceId);
+        try {
+            const sessionId = sessionIdFromInput(input);
+            const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const collections = [
+                TPV_COLLECTIONS.VENTAS,
+                TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+                TPV_COLLECTIONS.REEMBOLSOS,
+                TPV_COLLECTIONS.TICKET_X,
+                TPV_COLLECTIONS.TICKET_Z,
+            ];
+            const batches = await Promise.all(collections.map((collection) =>
+                queryTpvRecords(collection, undefined, { limit: 1000, maxRecords: 10000 })
+            ));
+            const items = batches.flat()
+                .filter((record) => sessionOf(record) === sessionId)
+                .map(mapMovementRecord)
+                .filter(Boolean)
+                .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+            await appendTpvAudit({
+                idempotencyKey: idempotencyKey + ":AUDIT",
+                action: "CASH_MOVEMENTS_EXPORT",
+                actorId: operator.operatorId,
+                entityType: "TPV_EXPORT",
+                entityId: sessionId,
+                traceId,
+                payload: {
+                    sessionId,
+                    operatorId: operator.operatorId,
+                    createdAt: new Date(),
+                    filters: { sessionId },
+                    format: "CSV",
+                    recordCount: items.length,
+                },
+            });
+            return exportSuccess({
+                items,
+                count: items.length,
+                sessionId,
+                format: "CSV",
+                syntheticOnly: true,
+                truncated: false,
+            }, traceId);
+        } catch (error) {
+            return exportFailure(error, "TPV_MOVEMENTS_EXPORT_FAILED", traceId);
+        }
+    }
+);
+
+export const exportarAuditoriaTPV = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-synthetic-audit-export");
+        await requireCajero(traceId);
+        const operator = await resolveTpvContext(traceId);
+        try {
+            const sessionId = sessionIdFromInput(input);
+            const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const [auditRecords, sales, movements, refunds, ticketsX, ticketsZ] = await Promise.all([
+                queryTpvRecords(TPV_COLLECTIONS.AUDITORIA, undefined, { limit: 1000, maxRecords: 10000 }),
+                queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined, { limit: 1000, maxRecords: 10000 }),
+                queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, undefined, { limit: 1000, maxRecords: 10000 }),
+                queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined, { limit: 1000, maxRecords: 10000 }),
+                queryTpvRecords(TPV_COLLECTIONS.TICKET_X, undefined, { limit: 1000, maxRecords: 10000 }),
+                queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined, { limit: 1000, maxRecords: 10000 }),
+            ]);
+            const entityIds = new Set([...sales, ...movements, ...refunds, ...ticketsX, ...ticketsZ]
+                .filter((record) => sessionOf(record) === sessionId)
+                .flatMap((record) => [record._id, record.saleId, record.refundId, record.reportId])
+                .filter(Boolean));
+            const items = auditRecords
+                .filter((record) => sessionOf(record) === sessionId || record.entityId === sessionId || entityIds.has(record.entityId))
+                .map((record) => ({
+                    auditId: record._id,
+                    action: record.action || record.operationType || "UNKNOWN",
+                    operatorId: record.actorId || record.operatorId || null,
+                    sessionId: sessionOf(record) || (record.entityId === sessionId ? sessionId : null),
+                    entityType: record.entityType || null,
+                    entityId: record.entityId || null,
+                    createdAt: record.occurredAt || record.createdAt || record._createdDate || null,
+                    source: record.source || null,
+                    traceId: record.payload?.traceId || record.traceId || null,
+                    format: record.payload?.format || null,
+                    filters: record.payload?.filters || null,
+                    details: JSON.stringify({
+                        reason: record.payload?.reason || record.reason || null,
+                        amountMinor: record.payload?.amountMinor ?? record.amountMinor ?? null,
+                        saleId: record.payload?.saleId || record.saleId || null,
+                        refundId: record.payload?.refundId || record.refundId || null,
+                        allocations: record.payload?.allocations || null,
+                        recordCount: record.payload?.recordCount ?? null,
+                    }),
+                    isSynthetic: true,
+                }))
+                .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+            await appendTpvAudit({
+                idempotencyKey: idempotencyKey + ":AUDIT",
+                action: "AUDIT_EXPORT",
+                actorId: operator.operatorId,
+                entityType: "TPV_EXPORT",
+                entityId: sessionId,
+                traceId,
+                payload: {
+                    sessionId,
+                    operatorId: operator.operatorId,
+                    createdAt: new Date(),
+                    filters: { sessionId },
+                    format: "CSV",
+                    recordCount: items.length,
+                },
+            });
+            return exportSuccess({
+                items,
+                count: items.length,
+                sessionId,
+                format: "CSV",
+                syntheticOnly: true,
+                truncated: false,
+            }, traceId);
+        } catch (error) {
+            return exportFailure(error, "TPV_AUDIT_EXPORT_FAILED", traceId);
         }
     }
 );
