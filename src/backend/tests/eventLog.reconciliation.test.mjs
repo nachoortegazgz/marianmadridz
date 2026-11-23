@@ -78,11 +78,31 @@ test("EVENTLOG-FISCAL-CONFIG-01 missing SIF configuration fails closed", () => {
     () => eventLogTest.buildFiscalSystemConfig({
       _id: "CONFIG_SISTEMA_FISCAL",
       recordType: "CONFIG_SISTEMA",
-      taxId: "X1234567X",
+      taxId: "X1234567B",
       legalName: "Titular de prueba",
       verifactuVersion: "1.0",
     }),
     /FISCAL_CONFIG_INCOMPLETE/,
+  );
+});
+
+test("EVENTLOG-FISCAL-CONFIG-03 rejects a tax id with invalid checksum", () => {
+  assert.throws(
+    () => eventLogTest.buildFiscalSystemConfig({
+      _id: "CONFIG_SISTEMA_FISCAL",
+      recordType: "CONFIG_SISTEMA",
+      sistemaInformaticoNombre: "SIF de prueba",
+      idSistemaInformatico: "PRODUCER-001",
+      verifactuVersion: "1.0.0",
+      numeroInstalacion: "1",
+      tipoUsoPosibleSoloVerifactu: false,
+      tipoUsoPosibleMultiOT: true,
+      indicadorMultiplesOT: true,
+      taxId: "X1234567X",
+      legalName: "Titular de prueba",
+      fechaInicioVerifactu: "2027-07-01",
+    }),
+    /FISCAL_CONFIG_INVALID_TAX_ID/
   );
 });
 
