@@ -8,7 +8,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { listTpvIdentities } from "backend/tpv/tpvIdentities";
 import { logger } from "backend/logger";
 import {
@@ -975,7 +975,7 @@ export async function getPendingTpvRefunds(sessionId) {
         for (const allocation of allocations) {
             const method = allocation?.paymentMethod;
             const amountMinor = Number(allocation?.amountMinor);
-            if (!["EFECTIVO", "TARJETA", "BIZUM", "OTROS"].includes(method) ||
+            if (!Object.values(TPV_PAYMENT_METHOD).includes(method) ||
                 !Number.isSafeInteger(amountMinor) || amountMinor <= 0) return true;
             const current = expectedByMethod.get(method) || { count: 0, amountMinor: 0 };
             current.count += 1;
