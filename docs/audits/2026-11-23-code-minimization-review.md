@@ -126,6 +126,18 @@ tpvRepository.js y tpvUtils.js importan node:crypto y utilizan createHash("sha25
 - Validadores CMS/DTO que protegen escrituras.
 - Históricos, ledgers, pruebas y decisiones que tengan valor probatorio.
 
+## 5.1 Persistencia TPV: migración lógica ya presente en main
+
+La lectura de internalConfig.js confirma que TPV_COLLECTIONS contiene discriminadores lógicos (TPV_LOGICAL_*), no IDs de colecciones CMS. El propio comentario del código indica que el repositorio los persiste físicamente en MovimientosCaja y que las sesiones se representan en CajaActual.
+
+tpvRepository.js confirma el comportamiento:
+- insertTpvEvent persiste los eventos lógicos en BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA.
+- queryTpvRecords consulta MovimientosCaja y reconstruye el registro lógico desde payloadFiscal.
+- Las sesiones de caja se proyectan en CajaActual.
+- TPV_LEGACY_COLLECTIONS se describe en internalConfig como mapeo de solo lectura para discriminadores históricos.
+
+Por tanto, el objetivo técnico de la issue #435 parece estar implementado parcialmente o en gran parte en el código actual de main. La issue sigue abierta y debe reconciliarse con el código actual, los dos movimientos sintéticos live, la colección de identidades vacía y la aceptación Runtime. No crear colecciones TPV_QA_* ni confundir los discriminadores lógicos con IDs CMS.
+
 ## 5. Orden de simplificación recomendado
 
 1. Resolver divergencias nativas Bookings/CitasF2 y opciones de pago.
