@@ -98,3 +98,12 @@ GetSiteContext indica que el sitio está Draft (Editor clásico, Velo habilitado
 Bookings Services V2 devuelve 94/94 servicios: 70 visibles, 24 ocultos; 74 con onlineBooking.enabled=true y 20 false. Los 70 visibles están habilitados; cuatro servicios F2 ocultos también están habilitados. Pago online: 70; presencial: 94. La lectura contradice el snapshot anterior 94/94 deshabilitados. No asumir que los flags cambiaron por una intervención concreta: no hay autoría ni historial de cambio disponible en esta lectura.
 
 **NO-GO de publicación:** mantener el sitio Draft hasta identificar la divergencia y validar que los servicios F2 ocultos no admiten una reserva directa que eluda el flujo dual personalizado. No modificar los 94 flags en bloque. La prueba de rutas directas y Runtime queda pendiente.
+
+
+## Integridad de TPV sintético — registros legacy fuera de contrato (2026-11-23)
+
+CMS devuelve siete registros con prefijo TPV-QA-1795437582366: tres movimientos sintéticos en MovimientosCaja (+20, +35, -35 EUR), tres filas LibroAsientosContablesDetalle marcadas SIMULATED_ONLY y un cierre Z marcado SIMULATED/TPV_CUSTOM_QA. Carecen de testRunId, siteId, sourceType y sessionId; no hay ControlOperativo que los correlacione.
+
+Los movimientos carecen de schemaVersion/hash/previousRecordHash. Los asientos incumplen assertAccountingLedgerRecord (journalEntryId, recordSource, documentId, sequenceNumber, desgloseDetallado y hashes ausentes). El cierre no cumple assertHistoricoCierresZ por fiscalPeriod/campos fiscales ausentes. El código actual en main rechazaría esos payloads; posible writer legacy, escritura CMS REST que elude hooks o desincronización Wix. Origen no acreditado.
+
+No tocar ni borrar: son colecciones append-only. Mantener #435/#434 abiertos; identificar el escritor, demostrar aislamiento y exclusión de lectores fiscales. Estos registros no están correlacionados con #10032/#10033 y no resuelven #416.
