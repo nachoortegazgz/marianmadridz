@@ -1,4 +1,4 @@
-import { BUSINESS_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 import { assertTpvSandboxIdentity } from "backend/validation";
 
@@ -8,7 +8,7 @@ function isEligibleIdentity(item, identityType) {
 }
 
 export async function listTpvSandboxIdentities(identityType) {
-    if (!Object.values(TPV_SANDBOX_IDENTITY_TYPES).includes(identityType)) {
+    if (!Object.values(TPV_IDENTITY_TYPES).includes(identityType)) {
         throw new Error("TPV_IDENTITY_TYPE_INVALID");
     }
     const result = await queryItems({
