@@ -24,8 +24,8 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 |---|---|---|
 | Servicios | Wix Bookings | Lectura de catálogo; sin escritores de reservas |
 | Productos y variantes | Wix Stores Catalog V3 | Lectura de catálogo; sin cambios de stock ni pedidos |
-| Clientes | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `CUSTOMER`, sin CRM/Members ni datos personales reales |
-| Profesionales | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `STAFF`; sin IDs ni consultas de Bookings Staff |
+| Clientes | Wix CRM Contacts V5 | Búsqueda/selección por ID nativo de Contact; el campo legado del widget `customerIdentityId` conserva el nombre por compatibilidad, pero su valor es `Contact._id` |
+| Profesionales | Wix Bookings Staff + `MapaStaff` | Resolución/autorización por `resourceId`; el mapeo CMS debe corresponder con el recurso nativo de Bookings |
 | Reservas | Wix Bookings | Consulta y vinculación deshabilitadas en QA |
 | Pagos, pedidos y transacciones | Wix eCommerce / proveedor | Simulación sintética; sin checkout, autorización, captura, pedido ni reembolso real |
 | Tarjetas regalo | Wix Gift Cards | Consulta de saldo real, emisión, canje y reembolso deshabilitados en QA |
@@ -33,6 +33,18 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 | Caja y ledgers | `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ`, ledgers fiscal/contable | Eventos sintéticos en `MovimientosCaja` y proyección de sesión en `CajaActual`; sin escritores fiscales/contables |
 
 Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS propio conserva exclusivamente el estado transaccional sintético de TPV. No se copian contactos, miembros, reservas, tarjetas regalo, pedidos ni pagos reales.
+
+### Identidades nativas y compatibilidad de contratos — 2026-11-23
+
+- El directorio de clientes consulta Wix CRM Contacts V5. No se crea ni consulta una colección de identidades TPV propia.
+- El nombre de propiedad `customerIdentityId` se mantiene temporalmente en el puente del widget por compatibilidad; semánticamente contiene el ID nativo de Contact (`Contact._id`). No representa una identidad sintética.
+- Los profesionales se resuelven mediante `MapaStaff` y Wix Bookings Staff usando `resourceId`. La verificación read-only realizada encontró tres asociaciones de tres; `staffMemberId` no es el identificador de unión empleado por el código.
+- No se ha autorizado ni ejecutado ninguna escritura de reconciliación en CMS.
+- Las colecciones retiradas `TpvSandboxIdentities` / `TPV_IDENTITIES` no forman parte del contrato runtime.
+- El metadato nuevo de sesión/proyección se escribe en `CajaActual.conceptOperations.tpvRuntime`. `tpvSandbox` se conserva exclusivamente como fallback de lectura para registros históricos. No se migran registros antiguos automáticamente.
+- Los nuevos envelopes sintéticos usan `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`, `siteId`, `sessionId`, `schemaVersion` y `ledgerVersion`; pagos/reembolsos nativos, escrituras nativas y efectos fiscales siguen deshabilitados.
+- Los identificadores históricos `TPVSANDBOX_*` solo se generan para búsquedas de compatibilidad/idempotencia; no son IDs de nueva inserción. No eliminar ni renombrar sin migración de lectura y pruebas de retry.
+
 
 ## Integración versionada
 
