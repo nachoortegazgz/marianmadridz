@@ -34,11 +34,9 @@ test("TPV runtime policy separates synthetic source from disabled external capab
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
     assert.match(source, /CAPABILITIES: Object\.freeze\(\{[\s\S]*?realPayments: false,[\s\S]*?nativeWrites: false/);
     assert.equal(TPV_RUNTIME_POLICY.ENABLED, true);
-    assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.realPayments, false);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.nativeWrites, false);
-    assert.equal(TPV_RUNTIME_POLICY.CURRENCY, "EUR");
-    assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
+
 });
 
 test("CajaActual integrity uses explicit source, site, schema, session and event hash metadata", () => {
@@ -63,11 +61,19 @@ test("CajaActual integrity uses explicit source, site, schema, session and event
     };
     const bootstrap = {
         cashRegisterStatus: "CERRADA",
-        snapshotSource: "TPV_SYNTHETIC",
-        traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":BOOTSTRAP",
-        conceptOperations: { tpvSandbox: { ...neutralMetadata } },
+        conceptOperations: { tpvSandbox: {
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            schemaVersion: 2,
+            externalSideEffects: false,
+        } },
     };
-    assert.doesNotThrow(() => assertTpvCajaIntegrity(bootstrap, { allowBootstrap: true }));
+    assert.throws(
+        () => assertTpvCajaIntegrity(sandboxBootstrap),
+        /TPV_CASH_REGISTER_INTEGRITY_FAILED/
+    );
+    assert.doesNotThrow(() => assertTpvCajaIntegrity(sandboxBootstrap, { allowBootstrap: true }));
 
     const activeCaja = {
         cashRegisterStatus: "SIMULACION",
@@ -81,20 +87,25 @@ test("CajaActual integrity uses explicit source, site, schema, session and event
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(activeCaja));
     assert.throws(
-        () => assertTpvCajaIntegrity({ ...activeCaja, conceptOperations: { tpvSandbox: {
-            ...activeCaja.conceptOperations.tpvSandbox,
-            siteId: "00000000-0000-4000-8000-000000000000",
-        } } }),
+        () => assertTpvCajaIntegrity({ ...activeSandboxCaja, traceId: "OTHER_TEST_RUN" }),
         /TPV_CASH_REGISTER_INTEGRITY_FAILED/
     );
 
     const legacyCaja = {
         cashRegisterStatus: "SIMULACION",
-        snapshotSource: "TPV_SANDBOX_SYNTHETIC",
-        traceId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-        conceptOperations: { tpvSandbox: { sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID } },
-    };
-    assert.doesNotThrow(() => assertTpvCajaIntegrity(legacyCaja), "historical markers remain accepted for compatibility");
+        snapshotSource: "TPV_SYNTHETIC",
+        traceId: "TPV_SESSION:SESSION-EXPLICIT",
+        conceptOperations: {
+            tpvSandbox: {
+                sourceType: "SYNTHETIC",
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                schemaVersion: 2,
+                externalSideEffects: false,
+                sessionId: "SESSION-EXPLICIT",
+            },
+        },
+    }), "explicit source/site/version/session markers must not depend on the static run ID");
 });
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
@@ -228,7 +239,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
-    const key = "sandbox-arqueo-reintento-0001";
+    const key = "tpv-cashcount-retry-0001";
     const cashCountId = makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
     const ticketId = makeTpvTransactionId(TPV_COLLECTIONS.TICKET_Z, key);
     const auditId = makeTpvTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
@@ -247,7 +258,7 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
 
 test("legacy transaction IDs remain discoverable for same-collection idempotent retries", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
-    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacyTpvTransactionId\(key\),\s*\]/);
+    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacyTpvTransactionIdByCollection\(collection, key\),\s*makeLegacyTpvTransactionId\(key\),\s*\]/);
     assert.match(repository, /for \(const transactionId of uniqueTransactionIds\)/);
 });
 

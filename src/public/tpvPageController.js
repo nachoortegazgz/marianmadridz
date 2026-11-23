@@ -1,235 +1,248 @@
-/**
- * TPV page controller — native Wix POS catalogue + Marian Madrid extensions.
- * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
- * All business rules and persistence remain in authenticated backend WebMethods.
- */
-import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja.web";
-import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
+// src/public/tpvPageController.js
+// TPV Marian Madrid — Controlador público de la interfaz.
+//
+// Directrices aplicadas:
+// - Codificación neutra: sin sufijos ni prefijos sandbox/qa/live/production
+//   en identificadores, mensajes, claves ni claves de idempotencia.
+// - El frontend NUNCA envía siteId; el backend resuelve actorId y siteId
+//   desde el contexto autenticado de Wix.
+// - Contratos backend respetados:
+//     * Devoluciones: { paymentMethod, amount }
+//     * Cierre Z: incluye idempotencyKey del frontend
+//     * Ventas y movimientos: operatorId obligatorio, profesionalId opcional
+// - Errores genéricos al frontend; el detalle técnico queda en logs internos.
+
 import { registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos.web";
+import { registrarMovimientoCaja } from "backend/tpv/tpvMovimientos.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
-import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
-import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
+import { generarControlX, generarCierreZ } from "backend/tpv/tpvCierres.web";
+import { listarCatalogo } from "backend/tpv/tpvCatalogo.web";
+import {
+    abrirCaja,
+    obtenerSesion,
+    obtenerResumenSesion,
+    listarPersonal,
+    listarMovimientos,
+} from "backend/tpv/tpvCaja.web";
 
-const REQUEST_TYPES = Object.freeze([
-    "CASHIER_STATE",
-    "SESSION_OPEN",
-    "CATALOG_SERVICES",
-    "CATALOG_PRODUCTS",
-    "CATALOG_VARIANTS",
-    "CATALOG_STAFF",
-    "CUSTOMERS_SEARCH",
-    "SALE_REGISTER",
-    "CASH_MOVEMENT",
-    "REFUND",
-    "TICKET_X",
-    "TICKET_Z",
-    "SESSION_SUMMARY",
-    "AUDIT_LIST",
-]);
-const activeBridges = new WeakMap();
+const HTML_ID = "#htmlTPV";
+const MAX_KEY_LEN = 128;
+const MAX_STR_LEN = 500;
 
-function envelope(result) {
-    if (result && (result.status === "SUCCESS" || result.status === "ERROR")) return result;
-    return { status: "SUCCESS", data: result ?? null, error: null };
-}
+// Mapa de tipo de mensaje → tipo de respuesta.
+// Necesario porque algunas respuestas no siguen el patrón <TYPE>_RES.
+const RESPONSE_TYPE = {
+    CATALOG_LIST: "CATALOG_LOADED",
+    STAFF_LIST: "STAFF_LOADED",
+    SESSION_GET: "SESSION_STATE",
+    SESSION_STATE: "SESSION_STATE",
+    OPEN_CASH: "OPEN_CASH_RES",
+    SALE_REGISTER: "SALE_REGISTER_RES",
+    CASH_MOVEMENT: "CASH_MOVEMENT_RES",
+    REFUND: "REFUND_RES",
+    SESSION_SUMMARY: "SESSION_SUMMARY_RES",
+    AUDIT_LIST: "AUDIT_LIST_RES",
+    TICKET_X: "TICKET_X_RES",
+    TICKET_Z: "TICKET_Z_RES",
+};
 
-function errorEnvelope(error) {
-    return {
-        status: "ERROR",
-        data: null,
-        error: {
-            code: String(error?.code || error?.message || "TPV_ERROR"),
-            message: "No se pudo completar la operación.",
-        },
-    };
-}
-
-function numeric(value, field, { allowZero = true } = {}) {
-    if (value === "" || value === null || value === undefined) {
-        if (allowZero) return 0;
-        throw new Error("TPV_INVALID_" + field);
+// Validación numérica en céntimos (hasta 2 decimales, redondeo bancario no requerido aquí).
+function cents(value, code, { allowZero = false } = {}) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0 || (!allowZero && n === 0)) {
+        throw new Error(code);
     }
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < 0 || (!allowZero && number === 0)) {
-        throw new Error("TPV_INVALID_" + field);
-    }
-    return number;
+    return Math.round(n * 100) / 100;
 }
 
-function idempotencyKey(message, payload = {}) {
-    const supplied = String(payload.idempotencyKey || "").trim();
-    if (supplied) {
-        if (!/^[A-Za-z0-9:_-]{8,100}$/.test(supplied)) {
-            throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
-        }
-        return supplied;
-    }
-    const messageId = String(message?.messageId || "").replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 70);
-    if (messageId.length < 8) throw new Error("TPV_MESSAGE_ID_REQUIRED_FOR_IDEMPOTENCY");
-    return ("TPV_UI_" + String(message.type || "OP") + "_" + messageId).slice(0, 100);
+// Cantidad entera positiva.
+function positiveInt(value, code) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n <= 0) throw new Error(code);
+    return n;
 }
 
-async function dispatch(message) {
-    const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
-        ? message.payload
-        : {};
-    const key = idempotencyKey(message, payload);
+function requiredString(value, code, maxLen = MAX_STR_LEN) {
+    const s = String(value ?? "").trim();
+    if (!s || s.length > maxLen) throw new Error(code);
+    return s;
+}
 
-    switch (message.type) {
-        case "CASHIER_STATE":
-            return obtenerEstadoCaja();
+function optionalString(value, maxLen = MAX_KEY_LEN) {
+    const s = String(value ?? "").trim();
+    return s && s.length <= maxLen ? s : null;
+}
 
-        case "SESSION_OPEN":
-            return abrirSesionCaja({
-                openingCash: numeric(payload.openingCash, "OPENING_CASH"),
-                terminalId: String(payload.terminalId || "TPV").slice(0, 80),
-                reason: String(payload.reason || "Apertura desde TPV").slice(0, 200),
-            });
+// Respuesta pública: nunca incluye códigos internos ni detalle técnico.
+function publicError() {
+    return { error: "Operación no completada. Contacta con soporte." };
+}
 
-        case "CATALOG_SERVICES":
-            return obtenerServicios({ limit: 100, offset: 0 });
+function respond(html, requestId, type, payload) {
+    html.postMessage({ type, requestId, payload });
+}
 
-        case "CATALOG_PRODUCTS":
-            return obtenerProductos({
-                limit: numeric(payload.limit ?? 100, "CATALOG_LIMIT", { allowZero: false }),
-                cursor: payload.cursor ? String(payload.cursor).slice(0, 16000) : null,
-            });
+function respondError(html, requestId, type) {
+    html.postMessage({ type: RESPONSE_TYPE[type] || type + "_RES", requestId, ...publicError() });
+}
 
-        case "CATALOG_VARIANTS":
-            return obtenerVariantesProducto({ productId: String(payload.productId || "") });
+$w.onReady(() => {
+    const html = $w(HTML_ID);
+    if (!html || typeof html.onMessage !== "function") return;
 
-        case "CATALOG_STAFF":
-            return obtenerStaff();
+    html.onMessage(async (event) => {
+        const data = event?.data || {};
+        const { type, requestId, payload } = data;
+        if (!type || !requestId) return;
 
-        case "CUSTOMERS_SEARCH":
-            return buscarClientesTPV({ search: String(payload.search || "").trim() });
+        try {
+            switch (type) {
+                case "CATALOG_LIST": {
+                    const items = await listarCatalogo();
+                    return respond(html, requestId, "CATALOG_LOADED", { items });
+                }
 
-        case "SALE_REGISTER": {
-            const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            const lineTaxMinor = lineItems.reduce((sum, line) => {
-                const amount = numeric(line?.impuestosImporte ?? 0, "LINE_TAX");
-                return sum + Math.round(amount * 100);
-            }, 0);
-            const declaredTaxMinor = Math.round(numeric(payload.tax, "TAX") * 100);
-            if (lineTaxMinor !== declaredTaxMinor) {
-                throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
+                case "STAFF_LIST": {
+                    const items = await listarPersonal();
+                    return respond(html, requestId, "STAFF_LOADED", { items });
+                }
+
+                case "SESSION_GET":
+                case "SESSION_STATE": {
+                    const session = await obtenerSesion();
+                    return respond(html, requestId, "SESSION_STATE", { session });
+                }
+
+                case "OPEN_CASH": {
+                    const operatorId = requiredString(payload?.operatorId, "TPV_OPERATOR_REQUIRED", MAX_KEY_LEN);
+                    const idempotencyKey = requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN);
+                    const initialCash = cents(payload?.initialCash, "TPV_INITIAL_CASH", { allowZero: true });
+                    const session = await abrirCaja({ operatorId, idempotencyKey, initialCash });
+                    return respond(html, requestId, "OPEN_CASH_RES", { session });
+                }
+
+                case "SALE_REGISTER": {
+                    const operatorId = requiredString(payload?.operatorId, "TPV_OPERATOR_REQUIRED", MAX_KEY_LEN);
+                    const profesionalId = optionalString(payload?.profesionalId, MAX_KEY_LEN);
+                    const idempotencyKey = requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN);
+
+                    const lines = Array.isArray(payload?.lines) ? payload.lines : [];
+                    const payments = Array.isArray(payload?.payments) ? payload.payments : [];
+                    if (!lines.length) throw new Error("TPV_LINES_REQUIRED");
+                    if (!payments.length) throw new Error("TPV_PAYMENTS_REQUIRED");
+
+                    const result = await registrarVenta({
+                        idempotencyKey,
+                        operatorId,
+                        profesionalId,
+                        lines: lines.map((l) => ({
+                            itemId: requiredString(l.itemId, "TPV_ITEM_REQUIRED", MAX_KEY_LEN),
+                            name: requiredString(l.name, "TPV_NAME_REQUIRED", 200),
+                            qty: positiveInt(l.qty, "TPV_QTY_REQUIRED"),
+                            price: cents(l.price, "TPV_PRICE_REQUIRED"),
+                        })),
+                        // Contrato backend actual: { paymentMethod, amount }
+                        payments: payments.map((p) => ({
+                            paymentMethod: String(p.paymentMethod || "").toUpperCase(),
+                            amount: cents(p.amount, "TPV_PAYMENT_AMOUNT_REQUIRED"),
+                        })),
+                    });
+                    return respond(html, requestId, "SALE_REGISTER_RES", result);
+                }
+
+                case "CASH_MOVEMENT": {
+                    const operatorId = requiredString(payload?.operatorId, "TPV_OPERATOR_REQUIRED", MAX_KEY_LEN);
+                    const profesionalId = optionalString(payload?.profesionalId, MAX_KEY_LEN);
+                    const movementType = String(payload?.movementType || "").toUpperCase();
+                    if (movementType !== "ENTRADA" && movementType !== "SALIDA") {
+                        throw new Error("TPV_MOVEMENT_TYPE_INVALID");
+                    }
+
+                    const result = await registrarMovimientoCaja({
+                        idempotencyKey: requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN),
+                        movementType,
+                        amount: cents(payload?.amount, "TPV_MOVEMENT_AMOUNT_REQUIRED"),
+                        reason: requiredString(payload?.reason, "TPV_MOVEMENT_REASON_REQUIRED"),
+                        operatorId,
+                        profesionalId,
+                    });
+                    return respond(html, requestId, "CASH_MOVEMENT_RES", result);
+                }
+
+                case "REFUND": {
+                    const operatorId = requiredString(payload?.operatorId, "TPV_OPERATOR_REQUIRED", MAX_KEY_LEN);
+                    const profesionalId = optionalString(payload?.profesionalId, MAX_KEY_LEN);
+                    const payments = Array.isArray(payload?.payments) ? payload.payments : [];
+                    if (!payments.length) throw new Error("TPV_REFUND_PAYMENTS_REQUIRED");
+
+                    const result = await registrarDevolucion({
+                        idempotencyKey: requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN),
+                        saleId: requiredString(payload?.saleId, "TPV_REFUND_SALE_REQUIRED", MAX_KEY_LEN),
+                        reason: requiredString(payload?.reason, "TPV_REFUND_REASON_REQUIRED"),
+                        operatorId,
+                        profesionalId,
+                        // Contrato backend: { paymentMethod, amount }
+                        payments: payments.map((p) => ({
+                            paymentMethod: String(p.paymentMethod || "").toUpperCase(),
+                            amount: cents(p.amount, "TPV_REFUND_AMOUNT_REQUIRED"),
+                        })),
+                    });
+                    return respond(html, requestId, "REFUND_RES", result);
+                }
+
+                case "SESSION_SUMMARY": {
+                    const sessionId = optionalString(payload?.sessionId, MAX_KEY_LEN);
+                    const result = await obtenerResumenSesion({ sessionId });
+                    return respond(html, requestId, "SESSION_SUMMARY_RES", result);
+                }
+
+                case "AUDIT_LIST": {
+                    const sessionId = optionalString(payload?.sessionId, MAX_KEY_LEN);
+                    const result = await listarMovimientos({ sessionId });
+                    return respond(html, requestId, "AUDIT_LIST_RES", result);
+                }
+
+                case "TICKET_X": {
+                    // Control X es informativo y repetible; operatorId opcional.
+                    const sessionId = optionalString(payload?.sessionId, MAX_KEY_LEN);
+                    const operatorId = optionalString(payload?.operatorId, MAX_KEY_LEN);
+                    const result = await generarControlX({
+                        sessionId,
+                        operatorId,
+                        idempotencyKey: requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN),
+                    });
+                    return respond(html, requestId, "TICKET_X_RES", result);
+                }
+
+                case "TICKET_Z": {
+                    const operatorId = requiredString(payload?.operatorId, "TPV_OPERATOR_REQUIRED", MAX_KEY_LEN);
+                    const profesionalId = optionalString(payload?.profesionalId, MAX_KEY_LEN);
+
+                    const result = await generarCierreZ({
+                        sessionId: requiredString(payload?.sessionId, "TPV_SESSION_REQUIRED", MAX_KEY_LEN),
+                        operatorId,
+                        profesionalId,
+                        idempotencyKey: requiredString(payload?.idempotencyKey, "TPV_IDEMPOTENCY_REQUIRED", MAX_KEY_LEN),
+                        countedCash: cents(payload?.countedCash, "TPV_COUNTED_CASH_REQUIRED", { allowZero: true }),
+                        differenceReason: optionalString(payload?.differenceReason, 200) || "",
+                    });
+                    return respond(html, requestId, "TICKET_Z_RES", result);
+                }
+
+                case "TPV_READY":
+                    // Notificación informativa del HTML; no requiere respuesta.
+                    return;
+
+                default:
+                    // Mensaje desconocido: no responder con detalle.
+                    return;
             }
-            return registrarVenta({
-                sessionId: String(payload.sessionId || ""),
-                idempotencyKey: key,
-                lineas: lineItems.map((line) => ({
-                    tipoLinea: String(line.tipoLinea || "").toUpperCase(),
-                    itemId: line.itemId || null,
-                    varianteId: line.varianteId || null,
-                    concepto: String(line.concepto || ""),
-                    cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
-                    precioUnitario: numeric(line.precioUnitario, "UNIT_PRICE"),
-                    descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
-                    impuestosImporte: numeric(line.impuestosImporte ?? 0, "LINE_TAX"),
-                    profesionalId: line.profesionalId || null,
-                    stockAfectado: line.stockAfectado === true,
-                })),
-                pagos: payments.map((payment) => ({
-                    medioPago: String(payment.method || payment.medioPago || "").toUpperCase(),
-                    importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
-                    importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
-                })),
-                subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
-                impuestosTotal: numeric(payload.tax, "TAX"),
-                totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
-                customerIdentityId: payload.customerIdentityId || null,
-            });
-        }
-
-        case "CASH_MOVEMENT":
-            return registrarMovimientoCaja({
-                idempotencyKey: key,
-                movementType: String(payload.movementType || "").toUpperCase(),
-                amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
-                reason: String(payload.reason || "").trim(),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
-            });
-
-        case "REFUND": {
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            return registrarDevolucion({
-                idempotencyKey: key,
-                saleId: String(payload.saleId || "").trim(),
-                reason: String(payload.reason || "").trim(),
-                payments: payments.map((payment) => ({
-                    paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
-                    amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
-                })),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
-            });
-        }
-
-        case "TICKET_X":
-            return generarControlX({
-                sessionId: String(payload.sessionId || ""),
-                idempotencyKey: key,
-            });
-
-        case "TICKET_Z":
-            return generarCierreZ({
-                sessionId: String(payload.sessionId || ""),
-                idempotencyKey: key,
-                countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
-                differenceReason: String(payload.differenceReason || "").trim(),
-            });
-
-        case "SESSION_SUMMARY":
-            return obtenerResumenCaja({ sessionId: String(payload.sessionId || "") });
-
-        case "AUDIT_LIST":
-            return obtenerMovimientosCaja({
-                sessionId: payload.sessionId ? String(payload.sessionId) : undefined,
-                limit: numeric(payload.limit ?? 50, "MOVEMENTS_LIMIT", { allowZero: false }),
-            });
-
-        default:
-            throw new Error("UNKNOWN_MESSAGE");
-    }
-}
-
-export function initializeTpvPage(widget) {
-    const previous = activeBridges.get(widget);
-    if (previous) previous.destroy();
-
-    const bridge = createWidgetBridge(widget, {
-        allowedTypes: [MESSAGE_TYPES.READY, ...REQUEST_TYPES],
-        allowOpaqueOrigin: true,
-        onContextReady: async () => {
-            const config = envelope(await obtenerConfiguracionTPV());
-            return {
-                status: config.status,
-                data: {
-                    component: "htmlTPV",
-                    protocolVersion: PROTOCOL_VERSION,
-                    currency: config.status === "SUCCESS" ? config.data?.currency : null,
-                    timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
-                },
-                error: config.error || null,
-            };
-        },
-        onWidgetMessage: async (message, reply) => {
-            if (message.type === MESSAGE_TYPES.READY) return;
+        } catch (err) {
+            // Log interno neutro (sin etiquetas de entorno); respuesta pública genérica.
             try {
-                const result = envelope(await dispatch(message));
-                reply(message.type + "_RES", result, message);
-            } catch (error) {
-                reply(message.type + "_RES", errorEnvelope(error), message);
-            }
-        },
-        onError: (error) => {
-            console.error("[TPV] Widget bridge error", error?.code || error?.message || error);
-        },
+                console.warn("[TPV]", type, err?.message || "TPV_UNEXPECTED_ERROR");
+            } catch (_e) { /* silencio */ }
+            return respondError(html, requestId, type);
+        }
     });
-
-    activeBridges.set(widget, bridge);
-    return bridge;
-}
+});
