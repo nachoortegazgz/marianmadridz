@@ -1799,6 +1799,9 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
     /* DUAL-GAP-02: diagnóstico de por qué no se forman pares. */
     let discardedForNoResources = 0;
     let discardedForNoF2 = 0;
+    let discardedForNoExactF2Start = 0;
+    let discardedForNoSameStaffF2 = 0;
+    let discardedForInvalidF2Slot = 0;
 
     for (const s1 of slotsF1 || []) {
         const s1EndLocal = _normalizeLocalIsoStr(s1.localEndDate);
@@ -1824,6 +1827,12 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         let s2 = null;
 
         const exactF2Candidates = f2SlotsByStart.get(targetF2Local) || [];
+        if (exactF2Candidates.length === 0) {
+            discardedForNoExactF2Start++;
+            discardedForNoF2++;
+            continue;
+        }
+        let hadSameStaffF2Candidate = false;
         for (const candidateResourceId of candidatesToTry) {
             /* DUAL-GAP-01 + DUAL-PERF-01: misma hora exacta, mismo profesional,
                usando la consulta F2 agrupada de la jornada (sin nuevas llamadas
@@ -1832,6 +1841,7 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
                 _getResourceIdsFromSlot(slot).includes(String(candidateResourceId))
             );
             if (!candidateF2) continue;
+            hadSameStaffF2Candidate = true;
             const s2StartLocal = _normalizeLocalIsoStr(candidateF2.localStartDate);
             const s2EndLocal = _normalizeLocalIsoStr(candidateF2.localEndDate);
             if (!_isValidSlotRange(s1.localStartDate, s1.localEndDate) || !_isValidSlotRange(s2StartLocal, s2EndLocal)) continue;
@@ -1847,6 +1857,11 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             break;
         }
         if (!chosenResourceId || !s2) {
+            if (hadSameStaffF2Candidate) {
+                discardedForInvalidF2Slot++;
+            } else {
+                discardedForNoSameStaffF2++;
+            }
             discardedForNoF2++;
             continue;
         }
@@ -1893,11 +1908,16 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
             serviceId: resolvedServiceId,
             dateYMD,
             totalSlotsF1: (slotsF1 || []).length,
+            totalSlotsF2: (slotsF2 || []).length,
+            distinctF2StartTimes: f2SlotsByStart.size,
             discardedForNoResources,
             discardedForNoF2,
+            discardedForNoExactF2Start,
+            discardedForNoSameStaffF2,
+            discardedForInvalidF2Slot,
             exposureMinutes,
             linkedServiceId,
-            note: "Si discardedForNoResources > 0, los slots no traen availableResources (verificar includeResourceTypeIds). Si discardedForNoF2 > 0, no existe un slot F2 exactamente en F1.end + exposureDuration.",
+            note: "NoExactF2Start: no hay slot F2 en F1.end + exposureDuration. NoSameStaffF2: existe hora F2 pero no comparte resourceId con F1. InvalidF2Slot: hay candidato del mismo staff, pero no supera validación de rango/gap.",
         });
     }
 
