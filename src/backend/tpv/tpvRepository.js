@@ -399,7 +399,7 @@ function _isCurrentV1Caja(caja, state = _getTpvRuntimeState(caja)) {
         (validFingerprint || validTrace);
 }
 
-function _isLegacyCaja(caja, state = caja?.conceptOperations?.tpvSandbox, { requireSession = true } = {}) {
+function _isLegacyCaja(caja, state = _getTpvRuntimeState(caja), { requireSession = true } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     return [
         TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
