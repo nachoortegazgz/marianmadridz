@@ -18,7 +18,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 | Secret scanning | Correcto | Gitleaks full-history SUCCESS, run 45107377700 sobre main HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
-| Wix Editor/Preview | No acreditado | Último contexto leído: Draft, Velo Enabled; SHA Git no sincronizado de forma demostrada. |
+| Wix Editor/Preview | No acreditado | El estado de publicación es contradictorio: contexto Draft frente a issues #520/#526 que documentan Published. Requiere read-back Wix; SHA Git no sincronizado de forma demostrada. |
 | CMS y ledgers | No aceptado para operación | Integridad de CajaActual y compensaciones pendientes. |
 | Fiscalidad/Veri*Factu | Bloqueado | No habilitar writers, emisión ni remisión. |
 | Capa 3 | Pendiente de aceptación | SharePoint solo evidencia; no gobierna Capa 1. |
