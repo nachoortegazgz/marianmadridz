@@ -17,6 +17,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_RUNTIME_POLICY,
+    TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
@@ -417,7 +418,7 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    if (["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
+    if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
         String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
@@ -486,9 +487,10 @@ export function MovimientosCaja_beforeInsert(item) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    const legacyExpectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    return ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
+    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":";
+    const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
         (
@@ -511,7 +513,8 @@ function _isCurrentSyntheticTpvRow(value) {
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
         Number(value?.sequenceNumber) === 0 &&
         (String(value?.traceId || "").startsWith(expectedPrefix) ||
-            String(value?.traceId || "").startsWith(legacyExpectedPrefix));
+            String(value?.traceId || "").startsWith(legacyExpectedPrefix) ||
+            String(value?.traceId || "").startsWith(oldestLegacyPrefix));
 }
 
 export async function MovimientosCaja_beforeUpdate() {
