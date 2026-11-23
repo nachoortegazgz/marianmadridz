@@ -285,21 +285,37 @@ function _isRecognizedSyntheticLedgerItem(item) {
     if (!item || typeof item !== "object" || Array.isArray(item) || !String(item.movementType || "").startsWith("SIMULATED_TPV_")) return false;
     const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
     const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
+    const validFingerprint = /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""));
     const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
         envelope.isSynthetic === true && envelope.realPayment === false &&
-        envelope.externalSideEffects === false && Boolean(envelope.requestFingerprint) && validHash;
-    const current = item.recordSource === TPV_LEDGER_SOURCE &&
+        envelope.externalSideEffects === false && validFingerprint && validHash;
+    const validSessionOrAudit = envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
+        Boolean(String(envelope.sessionId || "").trim());
+    const validTraceForSite = String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
+    const currentRecordSources = [TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE];
+    const currentV2 = currentRecordSources.includes(item.recordSource) &&
         envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(envelope.schemaVersion) === 2 &&
         envelope.reconciliationStatus === "NOT_RECONCILED" &&
-        (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
-        String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
-    const legacy = [TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
-        envelope.legacyRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
-        String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":");
-    return validCommon && (current || legacy);
+        validSessionOrAudit && validTraceForSite;
+    const currentV1 = currentRecordSources.includes(item.recordSource) &&
+        envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        (envelope.schemaVersion === undefined || envelope.schemaVersion === null || Number(envelope.schemaVersion) === 1) &&
+        (envelope.reconciliationStatus === undefined || envelope.reconciliationStatus === "NOT_RECONCILED") &&
+        validSessionOrAudit && validTraceForSite;
+    const legacyRunId = String(envelope.legacyRunId || envelope.sandboxRunId || "").trim();
+    const legacy = [
+        TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
+        TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
+    ].includes(item.recordSource) &&
+        legacyRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
+        (String(item.traceId || "").startsWith("TPV:" + legacyRunId + ":") ||
+            String(item.traceId || "") === legacyRunId);
+    return validCommon && (currentV2 || currentV1 || legacy);
 }
 
 function _virtualRecord(item) {
@@ -308,7 +324,9 @@ function _virtualRecord(item) {
         : {};
     const record = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object"
         ? envelope.ledgerRecord
-        : {};
+        : envelope.sandboxRecord && typeof envelope.sandboxRecord === "object"
+            ? envelope.sandboxRecord
+            : {};
     return {
         ...record,
         _id: item._id,
@@ -452,16 +470,17 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             assertTpvCajaIntegrity(caja);
             const preflightSandboxState = caja.conceptOperations?.tpvSandbox || {};
-            const explicitSynthetic = preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+            const explicitSyntheticV2 = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+                preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                preflightSandboxState.schemaVersion === 2 &&
+                Number(preflightSandboxState.schemaVersion) === 2 &&
                 preflightSandboxState.externalSideEffects === false &&
                 /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
-            const legacySynthetic = caja.snapshotSource === TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE &&
-                caja.traceId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
-            if (!explicitSynthetic && !legacySynthetic) {
+            const currentV1 = _isCurrentV1Caja(caja, preflightSandboxState);
+            const legacySynthetic = _isLegacyCaja(caja, preflightSandboxState);
+            if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             }
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
@@ -591,7 +610,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorId: String(record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorResourceId: String(record.operatorResourceId || "").trim() || null,
-                requestFingerprint: record.requestFingerprint || null,
+                requestFingerprint: String(record.requestFingerprint || eventHash || "") || null,
                 openedAt,
                 appliedMovementIds: [],
             },
