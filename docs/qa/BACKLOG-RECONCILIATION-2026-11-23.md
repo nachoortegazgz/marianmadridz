@@ -50,7 +50,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - main HEAD y PRs reconciliadas: verificados.
 - Fallo de CI localizado: aserción TPV desactualizada que esperaba cuatro métodos, frente a seis valores en TPV_PAYMENT_METHOD.
 - Corrección inicial integrada por PR #542; CI continuó fallando. Corrección completa del test y documentación depurada en PR #543.
-- Último CI conocido de PR #543 antes del ajuste final: FAIL por aserción OTROS; ajuste adicional en el HEAD actual de la rama, nuevo CI pendiente.
+- PR #543 HEAD eee6d75e5cf843a38823e7fa4c908783db175208: Backend offline quality gates SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. main sigue fallida hasta integrar la corrección.
 - Secret scanning de main: SUCCESS.
 - Protección de main: pendiente de administración (#210); main continúa sin protección.
 - PR #542 se integró en main durante la intervención y dejó CI fallida; PR #543 prepara la corrección completa. No se han realizado escrituras CMS ni cambios de configuración Wix.
