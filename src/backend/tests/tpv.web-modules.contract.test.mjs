@@ -482,7 +482,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
     assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
     assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(config, /SANDBOX_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
 });
 
