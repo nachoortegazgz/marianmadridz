@@ -2,22 +2,22 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación TPV sintética legacy) y #569 (sesión TPV nativa) también integradas. Último merge de código TPV verificado en `bf6e9966526716eef00ff1e304eb22459e2ef46e`.  
+**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación sintética legacy), #569 (sesión TPV), #571 (pedidos POS sintéticos) y #572 (Widget Bridge) integradas. Último merge TPV verificado: `dcd7452038912461bbc04f80f089a530d49aaf6e`.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
 
 | Área | Estado verificado | Límite |
 |---|---|---|
-| Código TPV / contratos | PR #543, #551 (metadatos), #554 (auditoría), #556 (identidad fiscal), #566 (clasificación sintética legacy) y #569 (sesión/identidad/estado TPV) fusionadas en `main`; CI offline pre-merge SUCCESS | Local Editor/Preview Runtime, lectura de sincronización real, E2E, concurrencia y aislamiento de efectos externos pendientes. |
+| Código TPV / contratos | PR #543, #551 (metadatos), #554 (auditoría), #556 (identidad fiscal), #566 (clasificación sintética legacy), #569 (sesión) y #572 (Widget Bridge) fusionadas en `main`; CI pre-merge #572 SUCCESS | Aplicar manualmente `#htmlTPV.txt` al HTML Component de Draft; después validar Local Editor/Preview Runtime, E2E, concurrencia y ausencia de efectos externos. |
 | CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR #545: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). Post-merge PR #545: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). PR #546: backend [45112483802](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483802), Gitleaks [45112483786](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483786); post-merge PR #546: backend [45112587480](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587480), Gitleaks [45112587474](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587474). |
-| Calidad offline | PR #569: Layer 1 30 suites / 364 PASS; Layer 2 17 / 244 PASS; suite completa 79 / 732 PASS / 0 FAIL; SDK checks, ESLint y Gitleaks SUCCESS | No se ha recuperado CI post-merge del merge commit. La CI offline no prueba CMS live, Wix Runtime, fiscalidad ni hardware. |
+| Calidad offline | PR #572 HEAD pre-merge: Layer 1 30 suites / 366 PASS; Layer 2 17 / 244 PASS; suite completa 79 / 734 PASS / 0 FAIL; Wix Cart V2, Transactions SDK, TPV SDK, ESLint y Gitleaks SUCCESS | No se ha verificado CI post-merge del commit `dcd7452...`. La CI offline no prueba CMS live, Wix Runtime, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | `wix.config.json` apunta al mismo siteId y `main` es la rama por defecto; la sincronización de `src/backend`/`src/public` es esperada por Git Integration pero no leída en el Editor. `#htmlTPV.txt` está fuera de las carpetas Velo y su HTML Component requiere aplicación manual en Draft. No se ha publicado. |
 | Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
 | Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |
 | Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. Pedidos POS #10032/#10033 confirmados por el titular como sintéticos QA; sus tres compensaciones permanecen sin reintento ni ledger real. #416 sigue abierto por CajaActual y verificación de ausencia de efectos externos. |
-| TPV | PR #551, #554 y #569 fusionadas; contrato de sesión ABIERTA/CERRADA/SIN_SESION, identidad backend, Madrid time, sessionId obligatorio y estados separados integrados en `main` | Falta comprobar propagación Git–Editor, abrir Local Editor con `wix dev`, ejecutar pruebas Preview/Runtime, permisos efectivos, idempotencia y concurrencia real. |
+| TPV | PR #551, #554, #569 y #572 fusionadas; contrato de sesión y bridge READY/CONTEXT corregido en `main` | Confirmar SHA Velo en Editor; copiar manualmente HTML actualizado; probar ausencia de errores bridge, permisos, idempotencia y concurrencia en Preview/Runtime. |
 | CMS / ledgers | Relectura consistente 2026-11-23: CajaActual 1 ABIERTA (300 € apertura / 320 € esperado); MovimientosCaja 5 sintéticos; CitasF2 6; MapaStaff 5 sin CONFIG_SISTEMA_FISCAL; HistoricoCierresZ 1 SIMULATED; LibroAsientosContablesDetalle 3 SIMULATED_ONLY | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
 | Fiscalidad / Veri*Factu | PR #556 fusionada; lector exige singleton fiscal canónico y falla cerrado | No existe CONFIG_SISTEMA verificado; no activar writers, firma, QR, emisión ni remisión. Validación Wix Runtime pendiente. |
@@ -32,6 +32,10 @@
 
 
 - PR #569 — merge commit `bf6e9966526716eef00ff1e304eb22459e2ef46e`; HEAD pre-merge `7d324d181d847326ca184b05a86edd52f8f11461`: Layer 1 30/364 PASS, Layer 2 17/244 PASS, suite 79/732 PASS, SDK checks, ESLint y Gitleaks SUCCESS.
+
+- PR #571 — merge commit `08214a6b0b41c729004115e601daf09b6364b2b1`: confirma pedidos POS #10032/#10033 como sintéticos QA por declaración del titular; no reintentar compensaciones ni crear asientos reales.
+- PR #572 — merge commit `dcd7452038912461bbc04f80f089a530d49aaf6e`; HEAD pre-merge `307d0362e029238e40bdeb45cd1cfc6d516bc0db`: Layer 1 30/366 PASS; Layer 2 17/244 PASS; suite 79/734 PASS; SDK checks, ESLint y Gitleaks SUCCESS. Corrige allowlist MM_CONTEXT y handshake READY con reintentos.
+- El HTML Component `#htmlTPV` no se ha actualizado en Wix Editor; el archivo raíz `#htmlTPV.txt` requiere aplicación manual en Draft. No declarar corregidos los errores en Runtime hasta probarlo.
 
 
 - Confirmación del titular 2026-11-23: pedidos POS #10032 (92,45 €) y #10033 (18,15 €) fueron operaciones sintéticas QA, no ventas/cobros reales. Las tres compensaciones vinculadas no deben convertirse en asientos reales ni reintentarse. #416 permanece abierto para verificar ausencia de efectos externos y resolver la evidencia/estado de CajaActual sin mutar ledgers.

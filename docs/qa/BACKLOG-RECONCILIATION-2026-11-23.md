@@ -23,6 +23,8 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | `03a019eafed46fc39bcc53d80cc09c335951d15e` | Backend `45170143336` y secret scanning `45170143367`: SUCCESS tras rebase | Wix Preview/Runtime, permisos, idempotencia y concurrencia |
 | [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | `3f02e5bb125fbb20d10d40e614c7c3eb3202b106` | Backend `45170094804` y secret scanning `45170094802`: SUCCESS tras rebase | Configuración fiscal legal verificada y lectura Runtime; mantener fail-closed |
 | [#569](https://github.com/nachoortegazgz/marianmadridz/pull/569) | `bf6e9966526716eef00ff1e304eb22459e2ef46e` | HEAD pre-merge: 79 suites / 732 PASS; Layer 1 364 PASS; Layer 2 244 PASS; SDK, ESLint y Gitleaks SUCCESS | Confirmar GitHub Integration SHA en Editor; Wix Local Editor/Runtime, concurrencia e idempotencia E2E |
+| [#571](https://github.com/nachoortegazgz/marianmadridz/pull/571) | `08214a6b0b41c729004115e601daf09b6364b2b1` | Backend offline y Gitleaks SUCCESS | Mantener #416 abierta para acreditar ausencia de efectos externos; no reintentar compensaciones sintéticas |
+| [#572](https://github.com/nachoortegazgz/marianmadridz/pull/572) | `dcd7452038912461bbc04f80f089a530d49aaf6e` | HEAD pre-merge: 79 suites / 734 PASS; Layer 1 366 PASS; Layer 2 244 PASS; SDK, ESLint y Gitleaks SUCCESS | Aplicar manualmente `#htmlTPV.txt` en Wix Draft y probar handshake en Preview/Runtime |
 
 
 
@@ -36,7 +38,7 @@ Confirmación del titular 2026-11-23: pedidos POS #10032 y #10033 son operacione
 | [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Closed · 2026-11-23 | No reactivar sin read-back y prueba negativa Runtime. Issue conserva evidencia histórica Published que contradice el read-back actual Draft; no asumir el estado de reservas solo por el cierre. |
 | [#523 Cancelaciones CitasF2](https://github.com/nachoortegazgz/marianmadridz/issues/523) | Open · revalidado 2026-11-23 | 6/6 bookings nativos CANCELED; CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos native PAID vs CMS PENDING_LEDGER. Verificar event delivery/runtime y correlacionar #416. | No corregir proyección, reenviar eventos ni tocar pagos/ledgers por inferencia. |
 | [#522 Canales de pago Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522) | Open · revalidado 2026-11-23 | 70 servicios visibles sin discrepancias; 24 hijos duales ocultos, F2 OFFLINE/noFee y native inPerson=true. Probar Writer con onlineBooking deshabilitado en Runtime. | No modificar masivamente flags ni servicios nativos. |
-| TPV E2E | Pendiente · PR #569 integrada | Confirmar SHA de backend/public en Editor; aplicar manualmente `#htmlTPV.txt` al HTML Component de Draft; después probar identidad Staff, sesión, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS en Local Editor/Preview/Runtime. |
+| TPV E2E | Pendiente · PR #569/#572 integradas | Confirmar SHA Velo en Editor; aplicar manualmente `#htmlTPV.txt` actualizado al HTML Component de Draft; comprobar que desaparecen `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` y `WIDGET_HANDSHAKE_TIMEOUT`; después ejecutar pruebas de sesión, identidad Staff, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS. |
 | Bookings/Payments E2E | Pendiente | Checkout, reserva, webhook, cancelación y devolución en Sandbox sin efectos externos reales. |
 
 ## P2 — integraciones
@@ -84,7 +86,7 @@ Lectura de cuatro páginas Bookings Reader V2 y CMS consistente: 354 bookings (3
 
 Las seis filas actuales CitasF2 se componen de 2 fases duales y 4 reservas simples. La pareja dual mantiene pairToken/resourceId comunes y gap exacto de 40 minutos, pero ambos bookings nativos están CANCELED mientras CMS indica CONFIRMED.
 
-**Bloqueo financiero P0 relacionado con #416:** pedidos #10032 (92,45 EUR, PAID/Cash) y #10033 (18,15 EUR, FULLY_REFUNDED; refund REFUNDED) tienen bookings nativos cancelados y proyecciones PENDING_LEDGER, importe cero y sin cashMovementId. Existen tres compensaciones PENDING_RECOVERY enlazadas a esos pedidos (+92,45; +18,15; -18,15 EUR). La devolución #10033 falla por ORIGINAL_ORDER_LEDGER_MISSING. No hay movimiento de caja correlacionado; las cinco filas actuales de MovimientosCaja son sintéticas y no enlazan pedidos/bookings; el detalle del libro contable está vacío. No tocar ni reconstruir ledgers hasta demostrar el origen económico y la correlación completa.
+**Bloqueo P0 relacionado con #416 — clasificación actualizada por confirmación del titular (2026-11-23):** los pedidos #10032 (92,45 EUR) y #10033 (18,15 EUR), incluidos su refund y las tres compensaciones PENDING_RECOVERY (+92,45; +18,15; -18,15 EUR), son artefactos sintéticos de QA, no ventas/cobros reales. No deben originar asientos fiscales reales ni reintentos de pago/refund/compensación. Se conserva el estado histórico sin borrado ni sobrescritura. #416 permanece abierta para demostrar ausencia de efectos externos y mantener separada la sesión singleton CajaActual; no usar writers ni mutar CMS.
 
 
 ## Causa raíz de #416 y prerequisitos fiscales (2026-11-23)
@@ -93,7 +95,7 @@ La escritura fiscal y contable permanece bloqueada intencionadamente: internalCo
 
 MapaStaff contiene 5 registros (GESTORIA 1, TERCERO 1, STAFF 3) y no contiene el singleton CONFIG_SISTEMA_FISCAL. La ausencia de configuración es un bloqueo independiente: no activar LEDGER_WRITES_ENABLED hasta que configuración, firma/SIF, permisos y Runtime estén certificados.
 
-Las tres compensaciones de #416 corresponden a #10032 (+92,45 EUR), #10033 (+18,15 EUR) y el refund de #10033 (-18,15 EUR). La secuencia de recuperación debe respetar causalidad: pago original antes del refund. No completar ni reintentar automáticamente. Primero acreditar si los pedidos son sintéticos QA o hechos económicos reales; después, bajo procedimiento aprobado, insertar nuevos registros append-only y verificar su correlación.
+Las tres compensaciones de #416 corresponden a operaciones sintéticas QA confirmadas por el titular: #10032 (+92,45 EUR), #10033 (+18,15 EUR) y refund #10033 (-18,15 EUR). No representan obligaciones económicas ni justifican asientos fiscales, pagos o refunds reales. No completar ni reintentar. Mantener evidencia histórica y documentar la resolución de QA de forma trazable, sin borrar ni modificar ledgers.
 
 
 ## Revalidación de sitio/Bookings — 2026-11-23 (solo lectura)
