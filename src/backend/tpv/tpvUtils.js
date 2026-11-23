@@ -3,7 +3,7 @@ import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT
 
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 
-function _getTpvRuntimeState(caja) {
+export function getTpvRuntimeState(caja) {
     const operations = caja?.conceptOperations;
     const current = operations?.tpvRuntime;
     if (current && typeof current === "object" && !Array.isArray(current) &&
@@ -14,7 +14,7 @@ function _getTpvRuntimeState(caja) {
 }
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
-    const state = _getTpvRuntimeState(caja);
+    const state = getTpvRuntimeState(caja);
     const sessionId = String(state?.sessionId || "").trim();
     const snapshotSource = String(caja?.snapshotSource || "");
     const traceId = String(caja?.traceId || "");
