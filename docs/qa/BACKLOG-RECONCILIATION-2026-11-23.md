@@ -66,3 +66,8 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 Consultas de solo lectura con `consistentRead=true`: `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`); `MovimientosCaja` 2 (ambas filas `synthetic=true`, `SIMULATED_SUCCESS`, `RECONCILED`, origen `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`); `CitasF2` 6 (5 CONFIRMED, 1 PENDING; tres `pairToken` vacíos, dos iguales y uno distinto); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA); `HistoricoCierresZ` 0; `LibroAsientosContablesDetalle` 0. No se mutaron colecciones.
 
 Consulta directa Bookings Reader V2 del 2026-11-23 confirma los seis bookingId proyectados: 6/6 nativos CANCELED desde 2026-11-20; dos paymentStatus=PAID y cuatro NOT_PAID/UNDEFINED. CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos paymentStatus PENDING_LEDGER. Véase [auditoría Bookings V2 y catálogo dual](../audits/2026-11-23-bookings-revalidation.md). No cerrar caja ni corregir CitasF2 por inferencia.
+
+
+## Criterio obligatorio de aceptación — reservas duales
+
+El flujo no usa Wix Bookings multiservicio. El backend compone dos bookings individuales (F1 y F2) separados por un gap de exposición. La aceptación exige `F2.start = F1.end + exposureDuration`, gap no ocupado, mismo `resourceId`, asociación de pareja persistida, F2 `OFFLINE` con importe cero y ausencia de segundo cobro. Deben probarse colisiones de disponibilidad, concurrencia, reintentos, cancelación y reprogramación en Runtime. No clasificar las 348 reservas sin CitasF2 como huérfanas del flujo dual sin demostrar que pertenecen a servicios duales.
