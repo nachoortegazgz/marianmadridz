@@ -5,7 +5,7 @@ import {
     getSandboxPayments,
     getSandboxRefunds,
     querySandboxRecords,
-} from "backend/tpv/tpvSandboxRepository";
+} from "backend/tpv/tpvRepository";
 
 export async function buildSandboxSessionSummary(session) {
     if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
