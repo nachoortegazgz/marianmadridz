@@ -287,7 +287,7 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(await source("tpv/tpvVentas.web.js"), /customerContactId/);
     assert.doesNotMatch(catalog, /TPV_SANDBOX_FIXTURES/);
     const identities = await source("tpv/tpvIdentities.js");
-    assert.match(identities, /BUSINESS_COLLECTIONS\\.TPV_IDENTITIES/);
+    assert.match(identities, /BUSINESS_COLLECTIONS\.TPV_IDENTITIES/);
     assert.match(identities, /CONSISTENCY\.STRONG/);
     assert.match(identities, /syntheticOnly/);
     assert.match(identities, /allowLegacyRead: true/);
