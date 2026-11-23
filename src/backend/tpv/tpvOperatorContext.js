@@ -11,6 +11,7 @@ export async function getTpvOperatorContext(traceId = null) {
     return Object.freeze({
         actorId: memberId,
         operatorId: memberId,
+        operatorDisplayName: String(staff?.displayName || "").trim() || null,
         operatorResourceId: String(staff?.resourceId || "").trim() || null,
         contactId: String(staff?.contactId || "").trim() || null,
     });
