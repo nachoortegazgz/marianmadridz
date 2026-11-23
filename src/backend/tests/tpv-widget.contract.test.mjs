@@ -50,8 +50,8 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     const html = await source("%23htmlTPV.txt");
     const types = [
         "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS",
-        "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND",
-        "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
+        "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "PARTIAL_CASH_COUNT", "REFUND",
+        "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST", "CASH_MOVEMENTS_EXPORT", "AUDIT_EXPORT",
     ];
     for (const type of types) {
         assert.ok(controller.includes('"' + type + '"'), "controller must dispatch " + type);
@@ -88,6 +88,9 @@ test("TPV bridge permits the context response and retries READY until a valid co
     const html = await source("%23htmlTPV.txt");
 
     assert.match(controller, /allowedTypes:\s*\[MESSAGE_TYPES\.READY,\s*MESSAGE_TYPES\.CONTEXT,\s*\.\.\.REQUEST_TYPES\]/);
+    assert.match(controller, /handshakeTimeoutMs:\s*65000/);
+    assert.match(bridge, /allowedTypes: Array\.from\(allowedTypes\)/);
+    assert.match(bridge, /receivedType: extracted\.type \?\? null,[\s\S]{0,180}allowedTypes: Array\.from\(allowedTypes\)/);
     assert.match(bridge, /function isAllowedType\(type\)[\s\S]*?allowedTypes\.has\(type\)/);
     assert.match(bridge, /send\(MESSAGE_TYPES\.CONTEXT, context, message\.messageId \|\| null\)/);
     assert.match(html, /const HANDSHAKE_RETRY_MS = 500/);
@@ -99,6 +102,34 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(html, /if \(connected\) \{\s*initializeWidgetAfterHandshake\(\)/);
     assert.match(html, /function initializeWidgetAfterHandshake\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
     assert.doesNotMatch(html, /function init\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
+});
+
+test("widget bridge reports the rejected type and active allowlist", () => {
+    let receive;
+    let reported;
+    const widget = {
+        onMessage(handler) {
+            receive = handler;
+            return () => { receive = null; };
+        },
+        postMessage() {},
+    };
+    const allowedTypes = [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, "CASHIER_STATE"];
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes,
+        allowOpaqueOrigin: true,
+        onError: (error) => { reported = error; },
+    });
+
+    receive({
+        origin: "null",
+        data: { type: "UNLISTED_REQUEST", version: 1, messageId: "rejected-12345678" },
+    });
+
+    assert.equal(reported?.code, "WIDGET_MESSAGE_TYPE_NOT_ALLOWED");
+    assert.equal(reported?.detail?.receivedType, "UNLISTED_REQUEST");
+    assert.deepEqual(reported?.detail?.allowedTypes, allowedTypes);
+    bridge.destroy();
 });
 
 test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are allowed", async () => {

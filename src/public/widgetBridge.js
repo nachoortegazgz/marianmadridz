@@ -212,7 +212,15 @@ export function createWidgetBridge(widgetElement, options = {}) {
     function send(type, payload = {}, messageId = null) {
         if (destroyed) { const e = new Error(WIDGET_ERROR_CODE.DESTROYED); e.code = WIDGET_ERROR_CODE.DESTROYED; throw e; }
         const normalizedType = safeType(type);
-        if (!isAllowedType(normalizedType)) { const e = new Error(WIDGET_ERROR_CODE.TYPE_NOT_ALLOWED); e.code = WIDGET_ERROR_CODE.TYPE_NOT_ALLOWED; throw e; }
+        if (!isAllowedType(normalizedType)) {
+            const error = new Error(WIDGET_ERROR_CODE.TYPE_NOT_ALLOWED);
+            error.code = WIDGET_ERROR_CODE.TYPE_NOT_ALLOWED;
+            error.detail = {
+                attemptedType: normalizedType,
+                allowedTypes: Array.from(allowedTypes),
+            };
+            throw error;
+        }
         const message = Object.freeze({ type: normalizedType, payload: safeObject(payload), messageId: safeMessageId(messageId) || nextMessageId(), version: PROTOCOL_VERSION, bridgeId });
         if (estimateBytes(message) > MAX_MESSAGE_BYTES) { const e = new Error(WIDGET_ERROR_CODE.MESSAGE_TOO_LARGE); e.code = WIDGET_ERROR_CODE.MESSAGE_TOO_LARGE; throw e; }
         widgetElement.postMessage(message); return message.messageId;
@@ -277,7 +285,12 @@ export function createWidgetBridge(widgetElement, options = {}) {
             send(MESSAGE_TYPES.CONTEXT, context, message.messageId || null);
         } catch (cause) {
             const code = cause?.code === WIDGET_ERROR_CODE.CONTEXT_TIMEOUT ? WIDGET_ERROR_CODE.CONTEXT_TIMEOUT : WIDGET_ERROR_CODE.CONTEXT_FAILED;
-            reportError(code, { causeCode: cause?.code || null, causeMessage: cause?.message || String(cause), causeStack: cause?.stack || null }, cause);
+            reportError(code, {
+                causeCode: cause?.code || null,
+                causeMessage: cause?.message || String(cause),
+                causeDetail: cause?.detail || null,
+                causeStack: cause?.stack || null,
+            }, cause);
         } finally { contextInFlight = false; }
     }
     function armHandshakeWatchdog() {
@@ -294,7 +307,14 @@ export function createWidgetBridge(widgetElement, options = {}) {
         try {
             const extracted = extractEvent(event); if (!extracted) return;
             const normalized = normalizeMessage(extracted);
-            if (!normalized.message) { reportError(normalized.code || WIDGET_ERROR_CODE.MESSAGE_REJECTED, { receivedType: extracted.type ?? null, receivedVersion: extracted.version ?? null }); return; }
+            if (!normalized.message) {
+                reportError(normalized.code || WIDGET_ERROR_CODE.MESSAGE_REJECTED, {
+                    receivedType: extracted.type ?? null,
+                    receivedVersion: extracted.version ?? null,
+                    allowedTypes: Array.from(allowedTypes),
+                });
+                return;
+            }
             const message = normalized.message;
             if (message.type === MESSAGE_TYPES.READY) {
                 if (handshakeCompleted) return;
