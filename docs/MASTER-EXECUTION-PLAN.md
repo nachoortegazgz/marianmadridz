@@ -37,7 +37,7 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 - Backend offline quality gates: **FAIL**, run [45105979742](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742).
 - Secret scanning: **SUCCESS**, run [45105979748](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748).
-- PR #543 está integrada en main. Su CI previo al merge pasó: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS. CI backend post-merge run 45107058637 está en curso; secret scanning post-merge run 45107058755 SUCCESS. No declarar post-merge cerrado hasta que el primer run finalice.
+- PR #543 está integrada en main. Su CI previo al merge pasó: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS. CI backend post-merge SUCCESS (run 45107058637): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint; secret scanning post-merge SUCCESS (run 45107058755). No declarar post-merge cerrado hasta que el primer run finalice.
 
 ### 2.3 Contrato de pagos TPV
 
