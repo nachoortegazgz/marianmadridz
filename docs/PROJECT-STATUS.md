@@ -16,7 +16,7 @@
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | `wix.config.json` del repo apunta al mismo siteId y `main` es la rama por defecto. Según Git Integration Wix, la rama por defecto sincroniza el código al Editor; la propagación del SHA y Local Editor/Runtime aún no tienen read-back. No se ha publicado. |
 | Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
 | Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |
-| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. Dos pedidos POS PAID/REFUNDED con ledger pendiente (#416); Runtime pendiente. |
+| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. Pedidos POS #10032/#10033 confirmados por el titular como sintéticos QA; sus tres compensaciones permanecen sin reintento ni ledger real. #416 sigue abierto por CajaActual y verificación de ausencia de efectos externos. |
 | TPV | PR #551, #554 y #569 fusionadas; contrato de sesión ABIERTA/CERRADA/SIN_SESION, identidad backend, Madrid time, sessionId obligatorio y estados separados integrados en `main` | Falta comprobar propagación Git–Editor, abrir Local Editor con `wix dev`, ejecutar pruebas Preview/Runtime, permisos efectivos, idempotencia y concurrencia real. |
 | CMS / ledgers | Relectura consistente 2026-11-23: CajaActual 1 ABIERTA (300 € apertura / 320 € esperado); MovimientosCaja 5 sintéticos; CitasF2 6; MapaStaff 5 sin CONFIG_SISTEMA_FISCAL; HistoricoCierresZ 1 SIMULATED; LibroAsientosContablesDetalle 3 SIMULATED_ONLY | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
@@ -32,6 +32,9 @@
 
 
 - PR #569 — merge commit `bf6e9966526716eef00ff1e304eb22459e2ef46e`; HEAD pre-merge `7d324d181d847326ca184b05a86edd52f8f11461`: Layer 1 30/364 PASS, Layer 2 17/244 PASS, suite 79/732 PASS, SDK checks, ESLint y Gitleaks SUCCESS.
+
+
+- Confirmación del titular 2026-11-23: pedidos POS #10032 (92,45 €) y #10033 (18,15 €) fueron operaciones sintéticas QA, no ventas/cobros reales. Las tres compensaciones vinculadas no deben convertirse en asientos reales ni reintentarse. #416 permanece abierto para verificar ausencia de efectos externos y resolver la evidencia/estado de CajaActual sin mutar ledgers.
 - El repo contiene `wix.config.json` con `siteId=188bed94-177c-4bc9-a9f0-35080d874f3e` y `uiVersion=15941`; GitHub confirma `main` como rama por defecto. La documentación oficial Wix establece que la rama por defecto sincroniza código con el Editor conectado. No se ha leído el panel GitHub Integration ni ejecutado `wix dev`; marcar sincronización como esperada, no verificada.
 - Los tres cambios están integrados en Git; no hay validación Wix Runtime ni autorización de publicación.
 - #525: el lock común ya está integrado por PR #528; falta demostrar concurrencia/recuperación en Wix Runtime.
