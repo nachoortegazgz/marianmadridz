@@ -430,6 +430,8 @@ function _sessionFromCaja(caja) {
         closedAt,
         openingCashMinor: Math.round(Number(caja.openingCashAmount || 0) * 100),
         cashierMemberId: caja.openedBy || null,
+        operatorId: caja.openedBy || null,
+        actorId: caja.openedBy || null,
         conceptOperations: caja.conceptOperations,
         payloadFiscal: { requestFingerprint: sourceState?.requestFingerprint },
         payload: makeSyntheticPayload({
