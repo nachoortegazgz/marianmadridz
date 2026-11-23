@@ -15,7 +15,8 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         validNeutralMetadata;
     const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
         validNeutralMetadata &&
-        Boolean(String(state?.sessionId || "").trim());
+        Boolean(String(state?.sessionId || "").trim()) &&
+        validEventHash;
     const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.traceId === legacyRunId &&
