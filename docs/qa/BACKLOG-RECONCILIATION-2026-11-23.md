@@ -118,3 +118,6 @@ Snapshot auditado 2026-11-12: 10 filas (4 SMOKE_TEST, 1 INTERNAL/VENTA_ONLINE no
 
 
 Seguimiento PR #566: el clasificador fiscal ahora reconoce esos marcadores legacy para excluirlos de lectores. No los convierte en registros válidos: los hooks de inserción y el lector TPV canónico siguen rechazando los payloads incompletos.
+
+
+Actualización de gobierno 2026-11-23: PR #566 integrada en main con CI completo SUCCESS; el clasificador reconoce marcadores legacy de simulación, sin legitimar los registros ni habilitar writers. PR #568 documenta la discrepancia histórica 10→5 de MovimientosCaja; CI pendiente. Último main base de esta rama: a5e611da1d98b743e14ea6dc6f4bfee8b26e00a6.
