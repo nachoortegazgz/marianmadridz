@@ -2,8 +2,8 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { listAuthorizedProfessionals, resolveTpvContact } from "backend/tpv/tpvNativeDirectory";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -71,15 +71,18 @@ export const registrarVenta = webMethod(
                 }
             }
 
+            // Compatibility: customerIdentityId is the widget's existing field name;
+            // the value is validated as a native Wix Contacts _id, not a synthetic identity.
             const customerIdentityId = String(input.customerIdentityId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId) throw new Error("TPV_BOOKINGS_DISABLED");
             const customer = customerIdentityId
-                ? await getTpvIdentity(customerIdentityId, TPV_IDENTITY_TYPES.CUSTOMER)
+                ? await resolveTpvContact(customerIdentityId)
                 : null;
             if (customerIdentityId && !customer) throw new Error("TPV_CUSTOMER_NOT_ALLOWED");
-            const staffIdentities = await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF);
-            const allowedProfessionalIds = new Set(staffIdentities.map((item) => item.identityId));
+
+            const professionals = await listAuthorizedProfessionals();
+            const allowedProfessionalIds = new Set(professionals.map((person) => person.resourceId));
             const requestedProfessionalId = String(input.profesionalId || "").trim();
             if (requestedProfessionalId && !allowedProfessionalIds.has(requestedProfessionalId)) {
                 throw new Error("TPV_STAFF_NOT_ALLOWED");
@@ -101,7 +104,7 @@ export const registrarVenta = webMethod(
                 saleId,
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
-                customerIdentityId: customer?.identityId || null,
+                customerContactId: customer?.contactId || null,
                 customerLabel: customer?.displayName || "CLIENTE ANONIMO",
                 bookingId: null,
                 bookingStatus: null,
@@ -212,7 +215,7 @@ export const registrarVenta = webMethod(
                     status: committed.status,
                     total: sale.totalVenta,
                     breakdown: sale.desgloseMedios,
-                    customerIdentityId: commonPayload.customerIdentityId,
+                    customerContactId: commonPayload.customerContactId,
                     customerLabel: commonPayload.customerLabel,
                     bookingId: commonPayload.bookingId,
                     replayed,
