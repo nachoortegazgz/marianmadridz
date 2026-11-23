@@ -14,8 +14,8 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
         source("security.js"),
         source("tpv/tpvOperatorContext.js"),
         source("tpv/tpvContext.js"),
-        readFile(new URL("../../public/tpvPageController.js", backendRoot), "utf8"),
-        readFile(new URL("../../%23htmlTPV.txt", repoRoot), "utf8"),
+        readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
+        readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
     ]);
 
     assert.match(security, /members\.getCurrentMember\(\)/);
@@ -105,7 +105,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
         source("tpv/tpvRepository.js"),
         source("tpv/tpvAuditoria.web.js"),
         source("tpv/tpvVentas.web.js"),
-        readFile(new URL("../../%23htmlTPV.txt", repoRoot), "utf8"),
+        readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
         source("internalConfig.js"),
     ]);
 
