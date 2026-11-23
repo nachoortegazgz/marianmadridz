@@ -7,8 +7,7 @@ Este archivo es un relevo breve, no una fuente de estado independiente. La jerar
 - PR #543: corrección contractual TPV integrada.
 - PR #544: reconciliación documental integrada.
 - PR #545: estabilización documental; HEAD validado `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`.
-- Backend offline quality gates: SUCCESS, run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint.
-- Secret scanning: SUCCESS, run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155).
+- La versión previa de la PR pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155)). Consultar PR #545 para el resultado del HEAD más reciente.
 - La rama main sigue sin protección efectiva (#210).
 
 ## Estado TPV
