@@ -43,6 +43,8 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
     assert.match(caja, /toMinorUnits\(input\.openingCash, "OPENING_CASH"\)/);
+    assert.match(caja, /payload: makeSyntheticPayload\(\{ traceId, replayed, sessionId \}\)/);
+    assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
     assert.match(controller, /lineas: lineItems\.map/);
     assert.match(controller, /pagos: payments\.map/);
     assert.match(sales, /lineas: input\.lineas/);
@@ -146,9 +148,17 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(repository, /action: String\(action \|\| "UNKNOWN"\)/);
     assert.match(repository, /actorId: String\(actorId \|\| "UNKNOWN"\)/);
     assert.match(audit, /await requireCajero\(traceId\)/);
+    assert.match(audit, /export const obtenerAuditoriaTPV = webMethod/);
+    assert.match(audit, /TPV_COLLECTIONS\.AUDITORIA/);
+    assert.match(audit, /record\.payload\?\.sessionId/);
+    assert.match(audit, /data: \{ items, count: items\.length/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerMovimientosCaja/);
-    assert.doesNotMatch(controller, /backend\/tpv\/tpvAuditoria\.web/);
+    assert.match(controller, /import \{ obtenerAuditoriaTPV \} from "backend\/tpv\/tpvAuditoria\.web"/);
+    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPV/);
+    assert.doesNotMatch(controller, /case "AUDIT_LIST":[\s\S]*?obtenerMovimientosCaja/);
+    assert.match(widget, /Auditoría de operaciones/);
+    assert.match(widget, /item\.action/);
+    assert.match(widget, /item\.actorId/);
     assert.match(sales, /fiscalLedgerWritten: false/);
     assert.match(config, /fiscalEmission: false/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
@@ -162,6 +172,6 @@ test.todo("Wix Preview: open one session, verify authenticated member/operator/r
 test.todo("Wix Preview: complete split-payment sales and reconcile Wix-native order/receipt IDs when native integration is authorized");
 test.todo("Wix Preview: verify payment-method totals, cash drawer balance, cash-only movements and partial refunds against CMS ledger");
 test.todo("Wix Preview: generate X without closing, then Z once; verify lock, replay conflict, counted cash, difference, X/Z linkage and closed session");
-test.todo("Wix Preview: wire and verify the dedicated audit-event reader; distinguish it from ledger movement history");
+test.todo("Wix Preview: verify the wired dedicated audit-event reader against persisted session events and distinguish it from ledger movement history");
 test.todo("Wix Preview: verify audit coverage for writes, reads, exports, printing and denied permission attempts, including sessionId");
 test.todo("Published negative test: native payments, fiscal writes and VeriFactu QR remain unavailable until their release gates are approved");
