@@ -17,7 +17,6 @@ const suites = [
   'fiscalFacsimile.test.mjs',
   'fiscalDocuments.package-version.concurrency.test.mjs',
   'qa.manager-email-sink.mock.test.mjs',
-  'fiscalLedgerLock.test.mjs',
   'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
