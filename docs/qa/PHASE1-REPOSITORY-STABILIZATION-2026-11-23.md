@@ -2,14 +2,14 @@
 
 ## Resultado
 
-**Completado:** corrección de contrato TPV, actualización documental y validación automatizada de la rama candidata PR #545.
+**Completado:** corrección de contrato TPV, consolidación documental, integración mediante PR #545 y validación automatizada pre-merge/post-merge.
 
 - PR #543: corrección de aserciones TPV obsoletas; integrada en main.
 - PR #544: reconciliación documental previa; integrada en main.
-- PR #545: consolidación documental. Su versión previa, HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`, pasó ambos workflows.
-- Backend offline quality gates SUCCESS: run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142), Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint.
-- Secret scanning SUCCESS: run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155).
-- La consolidación documental posterior debe validarse en el HEAD final de PR #545; consultar los checks asociados a ese commit.
+- PR #545: merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`.
+- CI pre-merge HEAD `57013eed25a5f8c755a2e5cd3434c792b3dec78c`: backend SUCCESS, run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881); secret scanning SUCCESS, run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897).
+- CI post-merge HEAD `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`: backend SUCCESS, run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859); secret scanning SUCCESS, run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890).
+- Backend quality gates: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint.
 
 ## Alcance
 

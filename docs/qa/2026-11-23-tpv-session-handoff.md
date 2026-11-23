@@ -6,8 +6,9 @@ Este archivo es un relevo breve, no una fuente de estado independiente. La jerar
 
 - PR #543: corrección contractual TPV integrada.
 - PR #544: reconciliación documental integrada.
-- PR #545: estabilización documental; HEAD validado `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`.
-- La versión previa de la PR pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155)). Consultar PR #545 para el resultado del HEAD más reciente.
+- PR #545: estabilización documental fusionada; merge commit main `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`.
+- CI pre-merge del HEAD `57013eed25a5f8c755a2e5cd3434c792b3dec78c`: backend run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897), ambos SUCCESS.
+- CI post-merge del main HEAD: backend run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890), ambos SUCCESS.
 - La rama main sigue sin protección efectiva (#210).
 
 ## Estado TPV
