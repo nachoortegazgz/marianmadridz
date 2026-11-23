@@ -20,7 +20,7 @@ function baseEnvelope(operation, requestFingerprint) {
         currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
         environment: "SIMULATOR",
         dataPlane: "NO_CMS_ACCESS",
-        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
         requestFingerprint,
         providerCalled: false,
         realPayment: false,
