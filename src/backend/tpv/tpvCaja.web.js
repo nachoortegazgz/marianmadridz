@@ -85,6 +85,7 @@ export const obtenerEstadoCaja = webMethod(
                 data: {
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
+                    canOpenSession: true,
                     sessionId: null,
                     operatorId: null,
                     actorId: null,
@@ -113,6 +114,8 @@ export const obtenerEstadoCaja = webMethod(
                 sessionId: session.sessionId,
                 status,
                 operationalStatus: status,
+                canOpenSession: status === OPERATIONAL_CASH_STATUS.CLOSED &&
+                    session.sessionId !== "TPV-SESSION-" + madridDayKey(),
                 operatorId: session.operatorId || session.cashierMemberId || null,
                 actorId: session.actorId || session.cashierMemberId || null,
                 operatorDisplayName: session.operatorDisplayName || null,
@@ -197,6 +200,7 @@ export const abrirSesionCaja = webMethod(
                         sessionId: item.sessionId,
                         status: item.status,
                         operationalStatus: OPERATIONAL_CASH_STATUS.OPEN,
+                        canOpenSession: false,
                         operatorId: operator.operatorId,
                         actorId: operator.actorId,
                         operatorDisplayName: operator.operatorDisplayName,
