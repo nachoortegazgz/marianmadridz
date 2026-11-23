@@ -878,7 +878,7 @@ export async function queryTpvLedgerRecords(options = {}) {
         }),
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-            filter: wql.eq("recordSource", "TPV_SYNTHETIC"),
+            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE),
             sort: ["recordTimestamp DESC"],
             limit,
             consistency: CONSISTENCY.STRONG,
