@@ -2,6 +2,18 @@
 
 **Estado de integración en main baseline pre-PR #545 (2026-11-23):** código TPV y corrección de contrato integrados en main ccdac0347e86f430c4f8086765815d9d5d7e00af. PR #541, #540, #542, #543 y #544 están merged. PR #537 se preservó en el historial de #541. **Release NO-GO:** falta Wix Preview/Runtime E2E.
 
+## Actualización de arquitectura — 2026-11-23
+
+La PR #550 está integrada en `main` (merge commit `24f843d249bfb9636409ebc688dd5e13ff336892`). La rama de neutralización posterior es `fix/tpv-runtime-metadata-neutralization-20261123`; no debe confundirse su estado con el CI histórico citado en este README.
+
+- Clientes: Wix CRM Contacts V5; el campo de widget `customerIdentityId` mantiene el nombre por compatibilidad y transporta `Contact._id`.
+- Profesionales: Wix Bookings Staff enlazado con `MapaStaff.resourceId`.
+- `CajaActual.conceptOperations.tpvRuntime` es la clave canónica para nuevas escrituras de metadatos. `tpvSandbox` solo se lee como fallback histórico.
+- Nuevos eventos: `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`, `siteId`, `sessionId`, `schemaVersion` y `ledgerVersion` centralizados.
+- Pagos/reembolsos nativos, escrituras nativas y emisión fiscal permanecen deshabilitados.
+- Los formatos `TPVSANDBOX_*` se conservan únicamente para búsqueda/idempotencia de registros antiguos; no deben utilizarse para nuevas inserciones.
+- La CI offline no acredita Wix Preview/Runtime ni sincronización del widget en el Editor.
+
 ## Estado CI vigente
 
 - Backend offline quality gates del baseline main pre-PR #545: SUCCESS, run 45107377657 (364/364 Layer 1, 255/255 Layer 2, 736/736 suite offline, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint).
