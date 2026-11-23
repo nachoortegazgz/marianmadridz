@@ -22,6 +22,12 @@
 
 ## Decisiones irreversibles y reglas vigentes
 
+- «No crear valores ficticios ni activar el writer hasta disponer de configuración legalmente validada.» **Fuente:** docs/audits/2026-11-23-fiscal-recovery-root-cause.md.
+- «La colección es append-only. La desaparición aparente de una fila previamente clasificada como no sintética es una discrepancia de integridad P0 hasta conocer la causa.» **Fuente:** docs/audits/2026-11-23-movimientos-caja-count-drift.md.
+- «La ausencia de fila en CitasF2 no convierte una reserva nativa en reserva dual huérfana.» **Fuente:** docs/audits/2026-11-23-bookings-revalidation.md.
+- «El TPV personalizado y Wix POS no están conciliados entre sí.» **Fuente:** docs/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md.
+- «El iframe reintenta MM_READY cada 500 ms, hasta 120 intentos (60 s), con un margen de 5 s antes del watchdog Velo de 65 s.» **Fuente:** docs/architecture/TPV-HTML-WIDGET-BRIDGE.md.
+- «Los eventos canónicos actuales del TPV usan sourceType=SYNTHETIC, processingMode=INTERNAL y reconciliationStatus=NOT_RECONCILED.» **Fuente:** docs/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md.
 - «La única SSOT de requisitos de negocio y aceptación funcional es la petición de Marian Madrid para su negocio, junto con las instrucciones vigentes del propietario.» **Fuente:** docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md.
 - «Las fuentes oficiales vigentes de Wix y de cada integración son la autoridad para contratos, APIs, permisos, límites y comportamiento técnico; la normativa legal vigente aplicable en España es obligatoria y no puede ser dispensada por una decisión técnica o de pruebas.» **Fuente:** docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md.
 - «Los ledgers de caja, contabilidad, fiscalidad, jornada, cierres y eventos webhook permanecen inmutables también en QA.» «No reabrirlos mediante flags ni por conveniencia de pruebas.» **Fuente:** docs/DECISION-LOG.md (TEC-038).
