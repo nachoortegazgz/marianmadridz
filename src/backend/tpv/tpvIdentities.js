@@ -12,7 +12,7 @@ export async function listTpvIdentities(identityType) {
         throw new Error("TPV_IDENTITY_TYPE_INVALID");
     }
     const result = await queryItems({
-        dataCollectionId: BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES,
+        dataCollectionId: BUSINESS_COLLECTIONS.TPV_IDENTITIES,
         filter: wql.and(
             wql.eq("identityType", identityType),
             wql.eq("environment", "SANDBOX"),
