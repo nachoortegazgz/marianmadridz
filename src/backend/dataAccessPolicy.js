@@ -6,6 +6,7 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     TPV_RUNTIME_POLICY,
+    TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
@@ -74,7 +75,7 @@ function _isRecord(value) {
 
 function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
-        ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
+        [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
         String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
         (
@@ -96,7 +97,8 @@ function _isSyntheticTpvRecord(item) {
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
-        (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":") ||
+        (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
+            String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":") ||
             String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":"));
 }
 
@@ -128,9 +130,9 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        (item.recordSource === "TPV_SANDBOX_SYNTHETIC" || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
+        ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
         if (!_isSyntheticTpvRecord(item)) {
-            throw _policyError("CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID");
+            throw _policyError("CMS_TPV_LEDGER_CONTRACT_INVALID");
         }
     }
     if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES &&
