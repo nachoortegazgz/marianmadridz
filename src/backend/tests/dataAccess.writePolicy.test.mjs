@@ -167,7 +167,7 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
-test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
+test("TPV identities require explicit source and site metadata and remain append-only", () => {
     const identity = {
         _id: "TPV-CUSTOMER-01",
         identityId: "TPV-CUSTOMER-01",
@@ -176,21 +176,22 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
         email: "cliente01@example.test",
         active: true,
         syntheticOnly: true,
-        environment: "SANDBOX",
-        testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        schemaVersion: 2,
         metadata: {},
     };
-    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
-    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
-        ...identity, environment: "LIVE",
-    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
-        ...identity, testRunId: "TPVSANDBOX-DEV-20990101-OTHER",
-    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => insertItem(C.TPV_SANDBOX_IDENTITIES, {
+    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_IDENTITIES, identity));
+    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
+        ...identity, sourceType: "NATIVE",
+    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
+        ...identity, siteId: "00000000-0000-4000-8000-000000000000",
+    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => insertItem(C.TPV_IDENTITIES, {
         ...identity, identityId: "INVALID-CUSTOMER",
     }), /SCHEMA_VIOLATION/);
-    assert.throws(() => assertUpdateAllowed(C.TPV_SANDBOX_IDENTITIES, {
+    assert.throws(() => assertUpdateAllowed(C.TPV_IDENTITIES, {
         ...identity, _id: identity._id,
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
