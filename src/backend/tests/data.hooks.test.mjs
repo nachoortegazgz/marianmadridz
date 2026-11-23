@@ -517,35 +517,25 @@ test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state a
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({ ...closing, totalCash: '121' }), /totalCash/);
   for (const field of ['closedAt', 'verifiedAt', 'sentAt']) assert.ok(closing[field] instanceof Date);
 
-  const persisted = {
+  const signatureRecoveryAttempt = {
     ...closing,
     _id: 'Z_2026-11-11',
-    closingSignature: '',
-    closingSignatureStatus: 'PENDING_SIGNATURE',
-    csvAEAT: null,
-    approverUser: null,
-  };
-  wixDataMock._seed('HistoricoCierresZ', [persisted]);
-  const recoveryUpdate = {
-    ...persisted,
     closingSignature: 'signature-recovered',
     closingSignatureStatus: 'SIGNED',
     verifiedAt: new Date('2026-11-11T20:05:00.000Z'),
     approverUser: 'authorized-recovery',
   };
-  assert.strictEqual(await H.HistoricoCierresZ_beforeUpdate(recoveryUpdate), recoveryUpdate);
+  assert.throws(
+    () => H.HistoricoCierresZ_beforeUpdate(signatureRecoveryAttempt),
+    /append-only/
+  );
 
-  const illegalUpdate = { ...persisted, totalCash: 999 };
-  await assert.rejects(
+  const illegalUpdate = { ...closing, _id: 'Z_2026-11-11', totalCash: 999 };
+  assert.throws(
     () => H.HistoricoCierresZ_beforeUpdate(illegalUpdate),
     /append-only/
   );
-  await assert.rejects(
-    () => H.HistoricoCierresZ_beforeUpdate({ _id: 'Z_MISSING', closingSignature: 'x' }),
-    /no pudo recuperar el estado previo/
-  );
   assert.throws(() => H.HistoricoCierresZ_beforeRemove('x'), /append-only/);
-  wixDataMock._reset();
 });
 
 // -----------------------------------------------------------------------------
