@@ -119,7 +119,7 @@
 
 **PARCIAL / GAP:**
 - No todas las auditorías contienen `sessionId` de forma explícita: apertura, movimiento y devolución requieren revisar/normalizar el payload.
-- **Corregido en PR #553 (código, pendiente de CI y Runtime):** `AUDIT_LIST` se enruta a `obtenerAuditoriaTPV` en `tpvAuditoria.web.js`, que consulta `TPV_COLLECTIONS.AUDITORIA`, filtra por sesión/entidad y devuelve eventos append-only ordenados por fecha. El widget presenta acción, entidad, operador y fecha/hora. Ya no confunde auditoría con movimientos de caja.
+- **Corregido en PR #554 (código, pendiente de CI y Runtime):** `AUDIT_LIST` se enruta a `obtenerAuditoriaTPV` en `tpvAuditoria.web.js`, que consulta `TPV_COLLECTIONS.AUDITORIA`, filtra por sesión/entidad y devuelve eventos append-only ordenados por fecha. El widget presenta acción, entidad, operador y fecha/hora. Ya no confunde auditoría con movimientos de caja.
 - `AUDIT_LIST` y `SESSION_SUMMARY` siguen siendo lecturas sin evento de auditoría de consulta.
 - Existen endpoints de exportación de movimientos y auditoría; su aceptación Runtime (filtros, autorización, límites, integridad y read-back) sigue pendiente.
 - La impresión del último ticket es local (`window.print()`) y no registra un evento de auditoría.
