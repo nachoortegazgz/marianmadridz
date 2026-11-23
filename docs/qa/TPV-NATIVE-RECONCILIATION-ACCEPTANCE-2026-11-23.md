@@ -119,9 +119,9 @@
 
 **PARCIAL / GAP:**
 - No todas las auditorías contienen `sessionId` de forma explícita: apertura, movimiento y devolución requieren revisar/normalizar el payload.
-- `AUDIT_LIST` del widget se resuelve actualmente mediante `obtenerMovimientosCaja` de `tpvMovimientos.web.js`: muestra movimientos/proyección del ledger, no los eventos de la colección de auditoría. El WebMethod de `tpvAuditoria.web.js` no está conectado al controlador de página.
-- `AUDIT_LIST` y `SESSION_SUMMARY` son lecturas sin evento de auditoría de consulta.
-- No existen exportaciones de movimientos/auditoría en el contrato activo revisado.
+- **Corregido en PR #553 (código, pendiente de CI y Runtime):** `AUDIT_LIST` se enruta a `obtenerAuditoriaTPV` en `tpvAuditoria.web.js`, que consulta `TPV_COLLECTIONS.AUDITORIA`, filtra por sesión/entidad y devuelve eventos append-only ordenados por fecha. El widget presenta acción, entidad, operador y fecha/hora. Ya no confunde auditoría con movimientos de caja.
+- `AUDIT_LIST` y `SESSION_SUMMARY` siguen siendo lecturas sin evento de auditoría de consulta.
+- Existen endpoints de exportación de movimientos y auditoría; su aceptación Runtime (filtros, autorización, límites, integridad y read-back) sigue pendiente.
 - La impresión del último ticket es local (`window.print()`) y no registra un evento de auditoría.
 - No se observa registro persistente de intentos rechazados por permisos. El log de backend no sustituye al ledger de auditoría.
 
