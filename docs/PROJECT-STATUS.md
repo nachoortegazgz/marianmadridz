@@ -2,21 +2,21 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación sintética legacy), #569 (sesión TPV), #571 (pedidos POS sintéticos) y #572 (Widget Bridge) integradas. Último merge TPV verificado: `dcd7452038912461bbc04f80f089a530d49aaf6e`.  
+**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563, #564, #566, #569, #571, #572, #578, #579, #580 y #582 integradas. PR #580 incorpora el ajuste del handshake TPV; PR #582 alinea el estado documental con su merge y CI. Último commit de main verificado en este corte: `d2debad0b0ed39e94d0c91019f2d60552394ecec`. PR #581 y #583 siguen abiertas como borradores documentales redundantes/no integrados; su evidencia se consolida en esta actualización.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
 
 | Área | Estado verificado | Límite |
 |---|---|---|
-| Código TPV / contratos | PR #543, #551 (metadatos), #554 (auditoría), #556 (identidad fiscal), #566 (clasificación sintética legacy), #569 (sesión) y #572 (Widget Bridge) fusionadas en `main`; CI pre-merge #572 SUCCESS | Aplicar manualmente `#htmlTPV.txt` al HTML Component de Draft; después validar Local Editor/Preview Runtime, E2E, concurrencia y ausencia de efectos externos. |
+| Código TPV / contratos | PR #543, #551, #554, #556, #566, #569, #572 y #580 integradas en `main`; #580 amplía `MM_READY` a 120 × 500 ms (60 s), frente al watchdog Velo de 65 s, y añade aserción contractual | Aplicar/sincronizar el HTML en `#htmlTPV` de Wix Draft y validar Preview/Runtime; E2E, concurrencia e inexistencia de efectos externos siguen pendientes. |
 | CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR #545: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). Post-merge PR #545: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). PR #546: backend [45112483802](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483802), Gitleaks [45112483786](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483786); post-merge PR #546: backend [45112587480](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587480), Gitleaks [45112587474](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587474). |
-| Calidad offline | PR #572 HEAD pre-merge: Layer 1 30 suites / 366 PASS; Layer 2 17 / 244 PASS; suite completa 79 / 734 PASS / 0 FAIL; Wix Cart V2, Transactions SDK, TPV SDK, ESLint y Gitleaks SUCCESS | No se ha verificado CI post-merge del commit `dcd7452...`. La CI offline no prueba CMS live, Wix Runtime, fiscalidad ni hardware. |
+| Calidad offline | PR #580 HEAD/CI de PR: Layer 1 30 suites / 369 PASS; Layer 2 17 / 245 PASS; suite completa 79 / 740 PASS / 0 FAIL; SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning SUCCESS | Resultados del CI de PR; no equivalen a Preview/Runtime Wix ni prueban CMS live, fiscalidad, hardware o ausencia de efectos externos. No consta una ejecución independiente post-merge para el SHA `180c69d...`. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
-| Wix Site Context | **Draft**, read-back directo 2026-11-23 | `wix.config.json` apunta al mismo siteId y `main` es la rama por defecto; la sincronización de `src/backend`/`src/public` es esperada por Git Integration pero no leída en el Editor. `#htmlTPV.txt` está fuera de las carpetas Velo y su HTML Component requiere aplicación manual en Draft. No se ha publicado. |
+| Wix Site Context | **Draft / no publicado**, confirmado por GetSiteContext y Query Sites V2 (2026-11-23); `published=false`, `viewUrl` vacío | `wix.config.json` apunta al mismo siteId y `main` es la rama por defecto; la sincronización Git→Editor no está acreditada por lectura del Editor. `#htmlTPV.txt` está fuera de las carpetas Velo y requiere aplicación manual en `#htmlTPV`. No se ha llamado a Publish/Unpublish. |
 | Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
 | Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |
-| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. Pedidos POS #10032/#10033 confirmados por el titular como sintéticos QA; sus tres compensaciones permanecen sin reintento ni ledger real. #416 sigue abierto por CajaActual y verificación de ausencia de efectos externos. |
+| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. El titular declara #10032/#10033 como sintéticos QA, pero Get Order V1 devuelve `demo=false`, `imported=false` y `channelInfo.type=POS`; esa declaración no demuestra Test Mode ni ausencia de efectos económicos. Las tres compensaciones permanecen `PENDING_RECOVERY`; #416 sigue P0. |
 | TPV | PR #551, #554, #569 y #572 fusionadas; contrato de sesión y bridge READY/CONTEXT corregido en `main` | Confirmar SHA Velo en Editor; copiar manualmente HTML actualizado; probar ausencia de errores bridge, permisos, idempotencia y concurrencia en Preview/Runtime. |
 | CMS / ledgers | Relectura consistente 2026-11-23: CajaActual 1 ABIERTA (300 € apertura / 320 € esperado); MovimientosCaja 5 sintéticos; CitasF2 6; MapaStaff 5 sin CONFIG_SISTEMA_FISCAL; HistoricoCierresZ 1 SIMULATED; LibroAsientosContablesDetalle 3 SIMULATED_ONLY | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
@@ -38,7 +38,7 @@
 - El HTML Component `#htmlTPV` no se ha actualizado en Wix Editor; el archivo raíz `#htmlTPV.txt` requiere aplicación manual en Draft. No declarar corregidos los errores en Runtime hasta probarlo.
 
 
-- Confirmación del titular 2026-11-23: pedidos POS #10032 (92,45 €) y #10033 (18,15 €) fueron operaciones sintéticas QA, no ventas/cobros reales. Las tres compensaciones vinculadas no deben convertirse en asientos reales ni reintentarse. #416 permanece abierto para verificar ausencia de efectos externos y resolver la evidencia/estado de CajaActual sin mutar ledgers.
+- Declaración del titular 2026-11-23: pedidos POS #10032 (92,45 €) y #10033 (18,15 €) se generaron como operaciones sintéticas QA. **Contraste posterior de Wix Get Order V1:** ambos devuelven `demo=false`, `imported=false`, `channelInfo.type=POS`; por tanto, Wix no los clasifica como test orders. La declaración de QA no acredita Test Mode del proveedor ni ausencia de liquidación externa. #416 permanece P0 hasta obtener evidencia del proveedor/Dashboard sobre modo test/live, settlement y refund. No reintentar compensaciones, cobros ni devoluciones; no crear asientos ni alterar ledgers.
 - El repo contiene `wix.config.json` con `siteId=188bed94-177c-4bc9-a9f0-35080d874f3e` y `uiVersion=15941`; GitHub confirma `main` como rama por defecto. La documentación oficial Wix establece que la rama por defecto sincroniza código con el Editor conectado. No se ha leído el panel GitHub Integration ni ejecutado `wix dev`; marcar sincronización como esperada, no verificada.
 - Los tres cambios están integrados en Git; no hay validación Wix Runtime ni autorización de publicación.
 - #525: el lock común ya está integrado por PR #528; falta demostrar concurrencia/recuperación en Wix Runtime.
@@ -296,3 +296,30 @@ Corrección integrada mediante [PR #580](https://github.com/nachoortegazgz/maria
 - Pendiente: aplicar el HTML actualizado al componente `#htmlTPV` del Draft y validar Wix Preview; el merge no acredita sincronización del Editor.
 
 La corrección elimina la desalineación temporal conocida en el código versionado, pero no certifica el runtime ni resuelve la caja singleton incoherente.
+
+
+## Reconciliación documental de estado — 2026-11-23 (corte posterior a PR #580/#582)
+
+### Código y GitHub
+- main tiene como último commit verificado d2debad0b0ed39e94d0c91019f2d60552394ecec (PR #582, actualización documental).
+- PR #580 está integrada en main, merge commit 180c69d9e200266e85f6f0974f1b6a01a7c172a3. El HTML fuente #htmlTPV.txt usa HANDSHAKE_RETRY_MS=500 y HANDSHAKE_MAX_ATTEMPTS=120; el controlador mantiene handshakeTimeoutMs=65000. La prueba src/backend/tests/tpv-widget.contract.test.mjs comprueba que el producto intervalo × intentos es positivo y menor que el watchdog.
+- CI de la PR #580: Layer 1 30 suites / 369 PASS; Layer 2 17 suites / 245 PASS; suite offline 79 suites / 740 PASS; SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning SUCCESS. Es CI de PR; no se afirma una ejecución Wix Preview/Runtime ni una ejecución independiente post-merge.
+- PR #582 integra la actualización documental del merge y los resultados de CI. PR #581 y #583 permanecen abiertas en estado draft y contienen cambios documentales solapados; no se consideran integradas ni fuente de estado de main.
+
+### Estado de publicación Wix
+- Query Sites V2 account-level para el siteId indicado devuelve published=false y viewUrl vacío; GetSiteContext devuelve Draft.
+- La consulta también devuelve domainConnected=true, premium=true, editorType=EDITOR; esos atributos no cambian el estado de publicación.
+- No se ejecutó Publish/Unpublish. La no publicación reduce la exposición pública, pero no demuestra que las automatizaciones programadas o internas estén inactivas.
+- No se ha acreditado SHA Velo instalado en Editor ni actualización del HTML Component #htmlTPV. El archivo #htmlTPV.txt está versionado en Git y la actualización del componente sigue pendiente de aplicación/validación en Draft.
+
+### Pedidos POS #10032 / #10033 — clasificación y riesgo
+- Get Order V1 devuelve para ambos demo=false, imported=false, channelInfo.type=POS y createdBy correspondiente al propietario del sitio.
+- Se conserva como **declaración del titular** que fueron operaciones sintéticas de QA; no se presenta como hecho verificado por Wix. El indicador nativo demo=false significa que Wix no los clasifica como test orders.
+- Order Transactions API observó #10032 con payment APPROVED por 92,45 EUR, método Cash, offlinePayment=false, sin refund; #10033 con payment REFUNDED por 18,15 EUR y refund SUCCEEDED, externalRefund=false. La API no acredita el modo del proveedor ni liquidación bancaria.
+- **P0 abierto (#416):** obtener evidencia del Dashboard/PSP sobre modo test/live, liquidación y devolución, y confirmar el origen operativo. No repetir cobros/refunds, no reintentar compensaciones y no modificar pedidos, CMS, caja o ledgers para despejar la incidencia.
+
+### Incidencias y límites vigentes
+- #416 permanece P0: singleton CajaActual y tres compensaciones PENDING_RECOVERY sin resolución acreditada. Mantener writers fiscales/contables cerrados.
+- #523 permanece abierta: seis proyecciones CitasF2 divergen de seis bookings nativos cancelados; no reinyectar eventos ni corregir proyecciones hasta verificar el registro/delivery de handlers y definir reconciliación idempotente.
+- El sitio sigue Draft/no publicado; no hay autorización de despliegue. No modificar reservas nativas, pedidos, refunds, caja ni ledgers como parte de esta actualización documental.
+- **Release: NO-GO.** CI GitHub no sustituye pruebas Wix Preview/Runtime, concurrencia, idempotencia, E2E ni validación fiscal.
