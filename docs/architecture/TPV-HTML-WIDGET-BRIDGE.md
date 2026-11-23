@@ -1,6 +1,6 @@
 # TPV Marian Madrid — contrato vigente HTML / Velo / backend
 
-**Estado:** corrección del contrato de handshake en rama; CI y validación Wix Runtime pendientes.  
+**Estado:** PR #572 y PR #580 integradas en main; CI de PR #580 SUCCESS (79 suites / 740 pruebas offline). Wix Editor/Preview/Runtime siguen pendientes de validación.  
 **Página:** `src/pages/TPV.yl5th.js` · **HTML Component:** `#htmlTPV` · **HTML fuente:** `#htmlTPV.txt`  
 **Controlador:** `src/public/tpvPageController.js` · **Puente:** `src/public/widgetBridge.js`
 
@@ -35,22 +35,24 @@ El flujo tiene dos mensajes distintos:
 1. El iframe envía `MM_READY`; el controlador recibe el evento Wix `onMessage` y responde con `MM_CONTEXT`.
 2. El iframe valida `status=SUCCESS`, `data.component=htmlTPV` y `data.protocolVersion=1`. Solo entonces inicia catálogo, staff y estado de caja.
 
-Correcciones aplicadas en la rama:
+Correcciones integradas en main mediante PR #572 y PR #580:
 - `MESSAGE_TYPES.CONTEXT` se incluye en `allowedTypes`. Antes se permitía recibir `MM_READY`, pero `send(MM_CONTEXT)` se rechazaba por el mismo filtro de tipos; eso explica el registro `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` al publicar el contexto.
-- El iframe reenvía `MM_READY` cada 500 ms, hasta 50 intentos (25 s), con `messageId` nuevo. Esto cubre la carrera en la que el iframe termina de cargar antes de que el page code haya registrado `onMessage`. El controlador ignora los READY duplicados una vez completado el handshake.
+- El iframe reenvía `MM_READY` cada 500 ms, hasta 120 intentos (60 s), con `messageId` nuevo. PR #580 amplía la ventana de reintentos para dejar 5 s de margen antes del watchdog Velo de 65 s. Esto cubre la carrera en la que el iframe termina de cargar antes de que el page code haya registrado `onMessage`; el controlador ignora los READY duplicados una vez completado el handshake.
 - Las llamadas de negocio ya no se disparan inmediatamente después del primer `postMessage(MM_READY)`; esperan un `MM_CONTEXT` válido. Esto evita solicitudes iniciales perdidas o prematuras.
 - El controlador actual permite `MM_READY`, `MM_CONTEXT` y todos los tipos de solicitud del HTML Component.
-- El watchdog específico del TPV es de 65 s; el iframe conserva 50 reintentos de `MM_READY` cada 500 ms (25 s).
+- El watchdog específico del TPV es de 65 s; el iframe reintenta `MM_READY` 120 veces cada 500 ms (60 s), con un margen de 5 s.
 - Un rechazo `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` registra ahora `receivedType`, `receivedVersion` y `allowedTypes`; los fallos al enviar también incluyen `attemptedType` y allowlist. Los detalles no incluyen payloads de negocio.
 - Los fallos al publicar `MM_CONTEXT` conservan `causeCode` y `causeDetail`, de modo que se distingue un rechazo del tipo de un fallo al obtener configuración.
 
 Diagnóstico actualizado:
 - La causa histórica del rechazo de `MM_CONTEXT` fue que el mismo allowlist se aplicaba a mensajes entrantes y salientes, y `MM_CONTEXT` no estaba incluido. PR #572 lo corrigió y está fusionada en `main`.
-- La emisión única de `MM_READY` fue sustituida por reintentos en esa misma PR. El margen del watchdog se amplía ahora para evitar falsos positivos si el iframe tarda en inicializarse.
+- PR #572 sustituyó la emisión única de `MM_READY` por reintentos y corrigió la allowlist de `MM_CONTEXT`; PR #580 amplió los reintentos de 25 s a 60 s para mantenerlos activos hasta 5 s antes del watchdog.
 - Revisión adicional: el HTML repetía `MM_READY` durante 25 s (50 × 500 ms), mientras el watchdog Velo esperaba 65 s. Esa ventana desigual podía dejar de emitir antes de que el controlador estuviera listo. Se amplía a 120 intentos (60 s), dejando 5 s de margen antes del watchdog; el test contractual comprueba matemáticamente la relación entre ambas ventanas.
 - Si los errores persisten con el código actual, el próximo log debe mostrar el tipo recibido y el allowlist activo. Si el tipo recibido es `MM_CONTEXT` o la allowlist no contiene `MM_CONTEXT`, el código de página Velo ejecutado en Wix no está sincronizado con el código versionado. Si el tipo es otra solicitud, debe compararse literalmente con `REQUEST_TYPES`.
 
-**Límite:** el merge de GitHub no acredita sincronización del Editor Wix. La verificación definitiva exige aplicar el código de página actual en Wix Draft, comprobar que `#htmlTPV.txt` contiene el handshake versionado y abrir Preview. No publicar ni ejecutar operaciones reales.
+**Validación GitHub:** PR #580 integrada en `main`; CI de PR SUCCESS: Layer 1 30 suites / 369 PASS, Layer 2 17 suites / 245 PASS, suite offline 79 suites / 740 PASS, además de SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning. Estas pruebas no acreditan Wix Preview/Runtime.
+
+**Límite:** el merge de GitHub no acredita sincronización del Editor Wix. La verificación definitiva exige comprobar el SHA Velo instalado en Wix Draft, aplicar/guardar el contenido actualizado de `#htmlTPV.txt` en el HTML Component `#htmlTPV` y abrir Preview. No publicar ni ejecutar operaciones reales.
 
 ### 2.2 Sincronización del HTML Component
 
