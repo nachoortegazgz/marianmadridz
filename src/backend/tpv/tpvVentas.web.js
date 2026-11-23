@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvRepository";
@@ -61,10 +61,10 @@ export const registrarVenta = webMethod(
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId) throw new Error("TPV_BOOKINGS_DISABLED");
             const customer = customerIdentityId
-                ? await getTpvSandboxIdentity(customerIdentityId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER)
+                ? await getTpvSandboxIdentity(customerIdentityId, TPV_IDENTITY_TYPES.CUSTOMER)
                 : null;
             if (customerIdentityId && !customer) throw new Error("TPV_CUSTOMER_NOT_ALLOWED");
-            const staffIdentities = await listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF);
+            const staffIdentities = await listTpvSandboxIdentities(TPV_IDENTITY_TYPES.STAFF);
             const allowedProfessionalIds = new Set(staffIdentities.map((item) => item.identityId));
             const requestedProfessionalId = String(input.profesionalId || "").trim();
             if (requestedProfessionalId && !allowedProfessionalIds.has(requestedProfessionalId)) {
