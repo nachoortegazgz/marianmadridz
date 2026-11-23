@@ -95,9 +95,9 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(bridge, /send\(MESSAGE_TYPES\.CONTEXT, context, message\.messageId \|\| null\)/);
     assert.match(html, /const HANDSHAKE_RETRY_MS = 500/);
     assert.match(html, /const HANDSHAKE_MAX_ATTEMPTS = 120/);
-    const retryIntervalMs = Number(html.match(/const HANDSHAKE_RETRY_MS = (\\d+)/)?.[1]);
-    const retryAttempts = Number(html.match(/const HANDSHAKE_MAX_ATTEMPTS = (\\d+)/)?.[1]);
-    const watchdogMs = Number(controller.match(/handshakeTimeoutMs: (\\d+)/)?.[1]);
+    const retryIntervalMs = Number(html.match(/const HANDSHAKE_RETRY_MS = (\d+)/)?.[1]);
+    const retryAttempts = Number(html.match(/const HANDSHAKE_MAX_ATTEMPTS = (\d+)/)?.[1]);
+    const watchdogMs = Number(controller.match(/handshakeTimeoutMs: (\d+)/)?.[1]);
     assert.ok(retryIntervalMs > 0 && retryAttempts > 0 && watchdogMs > 0);
     assert.ok(retryIntervalMs * retryAttempts < watchdogMs,
         "iframe retries must continue until shortly before the Velo watchdog");
