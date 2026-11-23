@@ -34,7 +34,10 @@
 
 ## Qué está completado
 
-- PR #551 integrada: escrituras de proyección TPV neutrales y compatibilidad de lectura histórica.\n- PR #554 integrada: `AUDIT_LIST` conectado al ledger de auditoría dedicado.\n- PR #556 integrada: identidad fiscal basada exclusivamente en `CONFIG_SISTEMA` canónico, con fail-closed.\n- Corrección de aserciones TPV desactualizadas mediante PR #543.
+- PR #551 integrada: escrituras de proyección TPV neutrales y compatibilidad de lectura histórica.
+- PR #554 integrada: `AUDIT_LIST` conectado al ledger de auditoría dedicado.
+- PR #556 integrada: identidad fiscal basada exclusivamente en `CONFIG_SISTEMA` canónico, con fail-closed.
+- Corrección de aserciones TPV desactualizadas mediante PR #543.
 - Consolidación documental previa en PR #544.
 - Estabilización documental consolidada mediante PR #545 y trazabilidad post-merge corregida por PR #546; ambas fusionadas en main con CI pre-merge y post-merge SUCCESS.
 - Read-back Wix Site Context actual que devuelve Draft; la lectura resuelve el estado en el momento consultado, no la sincronización del código.
@@ -45,7 +48,8 @@
 2. [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416): reconciliar registros pendientes con evidencia original.
 3. [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415): PR #556 integrada; no existe CONFIG_SISTEMA canónico en MapaStaff. Mantener fail-closed hasta disponer de datos legales verificados, ligado a #209.
 4. [#520 Automatizaciones](https://github.com/nachoortegazgz/marianmadridz/issues/520): siete PREINSTALLED ACTIVE; APPLICATION «Configuración de control laboral» INACTIVE (revisión 5). Inspeccionar efectos/historial de las siete preinstaladas y contención soportada.
-5. [#523 / #522 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 pendientes de reconciliación y una reserva nativa sin proyección; comparar con Bookings sin modificar reservas nativas.\n6. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
+5. [#523 / #522 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 pendientes de reconciliación y una reserva nativa sin proyección; comparar con Bookings sin modificar reservas nativas.
+6. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
 7. [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210): ruleset y checks requeridos mediante administrador.
 8. [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434): conservar NO-GO hasta cierre de los gates.
 
