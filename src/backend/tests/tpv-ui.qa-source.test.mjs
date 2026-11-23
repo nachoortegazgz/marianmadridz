@@ -25,8 +25,8 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     const controller = await read("src/public/tpvPageController.js");
     assert.match(script, /payments: state\.payments\.map/);
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
-    assert.match(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId\}/);
-    assert.doesNotMatch(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId,countedCash/);
+    assert.match(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
+    assert.doesNotMatch(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*,\s*countedCash/);
     assert.match(script, /impuestosImporte: 0/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
