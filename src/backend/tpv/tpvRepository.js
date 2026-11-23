@@ -420,6 +420,8 @@ function _sessionFromCaja(caja) {
         sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(sourceState?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         sourceState?.externalSideEffects === false &&
+        (sourceState?.processingMode === undefined || sourceState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+        (sourceState?.reconciliationStatus === undefined || sourceState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
         /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
     const currentV1 = _isCurrentV1Caja(caja, sourceState);
@@ -468,6 +470,8 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                 preflightRuntimeState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
                 Number(preflightRuntimeState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
                 preflightRuntimeState.externalSideEffects === false &&
+                (preflightRuntimeState.processingMode === undefined || preflightRuntimeState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+                (preflightRuntimeState.reconciliationStatus === undefined || preflightRuntimeState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
                 /^[a-f0-9]{64}$/i.test(String(preflightRuntimeState.eventHash || "")) &&
                 Boolean(String(preflightRuntimeState.sessionId || "").trim());
             const currentV1 = _isCurrentV1Caja(caja, preflightRuntimeState);
@@ -533,7 +537,10 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
             sourceState.externalSideEffects = false;
             sourceState.schemaVersion = TPV_RUNTIME_POLICY.SCHEMA_VERSION;
-            sourceState.reconciliationStatus = "NOT_RECONCILED";
+            sourceState.processingMode = TPV_RUNTIME_POLICY.PROCESSING_MODE;
+            sourceState.reconciliationStatus = TPV_RUNTIME_POLICY.RECONCILIATION_STATUS;
+            sourceState.allowNativePayments = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments;
+            sourceState.allowNativeRefunds = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds;
             sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
             sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
@@ -594,7 +601,10 @@ function _sessionCajaPatch(caja, record, eventHash) {
                 ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
                 schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
                 externalSideEffects: false,
-                reconciliationStatus: "NOT_RECONCILED",
+                processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+                reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+                allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+                allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
                 eventHash: String(eventHash || ""),
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
