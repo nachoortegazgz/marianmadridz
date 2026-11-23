@@ -138,9 +138,21 @@ test("CajaActual writes neutral tpvRuntime metadata and reads historical tpvSand
     assert.match(repository, /tpvRuntime: \{/);
     assert.match(repository, /const legacy = operations\?\.tpvSandbox/);
     assert.doesNotMatch(repository, /conceptOperations\.tpvSandbox\s*=/);
+    assert.match(repository, /processingMode: TPV_RUNTIME_POLICY\.PROCESSING_MODE/);
+    assert.match(repository, /reconciliationStatus: TPV_RUNTIME_POLICY\.RECONCILIATION_STATUS/);
+    assert.match(repository, /allowNativePayments: TPV_RUNTIME_POLICY\.CAPABILITIES\.allowNativePayments/);
+    assert.match(repository, /allowNativeRefunds: TPV_RUNTIME_POLICY\.CAPABILITIES\.allowNativeRefunds/);
     assert.match(utilities, /const current = operations\?\.tpvRuntime/);
     assert.match(utilities, /const legacy = operations\?\.tpvSandbox/);
     assert.doesNotMatch(utilities, /schemaVersion:\s*2/);
+    const syntheticEnvelope = repository.slice(
+        repository.indexOf("const envelope = {"),
+        repository.indexOf("const hashPayload =")
+    );
+    for (const key of ["processingMode", "reconciliationStatus", "allowNativePayments", "allowNativeRefunds"]) {
+        assert.equal(syntheticEnvelope.split(new RegExp("\\b" + key + "\\s*:")).length - 1, 1,
+            key + " must be defined exactly once in the synthetic ledger envelope");
+    }
 });
 
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
