@@ -1,9 +1,9 @@
 # Relevo técnico — TPV y estabilización — 2026-11-23
 
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**main:** 956356db48ee9d0ba363023c14105474316f84dd  
 **PR #541:** integrada en main mediante e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.  
-**PR #540:** integrada en main; HEAD actual b20304598f7017ebc283d5821a38b59fe41b90e0.  
+**PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd.  
 **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
 **Rama de estabilización:** chore/phase1-repository-stabilization-20261123.  
 **Release:** **NO-GO**.
@@ -22,10 +22,10 @@ BONO y TARJETA_REGALO están aceptados como medios sintéticos y se reflejan por
 
 ## Estado CI en main
 
-- Backend offline quality gates: FAIL, run 45105031715.
-- Secret scanning: SUCCESS, run 45105031857.
-- El fallo está en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis.
-- La corrección se encuentra en la rama de estabilización; esperar CI nuevo antes de considerar resuelto el fallo.
+- Backend offline quality gates: FAIL, run 45105979742.
+- Secret scanning: SUCCESS, run 45105979748.
+- El fallo inicial estaba en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis. La corrección inicial se integró por PR #542, pero el test continuó fallando por aserciones literales/escape incorrectas; PR #543 corrige el contrato completo.
+- La corrección final se encuentra en PR #543; esperar CI nuevo antes de considerar resuelto el fallo.
 
 ## Cambios de TPV ya integrados
 
