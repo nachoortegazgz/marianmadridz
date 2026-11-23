@@ -248,11 +248,8 @@ function stripVolatile(value) {
     return result;
 }
 
-const LEGACY_TPV_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
-const TPV_CASH_REGISTER_SOURCE = "TPV_SYNTHETIC";
 const TPV_GENESIS_HASH = "0".repeat(64);
 
-const LEGACY_RUN_ID = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
 const MAX_TPV_PROJECTION_EVENTS = 1000;
 
 function _assertLogicalCollection(collection) {
@@ -299,9 +296,9 @@ function _isRecognizedSyntheticLedgerItem(item) {
         envelope.reconciliationStatus === "NOT_RECONCILED" &&
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
-    const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
-        envelope.legacyRunId === LEGACY_RUN_ID &&
-        String(item.traceId || "").startsWith("TPV:" + LEGACY_RUN_ID + ":");
+    const legacy = [TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
+        envelope.legacyRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
+        String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":");
     return validCommon && (current || legacy);
 }
 
@@ -375,10 +372,39 @@ async function _ensureCajaActual() {
     return caja;
 }
 
+function _isCurrentV1Caja(caja, state = caja?.conceptOperations?.tpvSandbox) {
+    const traceId = String(caja?.traceId || "");
+    const validFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
+    const validTrace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
+        traceId.startsWith("TPV_SESSION:");
+    return caja?.cashRegisterStatus === "SIMULACION" &&
+        caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        (state?.schemaVersion === undefined || state?.schemaVersion === null || Number(state.schemaVersion) === 1) &&
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === "NOT_RECONCILED") &&
+        state?.externalSideEffects === false &&
+        Boolean(String(state?.sessionId || "").trim()) &&
+        (validFingerprint || validTrace);
+}
+
+function _isLegacyCaja(caja, state = caja?.conceptOperations?.tpvSandbox, { requireSession = true } = {}) {
+    const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+    return [
+        TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
+        TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE,
+    ].includes(String(caja?.snapshotSource || "")) &&
+        caja?.traceId === legacyRunId &&
+        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId) &&
+        (!requireSession || Boolean(String(state?.sessionId || "").trim()));
+}
+
 function _sessionFromCaja(caja) {
     const sourceState = caja?.conceptOperations?.tpvSandbox;
     const sessionId = String(sourceState?.sessionId || "").trim();
-    const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
+    const explicitSyntheticV2 = caja?.cashRegisterStatus === "SIMULACION" &&
+        caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
         sourceState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sourceState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
@@ -386,9 +412,10 @@ function _sessionFromCaja(caja) {
         sourceState?.externalSideEffects === false &&
         /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
-    const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
-        caja?.traceId === LEGACY_RUN_ID && Boolean(sessionId);
-    if (!explicitSynthetic && !legacySynthetic) return null;
+    const currentV1 = _isCurrentV1Caja(caja, sourceState);
+    const legacySynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
+        _isLegacyCaja(caja, sourceState);
+    if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) return null;
     if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
     const closedAt = caja.closedAt ? (caja.closedAt instanceof Date ? caja.closedAt : new Date(caja.closedAt)) : null;
@@ -401,12 +428,14 @@ function _sessionFromCaja(caja) {
         openingCashMinor: Math.round(Number(caja.openingCashAmount || 0) * 100),
         cashierMemberId: caja.openedBy || null,
         conceptOperations: caja.conceptOperations,
-        payloadFiscal: { requestFingerprint: caja.conceptOperations?.tpvSandbox?.requestFingerprint },
+        payloadFiscal: { requestFingerprint: sourceState?.requestFingerprint },
         payload: makeSyntheticPayload({
             sessionId,
             traceId: caja.traceId || "",
             dayKey: openedAt.toISOString().slice(0, 10).replace(/-/g, ""),
-            source: explicitSynthetic ? TPV_CASH_REGISTER_SOURCE : LEGACY_TPV_LEDGER_SOURCE,
+            source: explicitSyntheticV2 || currentV1
+                ? TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE
+                : TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
         }),
         _createdDate: caja._createdDate,
         _updatedDate: caja._updatedDate,
@@ -430,8 +459,8 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                 preflightSandboxState.externalSideEffects === false &&
                 /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
-            const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
-                caja.traceId === LEGACY_RUN_ID;
+            const legacySynthetic = caja.snapshotSource === TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE &&
+                caja.traceId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
             if (!explicitSynthetic && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             }
@@ -452,7 +481,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             next.lastOperationAt = now;
             next.lastOperationStatus = "SIMULATED";
             next.traceId = String(record.traceId || caja.traceId || "");
-            next.snapshotSource = TPV_CASH_REGISTER_SOURCE;
+            next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
             next.cashRegisterStatus = "SIMULACION";
 
             if (collection === TPV_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
@@ -540,7 +569,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
         difference: 0,
         differenceReason: "",
         salesCount: 0,
-        snapshotSource: TPV_CASH_REGISTER_SOURCE,
+        snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
         traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
         lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
         lastOperationType: "TPV_SESSION_OPEN",
@@ -823,7 +852,7 @@ export async function queryTpvLedgerRecords(options = {}) {
         }),
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-            filter: wql.eq("recordSource", LEGACY_TPV_LEDGER_SOURCE),
+            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE),
             sort: ["recordTimestamp DESC"],
             limit,
             consistency: CONSISTENCY.STRONG,
