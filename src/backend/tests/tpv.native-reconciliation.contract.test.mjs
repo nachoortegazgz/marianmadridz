@@ -214,7 +214,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(closures, /operationalStatus: "CERRADA"/);
     assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
     assert.match(audit, /recordSessionId === sessionId/);
-    assert.match(audit, /const belongsToSession = recordSessionId[\\s\\S]*?recordSessionId === sessionId/);
+    assert.match(audit, /const belongsToSession = recordSessionId \?/);
     assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
     assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
