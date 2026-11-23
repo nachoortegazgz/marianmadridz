@@ -383,43 +383,55 @@ export function assertTpvIdentity(item, options = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
     }
+
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
+    if (!["CUSTOMER", "STAFF"].includes(identityType) || item.identityType !== identityType) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity type invalid");
+    }
 
-    // Read-only compatibility for the six pre-neutral Sandbox identities.
-    // Writes remain strict: callers must not set allowLegacyRead.
     const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
-    const legacySuffix = identityId.startsWith(legacyPrefix) ? identityId.slice(legacyPrefix.length) : "";
+    const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
+    const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
+    const legacySuffix = identityId.startsWith(legacyPrefix)
+        ? identityId.slice(legacyPrefix.length)
+        : identityId.startsWith(expectedPrefix)
+            ? identityId.slice(expectedPrefix.length)
+            : "";
+    const isLegacyIdentityId = identityId.startsWith(legacyPrefix);
+    const expectedLegacyNamePrefix = isLegacyIdentityId
+        ? (identityType === "CUSTOMER" ? "Cliente Sandbox " : "Profesional Sandbox ")
+        : expectedNamePrefix;
+    const validSuffix = ["01", "02", "03"].includes(legacySuffix);
+    const validEmail = /^[^\s@]+@example\.test$/i.test(String(item.email || ""));
+    const validMetadata = item.metadata === undefined ||
+        (item.metadata && typeof item.metadata === "object" &&
+            !Array.isArray(item.metadata) && Object.keys(item.metadata).length === 0);
+
+    // Read-only compatibility for historical and transitional Sandbox identities.
+    // The caller must opt in; these records are never accepted for new writes.
     if (options.allowLegacyRead === true &&
-        ["CUSTOMER", "STAFF"].includes(identityType) &&
-        item.identityType === identityType &&
-        ["01", "02", "03"].includes(legacySuffix) &&
+        validSuffix &&
         item.environment === "SANDBOX" &&
         item.testRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
         item.active === true &&
         item.syntheticOnly === true &&
-        displayName.length > 0 &&
-        displayName.length <= 120 &&
-        /^[^\s@]+@example\.test$/i.test(String(item.email || "")) &&
-        (item.metadata === undefined ||
-            (item.metadata && typeof item.metadata === "object" &&
-                !Array.isArray(item.metadata) && Object.keys(item.metadata).length === 0))) {
+        displayName === expectedLegacyNamePrefix + legacySuffix &&
+        validEmail &&
+        validMetadata) {
         const legacyAllowedFields = new Set([
             "_id", "_createdDate", "_updatedDate", "_owner",
             "identityId", "identityType", "displayName", "email", "active",
             "syntheticOnly", "environment", "testRunId", "createdAt", "metadata",
         ]);
-        const legacyUnknownFields = Object.keys(item).filter((field) => !legacyAllowedFields.has(field));
-        if (legacyUnknownFields.length === 0) return true;
+        if (Object.keys(item).every((field) => legacyAllowedFields.has(field))) return true;
     }
 
-    const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
-    const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
-    const identitySuffix = identityId.startsWith(expectedPrefix) ? identityId.slice(expectedPrefix.length) : "";
-    if (!["CUSTOMER", "STAFF"].includes(identityType) ||
-        item.identityType !== identityType ||
-        !["01", "02", "03"].includes(identitySuffix) ||
+    const identitySuffix = identityId.startsWith(expectedPrefix)
+        ? identityId.slice(expectedPrefix.length)
+        : "";
+    if (!["01", "02", "03"].includes(identitySuffix) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
@@ -429,13 +441,22 @@ export function assertTpvIdentity(item, options = {}) {
     if (item.active !== true || item.syntheticOnly !== true) {
         throw new Error("SCHEMA_VIOLATION: TPV identity must be active and synthetic-only");
     }
-    if (!/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
+    if (item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+        item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+        Number(item.schemaVersion) !== TPV_RUNTIME_POLICY.SCHEMA_VERSION) {
+        throw new Error("SCHEMA_VIOLATION: TPV identity source metadata invalid");
+    }
+    if (!validEmail) {
         throw new Error("SCHEMA_VIOLATION: TPV synthetic identity email must use example.test");
     }
-    if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata) || Object.keys(item.metadata).length !== 0)) {
+    if (!validMetadata) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an empty OBJECT");
     }
-    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "createdAt", "metadata"]);
+    const allowedFields = new Set([
+        "_id", "_createdDate", "_updatedDate", "_owner",
+        "identityId", "identityType", "displayName", "email", "active",
+        "syntheticOnly", "sourceType", "siteId", "schemaVersion", "createdAt", "metadata",
+    ]);
     const unknownFields = Object.keys(item).filter((field) => !allowedFields.has(field));
     if (unknownFields.length) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities contains unsupported fields");
