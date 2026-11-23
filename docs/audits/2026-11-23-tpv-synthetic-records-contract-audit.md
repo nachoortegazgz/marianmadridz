@@ -82,3 +82,10 @@ Mantener NO-GO TPV/producción. Incidencias de seguimiento: #435 y #434. No modi
 Los siete registros TPV-QA comparten un único valor CMS _owner. Ese owner coincide con createdBy.userId de los pedidos POS #10032 y #10033; ambos pedidos tienen el mismo creador. Se ha comprobado por comparación booleana y no se exponen identificadores personales.
 
 **Interpretación limitada:** existe un actor común entre el grupo TPV sintético y los pedidos POS. Esto hace plausible que los pedidos formen parte de una sesión de pruebas, pero no lo demuestra: el mismo usuario puede crear operaciones reales o de prueba. No hay checkoutId/externalId ni marcador QA verificable en los pedidos, y la actividad MERCHANT_COMMENT no contiene indicadores textuales de test/QA/demo/prueba. Mantener #10032/#10033 como posibles hechos económicos hasta que el titular aporte evidencia de prueba, recibo/caja o trazas del adquirente.
+
+
+## 8. Seguimiento posterior — PR #566 integrada
+
+PR #566 modifica isExplicitSimulationLedgerRecord() para reconocer los marcadores legacy exactos observados en CMS: triple synthetic=true + recordSource=TPV_QA_DEVELOPMENT + source=TPV_FUNCTIONAL_TEST; projectionStatus=SIMULATED_ONLY; y eventType terminado en _SIMULATED. Los tests positivos/negativos de clasificación pasan en CI.
+
+**Alcance limitado:** esta corrección protege los lectores fiscales/contables que usan el clasificador. No convierte los registros en asientos válidos ni permite que el writer TPV los adopte: _isCurrentSyntheticTpvRow/_isRecognizedSyntheticLedgerItem siguen exigiendo el envelope neutral completo, hash, secuencia cero, fingerprint, siteId/sourceType/sessionId/schemaVersion y recordSource canónico. Los hooks de inserción siguen rechazando los registros por falta de campos obligatorios. No limpiar ni actualizar datos append-only.
