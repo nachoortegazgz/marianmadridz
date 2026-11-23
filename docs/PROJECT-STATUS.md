@@ -2,7 +2,7 @@
 
 **Corte:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main HEAD:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**main HEAD:** 956356db48ee9d0ba363023c14105474316f84dd  
 **Wix Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Clasificación funcional:** entorno QA según declaración del propietario.  
 **Release:** **NO-GO**.
@@ -14,8 +14,8 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 | Área | Estado | Evidencia / límite |
 |---|---|---|
 | Integración Git | Integrada | PR #541 y #540 están merged en main. |
-| CI backend en main | Fallida | Run 45105031715; una aserción de test TPV desactualizada. |
-| Secret scanning | Correcto | Run 45105031857 sobre el HEAD actual. |
+| CI backend en main | Fallida | Run 45105979742; una aserción de test TPV desactualizada. |
+| Secret scanning | Correcto | Run 45105979748 sobre el HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
 | Wix Editor/Preview | No acreditado | Último contexto leído: Draft, Velo Enabled; SHA Git no sincronizado de forma demostrada. |
@@ -25,9 +25,9 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 ## Repositorio y CI
 
-main está en b20304598f7017ebc283d5821a38b59fe41b90e0. PR #541 se integró en e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a y PR #540 en el HEAD actual. PR #537 quedó preservada en el historial de #541 mediante el merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
+main está en 956356db48ee9d0ba363023c14105474316f84dd. PR #541 se integró en e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a, PR #540 después y PR #542 generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd. PR #537 quedó preservada en el historial de #541 mediante el merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 
-El fallo actual de CI se localizó en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago; internalConfig.js define seis y tpvValidation.js obtiene los métodos con Object.values(TPV_PAYMENT_METHOD). La corrección y la documentación alineada se preparan en chore/phase1-repository-stabilization-20261123. Pendiente resultado de CI de esa rama/PR.
+El fallo actual de CI se localizó en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago; internalConfig.js define seis y tpvValidation.js obtiene los métodos con Object.values(TPV_PAYMENT_METHOD). La primera corrección de test se integró mediante PR #542, pero CI continuó fallando. PR #543 contiene la corrección de las aserciones restantes y la documentación depurada; CI nuevo pendiente.
 
 main no tiene protección efectiva. La issue #210 sigue abierta y requiere intervención con permisos de administración para configurar required checks, PR obligatoria y bloqueo de force-push/borrado.
 
