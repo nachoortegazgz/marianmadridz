@@ -97,14 +97,20 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
         source("internalConfig.js"),
     ]);
 
-    assert.match(validation, /const PAYMENT_METHODS = Object\.freeze\(\["EFECTIVO", "TARJETA", "BIZUM", "OTROS"\]\)/);
+    assert.match(validation, /import \\{ TPV_PAYMENT_METHOD \\} from "backend\\/internalConfig"/);
+    assert.match(validation, /Object\\.values\\(TPV_PAYMENT_METHOD\\)/);
+    for (const method of ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"]) {
+        assert.match(config, new RegExp(method + ": \\"" + method + "\\""));
+    }
     assert.match(validation, /importePagadoMinor \+= importeAplicadoMinor/);
     assert.match(validation, /paymentBreakdownMinor\[medioPago\] \+= importeAplicadoMinor/);
     assert.match(validation, /TPV_OVERPAYMENT/);
     assert.match(validation, /TPV_CHANGE_REQUIRES_CASH/);
     assert.match(summary, /case "EFECTIVO": totals\.cashMinor \+= amount/);
     assert.match(summary, /case "TARJETA": totals\.cardMinor \+= amount/);
-    assert.match(summary, /case "BIZUM": totals\.bizumMinor \+= amount/);
+    assert.match(summary, /case "BIZUM": totals\.bizumMinor \+= amount/);    assert.match(summary, /case TPV_PAYMENT_METHOD\\.BONO:/);
+    assert.match(summary, /case TPV_PAYMENT_METHOD\\.TARJETA_REGALO:/);
+    assert.match(refunds, /Object\\.values\\(TPV_PAYMENT_METHOD\\)/);
     assert.match(summary, /case "OTROS": totals\.otherMinor \+= amount/);
     assert.match(summary, /totals\.expectedCashMinor = totals\.openingCashMinor \+ totals\.cashMinor \+ totals\.cashInMinor - totals\.cashOutMinor/);
     assert.match(movements, /paymentMethod: "EFECTIVO"/);
