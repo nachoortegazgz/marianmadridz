@@ -346,7 +346,7 @@ La matriz de issues anterior queda supersedida por [Reconciliación del backlog 
 
 ### Addendum TPV — conciliación funcional y Wix nativo (2026-11-23)
 
-La aceptación funcional de TPV queda ampliada por [matriz de conciliación TPV/Wix nativo](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs`. La base técnica de esta matriz es el candidato PR #538; las adaptaciones de contrato del controlador (apertura `openingCash` y conversión `lineItems/payments` a `lineas/pagos`) quedan cubiertas por pruebas estáticas.
+La aceptación funcional de TPV queda ampliada mediante PR #540 (draft, apilada sobre PR #538) y por [matriz de conciliación TPV/Wix nativo](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs`. La base técnica de esta matriz es el candidato PR #538; las adaptaciones de contrato del controlador (apertura `openingCash` y conversión `lineItems/payments` a `lineas/pagos`) quedan cubiertas por pruebas estáticas.
 
 Hallazgos que bloquean declarar TPV funcional: el widget envía `profesionalId`, pero backend no valida que coincida con `operatorResourceId` del miembro Wix autenticado; las ventas son sintéticas y no generan pedido/recibo/factura nativa; solo se admiten EFECTIVO/TARJETA/BIZUM/OTROS; auditoría sin `sessionId` uniforme ni eventos de lectura/exportación/impresión/denegaciones; falta vínculo explícito X→Z; Veri*Factu permanece deshabilitado y no hay QR oficial. Los movimientos de caja son exclusivamente efectivo.
 
