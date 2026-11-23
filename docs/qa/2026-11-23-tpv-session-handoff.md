@@ -1,9 +1,9 @@
 # Relevo técnico — TPV y estabilización — 2026-11-23
 
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** 956356db48ee9d0ba363023c14105474316f84dd  
-**PR #541:** integrada en main mediante e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.  
-**PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd.  
+**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**PR #541:** integrada en main. **PR #540 y #542:** integradas. **PR #543:** integrada en main mediante 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. **PR #537:** preservada en el historial de #541.
+**PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.  
 **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
 **Rama de estabilización:** chore/phase1-repository-stabilization-20261123.  
 **Release:** **NO-GO**.
@@ -25,7 +25,7 @@ BONO y TARJETA_REGALO están aceptados como medios sintéticos y se reflejan por
 - Backend offline quality gates: FAIL, run 45105979742.
 - Secret scanning: SUCCESS, run 45105979748.
 - El fallo inicial estaba en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis. La corrección inicial se integró por PR #542, pero el test continuó fallando por aserciones literales/escape incorrectas; PR #543 corrige el contrato completo.
-- PR #543 HEAD eee6d75e5cf843a38823e7fa4c908783db175208 pasa CI: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. La corrección aún no está integrada en main.
+- PR #543 pasó CI pre-merge: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. Está integrada en main. Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning SUCCESS (run 45107058755).
 
 ## Cambios de TPV ya integrados
 

@@ -2,7 +2,7 @@
 
 **Corte:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main HEAD:** 956356db48ee9d0ba363023c14105474316f84dd  
+**main HEAD:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
 **Wix Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Clasificación funcional:** entorno QA según declaración del propietario.  
 **Release:** **NO-GO**.
@@ -14,7 +14,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 | Área | Estado | Evidencia / límite |
 |---|---|---|
 | Integración Git | Integrada | PR #541 y #540 están merged en main. |
-| CI backend en main | Fallida | Run 45105979742; main conserva el test defectuoso. PR #543 lo corrige y pasa CI. |
+| CI backend post-merge | Correcto | Run 45107058637: 736/736, npm audit 0, SDK contracts y ESLint. Secret scanning run 45107058755 SUCCESS. |
 | Secret scanning | Correcto | Run 45105979748 sobre el HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
@@ -25,9 +25,9 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 ## Repositorio y CI
 
-main está en 956356db48ee9d0ba363023c14105474316f84dd. PR #541 se integró en e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a, PR #540 después y PR #542 generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd. PR #537 quedó preservada en el historial de #541 mediante el merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
+main está en 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #543 se integró con ese merge commit después de CI pre-merge verde. PR #541, #540 y #542 también están integradas; PR #537 quedó preservada en el historial de #541.
 
-El fallo actual de main se localizó en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. PR #542 integró una primera corrección incompleta. PR #543 corrige las aserciones restantes y depura la documentación. Su HEAD eee6d75e5cf843a38823e7fa4c908783db175208 pasa Backend offline quality gates (Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK y ESLint SUCCESS; run 45106697984) y Secret scanning SUCCESS (run 45106698016). PR #543 sigue abierta; main no ha recibido todavía esta corrección.
+La regresión de test introducida por PR #542 se corrigió en PR #543 y ya está integrada en main. CI pre-merge y post-merge pasaron: 736/736 pruebas offline, npm audit 0, contratos SDK, ESLint y secret scanning.
 
 main no tiene protección efectiva. La issue #210 sigue abierta y requiere intervención con permisos de administración para configurar required checks, PR obligatoria y bloqueo de force-push/borrado.
 

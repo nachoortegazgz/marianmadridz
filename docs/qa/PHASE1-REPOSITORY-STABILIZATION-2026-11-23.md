@@ -6,8 +6,8 @@ Recuperar coherencia entre el código, los contratos de test y la documentación
 
 ## Diagnóstico verificado
 
-- main HEAD: 956356db48ee9d0ba363023c14105474316f84dd.
-- PR #541 y #540 están integradas en main. PR #537 quedó preservada en el historial de #541. PR #542 también se integró, produjo el HEAD actual y dejó el test aún fallido.
+- main HEAD: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
+- PR #541, #540, #542 y #543 están integradas en main. PR #537 quedó preservada en el historial de #541. PR #543 produjo el HEAD actual 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
 - Backend offline quality gates falla en run 45105979742 sobre main.
 - Secret scanning termina SUCCESS en run 45105979748.
 - El fallo se localiza en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago, pero internalConfig.js define seis valores en TPV_PAYMENT_METHOD y tpvValidation.js obtiene Object.values(TPV_PAYMENT_METHOD).
@@ -57,9 +57,9 @@ Rama: chore/phase1-repository-stabilization-20261123.
 ## Criterio de cierre de Fase 1
 
 La fase quedará cerrada cuando:
-1. CI backend y secret scanning terminan SUCCESS sobre la PR. **Cumplido** en HEAD eee6d75e5cf843a38823e7fa4c908783db175208.
+1. CI backend y secret scanning terminan SUCCESS sobre la PR. **Cumplido** antes del merge (run 45106697984 y 45106698016). Post-merge backend SUCCESS, run 45107058637 (736/736); secret scanning SUCCESS, run 45107058755.
 2. El diff se limita a test y documentación; sin cambios de runtime ni CMS. **Cumplido**: nueve archivos.
-3. La PR se integre sin bypass de checks. **Pendiente**: PR #543 sigue abierta.
+3. La PR se integre sin bypass de checks. **Cumplido**: PR #543 integrada después de CI verde.
 4. Un administrador habilite protección de main y required checks, o documente una excepción temporal aprobada. **Pendiente**: issue #210 abierta; main protected=false.
 
-Hasta entonces, el estado es **PARCIAL — código y documentación estabilizados en PR con CI verde; falta integrar sin bypass y proteger main**.
+La Fase 1 está **COMPLETADA EN CÓDIGO Y DOCUMENTACIÓN**. Queda pendiente la protección administrativa de main (#210) y el resultado final de CI post-merge. Esto no habilita release ni producción.
