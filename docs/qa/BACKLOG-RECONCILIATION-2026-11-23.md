@@ -1,7 +1,7 @@
 # Reconciliación del backlog — estado actual 2026-11-23
 
-**main:** 956356db48ee9d0ba363023c14105474316f84dd  
-**PR #541:** integrada en main mediante e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.  
+**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**PR #541:** integrada en main. **PR #540 y #542:** integradas. **PR #543:** integrada en main con merge commit 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. **PR #537:** preservada en el historial de #541.
 **PR #540:** integrada. **PR #542:** integrada; su merge produce el HEAD actual y CI falló.  
 **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
 **Release:** **NO-GO**.
@@ -49,15 +49,15 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 - main HEAD y PRs reconciliadas: verificados.
 - Fallo de CI localizado: aserción TPV desactualizada que esperaba cuatro métodos, frente a seis valores en TPV_PAYMENT_METHOD.
-- Corrección inicial integrada por PR #542; CI continuó fallando. Corrección completa del test y documentación depurada en PR #543.
-- PR #543 HEAD eee6d75e5cf843a38823e7fa4c908783db175208: Backend offline quality gates SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. main sigue fallida hasta integrar la corrección.
+- Corrección completa integrada por PR #543 tras CI pre-merge SUCCESS.
+- CI pre-merge PR #543: SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. CI backend post-merge run 45107058637 en curso; secret scanning post-merge 45107058755 SUCCESS.
 - Secret scanning de main: SUCCESS.
 - Protección de main: pendiente de administración (#210); main continúa sin protección.
-- PR #542 se integró en main durante la intervención y dejó CI fallida; PR #543 prepara la corrección completa. No se han realizado escrituras CMS ni cambios de configuración Wix.
+- PR #543 ya integrada en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
 
 ## Evidencia
 
-- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/956356db48ee9d0ba363023c14105474316f84dd)
+- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/0ba7b684d6f4d6465718ae4317d10d8f422de2ff)
 - [CI backend fallido en main](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742)
 - [Secret scanning correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748)
 - [Issue #210](https://github.com/nachoortegazgz/marianmadridz/issues/210)
