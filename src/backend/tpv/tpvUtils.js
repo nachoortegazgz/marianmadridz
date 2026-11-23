@@ -49,8 +49,7 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const legacySynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
         [TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE, TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE].includes(snapshotSource) &&
         traceId === legacyRunId &&
-        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId) &&
-        Boolean(sessionId);
+        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId);
 
     if (!bootstrap && !legacyBootstrap && !explicitSyntheticV2 && !explicitSyntheticV1 && !legacySynthetic) {
         throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
