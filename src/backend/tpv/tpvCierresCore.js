@@ -1,20 +1,20 @@
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import {
-    getCommittedSandboxSales,
-    getSandboxCashMovements,
-    getSandboxPayments,
-    getSandboxRefunds,
-    querySandboxRecords,
-} from "backend/tpv/tpvSandboxRepository";
+    getCommittedTpvSales,
+    getTpvCashMovements,
+    getTpvPayments,
+    getTpvRefunds,
+    queryTpvRecords,
+} from "backend/tpv/tpvRepository";
 
 export async function buildSandboxSessionSummary(session) {
     if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
     const [sales, payments, refunds, movements, lines] = await Promise.all([
-        getCommittedSandboxSales(session.sessionId),
-        getSandboxPayments(session.sessionId),
-        getSandboxRefunds(session.sessionId),
-        getSandboxCashMovements(session.sessionId),
-        querySandboxRecords(TPV_COLLECTIONS.VENTA_LINEAS, undefined),
+        getCommittedTpvSales(session.sessionId),
+        getTpvPayments(session.sessionId),
+        getTpvRefunds(session.sessionId),
+        getTpvCashMovements(session.sessionId),
+        queryTpvRecords(TPV_COLLECTIONS.VENTA_LINEAS, undefined),
     ]);
 
     const totals = {

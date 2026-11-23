@@ -2,7 +2,7 @@
 
 > **Estado actualizado (2026-11-20, main a231e5c):** PR #512 integrada. El simulador de proveedor sintético y fixture de identidades están versionados. CI post-merge SUCCESS: Layer 1, Layer 2, regresión offline completa, auditoría npm, contratos SDK Wix/eCommerce/TPV, ESLint y Gitleaks. No hay evidencia de Preview, preseed ejecutado ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
 
-> **Estado actualizado (2026-11-20, main 566a819):** PR #496 normalizó los contratos WebMethod y PR #497 corrigió el encabezado arquitectónico del controlador y el indicador `persisted` de respuestas de lectura. Los workflows del PR #497 y los dos workflows post-merge del commit `566a819719d945e690f85836f91a424afb9d959f` finalizaron en SUCCESS (runs `44777610050` y `44777610037`). La suite offline registró 75 suites / 704 tests, 0 fallos. La persistencia sintética usa `tpvSandboxRepository.js` sobre CMS nativo y comprueba los marcadores de `CajaActual` antes de escribir. No hay evidencia de ejecución Wix Preview, seed de identidades ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
+> **Estado actualizado (2026-11-20, main 566a819):** PR #496 normalizó los contratos WebMethod y PR #497 corrigió el encabezado arquitectónico del controlador y el indicador `persisted` de respuestas de lectura. Los workflows del PR #497 y los dos workflows post-merge del commit `566a819719d945e690f85836f91a424afb9d959f` finalizaron en SUCCESS (runs `44777610050` y `44777610037`). La suite offline registró 75 suites / 704 tests, 0 fallos. La persistencia sintética usa `tpvRepository.js` sobre CMS nativo y comprueba los marcadores de `CajaActual` antes de escribir. No hay evidencia de ejecución Wix Preview, seed de identidades ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.
 
 > **Estado UI:** `#htmlTPV.txt` conserva el contrato versionado y las operaciones sintéticas. El bootstrap de caja e identidades está implementado, pero no se ha ejecutado en Wix Preview. Cobros reales, pasarelas, fiscalidad, hardware y notificaciones permanecen deshabilitados.
 
@@ -41,7 +41,7 @@ Los métodos auxiliares `buscarClientesTPV`, `obtenerVariantesProducto` y `obten
 | `tpvPermisos.web.js` | Capacidades SANDBOX derivadas del rol backend |
 | `tpvUtils.web.js` | Configuración SANDBOX expuesta al controlador de página (sin validadores duplicados) |
 | `tpvUtils.js` | Validación pura, minor units, claves y payload sintético |
-| `tpvSandboxRepository.js` | Adaptador lógico sobre `MovimientosCaja`/`CajaActual`, idempotencia, lectura fuerte y locks CAS de sesión/venta |
+| `tpvRepository.js` | Adaptador lógico sobre `MovimientosCaja`/`CajaActual`, idempotencia, lectura fuerte y locks CAS de sesión/venta |
 | `tpvCierresCore.js` | Agregación reproducible de ventas, pagos, devoluciones y efectivo |
 
 ## Flujo de venta
@@ -118,7 +118,7 @@ En las seis filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `
 
 ## Runtime Sandbox y arranque de caja
 
-El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige sesión autorizada y delega en `initializeSandboxCaja`, que consulta el singleton `CajaActual` en el data plane seleccionado por Wix. No lo crea ni lo actualiza: si falta o no cumple el marcador de Sandbox, falla sin escribir.
+El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige sesión autorizada y delega en `initializeTpvCaja`, que consulta el singleton `CajaActual` en el data plane seleccionado por Wix. No lo crea ni lo actualiza: si falta o no cumple el marcador de Sandbox, falla sin escribir.
 
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
 
@@ -175,7 +175,7 @@ La simulación de reembolso no mantiene un acumulado. El llamador debe comprobar
 
 ## Fixture de identidades sintéticas
 
-docs/qa/fixtures/tpv-sandbox-identities.json contiene seis registros que cumplen assertTpvSandboxIdentity: tres clientes y tres profesionales, todos con correo @example.test, syntheticOnly=true, environment=SANDBOX, active=true y el SANDBOX_RUN_ID actual.
+docs/qa/fixtures/tpv-sandbox-identities.json contiene seis registros que cumplen assertTpvIdentity: tres clientes y tres profesionales, todos con correo @example.test, syntheticOnly=true, environment=SANDBOX, active=true y el SANDBOX_RUN_ID actual.
 
 El fixture es para importación manual desde CMS > Sandbox únicamente después de comprobar visualmente que el Editor está en Sandbox. No importar mediante Management API ni sincronizar Sandbox → Online. Los registros no son miembros Wix ni contactos CRM y no se deben convertir en memberId, contactId o resourceId.
 
@@ -192,7 +192,7 @@ El fixture es para importación manual desde CMS > Sandbox únicamente después 
 
 La colección física `MovimientosCaja` mantiene el índice `transactionId_unique` (`unique=true`). No se elimina: es una garantía de unicidad del ledger. Los eventos lógicos del TPV comparten esta colección física, por lo que el identificador CMS debe estar namespaced por `logicalCollection` además del `SANDBOX_RUN_ID` y la clave de idempotencia.
 
-`makeSandboxTransactionId(collection, key)` genera el `transactionId` y el `_id` determinista con el ámbito completo. La búsqueda de idempotencia también consulta el identificador histórico anterior (sin namespace) para reconocer reintentos ya persistidos; no migra, modifica ni elimina filas históricas. La clave de idempotencia sigue siendo estable dentro de la misma colección lógica.
+`makeTpvTransactionId(collection, key)` genera el `transactionId` y el `_id` determinista con el ámbito completo. La búsqueda de idempotencia también consulta el identificador histórico anterior (sin namespace) para reconocer reintentos ya persistidos; no migra, modifica ni elimina filas históricas. La clave de idempotencia sigue siendo estable dentro de la misma colección lógica.
 
 La inspección read-only del 2026-11-20 confirmó el índice único sobre `transactionId`; no hay índice único de usuario sobre `traceId`, `operationType`, `singletonKey` o `posTransactionId`. La consulta CMS devolvió un registro sintético de prueba sin `transactionId`, por lo que no se identificó un valor histórico duplicado concreto. La causa de colisión se atribuye al espacio de nombres incompleto del generador, no a una fila concreta demostrada.
 

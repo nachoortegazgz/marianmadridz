@@ -17,10 +17,11 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_RUNTIME_POLICY,
+    TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -417,7 +418,7 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    if (["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
+    if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
         String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
@@ -486,9 +487,10 @@ export function MovimientosCaja_beforeInsert(item) {
 }
 
 function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    const legacyExpectedPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    return ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
+    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":";
+    const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
+    const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
+    return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
         (
@@ -501,7 +503,7 @@ function _isCurrentSyntheticTpvRow(value) {
             ) ||
             (
                 value?.payloadFiscal?.sourceType == null &&
-                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
         value?.payloadFiscal?.isSynthetic === true &&
@@ -511,7 +513,8 @@ function _isCurrentSyntheticTpvRow(value) {
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
         Number(value?.sequenceNumber) === 0 &&
         (String(value?.traceId || "").startsWith(expectedPrefix) ||
-            String(value?.traceId || "").startsWith(legacyExpectedPrefix));
+            String(value?.traceId || "").startsWith(legacyExpectedPrefix) ||
+            String(value?.traceId || "").startsWith(oldestLegacyPrefix));
 }
 
 export async function MovimientosCaja_beforeUpdate() {
@@ -656,7 +659,7 @@ function _clearStaleCajaClosedAt(item) {
 }
 
 export function TpvSandboxIdentities_beforeInsert(item) {
-    assertTpvSandboxIdentity(item);
+    assertTpvIdentity(item);
     if (item.createdAt !== undefined && item.createdAt !== null) {
         _normalizeCmsDateTime(item, "createdAt");
     }
@@ -664,11 +667,11 @@ export function TpvSandboxIdentities_beforeInsert(item) {
 }
 
 export function TpvSandboxIdentities_beforeUpdate() {
-    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
+    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
 }
 
 export function TpvSandboxIdentities_beforeRemove() {
-    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
+    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
 }
 
 export function CajaActual_beforeInsert(item) {

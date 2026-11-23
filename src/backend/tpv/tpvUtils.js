@@ -1,46 +1,57 @@
 import { createHash } from "node:crypto";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
-export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {}) {
-    const sandboxRunId = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
-    const sandboxState = caja?.conceptOperations?.tpvSandbox;
+export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
+    const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+    const state = caja?.conceptOperations?.tpvSandbox;
+    const validNeutralMetadata = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(state?.schemaVersion) === 2 &&
+        state?.externalSideEffects === false;
     const bootstrap = allowBootstrap === true &&
-        caja?.snapshotSource === "TPV_SANDBOX_INITIALIZED" &&
         caja?.cashRegisterStatus === "CERRADA" &&
-        caja?.traceId === sandboxRunId &&
-        sandboxState?.sandboxRunId === sandboxRunId;
-    const explicitSynthetic = caja?.snapshotSource === "TPV_SYNTHETIC" &&
-        caja?.cashRegisterStatus === "SIMULACION" &&
-        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Boolean(String(sandboxState?.sessionId || "").trim());
+        validNeutralMetadata;
+    const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
+        validNeutralMetadata &&
+        Boolean(String(state?.sessionId || "").trim());
     const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
-        caja?.traceId === sandboxRunId &&
-        sandboxState?.sandboxRunId === sandboxRunId;
+        caja?.traceId === legacyRunId &&
+        state?.sandboxRunId === legacyRunId;
     if (!bootstrap && !explicitSynthetic && !legacySynthetic) {
-        throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
+        throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
     }
     return true;
 }
 
-export function makeSandboxTransactionId(collection, idempotencyKey) {
+export function makeTpvTransactionId(collection, idempotencyKey) {
     if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
         throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     }
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
-        .update(TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + collection + ":" + key, "utf8")
+        .update(TPV_RUNTIME_POLICY.SITE_ID + ":" + collection + ":" + key, "utf8")
         .digest("hex");
     return "TPV_" + digest;
 }
 
-export function makeLegacySandboxTransactionId(idempotencyKey) {
+export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKey) {
+    const logicalKey = Object.keys(TPV_COLLECTIONS).find((key) => TPV_COLLECTIONS[key] === collection);
+    const legacyCollection = logicalKey ? TPV_LEGACY_COLLECTIONS[logicalKey] : null;
+    if (!legacyCollection) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
-        .update(TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + key, "utf8")
+        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + legacyCollection + ":" + key, "utf8")
+        .digest("hex");
+    return "TPV_" + digest;
+}
+
+export function makeLegacyTpvTransactionId(idempotencyKey) {
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const digest = createHash("sha256")
+        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + key, "utf8")
         .digest("hex");
     return "TPVSANDBOX_" + digest;
 }
@@ -82,6 +93,10 @@ export function normalizePaymentMethod(value) {
     return method;
 }
 
+export function makeRequestFingerprint(value) {
+    return createHash("sha256").update(stableSerialize(value), "utf8").digest("hex");
+}
+
 export function stableSerialize(value) {
     if (value instanceof Date) return JSON.stringify(value.toISOString());
     if (Array.isArray(value)) return "[" + value.map(stableSerialize).join(",") + "]";
@@ -94,19 +109,19 @@ export function stableSerialize(value) {
     return JSON.stringify(value);
 }
 
-export function makeSandboxId(prefix, idempotencyKey) {
+export function makeTpvId(prefix, idempotencyKey) {
     const safe = normalizeIdempotencyKey(idempotencyKey).replace(/[^A-Za-z0-9_-]/g, "-");
     return "TPV-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
 }
 
-export function makeSandboxRefundLockId(saleId) {
+export function makeTpvRefundLockId(saleId) {
     const value = String(saleId || "").trim();
     if (!value) throw new Error("TPV_REFUND_LOCK_INVALID");
     const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
     return "TPVQ" + digest;
 }
 
-export function makeSandboxSessionLockId(sessionId) {
+export function makeTpvSessionLockId(sessionId) {
     const value = String(sessionId || "").trim();
     if (!value) throw new Error("TPV_SESSION_LOCK_INVALID");
     const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
@@ -119,7 +134,9 @@ export function makeSyntheticPayload(payload = {}) {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        sourceEnvironment: TPV_RUNTIME_POLICY.ENVIRONMENT,
+        schemaVersion: 2,
+        recordSource: TPV_LEDGER_SOURCE,
+        reconciliationStatus: "NOT_RECONCILED",
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,

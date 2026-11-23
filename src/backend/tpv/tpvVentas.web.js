@@ -1,12 +1,12 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
+import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
-import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
-import { makeSandboxId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { makeTpvId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
@@ -40,11 +40,11 @@ export const registrarVenta = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-sale");
         await requireAdmin(traceId);
-        const operator = await getTpvOperatorContext(traceId);
+        const operator = await resolveTpvContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
@@ -61,10 +61,10 @@ export const registrarVenta = webMethod(
             const bookingId = String(input.bookingId || "").trim();
             if (bookingId) throw new Error("TPV_BOOKINGS_DISABLED");
             const customer = customerIdentityId
-                ? await getTpvSandboxIdentity(customerIdentityId, TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER)
+                ? await getTpvIdentity(customerIdentityId, TPV_IDENTITY_TYPES.CUSTOMER)
                 : null;
             if (customerIdentityId && !customer) throw new Error("TPV_CUSTOMER_NOT_ALLOWED");
-            const staffIdentities = await listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF);
+            const staffIdentities = await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF);
             const allowedProfessionalIds = new Set(staffIdentities.map((item) => item.identityId));
             const requestedProfessionalId = String(input.profesionalId || "").trim();
             if (requestedProfessionalId && !allowedProfessionalIds.has(requestedProfessionalId)) {
@@ -74,13 +74,13 @@ export const registrarVenta = webMethod(
                 throw new Error("TPV_STAFF_NOT_ALLOWED");
             }
 
-            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenSandboxSession();
+            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
 
-            const saleId = makeSandboxId("SALE", key);
+            const saleId = makeTpvId("SALE", key);
             const createdAt = new Date();
             const commonPayload = {
                 sessionId: session.sessionId,
@@ -88,7 +88,7 @@ export const registrarVenta = webMethod(
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
                 customerIdentityId: customer?.identityId || null,
-                customerLabel: customer?.displayName || "CLIENTE ANONIMO SANDBOX",
+                customerLabel: customer?.displayName || "CLIENTE ANONIMO",
                 bookingId: null,
                 bookingStatus: null,
                 bookingPaymentStatus: null,
@@ -97,11 +97,11 @@ export const registrarVenta = webMethod(
                 bookingServiceId: null,
                 bookingProfessionalId: null,
                 bookingTitle: null,
-                source: "TPV_SANDBOX",
+                source: "TPV",
                 traceId,
             };
 
-            await insertSandboxEvent(TPV_COLLECTIONS.VENTAS, key + ":PREPARED", {
+            await insertTpvEvent(TPV_COLLECTIONS.VENTAS, key + ":PREPARED", {
                 saleId,
                 status: "PREPARADA_SINTETICA",
                 currency: "EUR",
@@ -118,14 +118,13 @@ export const registrarVenta = webMethod(
                 profesionalId: requestedProfessionalId,
                 createdAt,
                 traceId,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 payload: { ...commonPayload, phase: "PREPARED" },
             });
             persisted = true;
 
             for (const line of sale.lineas) {
                 const lineKey = key + ":LINE:" + String(line.lineaNumero).padStart(3, "0");
-                await insertSandboxEvent(TPV_COLLECTIONS.VENTA_LINEAS, lineKey, {
+                await insertTpvEvent(TPV_COLLECTIONS.VENTA_LINEAS, lineKey, {
                     saleId,
                     lineNumber: line.lineaNumero,
                     lineType: line.tipoLinea,
@@ -145,7 +144,7 @@ export const registrarVenta = webMethod(
             for (let index = 0; index < sale.pagos.length; index += 1) {
                 const payment = sale.pagos[index];
                 const paymentKey = key + ":PAYMENT:" + String(index + 1).padStart(3, "0");
-                await insertSandboxEvent(TPV_COLLECTIONS.PAGOS, paymentKey, {
+                await insertTpvEvent(TPV_COLLECTIONS.PAGOS, paymentKey, {
                     saleId,
                     paymentMethod: payment.medioPago,
                     amountMinor: Math.round(payment.importeAplicado * 100),
@@ -153,13 +152,13 @@ export const registrarVenta = webMethod(
                     changeMinor: Math.round(payment.importeCambio * 100),
                     status: "CONFIRMADO_SINTETICO",
                     provider: "SIMULATED",
-                    gatewayReference: "NO-GATEWAY",
+                    gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY",
                     createdAt,
                     payload: { ...commonPayload, paymentIndex: index + 1, traceId },
                 });
             }
 
-            const { item: committed, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.VENTAS, key + ":COMMITTED", {
+            const { item: committed, replayed } = await insertTpvEvent(TPV_COLLECTIONS.VENTAS, key + ":COMMITTED", {
                 saleId,
                 status: "CONFIRMADA_SINTETICA",
                 currency: "EUR",
@@ -172,7 +171,6 @@ export const registrarVenta = webMethod(
                 cashierMemberId: operator.operatorId,
                 createdAt,
                 traceId,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 payload: {
                     ...commonPayload,
                     phase: "COMMITTED",
@@ -182,9 +180,9 @@ export const registrarVenta = webMethod(
                 },
             });
 
-            await appendSandboxAudit({
+            await appendTpvAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "VENTA_SANDBOX_CONFIRMADA",
+                action: "VENTA_CONFIRMADA",
                 actorId: operator.operatorId,
                 entityType: "VENTA",
                 entityId: saleId,

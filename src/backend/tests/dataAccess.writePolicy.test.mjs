@@ -167,7 +167,7 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
-test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities and remains append-only", () => {
+test("TPV identities require explicit source and site metadata and remain append-only", () => {
     const identity = {
         _id: "TPV-CUSTOMER-01",
         identityId: "TPV-CUSTOMER-01",
@@ -176,21 +176,22 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
         email: "cliente01@example.test",
         active: true,
         syntheticOnly: true,
-        environment: "SANDBOX",
-        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        schemaVersion: 2,
         metadata: {},
     };
-    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
-    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
-        ...identity, environment: "LIVE",
-    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, {
-        ...identity, testRunId: "TPVSANDBOX-DEV-20990101-OTHER",
-    }), { code: "CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => insertItem(C.TPV_SANDBOX_IDENTITIES, {
+    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_IDENTITIES, identity));
+    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
+        ...identity, sourceType: "NATIVE",
+    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
+        ...identity, siteId: "00000000-0000-4000-8000-000000000000",
+    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
+    assert.throws(() => insertItem(C.TPV_IDENTITIES, {
         ...identity, identityId: "INVALID-CUSTOMER",
     }), /SCHEMA_VIOLATION/);
-    assert.throws(() => assertUpdateAllowed(C.TPV_SANDBOX_IDENTITIES, {
+    assert.throws(() => assertUpdateAllowed(C.TPV_IDENTITIES, {
         ...identity, _id: identity._id,
     }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
 });
@@ -200,7 +201,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
         _id: "TPV_TEST_ROW",
         recordSource: "TPV_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-1",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
@@ -208,7 +209,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
             sessionId: "SESSION-1",
-            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
@@ -218,7 +219,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":LEGACY-SESSION",
+        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":LEGACY-SESSION",
     }), "legacy trace IDs remain readable");
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });

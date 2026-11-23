@@ -29,6 +29,7 @@ import {
     PAYMENT_METHOD,
     TIPO_FACTURA,
     TPV_RUNTIME_POLICY,
+    TPV_LEDGER_SOURCE,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -318,7 +319,7 @@ export function assertMovimientosCajaRequiredFields(item) {
         !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires SHA-256 hash chain fields");
     }
-    if (item.recordSource !== "TPV_SANDBOX_SYNTHETIC") {
+    if (![TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource)) {
         assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
         assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
         assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
@@ -378,7 +379,7 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
  * TpvSandboxIdentities stores synthetic-only customer and staff projections.
  * It must never contain Wix CRM, Bookings or personal identity references.
  */
-export function assertTpvSandboxIdentity(item) {
+export function assertTpvIdentity(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
     }
@@ -386,11 +387,10 @@ export function assertTpvSandboxIdentity(item) {
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
     const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
-    const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
         item.identityType !== identityType ||
-        (!identityId.startsWith(expectedPrefix) && !identityId.startsWith(legacyPrefix)) ||
+        !identityId.startsWith(expectedPrefix) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
@@ -398,9 +398,11 @@ export function assertTpvSandboxIdentity(item) {
         !/^\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
-    if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
-        item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
+    if (item.active !== true || item.syntheticOnly !== true ||
+        item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+        item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+        Number(item.schemaVersion) !== 2) {
+        throw new Error("SCHEMA_VIOLATION: TPV identity requires explicit synthetic source, site and schema version");
     }
     if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities customer email must use example.test");
@@ -411,7 +413,7 @@ export function assertTpvSandboxIdentity(item) {
     if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata) || Object.keys(item.metadata).length !== 0)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an empty OBJECT");
     }
-    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "environment", "testRunId", "createdAt", "metadata"]);
+    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "sourceType", "siteId", "schemaVersion", "createdAt", "metadata"]);
     const unknownFields = Object.keys(item).filter((field) => !allowedFields.has(field));
     if (unknownFields.length) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities contains unsupported fields");

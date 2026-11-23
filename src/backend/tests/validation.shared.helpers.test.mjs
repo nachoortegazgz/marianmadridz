@@ -137,18 +137,18 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
         metadata: {},
     };
-    assert.equal(V.assertTpvSandboxIdentity(base), true);
-    assert.equal(V.assertTpvSandboxIdentity({ ...base, identityId: "SANDBOX-CUSTOMER-001" }), true, "legacy IDs remain readable");
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
-    assert.throws(() => V.assertTpvSandboxIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
-    assert.equal(V.assertTpvSandboxIdentity({
+    assert.equal(V.assertTpvIdentity(base), true);
+    assert.equal(V.assertTpvIdentity({ ...base, identityId: "SANDBOX-CUSTOMER-001" }), true, "legacy IDs remain readable");
+    assert.throws(() => V.assertTpvIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
+    assert.equal(V.assertTpvIdentity({
         ...base,
         identityId: "TPV-STAFF-001",
         identityType: "STAFF",

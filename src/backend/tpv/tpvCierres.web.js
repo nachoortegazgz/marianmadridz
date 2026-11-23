@@ -1,11 +1,11 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
+import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, getPendingSandboxRefunds, getPendingSandboxSales, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { appendTpvAudit, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
-import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const obtenerResumenCaja = webMethod(
@@ -15,7 +15,7 @@ export const obtenerResumenCaja = webMethod(
         await requireCajero(traceId);
 
         try {
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             const totals = await buildSandboxSessionSummary(session);
@@ -50,21 +50,21 @@ export const generarControlX = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-x");
         await requireAdmin(traceId);
-        const operator = await getTpvOperatorContext(traceId);
+        const operator = await resolveTpvContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenSandboxSession();
+            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             const totals = await buildSandboxSessionSummary(session);
             const reportId = "TPV-X-" + session.sessionId + "-" + key.slice(0, 20);
-            const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
+            const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
                 sessionId: session.sessionId,
                 reportId,
                 generatedAt: new Date(),
@@ -73,9 +73,9 @@ export const generarControlX = webMethod(
                 payload: { traceId, readOnly: true, closesSession: false },
             });
             persisted = true;
-            await appendSandboxAudit({
+            await appendTpvAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "TICKET_X_SANDBOX_GENERADO",
+                action: "TICKET_X_GENERATED",
                 actorId: operator.operatorId,
                 entityType: "TICKET_X",
                 entityId: reportId,
@@ -96,19 +96,35 @@ export const generarCierreZ = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-ticket-z");
         await requireAdmin(traceId);
-        const operator = await getTpvOperatorContext(traceId);
+        const operator = await resolveTpvContext(traceId);
 
         try {
-            const session = await latestOpenSandboxSession();
+            const clientIdempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const session = await latestOpenTpvSession();
             if (!session && input.sessionId) {
-                const priorClose = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
+                const priorClose = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
                 if (priorClose.length) {
                     const prior = priorClose[0];
                     const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
-                    if (requestedCount !== Number(prior.totals?.countedCashMinor) || String(input.differenceReason || "").trim() !== String(prior.totals?.differenceReason || "")) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
-                            await appendSandboxAudit({
-                        idempotencyKey: "SANDBOX_TICKET_Z:" + prior.sessionId + ":AUDIT",
-                        action: "TICKET_Z_SANDBOX_CERRADO",
+                    const requestedReason = String(input.differenceReason || "").trim();
+                    const requestFingerprint = makeRequestFingerprint({
+                        sessionId: String(input.sessionId),
+                        countedCashMinor: requestedCount,
+                        differenceReason: requestedReason,
+                    });
+                    if (prior.requestFingerprint) {
+                        if (prior.requestFingerprint !== requestFingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                        if (prior.clientIdempotencyKey === clientIdempotencyKey &&
+                            prior.requestFingerprint !== requestFingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                    } else if (
+                        requestedCount !== Number(prior.totals?.countedCashMinor) ||
+                        requestedReason !== String(prior.totals?.differenceReason || "")
+                    ) {
+                        throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                    }
+                    await appendTpvAudit({
+                        idempotencyKey: "TICKET_Z:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + prior.sessionId + ":AUDIT",
+                        action: "TICKET_Z_CLOSED",
                         actorId: operator.operatorId,
                         entityType: "TICKET_Z",
                         entityId: prior.reportId,
@@ -135,15 +151,15 @@ export const generarCierreZ = webMethod(
                 }
             }
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenSandboxSession();
+            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            const pendingSales = await getPendingSandboxSales(session.sessionId);
+            const pendingSales = await getPendingTpvSales(session.sessionId);
             if (pendingSales.length > 0) throw new Error("TPV_PENDING_SALES_PREVENT_CLOSE");
-            const pendingRefunds = await getPendingSandboxRefunds(session.sessionId);
+            const pendingRefunds = await getPendingTpvRefunds(session.sessionId);
             if (pendingRefunds.length > 0) throw new Error("TPV_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
             const totals = await buildSandboxSessionSummary(session);
@@ -153,17 +169,51 @@ export const generarCierreZ = webMethod(
             const differenceMinor = countedMinor - totals.expectedCashMinor;
             const reason = String(input.differenceReason || "").trim();
             if (differenceMinor !== 0 && reason.length < 3) throw new Error("TPV_COUNT_DIFFERENCE_REASON_REQUIRED");
+            const requestFingerprint = makeRequestFingerprint({
+                sessionId: session.sessionId,
+                countedCashMinor: countedMinor,
+                differenceReason: reason,
+            });
 
-            const existing = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
-            if (existing.length && existing[0].closed !== true) throw new Error("TPV_Z_RECORD_INVALID");
-            const idempotencyKey = "SANDBOX_TICKET_Z:" + session.sessionId;
-            const reportId = "TPV-Z-" + session.sessionId;
-            const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.TICKET_Z, idempotencyKey, {
+            const existing = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", session.sessionId));
+            if (existing.length) {
+                const prior = existing[0];
+                if (prior.closed !== true) throw new Error("TPV_Z_RECORD_INVALID");
+                if (prior.requestFingerprint && prior.requestFingerprint !== requestFingerprint) {
+                    throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                }
+                if (!prior.requestFingerprint && (
+                    Number(prior.totals?.countedCashMinor) !== countedMinor ||
+                    String(prior.totals?.differenceReason || "") !== reason
+                )) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                return {
+                    status: "SUCCESS",
+                    data: {
+                        reportId: prior.reportId,
+                        sessionId: prior.sessionId,
+                        expectedCash: fromMinorUnits(Number(prior.totals?.expectedCashMinor || 0)),
+                        countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
+                        difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
+                        replayed: true,
+                        closed: true,
+                        isSynthetic: true,
+                        realPayment: false,
+                        fiscalLedgerWritten: false,
+                    },
+                    error: null,
+                    traceId,
+                };
+            }
+            const idempotencyKey = "TICKET_Z:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + session.sessionId;
+            const reportId = "Z-" + session.sessionId;
+            const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_Z, idempotencyKey, {
                 sessionId: session.sessionId,
                 reportId,
                 generatedAt: new Date(),
                 status: "CERRADO_SINTETICO",
                 closed: true,
+                clientIdempotencyKey,
+                requestFingerprint,
                 totals: {
                     ...totals,
                     countedCashMinor: countedMinor,
@@ -173,12 +223,12 @@ export const generarCierreZ = webMethod(
                     actorId: operator.actorId,
                     operatorId: operator.operatorId,
                 },
-                payload: { traceId, sourceEnvironment: TPV_RUNTIME_POLICY.ENVIRONMENT, immutableAfterCreation: true },
+                payload: { traceId, sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE, siteId: operator.siteId, sessionId: session.sessionId, immutableAfterCreation: true },
             });
             persisted = true;
-            await appendSandboxAudit({
+            await appendTpvAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
-                action: "TICKET_Z_SANDBOX_CERRADO",
+                action: "TICKET_Z_CLOSED",
                 actorId: operator.operatorId,
                 entityType: "TICKET_Z",
                 entityId: reportId,
