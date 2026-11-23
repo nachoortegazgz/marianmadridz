@@ -32,6 +32,8 @@ export const obtenerResumenCaja = webMethod(
                         EFECTIVO: fromMinorUnits(totals.cashMinor),
                         TARJETA: fromMinorUnits(totals.cardMinor),
                         BIZUM: fromMinorUnits(totals.bizumMinor),
+                        BONO: fromMinorUnits(totals.bonoMinor),
+                        TARJETA_REGALO: fromMinorUnits(totals.giftCardMinor),
                         OTROS: fromMinorUnits(totals.otherMinor),
                     },
                 },
