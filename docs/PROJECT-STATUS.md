@@ -14,7 +14,9 @@
 | Calidad offline | CI por PR: #554 79 suites / 725 tests; #551 79 / 726; #556 79 / 728; backend y secret scanning en SUCCESS en los HEAD validados | No existe evidencia de Wix Runtime/E2E ni CI post-merge sobre el merge commit. La CI offline no prueba CMS live, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
-| Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |\n| Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |\n| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 conserva 5 CONFIRMED y 1 PENDING; dos nativos PAID. Correlación #416 y delivery Runtime pendientes. |
+| Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
+| Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |
+| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 conserva 5 CONFIRMED y 1 PENDING; dos nativos PAID. Correlación #416 y delivery Runtime pendientes. |
 | TPV | PR #551 y #554 fusionadas; metadatos neutrales y lector de auditoría conectados en código | Falta sincronización Git–Wix Editor, Preview/Runtime, permisos efectivos, idempotencia y concurrencia real. |
 | CMS / ledgers | Inspección solo lectura 2026-11-23: CajaActual 1 ABIERTA; MovimientosCaja 2; CitasF2 6; MapaStaff 5; HistoricoCierresZ 0; LibroAsientosContablesDetalle 0 | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
@@ -48,7 +50,8 @@
 2. [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416): reconciliar registros pendientes con evidencia original.
 3. [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415): PR #556 integrada; no existe CONFIG_SISTEMA canónico en MapaStaff. Mantener fail-closed hasta disponer de datos legales verificados, ligado a #209.
 4. [#520 Automatizaciones](https://github.com/nachoortegazgz/marianmadridz/issues/520): siete PREINSTALLED ACTIVE; APPLICATION «Configuración de control laboral» INACTIVE (revisión 5). Inspeccionar efectos/historial de las siete preinstaladas y contención soportada.
-5. [#523 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 divergen del estado nativo CANCELED; dos bookings nativos PAID y sus proyecciones PENDING_LEDGER deben correlacionarse con #416. No reinyectar eventos ni corregir estados por inferencia.\n6. [#522 Canales Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522): los 70 servicios visibles están coherentes; 24 hijos duales ocultos se crean por F2 OFFLINE/noFee. Runtime Writer pendiente; no modificar flags sin evidencia.
+5. [#523 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 divergen del estado nativo CANCELED; dos bookings nativos PAID y sus proyecciones PENDING_LEDGER deben correlacionarse con #416. No reinyectar eventos ni corregir estados por inferencia.
+6. [#522 Canales Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522): los 70 servicios visibles están coherentes; 24 hijos duales ocultos se crean por F2 OFFLINE/noFee. Runtime Writer pendiente; no modificar flags sin evidencia.
 7. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
 8. [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210): ruleset y checks requeridos mediante administrador.
 9. [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434): conservar NO-GO hasta cierre de los gates.
@@ -69,7 +72,8 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - [Plan maestro](MASTER-EXECUTION-PLAN.md)
 - [Backlog GitHub reconciliado](qa/BACKLOG-RECONCILIATION-2026-11-23.md)
 - [Aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
-- [Auditoría de contexto Wix](qa/2026-11-23-tpv-wix-audit-validation.md)\n- [Revalidación Bookings V2 y dual](audits/2026-11-23-bookings-revalidation.md)
+- [Auditoría de contexto Wix](qa/2026-11-23-tpv-wix-audit-validation.md)
+- [Revalidación Bookings V2 y dual](audits/2026-11-23-bookings-revalidation.md)
 - [Índice y jerarquía documental](README.md)
 - [README backend TPV](../src/backend/tpv/README.md)
 ## Evidencia CMS solo lectura — 2026-11-23
