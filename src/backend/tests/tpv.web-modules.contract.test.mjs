@@ -246,7 +246,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(closures, /withSandboxSessionLock\(session\.sessionId/);
     assert.doesNotMatch(joined, /registerManualTransaction|registerZClosing|createCheckout|createOrder|createPayment|processRefund/i);
 
-    const repository = await source("tpv/tpvSandboxRepository.js");
+    const repository = await source("tpv/tpvRepository.js");
     assert.match(repository, /insertItem\(/);
     assert.match(repository, /CONSISTENCY\.STRONG/);
     assert.match(repository, /requestFingerprint/);
@@ -395,7 +395,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
 });
  
 test("SANDBOX repository paginates reads and blocks Z close while sales are incomplete", async () => {
-    const repository = await source("tpv/tpvSandboxRepository.js");
+    const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
     assert.match(repository, /export async function getPendingSandboxSales\(sessionId\)/);
@@ -444,7 +444,7 @@ test("TPV public utility module exposes only the configuration contract consumed
 });
 
 test("TPV synthetic persistence maps logical events to CajaActual and MovimientosCaja without fiscal side effects", async () => {
-    const repository = await source("tpv/tpvSandboxRepository.js");
+    const repository = await source("tpv/tpvRepository.js");
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
@@ -490,7 +490,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
 test("new TPV synthetic identifiers are neutral while historical Sandbox markers remain compatible", async () => {
     const utilities = await source("tpv/tpvUtils.js");
     const validation = await source("validation.js");
-    const repository = await source("tpv/tpvSandboxRepository.js");
+    const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
