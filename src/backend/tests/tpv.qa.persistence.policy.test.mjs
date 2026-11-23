@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { assertTpvIdentity } from "../validation.js";
 import {
     assertBulkPatchAllowed,
     assertInsertAllowed,
@@ -309,7 +310,7 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
 
 test("legacy transaction IDs remain discoverable for same-collection idempotent retries", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
-    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacyTpvTransactionId\(key\),\s*\]/);
+    assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacyTpvTransactionIdByCollection\(collection, key\),\s*makeLegacyTpvTransactionId\(key\),\s*\]/);
     assert.match(repository, /for \(const transactionId of uniqueTransactionIds\)/);
 });
 
@@ -380,7 +381,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
         },
         "tpvMovimientos.web.js": {
-            guarded: ["registrarMovimientoCaja"],
+            guarded: ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
             readOnly: ["obtenerMovimientosCaja"],
         },
         "tpvVentas.web.js": {
