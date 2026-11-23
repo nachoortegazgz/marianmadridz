@@ -422,6 +422,7 @@ async function _writeCajaProjection(collection, record, eventId) {
             const explicitSynthetic = preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                preflightSandboxState.schemaVersion === 2 &&
                 preflightSandboxState.externalSideEffects === false &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
             const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
@@ -641,7 +642,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         _id: transactionId,
         hash,
         sequenceNumber: 0,
-        numSerieFactura: "NO-FISCAL-" + transactionId.slice(-20),
+        numSerieFactura: "TPV-SYNTHETIC-NO-FISCAL-" + transactionId.slice(-20),
         transactionId,
         previousRecordHash: TPV_GENESIS_HASH,
         recordTimestamp: timestamp,
@@ -655,7 +656,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         paymentMethod: String(record.paymentMethod || "OTROS").toUpperCase(),
         channelType: "PRESENCIAL",
         operationDescription: "TPV SYNTHETIC " + collection,
-        staffResourceId: record.operatorResourceId || null,
+        staffResourceId: String(record.operatorResourceId || ""),
         tipoFactura: "F2",
         fechaExpedicionFactura: dateYmd,
         tipoImpositivo: 0,
