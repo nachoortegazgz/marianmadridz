@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { queryTpvRecords } from "backend/tpv/tpvRepository";
 
 export const obtenerAuditoriaTPV = webMethod(
@@ -18,8 +18,8 @@ export const obtenerAuditoriaTPV = webMethod(
 
             const sessionId = String(input.sessionId || "").trim();
             const entityId = String(input.entityId || "").trim();
-            if (sessionId.length > 128 || entityId.length > 120) {
-                throw new Error("TPV_AUDIT_FILTER_INVALID");
+            if (!sessionId || sessionId.length > 128 || entityId.length > 120) {
+                throw new Error("TPV_SESSION_REQUIRED");
             }
 
             const records = await queryTpvRecords(
@@ -33,8 +33,7 @@ export const obtenerAuditoriaTPV = webMethod(
                     const recordSessionId = String(
                         record.payload?.sessionId || record.sessionId || ""
                     ).trim();
-                    const belongsToSession = !sessionId ||
-                        recordSessionId === sessionId ||
+                    const belongsToSession = recordSessionId === sessionId ||
                         String(record.entityId || "") === sessionId;
                     const matchesEntity = !entityId ||
                         String(record.entityId || "") === entityId;
