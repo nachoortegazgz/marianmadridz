@@ -45,19 +45,22 @@ jobs:
           const packageDependencies = packageJson.dependencies ?? {};
           const packageDevDependencies = packageJson.devDependencies ?? {};
           const lockDevDependencies = packageLock.packages?.[""]?.devDependencies ?? {};
-          const mismatches = [
-            ...Object.keys(packageDependencies).filter(
-              (name) => lockDependencies[name] !== packageDependencies[name]
-            ).map((name) => ({ name, section: "dependencies", expected: packageDependencies[name], actual: lockDependencies[name] })),
-            ...Object.keys(packageDevDependencies).filter(
-              (name) => lockDevDependencies[name] !== packageDevDependencies[name]
-            ).map((name) => ({ name, section: "devDependencies", expected: packageDevDependencies[name], actual: lockDevDependencies[name] })),
+          const declarations = [
+            ...Object.entries(packageDependencies).map(([name, version]) => ({ name, version, section: "dependencies", root: lockDependencies[name] })),
+            ...Object.entries(packageDevDependencies).map(([name, version]) => ({ name, version, section: "devDependencies", root: lockDevDependencies[name] })),
           ];
+          const mismatches = declarations.flatMap(({ name, version, section, root }) => {
+            const installed = packageLock.packages?.[`node_modules/${name}`]?.version;
+            const issues = [];
+            if (root !== version) issues.push({ name, section, expected: version, actual: root ?? "missing", kind: "root" });
+            if (installed !== version) issues.push({ name, section, expected: version, actual: installed ?? "missing", kind: "package" });
+            return issues;
+          });
 
           if (mismatches.length) {
             console.error("package.json/package-lock.json are out of sync:");
             for (const name of mismatches) {
-              console.error(`- ${name.section}.${name.name}: package=${name.expected}, lock=${name.actual ?? "missing"}`);
+              console.error(`- ${name.section}.${name.name} [${name.kind}]: expected=${name.expected}, actual=${name.actual}`);
             }
             process.exit(1);
           }
@@ -91,8 +94,15 @@ jobs:
           const report = JSON.parse(
             fs.readFileSync(process.env.RUNNER_TEMP + "/npm-audit.json", "utf8")
           );
+          if (report.error) {
+            console.error("npm audit failed:", report.error);
+            process.exit(1);
+          }
           const counts = report.metadata?.vulnerabilities;
-          if (!counts) process.exit(1);
+          if (!counts) {
+            console.error("npm audit returned no vulnerability metadata.");
+            process.exit(1);
+          }
 
           fs.writeFileSync(
             process.env.RUNNER_TEMP + "/npm-audit-summary.json",
