@@ -1164,8 +1164,9 @@ body {
   }
 
   function sendHandshake() {
-    if (widgetInitialized || handshakeTimer === null && handshakeAttempts >= HANDSHAKE_MAX_ATTEMPTS) return;
+    if (widgetInitialized) return;
     if (handshakeAttempts >= HANDSHAKE_MAX_ATTEMPTS) {
+      handshakeTimer = null;
       $("connStatus").className = "dot error";
       $("connLabel").textContent = "Sin conexión con Wix";
       error("No se recibió respuesta del controlador TPV.");
@@ -1178,7 +1179,10 @@ body {
       version: BRIDGE_PROTOCOL_VERSION,
       messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
     }, "*");
-    handshakeTimer = setTimeout(sendHandshake, HANDSHAKE_RETRY_MS);
+    handshakeTimer = setTimeout(() => {
+      handshakeTimer = null;
+      sendHandshake();
+    }, HANDSHAKE_RETRY_MS);
   }
 
   window.addEventListener("message", (event) => {
