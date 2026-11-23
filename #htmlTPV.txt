@@ -567,7 +567,9 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    $("operatorLabel").textContent = "Operador: " + (state.session?.operatorId || state.session?.authenticatedOperatorId || "—");
+    const operatorId = state.session?.operatorId || state.session?.authenticatedOperatorId || "—";
+    const resourceId = state.session?.operatorResourceId;
+    $("operatorLabel").textContent = "Operador: " + operatorId + (resourceId ? " · Staff: " + resourceId : "");
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
