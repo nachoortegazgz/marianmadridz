@@ -667,11 +667,11 @@ export function TpvSandboxIdentities_beforeInsert(item) {
 }
 
 export function TpvSandboxIdentities_beforeUpdate() {
-    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
+    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
 }
 
 export function TpvSandboxIdentities_beforeRemove() {
-    throw new Error("TPV_SANDBOX_IDENTITIES_APPEND_ONLY");
+    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
 }
 
 export function CajaActual_beforeInsert(item) {
