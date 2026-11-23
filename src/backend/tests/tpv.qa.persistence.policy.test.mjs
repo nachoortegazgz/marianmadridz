@@ -132,6 +132,9 @@ test("TPV identities follow the physical CMS schema and admit legacy IDs only fo
         email: "cliente.01@example.test",
         active: true,
         syntheticOnly: true,
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         metadata: {},
     };
     assert.doesNotThrow(() => assertTpvIdentity(neutralCustomer));
