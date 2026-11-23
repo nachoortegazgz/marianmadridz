@@ -4,6 +4,7 @@
 **PR #541, #540, #542, #543 y #544:** integradas en main. PR #543 corrigió las aserciones TPV; PR #544 actualizó la documentación.  
 **PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
 **Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
+**Read-back Wix Site Context (2026-11-23):** Draft · Wix Editor · Velo Enabled · Premium · dominio personalizado · EUR · Europe/Madrid.  
 **Estado de aceptación:** **NO-GO Runtime / producción**.
 
 ## Conclusión vigente
@@ -35,7 +36,7 @@ BONO y TARJETA_REGALO son medios sintéticos de registro; no equivalen a canje r
 
 ## Límites de esta auditoría
 
-Es una revisión de repositorio/GitHub y documentación. No se han ejecutado escrituras CMS, pagos, reembolsos, facturación, emisión Veri*Factu, automatizaciones externas, publicación ni despliegue. La última lectura de contexto Wix disponible indicaba Draft y Velo Enabled; no se interpreta como prueba de sincronización del código.
+Es una revisión de repositorio/GitHub, documentación y lectura de contexto del sitio. El read-back directo de Wix Site Context devuelve Draft; las menciones Published de issues #520/#526 son históricas y quedan reconciliadas. No se han ejecutado escrituras CMS, pagos, reembolsos, facturación, emisión Veri*Factu, automatizaciones externas, publicación ni despliegue. El estado Draft no demuestra que el SHA Git esté sincronizado con Wix Editor ni sustituye las pruebas Preview/Runtime.
 
 ## Historial
 
