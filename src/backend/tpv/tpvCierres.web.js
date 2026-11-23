@@ -15,9 +15,11 @@ export const obtenerResumenCaja = webMethod(
         await requireCajero(traceId);
 
         try {
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             const totals = await buildTpvSessionSummary(session);
             return {
                 status: "SUCCESS",
@@ -58,7 +60,7 @@ export const generarControlX = webMethod(
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
@@ -103,9 +105,11 @@ export const generarCierreZ = webMethod(
 
         try {
             const clientIdempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session && input.sessionId) {
-                const priorClose = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
+            if (!session && requestedSessionId) {
+                const priorClose = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", requestedSessionId));
                 if (priorClose.length) {
                     const prior = priorClose[0];
                     const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
@@ -143,6 +147,12 @@ export const generarCierreZ = webMethod(
                             countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
                             difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
                             closed: prior.closed === true,
+                            operationalStatus: "CERRADA",
+                            operatorId: operator.operatorId,
+                            actorId: operator.actorId,
+                            integrationStatus: "NO_ENVIADO",
+                            now: new Date().toISOString(),
+                            timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                             replayed: true,
                             isSynthetic: true,
                             realPayment: false,
@@ -249,6 +259,12 @@ export const generarCierreZ = webMethod(
                     difference: fromMinorUnits(differenceMinor),
                     replayed,
                     closed: true,
+                    operationalStatus: "CERRADA",
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     isSynthetic: true,
                     realPayment: false,
                     fiscalLedgerWritten: false,
