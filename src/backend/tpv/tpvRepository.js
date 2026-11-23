@@ -9,19 +9,19 @@ import {
     wql,
 } from "backend/dataAccess";
 import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
-import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
+import { listTpvIdentities } from "backend/tpv/tpvSandboxIdentities";
 import { logger } from "backend/logger";
 import {
 
-    assertSandboxCajaWritable,
+    assertTpvCajaIntegrity,
     normalizeIdempotencyKey,
     stableSerialize,
     makeSyntheticPayload,
-    makeSandboxRefundLockId,
-    makeSandboxSessionLockId,
-    makeSandboxTransactionId,
+    makeTpvRefundLockId,
+    makeTpvSessionLockId,
+    makeTpvTransactionId,
     makePreviousSandboxTransactionId,
-    makeLegacySandboxTransactionId,
+    makeLegacyTpvTransactionId,
 } from "backend/tpv/tpvUtils";
 import {
     acquireFiscalLedgerLock,
@@ -56,7 +56,7 @@ async function withCajaActualProjectionLock(traceId, operation) {
     }
 }
 
-async function withSandboxScopedLock({
+async function withTpvScopedLock({
     lockId,
     controlType,
     dedupePrefix,
@@ -199,9 +199,9 @@ async function withSandboxScopedLock({
     return result;
 }
 
-export async function withSandboxSaleLock(saleId, traceId, operation, sessionId = null) {
-    const lockId = makeSandboxRefundLockId(saleId);
-    const executeSaleLock = () => withSandboxScopedLock({
+export async function withTpvSaleLock(saleId, traceId, operation, sessionId = null) {
+    const lockId = makeTpvRefundLockId(saleId);
+    const executeSaleLock = () => withTpvScopedLock({
         lockId,
         controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
         dedupePrefix: "TPV_REFUND:",
@@ -212,15 +212,15 @@ export async function withSandboxSaleLock(saleId, traceId, operation, sessionId 
         errorPrefix: "TPV_REFUND",
     });
     return sessionId
-        ? withSandboxSessionLock(sessionId, traceId, executeSaleLock)
+        ? withTpvSessionLock(sessionId, traceId, executeSaleLock)
         : executeSaleLock();
 }
 
-export async function withSandboxSessionLock(sessionId, traceId, operation) {
+export async function withTpvSessionLock(sessionId, traceId, operation) {
     const caja = await _ensureCajaActualForSandbox();
-    assertSandboxCajaWritable(caja, { allowBootstrap: true });
-    const lockId = makeSandboxSessionLockId(sessionId);
-    return withSandboxScopedLock({
+    assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+    const lockId = makeTpvSessionLockId(sessionId);
+    return withTpvScopedLock({
         lockId,
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         dedupePrefix: "TPV_SESSION:",
@@ -272,7 +272,7 @@ function _fingerprintOf(record) {
 }
 
 function _testTransactionId(collection, key) {
-    return makeSandboxTransactionId(collection, key);
+    return makeTpvTransactionId(collection, key);
 }
 
 function _eventAmount(record) {
@@ -329,15 +329,15 @@ function _virtualRecord(item) {
 }
 
 
-export async function seedSandboxIdentities() {
+export async function seedTpvIdentities() {
 
     const requiredIds = [
         ...Array.from({ length: 3 }, (_, index) => "TPV-CUSTOMER-" + String(index + 1).padStart(2, "0")),
         ...Array.from({ length: 3 }, (_, index) => "TPV-STAFF-" + String(index + 1).padStart(2, "0")),
     ];
     const [customers, staff] = await Promise.all([
-        listTpvSandboxIdentities(TPV_IDENTITY_TYPES.CUSTOMER),
-        listTpvSandboxIdentities(TPV_IDENTITY_TYPES.STAFF),
+        listTpvIdentities(TPV_IDENTITY_TYPES.CUSTOMER),
+        listTpvIdentities(TPV_IDENTITY_TYPES.STAFF),
     ]);
     const existing = new Map([...customers, ...staff].map((item) => [item.identityId, item]));
     const missing = requiredIds.filter((identityId) => !existing.has(identityId));
@@ -347,11 +347,11 @@ export async function seedSandboxIdentities() {
     return { created: 0, total: requiredIds.length };
 }
 
-export async function initializeSandboxCaja() {
+export async function initializeTpvCaja() {
 
     const existing = await _getCajaActual();
     if (!existing) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
-    assertSandboxCajaWritable(existing, { allowBootstrap: true });
+    assertTpvCajaIntegrity(existing, { allowBootstrap: true });
     return { item: existing, created: false };
 }
 
@@ -369,7 +369,7 @@ async function _getCajaActual() {
 async function _ensureCajaActualForSandbox() {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_SEEDED");
-    assertSandboxCajaWritable(caja, { allowBootstrap: true });
+    assertTpvCajaIntegrity(caja, { allowBootstrap: true });
     return caja;
 }
 
@@ -417,7 +417,7 @@ async function _writeCajaProjection(collection, record, eventId) {
         async (lock) => {
             const caja = await _getCajaActual();
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
-            assertSandboxCajaWritable(caja);
+            assertTpvCajaIntegrity(caja);
             const preflightSandboxState = caja.conceptOperations?.tpvSandbox || {};
             const explicitSynthetic = preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
@@ -575,7 +575,7 @@ async function findByIdempotencyKey(collection, key) {
     const transactionIds = [
         _testTransactionId(collection, key),
         makePreviousSandboxTransactionId(collection, key),
-        makeLegacySandboxTransactionId(key),
+        makeLegacyTpvTransactionId(key),
     ];
     const uniqueTransactionIds = [...new Set(transactionIds)];
     for (const transactionId of uniqueTransactionIds) {
@@ -689,7 +689,7 @@ function _matchesFilter(record, filter) {
     });
 }
 
-export async function insertSandboxEvent(collection, idempotencyKey, data) {
+export async function insertTpvEvent(collection, idempotencyKey, data) {
 
     _assertLogicalCollection(collection);
     const key = normalizeIdempotencyKey(idempotencyKey);
@@ -701,7 +701,7 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
             "TPV_SESSION:" + key,
             async (lock) => {
                 const caja = await _ensureCajaActualForSandbox();
-                assertSandboxCajaWritable(caja, { allowBootstrap: true });
+                assertTpvCajaIntegrity(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
                 if (caja.closedAt == null && _sessionFromCaja(caja)) {
@@ -716,7 +716,7 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
     }
 
     const caja = await _getCajaActual();
-    assertSandboxCajaWritable(caja);
+    assertTpvCajaIntegrity(caja);
     const existing = await findByIdempotencyKey(collection, key);
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
@@ -752,7 +752,7 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
     return { item, replayed: false };
 }
 
-export async function querySandboxRecords(collection, filter, options = {}) {
+export async function queryTpvRecords(collection, filter, options = {}) {
 
     _assertLogicalCollection(collection);
     if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
@@ -795,7 +795,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
     return records;
 }
 
-export async function querySandboxLedgerRecords(options = {}) {
+export async function queryTpvLedgerRecords(options = {}) {
 
     const limit = Number(options.limit ?? 100);
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
@@ -826,7 +826,7 @@ export async function querySandboxLedgerRecords(options = {}) {
         current.items.length + legacy.items.length > limit };
 }
 
-export async function appendSandboxAudit({
+export async function appendTpvAudit({
     idempotencyKey,
     action,
     actorId,
@@ -835,7 +835,7 @@ export async function appendSandboxAudit({
     traceId,
     payload = {},
 }) {
-    const { item, replayed } = await insertSandboxEvent(
+    const { item, replayed } = await insertTpvEvent(
         TPV_COLLECTIONS.AUDITORIA,
         idempotencyKey,
         {
@@ -851,13 +851,13 @@ export async function appendSandboxAudit({
     return { item, replayed };
 }
 
-export async function latestOpenSandboxSession() {
-    const sessions = await querySandboxRecords(
+export async function latestOpenTpvSession() {
+    const sessions = await queryTpvRecords(
         TPV_COLLECTIONS.SESIONES_CAJA,
         undefined,
         { sort: ["_createdDate DESC"], limit: 1000 }
     );
-    const closures = await querySandboxRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
+    const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
     const closedSessionIds = new Set(closures.filter((item) => item.closed === true).map((item) => item.sessionId));
     return sessions.find((session) =>
         session.status === "ABIERTA" && !closedSessionIds.has(session.sessionId)
@@ -865,16 +865,16 @@ export async function latestOpenSandboxSession() {
 }
 
 
-export async function getCommittedSandboxSales(sessionId) {
-    const records = await querySandboxRecords(TPV_COLLECTIONS.VENTAS, undefined);
+export async function getCommittedTpvSales(sessionId) {
+    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     return records.filter((item) =>
         item.status === "CONFIRMADA_SINTETICA" &&
         item.payload?.sessionId === sessionId
     );
 }
 
-export async function getPendingSandboxSales(sessionId) {
-    const records = await querySandboxRecords(TPV_COLLECTIONS.VENTAS, undefined);
+export async function getPendingTpvSales(sessionId) {
+    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     const committedIds = new Set(records
         .filter((item) => item.status === "CONFIRMADA_SINTETICA")
         .map((item) => item.saleId));
@@ -885,16 +885,16 @@ export async function getPendingSandboxSales(sessionId) {
     );
 }
 
-export async function getSandboxPayments(sessionId) {
-    const records = await querySandboxRecords(TPV_COLLECTIONS.PAGOS, undefined);
+export async function getTpvPayments(sessionId) {
+    const records = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, undefined);
     return records.filter((item) => item.payload?.sessionId === sessionId);
 }
 
-export async function getPendingSandboxRefunds(sessionId) {
+export async function getPendingTpvRefunds(sessionId) {
     const [refunds, payments, movements] = await Promise.all([
-        getSandboxRefunds(sessionId),
-        getSandboxPayments(sessionId),
-        getSandboxCashMovements(sessionId),
+        getTpvRefunds(sessionId),
+        getTpvPayments(sessionId),
+        getTpvCashMovements(sessionId),
     ]);
 
     return refunds.filter((refund) => {
@@ -958,16 +958,16 @@ export async function getPendingSandboxRefunds(sessionId) {
     });
 }
 
-export async function getSandboxRefunds(sessionId) {
-    const records = await querySandboxRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
+export async function getTpvRefunds(sessionId) {
+    const records = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
         item.status === "CONFIRMADO_SINTETICO" &&
         item.payload?.sessionId === sessionId
     );
 }
 
-export async function getSandboxCashMovements(sessionId) {
-    return querySandboxRecords(
+export async function getTpvCashMovements(sessionId) {
+    return queryTpvRecords(
         TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
         wql.eq("sessionId", sessionId)
     );
