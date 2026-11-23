@@ -23,7 +23,7 @@ Esta matriz sustituye los estados de backlog anteriores que contradigan la fecha
 | [#415 Maestro fiscal CMS](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Abierta | Reconciliar MapaStaff y sus consumidores con el esquema físico actual; confirmar configuración fiscal. | No recrear DatosFiscales ni CONFIG_SISTEMA sin evidencia y decisión arquitectónica. |
 | [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Abierta | Inspeccionar la tarea/historial de la automatización APPLICATION y definir contención soportada de siete automatizaciones PREINSTALLED activas. | No sortear disableStatusChange ni desinstalar apps para evitar controles Wix. |
 | [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Abierta | Consolidar todos los gates de release y conservar NO-GO. | Issue paraguas; no duplicar implementación de issues especializadas. |
-| [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Estado no reconsultado en este corte | Confirmar estado GitHub y cerrar diseño/validación legal, técnica y de proveedor. | Writers, firma, QR y remisión siguen bloqueados hasta evidencia y autorización. |
+| [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Abierta | Completar diseño con asesoría/proveedor y validar requisitos AEAT, firma, huella, XML y remisión. | Writers, firma, QR y remisión siguen bloqueados hasta evidencia y autorización. |
 
 ## P1 — gobierno y pruebas funcionales
 
@@ -51,7 +51,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - Corrección completa integrada por PR #543 tras CI pre-merge SUCCESS.
 - CI del HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af: SUCCESS, Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint (run 45107377657). Gitleaks full-history SUCCESS (run 45107377700).
 - Secret scanning de main: SUCCESS.
-- Protección de main: pendiente de administración (#210); main continúa sin protección.
+- Protección de main: pendiente de administración (#210); API confirma `protected=false` y `required_status_checks.enforcement_level=off`.
 - PR #543 y actualización documental #544 integradas en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
 
 ## Evidencia
