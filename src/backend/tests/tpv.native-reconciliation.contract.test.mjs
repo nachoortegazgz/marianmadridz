@@ -183,11 +183,13 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
 
     assert.match(repository, /export async function latestTpvSession/);
     assert.match(repository, /status: "CERRADA"/);
+    assert.match(repository, /operatorResourceId: String\(sourceState\?\.operatorResourceId/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
+    assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
     assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
@@ -207,6 +209,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(closures, /operationalStatus: "CERRADA"/);
     assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
     assert.match(audit, /recordSessionId === sessionId/);
+    assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
     assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
