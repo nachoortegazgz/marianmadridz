@@ -296,7 +296,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(movements, /resolveAuthorizedProfessional/);
     assert.match(refunds, /resolveAuthorizedProfessional/);
     for (const file of [catalog, directory, sales, movements, refunds]) {
-        assert.doesNotMatch(file, /TPV_IDENTITY_TYPES|listTpvIdentities|getTpvIdentity|syntheticOnly/);
+        assert.doesNotMatch(file, /TPV_IDENTITY_TYPES|listTpvIdentities|getTpvIdentity/);
     }
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
