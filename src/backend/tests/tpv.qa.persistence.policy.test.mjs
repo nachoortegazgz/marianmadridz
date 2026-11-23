@@ -113,6 +113,8 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            schemaVersion: 2,
+            reconciliationStatus: "NOT_RECONCILED",
             sessionId: "SESSION-TEST",
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
