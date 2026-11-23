@@ -188,7 +188,7 @@ Inválido:
 | `recordType` | string/enum | Valor exacto `CONFIG_SISTEMA` | Sí | `src/backend/data.js:871-873`; `src/backend/validation.js:294-295` |
 | `schemaVersion` | integer | Exactamente `1` | Sí | `src/backend/validation.js:316-321` |
 | `traceId` | string | No vacío tras trim | Sí | `src/backend/validation.js:320-322` |
-| `taxId` | string | NIF/NIE/CIF válido con control; VAT-UE validado por formato (sin consulta VIES); normalizado a mayúsculas | Sí | `src/backend/validation.js:355-363,709-713`; `src/backend/eventLog.js:180-190`; `src/backend/fiscalAggregator.web.js:473-481` |
+| `taxId` | string | NIF/NIE/CIF válido con control; VAT-UE validado por formato (sin consulta VIES); normalizado a mayúsculas | Sí | `src/backend/validation.js:355-363,709-713`; `src/backend/eventLog.js:172-193`; `src/backend/fiscalAggregator.web.js:473-485` |
 | `legalName` | string | Razón social no vacía tras trim | Sí | `src/backend/validation.js:356-365`; `src/backend/eventLog.js:181-190` |
 | `thirdPartyType` | null | Debe ser null o vacío; CONFIG_SISTEMA no es TERCERO | Sí | `src/backend/validation.js:367-369` |
 | `sistemaInformaticoNombre` | string | No vacío tras trim | Sí | `src/backend/eventLog.js:172-190` |
@@ -196,8 +196,8 @@ Inválido:
 | `verifactuVersion` | string | No vacío tras trim; se expone como `version` | Sí | `src/backend/eventLog.js:175-190` |
 | `numeroInstalacion` | string | No vacío tras trim | Sí | `src/backend/eventLog.js:176-190` |
 | `tipoUsoPosibleSoloVerifactu` | boolean|string|number | boolean o representación `S, SI, TRUE, 1, N, NO, FALSE, 0`; normalizado a S/N | Sí | `src/backend/eventLog.js:147-153,177-190` |
-| `tipoUsoPosibleMultiOT` | boolean|string | boolean o uno de `S, SI, TRUE, 1, N, NO, FALSE, 0`; normalizado a S/N | Sí | `src/backend/eventLog.js:147-153,178-190` |
-| `indicadorMultiplesOT` | boolean|string | boolean o uno de `S, SI, TRUE, 1, N, NO, FALSE, 0`; normalizado a S/N | Sí | `src/backend/eventLog.js:147-153,179-190` |
+| `tipoUsoPosibleMultiOT` | boolean|string|number | boolean o representación `S, SI, TRUE, 1, N, NO, FALSE, 0`; normalizado a S/N | Sí | `src/backend/eventLog.js:147-153,178-190` |
+| `indicadorMultiplesOT` | boolean|string|number | boolean o representación `S, SI, TRUE, 1, N, NO, FALSE, 0`; normalizado a S/N | Sí | `src/backend/eventLog.js:147-153,179-190` |
 | `fechaInicioVerifactu` | string | Fecha real en formato `YYYY-MM-DD`; se rechazan fechas imposibles | Sí | `src/backend/eventLog.js:155-164,182-190` |
 
 **Alta del registro:** el humano debe dar de alta este singleton en **Wix CMS → MapaStaff** con datos legales VERIFICADOS. El código falla cerrado si falta, está duplicado o incompleto. No introducir valores de ejemplo ni ficticios. Los flags de escritura fiscal/contable deben permanecer deshabilitados.
@@ -231,4 +231,6 @@ Inválido:
 | P1 | PENDIENTE | — | — |
 | P2 | PENDIENTE | — | — |
 | P3 | PENDIENTE | — | — |
-| P4 | PENDIENTE | — | — |\n| F5 | PENDIENTE | — | — |\n| F1 | PENDIENTE | — | — |
+| P4 | PENDIENTE | — | — |
+| F5 | PENDIENTE | — | — |
+| F1 | PENDIENTE | — | — |
