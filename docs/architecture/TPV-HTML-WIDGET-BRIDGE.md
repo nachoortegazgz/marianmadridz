@@ -39,9 +39,17 @@ Correcciones aplicadas en la rama:
 - `MESSAGE_TYPES.CONTEXT` se incluye en `allowedTypes`. Antes se permitía recibir `MM_READY`, pero `send(MM_CONTEXT)` se rechazaba por el mismo filtro de tipos; eso explica el registro `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` al publicar el contexto.
 - El iframe reenvía `MM_READY` cada 500 ms, hasta 50 intentos (25 s), con `messageId` nuevo. Esto cubre la carrera en la que el iframe termina de cargar antes de que el page code haya registrado `onMessage`. El controlador ignora los READY duplicados una vez completado el handshake.
 - Las llamadas de negocio ya no se disparan inmediatamente después del primer `postMessage(MM_READY)`; esperan un `MM_CONTEXT` válido. Esto evita solicitudes iniciales perdidas o prematuras.
-- El log del controlador añade `error.detail` (tipo y versión recibidos, sin volcar payloads de negocio) para identificar futuros rechazos.
+- El controlador actual permite `MM_READY`, `MM_CONTEXT` y todos los tipos de solicitud del HTML Component.
+- El watchdog específico del TPV es de 65 s; el iframe conserva 50 reintentos de `MM_READY` cada 500 ms (25 s).
+- Un rechazo `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` registra ahora `receivedType`, `receivedVersion` y `allowedTypes`; los fallos al enviar también incluyen `attemptedType` y allowlist. Los detalles no incluyen payloads de negocio.
+- Los fallos al publicar `MM_CONTEXT` conservan `causeCode` y `causeDetail`, de modo que se distingue un rechazo del tipo de un fallo al obtener configuración.
 
-Diagnóstico: el código contiene dos defectos que corresponden a los dos errores comunicados. El rechazo de `MM_CONTEXT` queda explicado directamente por la lista de tipos permitidos. El timeout es compatible con la emisión única de `MM_READY` y la carrera de inicialización; la confirmación definitiva exige repetir la apertura en Wix Draft después de aplicar el HTML actualizado.
+Diagnóstico actualizado:
+- La causa histórica del rechazo de `MM_CONTEXT` fue que el mismo allowlist se aplicaba a mensajes entrantes y salientes, y `MM_CONTEXT` no estaba incluido. PR #572 lo corrigió y está fusionada en `main`.
+- La emisión única de `MM_READY` fue sustituida por reintentos en esa misma PR. El margen del watchdog se amplía ahora para evitar falsos positivos si el iframe tarda en inicializarse.
+- Si los errores persisten con el código actual, el próximo log debe mostrar el tipo recibido y el allowlist activo. Si el tipo recibido es `MM_CONTEXT` o la allowlist no contiene `MM_CONTEXT`, el código de página Velo ejecutado en Wix no está sincronizado con el código versionado. Si el tipo es otra solicitud, debe compararse literalmente con `REQUEST_TYPES`.
+
+**Límite:** el merge de GitHub no acredita sincronización del Editor Wix. La verificación definitiva exige aplicar el código de página actual en Wix Draft, comprobar que `#htmlTPV.txt` contiene el handshake versionado y abrir Preview. No publicar ni ejecutar operaciones reales.
 
 ### 2.2 Sincronización del HTML Component
 
