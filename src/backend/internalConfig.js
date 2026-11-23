@@ -65,6 +65,19 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
 // Logical event types only; these values are NOT Wix CMS collection IDs.
 // The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
+  VENTAS: "TPV_LOGICAL_VENTAS",
+  VENTA_LINEAS: "TPV_LOGICAL_VENTA_LINEAS",
+  PAGOS: "TPV_LOGICAL_PAGOS",
+  REEMBOLSOS: "TPV_LOGICAL_REEMBOLSOS",
+  MOVIMIENTOS_CAJA: "TPV_LOGICAL_MOVIMIENTOS_CAJA",
+  SESIONES_CAJA: "TPV_LOGICAL_SESIONES_CAJA",
+  TICKET_X: "TPV_LOGICAL_TICKET_X",
+  TICKET_Z: "TPV_LOGICAL_TICKET_Z",
+  AUDITORIA: "TPV_LOGICAL_AUDITORIA",
+});
+
+// Read-only mapping for previously persisted logical collection discriminators.
+export const TPV_LEGACY_COLLECTIONS = Object.freeze({
   VENTAS: "SANDBOX_LOGICAL_VENTAS",
   VENTA_LINEAS: "SANDBOX_LOGICAL_VENTA_LINEAS",
   PAGOS: "SANDBOX_LOGICAL_PAGOS",
