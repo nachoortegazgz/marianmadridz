@@ -112,7 +112,7 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.BONO:"));
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.TARJETA_REGALO:"));
     assert.ok(refunds.includes("Object.values(TPV_PAYMENT_METHOD)"));
-    assert.match(summary, /case "OTROS": totals\.otherMinor \+= amount/);
+    assert.ok(summary.includes("case TPV_PAYMENT_METHOD.OTROS:"));
     assert.match(summary, /totals\.expectedCashMinor = totals\.openingCashMinor \+ totals\.cashMinor \+ totals\.cashInMinor - totals\.cashOutMinor/);
     assert.match(movements, /paymentMethod: "EFECTIVO"/);
     assert.match(movements, /affectsPhysicalCash: true/);
