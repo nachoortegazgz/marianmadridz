@@ -2,7 +2,7 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563, #564, #566, #569, #571, #572, #578, #579, #580 y #582 integradas. PR #580 incorpora el ajuste del handshake TPV; PR #582 alinea el estado documental con su merge y CI. Último commit de main verificado en este corte: `d2debad0b0ed39e94d0c91019f2d60552394ecec`. PR #581 y #583 siguen abiertas como borradores documentales redundantes/no integrados; su evidencia se consolida en esta actualización.  
+**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563, #564, #566, #569, #571, #572, #578, #579, #580 y #582 integradas. PR #580 incorpora el ajuste del handshake TPV; PR #582 alinea el estado documental con su merge y CI. Base main verificada para esta reconciliación: `d2debad0b0ed39e94d0c91019f2d60552394ecec`. PR #581 y #583 se cerraron sin merge por estar sus cambios documentales consolidados en esta PR #584.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
@@ -304,7 +304,7 @@ La corrección elimina la desalineación temporal conocida en el código version
 - main tiene como último commit verificado d2debad0b0ed39e94d0c91019f2d60552394ecec (PR #582, actualización documental).
 - PR #580 está integrada en main, merge commit 180c69d9e200266e85f6f0974f1b6a01a7c172a3. El HTML fuente #htmlTPV.txt usa HANDSHAKE_RETRY_MS=500 y HANDSHAKE_MAX_ATTEMPTS=120; el controlador mantiene handshakeTimeoutMs=65000. La prueba src/backend/tests/tpv-widget.contract.test.mjs comprueba que el producto intervalo × intentos es positivo y menor que el watchdog.
 - CI de la PR #580: Layer 1 30 suites / 369 PASS; Layer 2 17 suites / 245 PASS; suite offline 79 suites / 740 PASS; SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning SUCCESS. Es CI de PR; no se afirma una ejecución Wix Preview/Runtime ni una ejecución independiente post-merge.
-- PR #582 integra la actualización documental del merge y los resultados de CI. PR #581 y #583 permanecen abiertas en estado draft y contienen cambios documentales solapados; no se consideran integradas ni fuente de estado de main.
+- PR #582 integra la actualización documental del merge y los resultados de CI. PR #581 y #583 se cerraron sin merge como duplicadas/sustituidas por esta reconciliación documental; su contenido relevante se ha incorporado aquí.
 
 ### Estado de publicación Wix
 - Query Sites V2 account-level para el siteId indicado devuelve published=false y viewUrl vacío; GetSiteContext devuelve Draft.
