@@ -2,21 +2,21 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546, #558 y #559 fusionadas. Último `main` verificado en `75b6fc2b6172ae8e8ea38536c28eace208d10d69`.  
+**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación TPV sintética legacy) también integrada. Último `main` verificado en `a5e611da1d98b743e14ea6dc6f4bfee8b26e00a6`.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
 
 | Área | Estado verificado | Límite |
 |---|---|---|
-| Código TPV / contratos | PR #543, #551 (metadatos), #554 (auditoría) y #556 (identidad fiscal) fusionadas en `main`; CI offline de las tres PR en SUCCESS | Wix Runtime/E2E, sincronización Git–Editor y aislamiento de efectos externos pendientes. |
+| Código TPV / contratos | PR #543, #551 (metadatos), #554 (auditoría), #556 (identidad fiscal) y #566 (clasificación sintética legacy) fusionadas en `main`; CI offline en SUCCESS | Wix Runtime/E2E, sincronización Git–Editor y aislamiento de efectos externos pendientes. |
 | CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR #545: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). Post-merge PR #545: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). PR #546: backend [45112483802](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483802), Gitleaks [45112483786](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483786); post-merge PR #546: backend [45112587480](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587480), Gitleaks [45112587474](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587474). |
-| Calidad offline | CI por PR: #554 79 suites / 725 tests; #551 79 / 726; #556 79 / 728; backend y secret scanning en SUCCESS en los HEAD validados | No existe evidencia de Wix Runtime/E2E ni CI post-merge sobre el merge commit. La CI offline no prueba CMS live, fiscalidad ni hardware. |
+| Calidad offline | CI por PR: #554 79 suites / 725 tests; #551 79 / 726; #556 79 / 728; #566 full offline suite, SDK checks, ESLint y secret scanning en SUCCESS | No existe evidencia de Wix Runtime/E2E ni CI post-merge sobre el merge commit. La CI offline no prueba CMS live, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
 | Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
 | Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |
-| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 conserva 5 CONFIRMED y 1 PENDING; dos nativos PAID. Correlación #416 y delivery Runtime pendientes. |
+| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 incluye 2 fases duales y 4 reservas simples; conserva 5 CONFIRMED y 1 PENDING. Dos pedidos POS PAID/REFUNDED con ledger pendiente (#416); Runtime pendiente. |
 | TPV | PR #551 y #554 fusionadas; metadatos neutrales y lector de auditoría conectados en código | Falta sincronización Git–Wix Editor, Preview/Runtime, permisos efectivos, idempotencia y concurrencia real. |
 | CMS / ledgers | Relectura consistente 2026-11-23: CajaActual 1 ABIERTA (300 € apertura / 320 € esperado); MovimientosCaja 5 sintéticos; CitasF2 6; MapaStaff 5 sin CONFIG_SISTEMA_FISCAL; HistoricoCierresZ 1 SIMULATED; LibroAsientosContablesDetalle 3 SIMULATED_ONLY | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
