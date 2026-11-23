@@ -36,3 +36,35 @@ test("SIMULATION-02 keeps genuine movement types outside simulation classificati
     );
   }
 });
+
+
+test("SIMULATION-03 recognizes the explicit legacy TPV-QA markers observed in CMS", () => {
+  assert.equal(isExplicitSimulationLedgerRecord({
+    synthetic: true,
+    recordSource: "TPV_QA_DEVELOPMENT",
+    source: "TPV_FUNCTIONAL_TEST",
+    movementType: "SALE",
+    traceId: "TPV-QA-1795437582366-CASH",
+  }), true);
+
+  assert.equal(isExplicitSimulationLedgerRecord({
+    projectionStatus: "SIMULATED_ONLY",
+    eventType: "TPV_SALE_SIMULATED",
+    movementType: "SALE",
+  }), true);
+
+  assert.equal(isExplicitSimulationLedgerRecord({
+    projectionStatus: "SIMULATED_ONLY",
+    eventType: "TPV_REFUND_SIMULATED",
+    movementType: "REFUND",
+  }), true);
+});
+
+test("SIMULATION-04 does not classify a bare synthetic flag or QA source alone", () => {
+  assert.equal(isExplicitSimulationLedgerRecord({ synthetic: true, movementType: "SALE" }), false);
+  assert.equal(isExplicitSimulationLedgerRecord({
+    recordSource: "TPV_QA_DEVELOPMENT",
+    source: "TPV_FUNCTIONAL_TEST",
+    movementType: "SALE",
+  }), false);
+});
