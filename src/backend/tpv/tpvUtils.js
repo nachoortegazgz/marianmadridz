@@ -3,23 +3,23 @@ import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
-    const sandboxRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
-    const sandboxState = caja?.conceptOperations?.tpvSandbox;
+    const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+    const state = caja?.conceptOperations?.tpvSandbox;
+    const validNeutralMetadata = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(state?.schemaVersion) === 2 &&
+        state?.externalSideEffects === false;
     const bootstrap = allowBootstrap === true &&
-        caja?.snapshotSource === "TPV_SANDBOX_INITIALIZED" &&
         caja?.cashRegisterStatus === "CERRADA" &&
-        caja?.traceId === sandboxRunId &&
-        sandboxState?.sandboxRunId === sandboxRunId;
+        validNeutralMetadata;
     const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
-        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        sandboxState?.externalSideEffects === false &&
-        Boolean(String(sandboxState?.sessionId || "").trim());
+        validNeutralMetadata &&
+        Boolean(String(state?.sessionId || "").trim());
     const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
-        caja?.traceId === sandboxRunId &&
-        sandboxState?.sandboxRunId === sandboxRunId;
+        caja?.traceId === legacyRunId &&
+        state?.sandboxRunId === legacyRunId;
     if (!bootstrap && !explicitSynthetic && !legacySynthetic) {
         throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
     }
@@ -37,7 +37,7 @@ export function makeTpvTransactionId(collection, idempotencyKey) {
     return "TPV_" + digest;
 }
 
-export function makePreviousSandboxTransactionId(collection, idempotencyKey) {
+export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKey) {
     if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
         throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     }
