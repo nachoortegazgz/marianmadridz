@@ -2,7 +2,7 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546 y #558 fusionadas. Último `main` verificado en `3f02e5bb125fbb20d10d40e614c7c3eb3202b106`.  
+**Integración documental:** PR #545, #546, #558 y #559 fusionadas. Último `main` verificado en `75b6fc2b6172ae8e8ea38536c28eace208d10d69`.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
@@ -14,7 +14,7 @@
 | Calidad offline | CI por PR: #554 79 suites / 725 tests; #551 79 / 726; #556 79 / 728; backend y secret scanning en SUCCESS en los HEAD validados | No existe evidencia de Wix Runtime/E2E ni CI post-merge sobre el merge commit. La CI offline no prueba CMS live, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
-| Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
+| Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |\n| Catálogo Bookings | 94 servicios nativos ↔ 95 filas CMS; 70 visibles con reserva online habilitada y sin discrepancias de pago | 24 hijos duales ocultos; F2 usa OFFLINE/noFee. Runtime de Writer pendiente. |\n| Cancelaciones Bookings | 6/6 bookingId CitasF2 encontrados en Bookings V2; los 6 nativos CANCELED el 2026-11-20 | CitasF2 conserva 5 CONFIRMED y 1 PENDING; dos nativos PAID. Correlación #416 y delivery Runtime pendientes. |
 | TPV | PR #551 y #554 fusionadas; metadatos neutrales y lector de auditoría conectados en código | Falta sincronización Git–Wix Editor, Preview/Runtime, permisos efectivos, idempotencia y concurrencia real. |
 | CMS / ledgers | Inspección solo lectura 2026-11-23: CajaActual 1 ABIERTA; MovimientosCaja 2; CitasF2 6; MapaStaff 5; HistoricoCierresZ 0; LibroAsientosContablesDetalle 0 | No mutar CajaActual ni ledgers; investigar sesión abierta y reconciliar reservas sin alterar reservas nativas. |
 | Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
@@ -48,10 +48,10 @@
 2. [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416): reconciliar registros pendientes con evidencia original.
 3. [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415): PR #556 integrada; no existe CONFIG_SISTEMA canónico en MapaStaff. Mantener fail-closed hasta disponer de datos legales verificados, ligado a #209.
 4. [#520 Automatizaciones](https://github.com/nachoortegazgz/marianmadridz/issues/520): siete PREINSTALLED ACTIVE; APPLICATION «Configuración de control laboral» INACTIVE (revisión 5). Inspeccionar efectos/historial de las siete preinstaladas y contención soportada.
-5. [#523 / #522 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 pendientes de reconciliación y una reserva nativa sin proyección; comparar con Bookings sin modificar reservas nativas.
-6. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
-7. [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210): ruleset y checks requeridos mediante administrador.
-8. [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434): conservar NO-GO hasta cierre de los gates.
+5. [#523 Reservas](https://github.com/nachoortegazgz/marianmadridz/issues/523): seis proyecciones CitasF2 divergen del estado nativo CANCELED; dos bookings nativos PAID y sus proyecciones PENDING_LEDGER deben correlacionarse con #416. No reinyectar eventos ni corregir estados por inferencia.\n6. [#522 Canales Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522): los 70 servicios visibles están coherentes; 24 hijos duales ocultos se crean por F2 OFFLINE/noFee. Runtime Writer pendiente; no modificar flags sin evidencia.
+7. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
+8. [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210): ruleset y checks requeridos mediante administrador.
+9. [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434): conservar NO-GO hasta cierre de los gates.
 
 La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) está cerrada. Su descripción conserva una lectura histórica Published; el read-back directo posterior de Site Context devuelve Draft. La prueba negativa Runtime de reservas/efectos externos sigue pendiente.
 
@@ -69,14 +69,14 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - [Plan maestro](MASTER-EXECUTION-PLAN.md)
 - [Backlog GitHub reconciliado](qa/BACKLOG-RECONCILIATION-2026-11-23.md)
 - [Aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
-- [Auditoría de contexto Wix](qa/2026-11-23-tpv-wix-audit-validation.md)
+- [Auditoría de contexto Wix](qa/2026-11-23-tpv-wix-audit-validation.md)\n- [Revalidación Bookings V2 y dual](audits/2026-11-23-bookings-revalidation.md)
 - [Índice y jerarquía documental](README.md)
 - [README backend TPV](../src/backend/tpv/README.md)
 ## Evidencia CMS solo lectura — 2026-11-23
 
 - `CajaActual`: singleton `ABIERTA`, `openedAt=2026-11-21T08:12:21.994Z`, `closedAt=null`, `snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS`, `conceptOperations={}` y `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`. No se ejecutaron escrituras ni cierres.
 - `MovimientosCaja`: 2 filas; ambas `synthetic=true`, `status=SIMULATED_SUCCESS` y `reconciliationStatus=RECONCILED`, con orígenes `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`. La presencia de `gatewayResponse` no demuestra llamada real a pasarela.
-- `CitasF2`: 6 proyecciones; 5 `CONFIRMED`, 1 `PENDING`; 3 sin `pairToken`, 2 comparten token y 1 tiene token distinto. La auditoría consolidada previa registró los seis bookings nativos como `CANCELED`; no se repitió aquí esa consulta para respetar la frontera contractual TPV. [Evidencia detallada](qa/../audits/2026-11-23-repository-wix-cms-reconciliation.md#5-conciliación-bookings-v2-y-citasf2).
+- `CitasF2`: 6 proyecciones; 5 `CONFIRMED`, 1 `PENDING`; 3 sin `pairToken`, 2 comparten token y 1 tiene token distinto. Consulta directa Bookings Reader V2: 6/6 nativos `CANCELED` el 2026-11-20; dos conservan `paymentStatus=PAID` mientras CMS indica `PENDING_LEDGER`. No se mutaron. [Revalidación](audits/2026-11-23-bookings-revalidation.md).
 - `MapaStaff`: 5 registros, 3 `STAFF`; no existe `recordType=CONFIG_SISTEMA`. No se consultaron ni expusieron NIF.
 - `HistoricoCierresZ` y `LibroAsientosContablesDetalle`: 0 registros.
 - Todas las lecturas CMS se ejecutaron con `consistentRead=true`; no hubo mutaciones.
