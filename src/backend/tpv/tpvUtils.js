@@ -85,6 +85,11 @@ export function makeTpvTransactionId(collection, idempotencyKey) {
     return "TPV_" + digest;
 }
 
+/**
+ * Historical transaction ID lookup only.
+ * Use exclusively when searching for records written by the previous run-scoped format;
+ * never use this value for a new insert.
+ */
 export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKey) {
     const logicalKey = Object.keys(TPV_COLLECTIONS).find((key) => TPV_COLLECTIONS[key] === collection);
     const legacyCollection = logicalKey ? TPV_LEGACY_COLLECTIONS[logicalKey] : null;
@@ -96,6 +101,10 @@ export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKe
     return "TPV_" + digest;
 }
 
+/**
+ * Historical Sandbox ID lookup only. Retained for idempotent retries against old rows;
+ * never use this value for a new insert.
+ */
 export function makeLegacyTpvTransactionId(idempotencyKey) {
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
