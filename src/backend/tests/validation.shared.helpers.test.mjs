@@ -128,11 +128,32 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
 });
 
 
-test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and staff records", () => {
+test("VALIDATION-TPV-IDENTITY-01 validates canonical neutral identities and explicit legacy reads", () => {
     const base = {
-        identityId: "TPV-CUSTOMER-001",
+        identityId: "TPV-CUSTOMER-01",
         identityType: "CUSTOMER",
         displayName: "Cliente Sintético 01",
+        email: "cliente.sandbox@example.test",
+        active: true,
+        syntheticOnly: true,
+        sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
+        schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+        metadata: {},
+    };
+    assert.equal(V.assertTpvIdentity(base), true);
+    assert.throws(() => V.assertTpvIdentity({ ...base, environment: "SANDBOX" }), /unsupported fields/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, syntheticOnly: false }), /active and synthetic-only/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, sourceType: "NATIVE" }), /source metadata invalid/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
+    assert.throws(() => V.assertTpvIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
+
+    const legacy = {
+        identityId: "SANDBOX-CUSTOMER-01",
+        identityType: "CUSTOMER",
+        displayName: "Cliente Sandbox 01",
         email: "cliente.sandbox@example.test",
         active: true,
         syntheticOnly: true,
@@ -140,17 +161,24 @@ test("VALIDATION-TPV-IDENTITY-01 accepts only synthetic Sandbox customer and sta
         testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
         metadata: {},
     };
-    assert.equal(V.assertTpvIdentity(base), true);
-    assert.equal(V.assertTpvIdentity({ ...base, identityId: "SANDBOX-CUSTOMER-001" }), true, "legacy IDs remain readable");
-    assert.throws(() => V.assertTpvIdentity({ ...base, environment: "LIVE" }), /Sandbox/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, syntheticOnly: false }), /synthetic Sandbox/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
+    assert.throws(() => V.assertTpvIdentity(legacy), /identity key\/type invalid/);
+    assert.equal(V.assertTpvIdentity(legacy, { allowLegacyRead: true }), true);
+    assert.throws(
+        () => V.assertTpvIdentity({ ...legacy, testRunId: "UNAPPROVED-RUN" }, { allowLegacyRead: true }),
+        /identity key\/type invalid/
+    );
+
+    const transitionalLegacy = {
+        ...base,
+        environment: "SANDBOX",
+        testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
+    };
+    assert.throws(() => V.assertTpvIdentity(transitionalLegacy), /unsupported fields/);
+    assert.equal(V.assertTpvIdentity(transitionalLegacy, { allowLegacyRead: true }), true);
+
     assert.equal(V.assertTpvIdentity({
         ...base,
-        identityId: "TPV-STAFF-001",
+        identityId: "TPV-STAFF-01",
         identityType: "STAFF",
         displayName: "Profesional Sintético 01",
         email: "staff.sandbox@example.test",
