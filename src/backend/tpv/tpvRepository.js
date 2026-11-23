@@ -432,6 +432,7 @@ function _sessionFromCaja(caja) {
         cashierMemberId: caja.openedBy || null,
         operatorId: caja.openedBy || null,
         actorId: caja.openedBy || null,
+        operatorResourceId: String(sourceState?.operatorResourceId || "").trim() || null,
         conceptOperations: caja.conceptOperations,
         payloadFiscal: { requestFingerprint: sourceState?.requestFingerprint },
         payload: makeSyntheticPayload({
