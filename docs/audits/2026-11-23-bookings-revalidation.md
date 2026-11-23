@@ -118,3 +118,21 @@ No verificado:
 **Regla de clasificación:** la ausencia de fila en `CitasF2` no convierte una reserva nativa en reserva dual huérfana. Primero se clasifica el servicio por su relación con el catálogo dual y el origen del booking. Las reservas individuales ordinarias no pertenecen a esta reconciliación. No inferir que las 348 reservas nativas fuera de `CitasF2` deban proyectarse.
 
 **Decisión:** mantener #522 y #523 abiertas hasta completar pruebas Runtime específicas. No usar Wix Bookings multiservicio, no crear bookings de prueba sobre datos operativos, no cambiar flags masivamente y no reconciliar proyecciones por inferencia.
+
+
+## 6. Clasificación de reservas duales y pedidos asociados (2026-11-23)
+
+La consulta completa de 354 bookings nativos (4 páginas cursor) y 95 registros ServiciosCatalogo identifica 24 servicios padre duales y 24 servicios F2 enlazados. Hay 132 bookings en ese conjunto (87 F1 y 45 F2), todos CANCELED; los otros 222 bookings pertenecen a servicios no duales. Ningún booking consultado contiene multiServiceBookingInfo. De los 132 duales, 130 no tienen proyección CitasF2. Una heurística de mismo email, mismo recurso y gap exacto identifica 34 parejas candidatas, pero no existe pairToken nativo que pruebe su relación; quedan 53 F1 y 11 F2 sin pareja candidata. No crear proyecciones con esta heurística.
+
+Las seis filas actuales de CitasF2 incluyen dos fases duales y cuatro simples. La pareja dual mantiene pairToken y resourceId comunes; F1 termina a las 08:40 UTC y F2 comienza a las 09:20 UTC, gap de 40 minutos, igual a exposureDuration del catálogo. Sus bookings nativos están CANCELED y las proyecciones CONFIRMED. Las cuatro filas simples son tres de Barba Perfecta (dos con pedido y una sin pedido) y una de Corte de Pelo Niños.
+
+### Pedidos #10032 y #10033
+
+- #10032: APPROVED/PAID, 92,45 EUR, método Cash; dos productos y Barba Perfecta. Booking asociado CANCELED. La proyección está PENDING_LEDGER, totalAmount 0 y sin cashMovementId.
+- #10033: APPROVED/FULLY_REFUNDED, 18,15 EUR; Barba Perfecta. La transacción aparece REFUNDED y hay refund registrado el 16-11-2026. Booking asociado CANCELED. La proyección está PENDING_LEDGER, totalAmount 0 y sin cashMovementId.
+
+En ControlOperativo existen tres compensaciones PENDING_RECOVERY para esos pedidos: +92,45 EUR para #10032; +18,15 EUR y -18,15 EUR para #10033. La devolución indica ORIGINAL_ORDER_LEDGER_MISSING. Ninguna de las tres tiene bookingId.
+
+MovimientosCaja tiene cinco registros, todos synthetic=true, SIMULATED_SUCCESS y RECONCILED, sin orderId ni bookingId; no hay movimiento correlacionado con esos pedidos. LibroAsientosContablesDetalle tiene cero registros. Esto no demuestra por sí solo pérdida de dinero ni que los pedidos sean reales o sintéticos; su origen económico sigue pendiente.
+
+**Prioridad P0:** correlacionar pedido, pago, devolución, compensaciones, caja y ledger antes de cualquier reparación. No modificar reservas, pedidos, pagos, devoluciones ni registros append-only. Todas las consultas fueron de solo lectura; Runtime y sincronización Git–Wix no están validados.
