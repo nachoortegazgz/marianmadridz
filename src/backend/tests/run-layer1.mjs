@@ -1,6 +1,6 @@
 import { parseTapSummary } from "./tapSummary.mjs";
 // Layer 1 gate: shared infrastructure, booking core, staff availability and public booking contracts.
-// Includes the static shared fiscal-lock writer contract; runtime fiscal flows remain in Layer 2.
+// Includes offline shared fiscal-lock CAS and writer-contract tests; runtime fiscal flows remain in Layer 2.
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -32,6 +32,7 @@ const suites = [
   'booking.core.concurrency.test.mjs',
   'controlOperativo.hooks.test.mjs',
   'fiscalLedgerWriters.locking.test.mjs',
+  'fiscalLedgerLock.test.mjs',
   'serviciosCatalogo.hooks.test.mjs',
   'events.backend-events.contract.test.mjs',
   'reservas.web.test.mjs',
