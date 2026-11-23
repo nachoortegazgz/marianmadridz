@@ -17,6 +17,7 @@
 >
 > **Estado vigente de CI:** el HEAD de código validado de PR #541 es `1d7e99d66fcc14165bf2482885e583176c2b06ef`: Backend offline quality gates SUCCESS (run 45100967570), Layer 1 364/364, Layer 2 255/255, offline completo 732/732; npm audit 0 vulnerabilidades; Wix SDK/eCommerce/TPV contracts y ESLint SUCCESS. Secret scanning SUCCESS (run 45100967567). Los commits posteriores de la rama son únicamente documentación.
 >
+> **CI posterior al merge:** CI posterior a la reconciliación: Backend offline quality gates SUCCESS (run `45102063911`): Layer 1 364/364, Layer 2 255/255, suite offline 732/732, npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run `45102063815`).  
 > **Wix:** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, estado Draft, Velo Enabled. No se ha probado sincronización del SHA con Wix Editor ni flujo E2E en Preview. **NO-GO para producción.**
 >
 > Los apartados originales de esta nota describen el snapshot de PR #537 y sus límites en ese momento. Las referencias a “sin CI” y al último commit `de532108...` son históricas, no el estado actual de PR #541.
