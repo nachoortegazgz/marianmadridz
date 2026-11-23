@@ -215,8 +215,11 @@ export const registrarArqueoParcial = webMethod(
         const operator = await resolveTpvContext(traceId);
 
         try {
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
             if (!session) return errorResult("TPV_SESSION_NOT_OPEN");
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
@@ -264,7 +267,21 @@ export const registrarArqueoParcial = webMethod(
             });
             return {
                 status: "SUCCESS",
-                data: { movementId: item._id, difference: fromMinorUnits(differenceMinor), replayed, persisted: true, isSynthetic: true },
+                data: {
+                    movementId: item._id,
+                    sessionId: session.sessionId,
+                    difference: fromMinorUnits(differenceMinor),
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    replayed,
+                    persisted: true,
+                    isSynthetic: true,
+                    realPayment: false,
+                },
                 error: null,
                 traceId,
             };
