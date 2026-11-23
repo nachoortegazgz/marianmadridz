@@ -109,13 +109,13 @@ La auditoría nativa anterior documentó seis bookings proyectados, seis cancela
 4. **Singleton ambiguo:** `CajaActual` permanece ABIERTA y no presenta el envelope TPV V2 esperado. No debe asociarse automáticamente al run QA ni cerrarse/reconstruirse por inferencia.
 5. **Proyección de reservas divergente:** dos filas `CitasF2` siguen CONFIRMED/PENDING_LEDGER pese al estado nativo CANCELED/PAID documentado.
 
-## 5. Ausencia de correlación para pedidos POS
+## 6. Ausencia de correlación para pedidos POS
 
 Se consultaron `MovimientosCaja` y `LibroAsientosContablesDetalle` mediante filtros por los cinco `orderId`, los cinco IDs de transacción nativos, los cuatro bookingId y los refundId conocidos: 0 coincidencias en ambas colecciones. La consulta de `ControlOperativo` por #10030/#10031/#10034 y los bookings #10030/#10034 también devolvió 0 marcadores.
 
 Por tanto, los tres pedidos sin clasificación no tienen ledger TPV/fiscal correlacionado en las colecciones consultadas. El resultado no demuestra por sí solo que falte una obligación fiscal: antes hay que determinar si esas ventas son reales o QA y revisar el circuito fiscal autorizado correspondiente.
 
-## 6. Decisiones y acciones
+## 7. Decisiones y acciones
 
 - Mantener `ALLOW_NATIVE_WRITES=false`, `ALLOW_REAL_PAYMENTS=false`, `allowNativePayments=false`, `allowNativeRefunds=false` y escrituras fiscales cerradas.
 - No crear pedidos, cargos, pagos, refunds, asientos, facturas ni movimientos para “hacer coincidir” importes.
@@ -128,7 +128,7 @@ Por tanto, los tres pedidos sin clasificación no tienen ledger TPV/fiscal corre
 - Para futuras pruebas, separar explícitamente tres estados distintos: conciliación interna del ledger sintético, correlación con un pedido nativo y conciliación de liquidación externa. No reutilizar `RECONCILED` como prueba de las tres.
 - Una integración TPV↔POS de producción requeriría una decisión de negocio/arquitectura y contrato de idempotencia con IDs nativos. No forma parte de la corrección QA actual.
 
-## 7. Fuentes
+## 8. Fuentes
 
 - Wix CMS — [Query Data Items](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items/query-data-items).
 - Wix eCommerce — [Search Orders](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/search-orders).
