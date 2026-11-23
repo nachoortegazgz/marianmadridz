@@ -137,8 +137,9 @@ export function assertInsertAllowed(collection, item) {
     }
     if (collection === BUSINESS_COLLECTIONS.TPV_IDENTITIES &&
         (item.syntheticOnly !== true ||
-         item.environment !== "SANDBOX" ||
-         item.testRunId !== TPV_RUNTIME_POLICY.LEGACY_RUN_ID)) {
+         item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+         item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+         Number(item.schemaVersion) !== 2)) {
         throw _policyError("CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
