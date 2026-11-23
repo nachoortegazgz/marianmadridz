@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {}) {
@@ -10,23 +10,34 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
         caja?.cashRegisterStatus === "CERRADA" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
-    const explicitSynthetic = caja?.snapshotSource === "TPV_SYNTHETIC" &&
-        caja?.cashRegisterStatus === "SIMULACION" &&
+    const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
         sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        sandboxState?.externalSideEffects === false &&
         Boolean(String(sandboxState?.sessionId || "").trim());
     const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
         caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.traceId === sandboxRunId &&
         sandboxState?.sandboxRunId === sandboxRunId;
     if (!bootstrap && !explicitSynthetic && !legacySynthetic) {
-        throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
+        throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
     }
     return true;
 }
 
 export function makeSandboxTransactionId(collection, idempotencyKey) {
+    if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
+        throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    }
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const digest = createHash("sha256")
+        .update(TPV_RUNTIME_POLICY.SITE_ID + ":" + collection + ":" + key, "utf8")
+        .digest("hex");
+    return "TPV_" + digest;
+}
+
+export function makePreviousSandboxTransactionId(collection, idempotencyKey) {
     if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
         throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     }
@@ -123,7 +134,9 @@ export function makeSyntheticPayload(payload = {}) {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        sourceEnvironment: TPV_RUNTIME_POLICY.ENVIRONMENT,
+        schemaVersion: 2,
+        recordSource: TPV_LEDGER_SOURCE,
+        reconciliationStatus: "NOT_RECONCILED",
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,
