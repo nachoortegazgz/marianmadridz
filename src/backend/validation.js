@@ -400,7 +400,7 @@ export function assertTpvSandboxIdentity(item) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
     if (item.active !== true || item.syntheticOnly !== true || item.environment !== "SANDBOX" ||
-        item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID) {
+        item.testRunId !== TPV_RUNTIME_POLICY.LEGACY_RUN_ID) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities must belong to the active synthetic Sandbox test-run");
     }
     if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
