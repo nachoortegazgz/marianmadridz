@@ -29,9 +29,9 @@ test("FISCAL-LOCK-01 serializes concurrent fiscal ledger writers", async () => {
   assert.equal(stored.ownerToken, second.ownerId);
   assert.equal(stored.status, "ACTIVE");
   await releaseFiscalLedgerLock(second);
-  const released = wixDataMock._store.get(CONTROL).find((row) => row._id === second.id);
-  assert.equal(released.status, "RELEASED");
-  assert.equal(released.version, second.version + 1);
+  const releasedRow = wixDataMock._store.get(CONTROL).find((row) => row._id === second.id);
+  assert.equal(releasedRow.status, "RELEASED");
+  assert.equal(releasedRow.version, second.version + 1);
 });
 
 test("FISCAL-LOCK-02 reclaims only an expired lock", async () => {
