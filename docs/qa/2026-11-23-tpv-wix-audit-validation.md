@@ -48,3 +48,16 @@ Esta validación no equivale a una ejecución Wix Runtime ni a una prueba E2E en
 ## Estado
 
 **Parcial — no apto para declarar E2E validado.** La lista concreta de la auditoría queda atendida en sus correcciones válidas de código y tests estáticos, pero el gate de aceptación sigue pendiente de CI verificable y pruebas Wix Preview apertura → venta → Ticket X/Z, incluyendo reintento y conciliación.
+
+
+## Seguimiento de rama y release gate
+
+Último commit de esta actualización: `de5321083be16d2a4bfd9d501bcf1b212050da6a`.
+
+- PR #537 continúa abierta y sin merge.
+- Comparación contra `main`: 26 commits por delante y 4 por detrás; GitHub reporta `diverged` y `mergeable=false`.
+- La consulta de checks y ejecuciones asociadas al último commit no devolvió ejecuciones ni estados.
+- El entorno de trabajo no permitió clonar el repositorio para ejecutar Vitest/Node localmente.
+- Por tanto, los tests actualizados son cambios de código, no pruebas ejecutadas. No se declara CI ni suite local en verde.
+
+**Gate mantenido: NO-GO para merge/despliegue** hasta resolver divergencia, ejecutar CI, revisar el diff completo y validar el flujo en Wix Preview.
