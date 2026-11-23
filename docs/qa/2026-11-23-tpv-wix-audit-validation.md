@@ -15,7 +15,7 @@ La integración de código TPV está en main. La aceptación estática no demues
 
 - Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
 - Secret scanning: SUCCESS, run 45105979748.
-- PR #542 integró una primera corrección que aún fallaba. PR #543 contiene la corrección final de las aserciones; CI de su HEAD más reciente pendiente.
+- PR #542 integró una primera corrección incompleta y el CI post-merge falló. PR #543 corrige las aserciones; CI backend y secret scanning pasan en HEAD eee6d75e5cf843a38823e7fa4c908783db175208 (736/736 pruebas offline, npm audit 0, SDK contracts y ESLint SUCCESS). La corrección no está integrada en main.
 
 ## Contrato de pagos comprobado estáticamente
 
