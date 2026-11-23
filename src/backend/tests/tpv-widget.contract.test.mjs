@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { Script } from "node:vm";
+import { createWidgetBridge, MESSAGE_TYPES } from "../../public/widgetBridge.js";
 
 const repoRoot = new URL("../../../", import.meta.url);
 const source = (path) => readFile(new URL(path, repoRoot), "utf8");
@@ -98,4 +99,40 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(html, /if \(connected\) \{\s*initializeWidgetAfterHandshake\(\)/);
     assert.match(html, /function initializeWidgetAfterHandshake\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
     assert.doesNotMatch(html, /function init\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
+});
+
+test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are allowed", async () => {
+    const sent = [];
+    let receive;
+    const widget = {
+        onMessage(handler) {
+            receive = handler;
+            return () => { receive = null; };
+        },
+        postMessage(message) {
+            sent.push(message);
+        },
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        allowOpaqueOrigin: true,
+        handshakeTimeoutMs: 1000,
+        onContextReady: async () => ({
+            status: "SUCCESS",
+            data: { component: "htmlTPV", protocolVersion: 1 },
+            error: null,
+        }),
+    });
+
+    receive({
+        origin: "null",
+        data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-ready-12345678" },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const contextMessage = sent.find((message) => message.type === MESSAGE_TYPES.CONTEXT);
+    assert.ok(contextMessage, "bridge must send MM_CONTEXT after READY");
+    assert.equal(contextMessage.payload.status, "SUCCESS");
+    assert.equal(contextMessage.messageId, "tpv-ready-12345678");
+    bridge.destroy();
 });
