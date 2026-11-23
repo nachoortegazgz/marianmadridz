@@ -13,6 +13,7 @@ import { logger } from "backend/logger";
 import {
 
     assertTpvCajaIntegrity,
+    getTpvRuntimeState,
     normalizeIdempotencyKey,
     stableSerialize,
     makeSyntheticPayload,
@@ -30,16 +31,6 @@ import {
 
 const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
-
-function _getTpvRuntimeState(caja) {
-    const operations = caja?.conceptOperations;
-    const current = operations?.tpvRuntime;
-    if (current && typeof current === "object" && !Array.isArray(current) &&
-        Object.keys(current).length > 0) return current;
-    const legacy = operations?.tpvSandbox;
-    if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) return legacy;
-    return current && typeof current === "object" && !Array.isArray(current) ? current : {};
-}
 
 async function withCajaActualProjectionLock(traceId, operation) {
     const lock = await acquireFiscalLedgerLock(traceId || "TPV_CAJA_PROJECTION");
@@ -382,7 +373,7 @@ async function _ensureCajaActual() {
     return caja;
 }
 
-function _isCurrentV1Caja(caja, state = _getTpvRuntimeState(caja)) {
+function _isCurrentV1Caja(caja, state = getTpvRuntimeState(caja)) {
     const traceId = String(caja?.traceId || "");
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
     const validTrace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
@@ -399,7 +390,7 @@ function _isCurrentV1Caja(caja, state = _getTpvRuntimeState(caja)) {
         (validFingerprint || validTrace);
 }
 
-function _isLegacyCaja(caja, state = _getTpvRuntimeState(caja), { requireSession = true } = {}) {
+function _isLegacyCaja(caja, state = getTpvRuntimeState(caja), { requireSession = true } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     return [
         TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
@@ -411,7 +402,7 @@ function _isLegacyCaja(caja, state = _getTpvRuntimeState(caja), { requireSession
 }
 
 function _sessionFromCaja(caja) {
-    const sourceState = _getTpvRuntimeState(caja);
+    const sourceState = getTpvRuntimeState(caja);
     const sessionId = String(sourceState?.sessionId || "").trim();
     const explicitSyntheticV2 = caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
@@ -463,7 +454,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             const caja = await _getCajaActual();
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             assertTpvCajaIntegrity(caja);
-            const preflightRuntimeState = _getTpvRuntimeState(caja);
+            const preflightRuntimeState = getTpvRuntimeState(caja);
             const explicitSyntheticV2 = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
                 preflightRuntimeState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightRuntimeState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
@@ -482,7 +473,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
                 : {};
-            const sourceState = { ..._getTpvRuntimeState({ conceptOperations }) };
+            const sourceState = { ...getTpvRuntimeState({ conceptOperations }) };
             const appliedIds = Array.isArray(sourceState.appliedMovementIds) ? sourceState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
             if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
@@ -653,7 +644,7 @@ async function findByIdempotencyKey(collection, key) {
 function assertSameRequest(existing, fingerprint) {
     const existingFingerprint = existing?.payloadFiscal?.requestFingerprint ||
         existing?.payload?.requestFingerprint ||
-        _getTpvRuntimeState(existing).requestFingerprint;
+        getTpvRuntimeState(existing).requestFingerprint;
     if (existingFingerprint !== fingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
     return { item: existing, replayed: true };
 }
