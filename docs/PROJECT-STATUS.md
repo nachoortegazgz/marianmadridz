@@ -173,7 +173,7 @@ Auditoría de ControlOperativo para explicar el delta: 63 registros, sin control
 
 ### Ampliación de alcance POS — consulta completa 1–24 noviembre
 
-- La búsqueda completa de pedidos eCommerce devuelve 5 pedidos con canal POS: #10030–#10034. #10032/#10033 son sintéticos QA por confirmación del titular; #10030 (18,15 €), #10031 (27,71 €) y #10034 (18,15 €) siguen sin clasificación.
+- La consulta paginada de Search Orders para estados APPROVED/CANCELED/PENDING/REJECTED devuelve 5 pedidos con canal POS: #10030–#10034. Search Orders no devuelve INITIALIZED. #10032/#10033 son sintéticos QA por confirmación del titular; #10030 (18,15 €), #10031 (27,71 €) y #10034 (18,15 €) siguen sin clasificación.
 - Los tres no clasificados no tienen referencias en MovimientosCaja ni LibroAsientosContablesDetalle; ControlOperativo tampoco devuelve markers asociados. No inferir si son reales o QA.
 - #10030: pedido PAID, booking nativo CANCELED/PAID y sin refund en historial. #10034: pedido PAID y booking nativo CONFIRMED/PAID, sin proyección CitasF2. #10031 es producto tienda.
 - Los cuatro bookings asociados a pedidos POS consultados: #10030 y #10032/#10033 están CANCELED/PAID; #10034 está CONFIRMED/PAID. CitasF2 carece de proyección para #10030 y #10034.
