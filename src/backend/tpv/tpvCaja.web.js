@@ -3,13 +3,30 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false, realPayment: false };
+}
+
+const OPERATIONAL_CASH_STATUS = Object.freeze({
+    OPEN: "ABIERTA",
+    CLOSED: "CERRADA",
+    NONE: "SIN_SESION",
+});
+
+function operationalStatus(value) {
+    const status = String(value || "").toUpperCase();
+    if (status === OPERATIONAL_CASH_STATUS.OPEN) return OPERATIONAL_CASH_STATUS.OPEN;
+    if (status === OPERATIONAL_CASH_STATUS.CLOSED) return OPERATIONAL_CASH_STATUS.CLOSED;
+    return OPERATIONAL_CASH_STATUS.NONE;
+}
+
+function responseClock() {
+    return { now: new Date().toISOString(), timeZone: TPV_RUNTIME_POLICY.TIME_ZONE };
 }
 
 function madridDayKey(date = new Date()) {
@@ -60,23 +77,51 @@ export const obtenerEstadoCaja = webMethod(
         const traceId = makeTraceId("tpv-session-read");
         await requireCajero(traceId);
 
-        const session = await latestOpenTpvSession();
-        if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
-        const summary = await buildTpvSessionSummary(session);
+        const operator = await resolveTpvContext(traceId);
+        const session = await latestTpvSession();
+        if (!session) {
+            return {
+                status: "SUCCESS",
+                data: {
+                    status: OPERATIONAL_CASH_STATUS.NONE,
+                    operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
+                    sessionId: null,
+                    operatorId: null,
+                    actorId: null,
+                    integrationStatus: "NO_ENVIADO",
+                    ...responseClock(),
+                },
+                error: null,
+                traceId,
+                isSynthetic: true,
+                realPayment: false,
+            };
+        }
+        const status = operationalStatus(session.status);
+        const summary = status === OPERATIONAL_CASH_STATUS.OPEN
+            ? await buildTpvSessionSummary(session)
+            : null;
         return {
             status: "SUCCESS",
             data: {
                 sessionId: session.sessionId,
-                status: "ABIERTA",
+                status,
+                operationalStatus: status,
+                operatorId: session.operatorId || session.cashierMemberId || operator.operatorId,
+                actorId: session.actorId || session.operatorId || session.cashierMemberId || operator.actorId,
                 openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
-                expectedCash: fromMinorUnits(summary.expectedCashMinor),
-                cashAmount: fromMinorUnits(summary.cashMinor),
-                cardAmount: fromMinorUnits(summary.cardMinor),
-                bizumAmount: fromMinorUnits(summary.bizumMinor),
-                otherAmount: fromMinorUnits(summary.otherMinor),
-                totalOperations: summary.ticketCount,
+                expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
+                cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
+                cardAmount: summary ? fromMinorUnits(summary.cardMinor) : null,
+                bizumAmount: summary ? fromMinorUnits(summary.bizumMinor) : null,
+                otherAmount: summary ? fromMinorUnits(summary.otherMinor) : null,
+                totalOperations: summary?.ticketCount ?? null,
                 openedAt: session.openedAt,
+                closedAt: session.closedAt || null,
+                integrationStatus: "NO_ENVIADO",
+                ...responseClock(),
                 isSynthetic: true,
+                realPayment: false,
             },
             error: null,
             traceId,
@@ -138,7 +183,13 @@ export const abrirSesionCaja = webMethod(
                     data: {
                         sessionId: item.sessionId,
                         status: item.status,
+                        operationalStatus: OPERATIONAL_CASH_STATUS.OPEN,
+                        operatorId: operator.operatorId,
+                        actorId: operator.actorId,
                         openingCash: fromMinorUnits(openingCashMinor),
+                        openedAt: item.openedAt,
+                        integrationStatus: "NO_ENVIADO",
+                        ...responseClock(),
                         replayed,
                         persisted: true,
                         isSynthetic: true,
