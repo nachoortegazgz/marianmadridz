@@ -1,3 +1,14 @@
+## Criterio GO (vinculante)
+
+El release pasa a GO si y solo si:
+1. Los 5 P0 tienen evidencia runtime PASS enlazada en esta tabla.
+2. Cada evidencia PASS tiene fecha, ejecutor y JSON íntegro en RUNTIME-EVIDENCE-CHECKLIST.md.
+3. CONFIG_SISTEMA_FISCAL existe en Wix CMS con datos legales verificados (F1 PASS).
+4. Los flags LEDGER_WRITES_ENABLED y ACCOUNTING_LEDGER_WRITES_ENABLED siguen en false hasta la certificación legal del punto 3.
+5. Las verificaciones CMS de #520 están todas PASS.
+
+Cualquier otro estado es NO-GO. No hay GO parcial.
+
 # Release Readiness
 
 | Issue | Descripción (1 línea) | PR asociado | Evidencia runtime requerida (referencia a RUNTIME-EVIDENCE-CHECKLIST.md) | Estado evidencia | Responsable | Fecha |
