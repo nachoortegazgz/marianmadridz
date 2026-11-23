@@ -7,7 +7,7 @@
 - Backend offline quality gates: FAIL, run 45105979742.
 - Secret scanning: SUCCESS, run 45105979748.
 - El único fallo localizado corresponde a una aserción de test obsoleta que esperaba cuatro medios de pago; el enum TPV_PAYMENT_METHOD define seis.
-- PR #542 integró una primera corrección incompleta; PR #543 contiene la corrección final de aserciones. No considerar resuelto hasta CI SUCCESS.
+- PR #542 integró una primera corrección incompleta; PR #543 contiene la corrección completa. CI de PR #543 pasa en HEAD eee6d75e5cf843a38823e7fa4c908783db175208: 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint SUCCESS; secret scanning SUCCESS. main conserva el fallo hasta integrar PR #543.
 
 ## Contrato TPV vigente
 
