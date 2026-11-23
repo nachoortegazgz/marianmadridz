@@ -2,6 +2,7 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
+**main HEAD:** `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739` (merge PR #545).  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
@@ -9,7 +10,7 @@
 | Área | Estado verificado | Límite |
 |---|---|---|
 | Código TPV / contratos | Integrados en main por PR #543 | Aceptación Wix Runtime/E2E pendiente. |
-| CI de estabilización documental | La versión previa de PR #545 pasó en HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` | Backend run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142); Gitleaks run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155). La consolidación posterior debe validarse en el HEAD más reciente de la PR. |
+| CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR HEAD `57013eed25a5f8c755a2e5cd3434c792b3dec78c`: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). main HEAD `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). |
 | Calidad offline | Layer 1 364/364; Layer 2 255/255; suite 736/736; npm audit 0; contratos SDK Wix/eCommerce/TPV y ESLint SUCCESS | No prueba CMS live, Wix Runtime, E2E, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
@@ -24,7 +25,7 @@
 
 - Corrección de aserciones TPV desactualizadas mediante PR #543.
 - Consolidación documental previa en PR #544.
-- Estabilización y actualización de estado en PR #545; una versión previa de la rama superó ambos workflows. Los checks del último commit se consultan en la PR.
+- Estabilización documental consolidada y fusionada mediante PR #545 en merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`; CI pre-merge y post-merge SUCCESS.
 - Read-back Wix Site Context actual que devuelve Draft; la lectura resuelve el estado en el momento consultado, no la sincronización del código.
 
 ## Bloqueos prioritarios
