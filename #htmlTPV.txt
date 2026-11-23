@@ -1,38 +1,836 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TPV Marian Madrid</title>
 <style>
-:root{--bg:#fafafa;--surface:#fff;--line:#e6e2dc;--ink:#1d1b19;--muted:#777;--brand:#b08d57;--danger:#a2362a;--ok:#2e7d32;--radius:12px}*{box-sizing:border-box}body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:14px Arial,sans-serif}.shell{max-width:1500px;margin:auto}.top,.bar,.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}.top,.bar{padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:10px}.logo{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;background:var(--brand);color:#fff;font-weight:bold}.brand h1{margin:0;font-size:18px}.muted{color:var(--muted)}.pill{padding:5px 10px;border:1px solid var(--line);border-radius:7px;background:#f5f3ef;font-size:12px}.pill.ok{color:var(--ok);background:#eff8f0}.pill.bad{color:var(--danger);background:#fff1f0}.layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{overflow:hidden;margin-bottom:14px}.head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}.head h2{margin:0;font-size:15px}.body{padding:16px}.field,select{width:100%;min-height:40px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.products,.ticket{display:grid;gap:8px;max-height:430px;overflow:auto;margin-top:12px}.product,.ticket-line{border:1px solid var(--line);border-radius:8px;background:#fff;padding:11px;text-align:left}.product{cursor:pointer}.product:hover,.btn:hover{border-color:var(--brand)}.product b{display:block;margin-bottom:5px}.product span{color:var(--brand);font-weight:bold}.btn{min-height:38px;padding:9px 13px;border:1px solid transparent;border-radius:8px;background:#f3f1ed;cursor:pointer}.btn.primary{background:var(--brand);color:#fff}.btn.danger{background:#fff0ef;color:var(--danger)}.btn.block{width:100%}.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.between{justify-content:space-between}.total{font-size:25px;font-weight:bold}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.tab.active{background:var(--brand);color:#fff}.notice{padding:10px;border-radius:8px;background:#fff1f0;color:var(--danger);margin-bottom:14px}.hidden{display:none!important}.line-controls{display:flex;justify-content:space-between;align-items:center;margin-top:8px}.qty button{width:28px;height:28px;border:0;border-radius:6px;background:#eee;cursor:pointer}.summary{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}.quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.quick .btn{min-height:48px}.toast{position:fixed;right:18px;bottom:18px;background:#222;color:#fff;padding:12px 16px;border-radius:8px;display:none}.toast.show{display:block}@media(max-width:850px){.layout{grid-template-columns:1fr}}@media(max-width:500px){body{padding:8px}.grid,.actions,.quick{grid-template-columns:1fr}.top,.bar{padding:12px}.body{padding:12px}}
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --line: #e6e2dc;
+  --ink: #1d1b19;
+  --muted: #777777;
+  --brand: #b08d57;
+  --danger: #a2362a;
+  --ok: #2e7d32;
+  --warning: #fff3cd;
+  --warning-ink: #795600;
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px Arial, sans-serif;
+}
+.shell { max-width: 1500px; margin: auto; }
+.top, .bar, .panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.top, .bar {
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  display: grid; place-items: center; font-weight: 700;
+}
+.status { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--muted);
+}
+.dot.ok { background: var(--ok); }
+.dot.error { background: var(--danger); }
+.session-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.session-bar .field { min-width: 180px; }
+.field {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+}
+.btn {
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: inherit;
+  min-height: 48px;
+  transition: background .15s;
+}
+.btn:hover { background: #f5f3f0; }
+.btn.primary {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+.btn.primary:hover { background: #9a7a4a; }
+.btn.danger {
+  background: #fdecea;
+  color: var(--danger);
+  border-color: #f5c6c0;
+}
+.btn.warning {
+  background: var(--warning);
+  color: var(--warning-ink);
+  border-color: #f0e0a0;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.grid {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  gap: 14px;
+}
+@media (max-width: 1024px) {
+  .grid { grid-template-columns: 1fr; }
+}
+.panel { padding: 18px; }
+.panel h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.tabs .btn { flex: 1; min-height: 44px; padding: 10px; }
+.catalog-list {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 340px; overflow-y: auto;
+}
+.catalog-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fff;
+}
+.catalog-item:hover { background: #faf9f7; }
+.catalog-item .price { font-weight: 700; color: var(--brand); }
+.ticket-lines {
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 120px; max-height: 300px; overflow-y: auto;
+  margin-bottom: 12px;
+}
+.ticket-line {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  gap: 8px;
+}
+.ticket-line .qty { display: flex; gap: 6px; align-items: center; }
+.ticket-line .qty button {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--line); background: #fff;
+  cursor: pointer; font-size: 18px; line-height: 1;
+}
+.totals {
+  border-top: 2px solid var(--line);
+  padding-top: 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.totals .row {
+  display: flex; justify-content: space-between;
+}
+.totals .total {
+  font-size: 20px; font-weight: 700;
+}
+.payment-methods {
+  display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.payment-methods .btn { flex: 1; min-height: 44px; padding: 10px; }
+.payment-methods .btn.active {
+  background: var(--brand); color: #fff; border-color: var(--brand);
+}
+.payment-input {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 12px; flex-wrap: wrap;
+}
+.payment-input .field { flex: 1; min-width: 120px; }
+.quick-cash { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.quick-cash .btn { min-height: 44px; padding: 8px 14px; }
+.operations-panel .btn { min-height: 48px; }
+.operations-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.operations-grid .btn { width: 100%; }
+.bottom-bar {
+  margin-top: 14px;
+  display: flex; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+}
+.bottom-bar .btn { flex: 1; min-width: 160px; }
+/* Modales */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center;
+  padding: 16px;
+  background: rgba(0,0,0,.45);
+}
+.modal-backdrop.hidden { display: none; }
+.modal {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgba(0,0,0,.2);
+}
+.modal .head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.modal .head h2 { margin: 0; font-size: 18px; }
+.modal .body { display: flex; flex-direction: column; gap: 12px; }
+.modal .actions {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 20px;
+}
+.modal .actions .btn { min-width: 100px; }
+.hidden { display: none; }
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: #fff; padding: 12px 20px;
+  border-radius: 8px; font-size: 13px; z-index: 200;
+  opacity: 0; transition: opacity .25s; pointer-events: none;
+}
+.toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 <div class="shell">
-<header class="top"><div class="brand"><div class="logo">MM</div><div><h1>Marian Madrid</h1><small class="muted">TPV presencial</small></div></div><div class="row"><span id="mode" class="pill">Conectando…</span><span id="cashStatus" class="pill">Caja no consultada</span><span id="clock" class="muted"></span></div></header>
-<section class="bar"><div class="row"><b>Sesión:</b><span id="sessionId">—</span><span class="muted">Operador:</span><span id="operator">Sin asignar</span></div><div class="row"><input id="openingCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo inicial" style="width:160px"><button id="openSession" class="btn primary">Abrir caja</button><button id="operatorBtn" class="btn">Operador</button></div></section>
-<div id="notice" class="notice hidden"></div>
-<main class="layout">
-<section><div class="panel"><div class="head"><h2>Catálogo</h2><button id="refresh" class="btn">Actualizar</button></div><div class="body"><input id="search" class="field" placeholder="Buscar servicios o productos"><div class="tabs"><button class="btn tab active" data-kind="SERVICIO">Servicios</button><button class="btn tab" data-kind="PRODUCTO">Productos</button><button class="btn tab" data-kind="PERSONALIZADA">Tarifa personalizada</button></div><div id="custom" class="hidden"><div class="grid"><input id="customName" class="field" placeholder="Concepto"><input id="customPrice" class="field" type="number" min="0.01" step="0.01" placeholder="Importe"></div><button id="addCustom" class="btn primary block" style="margin-top:8px">Añadir al ticket</button></div><div id="products" class="products"><p class="muted">Esperando catálogo…</p></div></div></div>
-<div class="panel"><div class="head"><h2>Operaciones de caja</h2></div><div class="body quick"><button id="cashIn" class="btn">Entrada de efectivo</button><button id="cashOut" class="btn">Salida de efectivo</button><button id="refund" class="btn danger">Devolución</button><button id="ticketX" class="btn">Control X</button><button id="ticketZ" class="btn danger">Cierre Z</button><button id="cashSummary" class="btn">Resumen de caja</button><button id="printLast" class="btn">Imprimir último ticket</button><button id="audit" class="btn">Movimientos</button></div></div></section>
-<section><div class="panel"><div class="head"><h2>Ticket actual</h2><div class="row"><button id="customer" class="btn">Cliente</button><button id="clear" class="btn danger">Vaciar</button></div></div><div class="body"><div id="ticket" class="ticket"><p class="muted">Añade conceptos del catálogo.</p></div><div class="summary"><div class="row between"><span>Subtotal</span><b id="subtotal">0,00 €</b></div><div class="row between"><span>Impuestos (reglas Wix pendientes)</span><input id="tax" class="field" type="number" min="0" step="0.01" value="0" disabled style="width:120px"></div><div class="row between"><span>Total</span><strong id="total" class="total">0,00 €</strong></div></div></div></div>
-<div class="panel"><div class="head"><h2>Pago presencial</h2></div><div class="body"><div class="grid"><select id="payMethod" class="field"><option value="EFECTIVO">Efectivo</option><option value="TARJETA">Tarjeta</option><option value="BIZUM">Bizum</option><option value="OTROS">Otros</option></select><input id="payAmount" class="field" type="number" min="0" step="0.01" placeholder="Importe recibido"></div><div class="grid" style="margin-top:8px"><input id="change" class="field" type="number" min="0" step="0.01" value="0" placeholder="Cambio"><button id="addPayment" class="btn">Añadir pago</button></div><div id="payments" class="muted" style="margin-top:10px">Sin pagos añadidos.</div><div class="row between" style="margin-top:12px"><span>Aplicado <b id="paid">0,00 €</b></span><span>Pendiente <b id="pending">0,00 €</b></span></div><button id="saveSale" class="btn primary block" style="margin-top:12px">Guardar venta</button></div></div></section>
-</main></div><div id="toast" class="toast"></div>
+
+  <!-- Cabecera -->
+  <header class="top">
+    <div class="brand">
+      <div class="logo">MM</div>
+      <div>
+        <strong>Marian Madrid</strong>
+        <div class="status">
+          <span id="connStatus" class="dot"></span>
+          <span id="connLabel">Conectando…</span>
+        </div>
+      </div>
+    </div>
+    <div class="status">
+      <span id="cashStatus" class="dot"></span>
+      <span id="cashLabel">Caja no consultada</span>
+    </div>
+  </header>
+
+  <!-- Barra de sesión -->
+  <div class="bar session-bar">
+    <span>Sesión: <strong id="sessionLabel">—</strong></span>
+
+    <label for="operatorSelect" class="status">Operador:</label>
+    <select id="operatorSelect" class="field">
+      <option value="">Sin asignar</option>
+    </select>
+
+    <button id="openCash" class="btn primary">Abrir caja</button>
+    <button id="refreshCatalog" class="btn">Actualizar</button>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="grid">
+
+    <!-- Columna izquierda: catálogo y operaciones -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Catálogo -->
+      <section class="panel">
+        <h2>Catálogo</h2>
+        <div class="tabs">
+          <button id="tabServicios" class="btn active">Servicios</button>
+          <button id="tabProductos" class="btn">Productos</button>
+          <button id="tabPersonalizada" class="btn">Tarifa personalizada</button>
+        </div>
+        <div id="catalogList" class="catalog-list">
+          <p>Esperando catálogo…</p>
+        </div>
+      </section>
+
+      <!-- Operaciones de caja -->
+      <section class="panel operations-panel">
+        <h2>Operaciones de caja</h2>
+        <div class="operations-grid">
+          <button id="cashIn" class="btn">Entrada de efectivo</button>
+          <button id="cashOut" class="btn">Salida de efectivo</button>
+          <button id="refund" class="btn danger">Devolución</button>
+          <button id="cashSummary" class="btn">Resumen de caja</button>
+          <button id="audit" class="btn">Historial</button>
+          <button id="printLast" class="btn">Imprimir último ticket</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Columna derecha: ticket y cobro -->
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- Ticket -->
+      <section class="panel">
+        <h2>
+          Ticket actual
+          <span>
+            <button id="selectClient" class="btn">Cliente</button>
+            <button id="clearTicket" class="btn danger">Vaciar</button>
+          </span>
+        </h2>
+        <div id="ticketLines" class="ticket-lines">
+          <p style="color:var(--muted);">Añade conceptos del catálogo.</p>
+        </div>
+
+        <div class="totals">
+          <div class="row"><span>Subtotal</span><span id="subtotal">0,00 €</span></div>
+          <div class="row"><span>Impuestos (pendientes de configuración)</span><span id="taxes">0,00 €</span></div>
+          <div class="row total"><span>Total</span><span id="total">0,00 €</span></div>
+        </div>
+      </section>
+
+      <!-- Pago -->
+      <section class="panel">
+        <h2>Pago presencial</h2>
+
+        <div class="payment-methods" id="paymentMethods">
+          <button class="btn active" data-method="EFECTIVO">Efectivo</button>
+          <button class="btn" data-method="TARJETA">Tarjeta</button>
+          <button class="btn" data-method="BIZUM">Bizum</button>
+          <button class="btn" data-method="OTROS">Otros</button>
+        </div>
+
+        <div class="payment-input">
+          <input id="paymentAmount" class="field" type="number" min="0" step="0.01" placeholder="Importe recibido">
+          <button id="addPayment" class="btn">Añadir pago</button>
+        </div>
+
+        <div class="quick-cash" id="quickCash">
+          <button class="btn" data-cash="10">10 €</button>
+          <button class="btn" data-cash="20">20 €</button>
+          <button class="btn" data-cash="50">50 €</button>
+          <button class="btn" data-cash="exact">Exacto</button>
+        </div>
+
+        <div id="paymentList" style="margin-bottom:12px;color:var(--muted);">
+          Sin pagos añadidos.
+        </div>
+
+        <div class="totals">
+          <div class="row"><span>Aplicado</span><span id="applied">0,00 €</span></div>
+          <div class="row"><span>Pendiente</span><span id="pending">0,00 €</span></div>
+          <div class="row"><span>Cambio</span><span id="change">0,00 €</span></div>
+        </div>
+
+        <button id="saveSale" class="btn primary" style="width:100%;margin-top:14px;min-height:52px;font-size:16px;">
+          Cobrar
+        </button>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Barra inferior: Control X y Cierre Z -->
+  <div class="bottom-bar">
+    <button id="ticketX" class="btn warning">Control X</button>
+    <button id="ticketZ" class="btn danger">Cierre Z</button>
+  </div>
+
+</div>
+
+<!-- Modal genérico -->
+<div id="modalBackdrop" class="modal-backdrop hidden">
+  <section class="modal" role="dialog" aria-modal="true">
+    <div class="head">
+      <h2 id="modalTitle"></h2>
+      <button id="modalClose" class="btn">Cerrar</button>
+    </div>
+    <div id="modalBody" class="body"></div>
+    <div class="actions">
+      <button id="modalCancel" class="btn">Cancelar</button>
+      <button id="modalConfirm" class="btn primary">Confirmar</button>
+    </div>
+  </section>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
 <script>
-(function(){"use strict";
-const VERSION=1;const state={ready:false,kind:"SERVICIO",services:[],products:[],items:[],payments:[],session:null,staff:[],operatorId:null,customerIdentityId:null,operationKeys:{},pending:new Map(),seq:0,lastSale:null};const $=id=>document.getElementById(id);const money=n=>new Intl.NumberFormat("es-ES",{style:"currency",currency:"EUR"}).format(Number(n)||0);const num=n=>Math.round((Number(n)||0)*100)/100;
-function toast(t){$("toast").textContent=t;$("toast").classList.add("show");setTimeout(()=>$("toast").classList.remove("show"),3000)}function error(t){$("notice").textContent=t;$("notice").classList.remove("hidden");toast(t)}function send(type,payload={}){if(!state.ready&&type!=="MM_READY")return null;const messageId="tpv-"+Date.now().toString(36)+"-"+(++state.seq);window.parent.postMessage({type,payload,messageId,version:VERSION},"*");return messageId}function request(type,payload,responseType,timeout=25000){const id=send(type,payload);if(!id)return Promise.reject(new Error("WIDGET_NOT_READY"));return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{state.pending.delete(id);reject(new Error("TIMEOUT_"+type))},timeout);state.pending.set(id,{resolve,reject,timer,responseType})})}function unwrap(x){if(!x||x.status!=="SUCCESS")throw new Error(x?.error?.code||x?.error?.message||"TPV_REQUEST_FAILED");return x.data}
-window.addEventListener("message",e=>{if(e.source!==window.parent)return;const m=e.data||{};if(m.type==="MM_CONTEXT"){if(m.payload?.status!=="SUCCESS"){state.ready=false;$("mode").textContent="No disponible";$("mode").className="pill bad";error(m.payload?.error?.code||"TPV_CONTEXT_UNAVAILABLE");return}state.ready=true;$("mode").textContent="TPV";$("mode").className="pill ok";bootstrap();return}const p=state.pending.get(m.messageId);if(!p||m.type!==p.responseType)return;clearTimeout(p.timer);state.pending.delete(m.messageId);p.resolve(m.payload)});
-async function call(t,p,r){return unwrap(await request(t,p,r))}async function bootstrap(){try{const [session,services,staff]=await Promise.all([call("CASHIER_STATE",{},"CASHIER_STATE_RES"),call("CATALOG_SERVICES",{},"CATALOG_SERVICES_RES"),call("CATALOG_STAFF",{},"CATALOG_STAFF_RES")]);state.session=session;state.staff=staff.items||[];state.services=(services.items||[]).filter(x=>!x.oculto).map(x=>({...x,tipoLinea:"SERVICIO"}));renderSession();renderCatalog();const products=await call("CATALOG_PRODUCTS",{limit:100,cursor:null},"CATALOG_PRODUCTS_RES");state.products=(products.items||[]).map(x=>({...x,tipoLinea:"PRODUCTO"}));renderCatalog()}catch(e){error(e.message)}}
-function totals(){const subtotal=num(state.items.reduce((s,x)=>s+x.cantidad*x.precioUnitario-x.descuentoImporte,0));const tax=num($("tax").value);return{subtotal,tax,total:num(subtotal+tax)}}function renderSession(){const s=state.session;$("cashStatus").textContent=s?"Caja abierta":"Caja cerrada";$("cashStatus").className="pill "+(s?"ok":"");$("sessionId").textContent=s?.sessionId||"—";$("openSession").disabled=!!s}function renderCatalog(){const custom=state.kind==="PERSONALIZADA";$("custom").classList.toggle("hidden",!custom);$("products").classList.toggle("hidden",custom);if(custom)return;const term=$("search").value.trim().toLowerCase();const list=state.services.concat(state.products).filter(x=>x.tipoLinea===state.kind&&(!term||String(x.concepto||x.name||"").toLowerCase().includes(term)));$("products").innerHTML=list.length?list.map((x,i)=>`<button class="product" data-i="${i}"><b>${esc(x.concepto||x.name||"Sin nombre")}</b><span>${x.requiereSeleccionVariante?"Seleccionar variante":esc(x.precioFormateado||money(x.precioMinimo??x.precioFijo??x.price))}</span></button>`).join(""):"<p class=muted>No hay resultados.</p>";$("products").querySelectorAll("button").forEach((b,i)=>b.onclick=()=>selectCatalogItem(list[i]))}function selectCatalogItem(x){if(x.tipoLinea!=="PRODUCTO"||!Number(x.numeroVariantes))return addLine(x);return call("CATALOG_VARIANTS",{productId:x.itemId},"CATALOG_VARIANTS_RES").then(data=>{const variants=(data.variantes||[]).filter(v=>v.disponible&&Number.isFinite(Number(v.precio))&&Number(v.precio)>0);if(!variants.length){toast("No hay variantes disponibles para este producto.");return}let variant=variants[0];if(variants.length>1){const choices=variants.map((v,i)=>(i+1)+". "+v.concepto+" — "+money(v.precio)).join("\n");const selected=Number(prompt("Selecciona variante\n"+choices));if(!Number.isInteger(selected)||selected<1||selected>variants.length)return;variant=variants[selected-1]}addLine({...x,precioMinimo:variant.precio,concepto:x.concepto+" · "+variant.concepto,varianteId:variant.varianteId})}).catch(e=>error(e.message))}function addLine(x){const price=Number(x.precioMinimo??x.precioFijo??x.price);if(!Number.isFinite(price)||price<=0){toast("El artículo no tiene precio válido.");return}state.items.push({itemId:x.itemId||x.id||null,tipoLinea:x.tipoLinea,concepto:x.concepto||x.name,cantidad:1,precioUnitario:num(price),descuentoImporte:0,impuestosImporte:0,varianteId:x.varianteId||null,profesionalId:state.operatorId});renderTicket()}function renderTicket(){const t=totals();$("ticket").innerHTML=state.items.length?state.items.map((x,i)=>`<div class="ticket-line"><div class="row between"><b>${esc(x.concepto)}</b><b>${money(x.cantidad*x.precioUnitario-x.descuentoImporte)}</b></div><small class="muted">${money(x.precioUnitario)} · ${x.tipoLinea}</small><div class="line-controls"><div class="qty"><button data-dec="${i}">−</button> <b>${x.cantidad}</b> <button data-inc="${i}">+</button></div><button class="btn" data-del="${i}">Quitar</button></div></div>`).join(""):"<p class=muted>Añade conceptos del catálogo.</p>";$("ticket").querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const i=+b.dataset.dec;state.items[i].cantidad--;if(state.items[i].cantidad<=0)state.items.splice(i,1);renderTicket()});$("ticket").querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{state.items[+b.dataset.inc].cantidad++;renderTicket()});$("ticket").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{state.items.splice(+b.dataset.del,1);renderTicket()});$("subtotal").textContent=money(t.subtotal);$("total").textContent=money(t.total);renderPayments()}function renderPayments(){const t=totals(),paid=num(state.payments.reduce((s,p)=>s+p.amount-p.change,0));$("payments").innerHTML=state.payments.length?state.payments.map((p,i)=>`<div class=row><span>${esc(p.method)} · ${money(p.amount)} · cambio ${money(p.change)}</span><button class=btn data-pay="${i}">Quitar</button></div>`).join(""):"Sin pagos añadidos.";$("payments").querySelectorAll("[data-pay]").forEach(b=>b.onclick=()=>{state.payments.splice(+b.dataset.pay,1);renderPayments()});$("paid").textContent=money(paid);$("pending").textContent=money(Math.max(0,t.total-paid))}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}function openSession(){const openingCash=$("openingCash").value;if(openingCash.trim()===""){toast("Indica el efectivo inicial, incluso si es cero.");return}request("SESSION_OPEN",{openingCash:num(openingCash),terminalId:"TPV"},"SESSION_OPEN_RES").then(unwrap).then(()=>request("CASHIER_STATE",{},"CASHIER_STATE_RES")).then(unwrap).then(s=>{state.session=s;renderSession();toast("Caja abierta")}).catch(e=>error(e.message))}function restoreOperationKeys(){try{const saved=JSON.parse(sessionStorage.getItem("mmTPVOperationKeys")||"{}");if(saved&&typeof saved==="object"&&!Array.isArray(saved))state.operationKeys=saved}catch(_){state.operationKeys={}}}
-function persistOperationKeys(){try{sessionStorage.setItem("mmTPVOperationKeys",JSON.stringify(state.operationKeys))}catch(_){}}
-function operationScope(kind){return kind+"_"+String(state.session?.sessionId||"GLOBAL")}function operationKey(kind){const scope=operationScope(kind);if(!state.operationKeys[scope]){const suffix=window.crypto?.randomUUID?.().replace(/-/g,"")||Date.now().toString(36)+"_"+(++state.seq).toString(36);state.operationKeys[scope]="TPVUI_"+kind+"_"+suffix;persistOperationKeys()}return state.operationKeys[scope]}
-restoreOperationKeys();
-function keyedAction(kind,type,payload,response){const scope=operationScope(kind),key=operationKey(kind);return action(type,{...payload,idempotencyKey:key},response).then(result=>{delete state.operationKeys[scope];persistOperationKeys();return result})}
-function action(type,payload,response){if(!state.session){error("Abre la caja antes de continuar.");return Promise.reject(new Error("TPV_SESSION_NOT_OPEN"))}return call(type,payload,response).then(result=>{toast("Operación registrada");return request("CASHIER_STATE",{},"CASHIER_STATE_RES").then(unwrap).then(s=>{state.session=s;renderSession();return result})}).catch(e=>{error(e.message);throw e})}
-$("openSession").onclick=openSession;$("refresh").onclick=bootstrap;$("search").oninput=renderCatalog;$("tax").onchange=renderTicket;$("clear").onclick=()=>{state.items=[];state.payments=[];renderTicket()};$("addPayment").onclick=()=>{const amount=num($("payAmount").value),change=num($("change").value);if(amount<=0||change<0||change>amount){toast("Pago no válido");return}state.payments.push({method:$("payMethod").value,amount,change});$("payAmount").value="";$("change").value="0";renderPayments()};$("saveSale").onclick=()=>{const t=totals(),paid=num(state.payments.reduce((s,p)=>s+p.amount-p.change,0));if(!state.session||!state.items.length||paid!==t.total){error("La venta requiere caja abierta, líneas y pago exacto.");return}keyedAction("SALE","SALE_REGISTER",{sessionId:state.session.sessionId,profesionalId:state.operatorId,customerIdentityId:state.customerIdentityId,lineItems:state.items,payments:state.payments,subtotal:t.subtotal,tax:t.tax,total:t.total},"SALE_REGISTER_RES").then(result=>{state.lastSale=result;state.items=[];state.payments=[];renderTicket();toast("Venta registrada: "+(result.saleId||"OK"))}).catch(()=>{})};$("cashIn").onclick=()=>{const amountInput=prompt("Importe de entrada");if(amountInput===null)return;const reason=prompt("Motivo de entrada");if(reason===null||reason.trim().length<3){toast("El motivo debe tener al menos tres caracteres.");return}return keyedAction("CASH_IN","CASH_MOVEMENT",{movementType:"ENTRADA",amount:num(amountInput),reason:reason.trim()},"CASH_MOVEMENT_RES").catch(()=>{})};$("cashOut").onclick=()=>{const amountInput=prompt("Importe de salida");if(amountInput===null)return;const reason=prompt("Motivo de salida");if(reason===null||reason.trim().length<3){toast("El motivo debe tener al menos tres caracteres.");return}return keyedAction("CASH_OUT","CASH_MOVEMENT",{movementType:"SALIDA",amount:num(amountInput),reason:reason.trim()},"CASH_MOVEMENT_RES").catch(()=>{})};$("refund").onclick=()=>{const saleId=prompt("Identificador de venta",state.lastSale?.saleId||""),amount=num(prompt("Importe de devolución")),paymentMethod=String(prompt("Medio original: EFECTIVO, TARJETA, BIZUM u OTROS")||"").trim().toUpperCase(),reason=prompt("Motivo");return keyedAction("REFUND","REFUND",{saleId,payments:[{paymentMethod,amount}],reason},"REFUND_RES").catch(()=>{})};$("ticketX").onclick=()=>keyedAction("TICKET_X","TICKET_X",{sessionId:state.session?.sessionId},"TICKET_X_RES").catch(()=>{});$("ticketZ").onclick=()=>{const countedInput=prompt("Efectivo contado");if(countedInput===null)return;if(countedInput.trim()===""){toast("Indica el efectivo contado; utiliza 0 si corresponde.");return}const reason=prompt("Motivo de diferencia (dejar vacío si coincide)");if(reason===null)return;return action("TICKET_Z",{sessionId:state.session?.sessionId,countedCash:num(countedInput),differenceReason:reason.trim()},"TICKET_Z_RES").catch(()=>{})};$("cashSummary").onclick=()=>call("SESSION_SUMMARY",{sessionId:state.session?.sessionId},"SESSION_SUMMARY_RES").then(d=>toast(JSON.stringify(d))).catch(e=>error(e.message));$("audit").onclick=()=>call("AUDIT_LIST",{sessionId:state.session?.sessionId},"AUDIT_LIST_RES").then(d=>toast(JSON.stringify(d))).catch(e=>error(e.message));$("printLast").onclick=()=>window.print();document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>{state.kind=b.dataset.kind;document.querySelectorAll("[data-kind]").forEach(x=>x.classList.toggle("active",x===b));renderCatalog()});$("addCustom").onclick=()=>{const name=$("customName").value.trim(),price=num($("customPrice").value);if(!name||price<=0){toast("Concepto o importe no válido");return}addLine({tipoLinea:"PERSONALIZADA",concepto:name,precioMinimo:price});$("customName").value="";$("customPrice").value=""};$("customer").onclick=()=>{const search=prompt("Buscar cliente (nombre o email)");if(search===null)return;if(search.trim().length<2){toast("Introduce al menos dos caracteres.");return}call("CUSTOMERS_SEARCH",{search:search.trim()},"CUSTOMERS_SEARCH_RES").then(result=>{const items=result.items||[];if(!items.length){toast("No hay coincidencias.");return}const choices=["0. Cliente anónimo",...items.map((x,i)=>(i+1)+". "+x.displayName)].join("\n");const selected=Number(prompt("Selecciona cliente\n"+choices));if(!Number.isInteger(selected)||selected<0||selected>items.length)return;if(selected===0){state.customerIdentityId=null;$("customer").textContent="Cliente";return}const person=items[selected-1];state.customerIdentityId=person.identityId;$("customer").textContent="Cliente: "+person.displayName}).catch(e=>error(e.message))};$("operatorBtn").onclick=()=>{if(!state.staff.length){toast("No hay personal disponible.");return}const choices=state.staff.map((x,i)=>(i+1)+". "+x.nombre).join("\n");const selected=Number(prompt("Selecciona operador\\n"+choices));if(Number.isInteger(selected)&&selected>=1&&selected<=state.staff.length){const person=state.staff[selected-1];state.operatorId=person.profesionalId;$("operator").textContent=person.nombre;toast("Operador seleccionado")}};setInterval(()=>$("clock").textContent=new Date().toLocaleString("es-ES"),1000);renderTicket();send("MM_READY",{component:"htmlTPV",protocolVersion:VERSION})})();
+/* ============================================================
+   TPV Marian Madrid — Interfaz mejorada
+   Codificación neutra: sin referencias a sandbox/qa/live.
+   ============================================================ */
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+  const num = (v) => Number.parseFloat(v) || 0;
+  const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
+
+  /* ---------- Estado local ---------- */
+  const state = {
+    session: null,
+    operatorId: null,
+    staff: [],
+    items: [],
+    payments: [],
+    paymentMethod: "EFECTIVO",
+    busy: false,
+    lastSale: null,
+  };
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(msg) {
+    const el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
+  }
+  function error(msg) { toast("Error: " + msg); }
+
+  /* ---------- Modales ---------- */
+  function openModal(title, bodyHtml, onConfirm) {
+    $("modalTitle").textContent = title;
+    $("modalBody").innerHTML = bodyHtml;
+    $("modalBackdrop").classList.remove("hidden");
+    $("modalConfirm").onclick = async () => {
+      try {
+        await onConfirm();
+        closeModal();
+      } catch (e) {
+        error(e.message);
+      }
+    };
+  }
+  function closeModal() {
+    $("modalBackdrop").classList.add("hidden");
+  }
+  $("modalClose").onclick = closeModal;
+  $("modalCancel").onclick = closeModal;
+
+  /* ---------- Envío al controlador (postMessage) ---------- */
+  function call(type, payload, responseType) {
+    return new Promise((resolve, reject) => {
+      const id = "req-" + Math.random().toString(36).slice(2);
+      const handler = (event) => {
+        const data = event.data || {};
+        if (data.type === responseType && data.requestId === id) {
+          window.removeEventListener("message", handler);
+          if (data.error) reject(new Error(data.error));
+          else resolve(data.payload);
+        }
+      };
+      window.addEventListener("message", handler);
+      window.parent.postMessage({ type, payload, requestId: id }, "*");
+      setTimeout(() => {
+        window.removeEventListener("message", handler);
+        reject(new Error("TPV_TIMEOUT"));
+      }, 15000);
+    });
+  }
+
+  /* ---------- Idempotencia local ---------- */
+  function keyedAction(keyPrefix, type, payload, responseType) {
+    const storageKey = "tpv_key_" + keyPrefix;
+    let key = sessionStorage.getItem(storageKey);
+    if (!key) {
+      key = keyPrefix + ":" + crypto.randomUUID();
+      sessionStorage.setItem(storageKey, key);
+    }
+    const fullPayload = Object.assign({}, payload, { idempotencyKey: key });
+    return call(type, fullPayload, responseType).then((result) => {
+      sessionStorage.removeItem(storageKey);
+      return result;
+    });
+  }
+
+  /* ---------- Operador ---------- */
+  function requireOperator() {
+    if (!state.operatorId) {
+      toast("Selecciona el operador antes de continuar.");
+      throw new Error("TPV_OPERATOR_REQUIRED");
+    }
+  }
+
+  function renderOperators() {
+    const select = $("operatorSelect");
+    select.innerHTML = '<option value="">Sin asignar</option>' +
+      state.staff.map((p) =>
+        `<option value="${esc(p.profesionalId)}">${esc(p.nombre)}</option>`
+      ).join("");
+    if (state.operatorId) select.value = state.operatorId;
+  }
+
+  $("operatorSelect").onchange = (e) => {
+    const person = state.staff.find((p) => p.profesionalId === e.target.value);
+    state.operatorId = person ? person.profesionalId : null;
+    toast(person ? "Operador: " + person.nombre : "Operador sin asignar");
+  };
+
+  /* ---------- Bloqueo de operaciones ---------- */
+  function setBusy(value) {
+    state.busy = value;
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+      const el = $(id);
+      if (el) el.disabled = value;
+    });
+  }
+
+  async function runOperation(fn) {
+    if (state.busy) return;
+    setBusy(true);
+    try {
+      return await fn();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* ---------- Catálogo (ejemplo mínimo; el controlador lo carga) ---------- */
+  function renderCatalog(items) {
+    const list = $("catalogList");
+    if (!items || !items.length) {
+      list.innerHTML = "<p>No hay elementos.</p>";
+      return;
+    }
+    list.innerHTML = items.map((it) => `
+      <div class="catalog-item" data-id="${esc(it.id)}" data-name="${esc(it.nombre)}" data-price="${num(it.precio)}">
+        <span>${esc(it.nombre)}</span>
+        <span class="price">${money(it.precio)}</span>
+      </div>
+    `).join("");
+    list.querySelectorAll(".catalog-item").forEach((el) => {
+      el.onclick = () => {
+        const id = el.dataset.id;
+        const name = el.dataset.name;
+        const price = num(el.dataset.price);
+        state.items.push({ id, name, price, qty: 1 });
+        renderTicket();
+      };
+    });
+  }
+
+  /* ---------- Ticket ---------- */
+  function renderTicket() {
+    const container = $("ticketLines");
+    if (!state.items.length) {
+      container.innerHTML = '<p style="color:var(--muted);">Añade conceptos del catálogo.</p>';
+    } else {
+      container.innerHTML = state.items.map((item, i) => `
+        <div class="ticket-line">
+          <span>${esc(item.name)}</span>
+          <span class="qty">
+            <button data-action="minus" data-idx="${i}">−</button>
+            <span>${item.qty}</span>
+            <button data-action="plus" data-idx="${i}">+</button>
+          </span>
+          <span>${money(item.price * item.qty)}</span>
+        </div>
+      `).join("");
+      container.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.onclick = () => {
+          const idx = Number(btn.dataset.idx);
+          if (btn.dataset.action === "plus") state.items[idx].qty++;
+          else if (btn.dataset.action === "minus") {
+            state.items[idx].qty--;
+            if (state.items[idx].qty <= 0) state.items.splice(idx, 1);
+          }
+          renderTicket();
+        };
+      });
+    }
+    const subtotal = state.items.reduce((s, it) => s + it.price * it.qty, 0);
+    $("subtotal").textContent = money(subtotal);
+    $("taxes").textContent = money(0);
+    $("total").textContent = money(subtotal);
+    renderPaymentSummary();
+  }
+
+  $("clearTicket").onclick = () => {
+    state.items = [];
+    state.payments = [];
+    renderTicket();
+  };
+
+  /* ---------- Pagos ---------- */
+  function renderPaymentSummary() {
+    const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
+    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
+    const pending = Math.max(0, total - applied);
+    const change = Math.max(0, applied - total);
+    $("applied").textContent = money(applied);
+    $("pending").textContent = money(pending);
+    $("change").textContent = money(change);
+    $("paymentList").innerHTML = state.payments.length
+      ? state.payments.map((p) => `<div>${esc(p.method)}: ${money(p.amount)}</div>`).join("")
+      : "Sin pagos añadidos.";
+  }
+
+  $("paymentMethods").querySelectorAll("button[data-method]").forEach((btn) => {
+    btn.onclick = () => {
+      $("paymentMethods").querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.paymentMethod = btn.dataset.method;
+    };
+  });
+
+  $("quickCash").querySelectorAll("button[data-cash]").forEach((btn) => {
+    btn.onclick = () => {
+      const val = btn.dataset.cash;
+      if (val === "exact") {
+        const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
+        $("paymentAmount").value = total.toFixed(2);
+      } else {
+        $("paymentAmount").value = val;
+      }
+    };
+  });
+
+  $("addPayment").onclick = () => {
+    const amount = num($("paymentAmount").value);
+    if (amount <= 0) {
+      toast("Introduce un importe válido.");
+      return;
+    }
+    state.payments.push({ method: state.paymentMethod, amount });
+    $("paymentAmount").value = "";
+    renderPaymentSummary();
+  };
+
+  /* ---------- Guardar venta ---------- */
+  $("saveSale").onclick = () => runOperation(async () => {
+    requireOperator();
+    if (!state.items.length) {
+      toast("El ticket está vacío.");
+      return;
+    }
+    const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
+    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
+    if (Math.abs(applied - total) > 0.001) {
+      toast("El pago no cubre el total exacto.");
+      return;
+    }
+    try {
+      const result = await keyedAction("SALE", "SALE_REGISTER", {
+        sessionId: state.session?.sessionId,
+        operatorId: state.operatorId,
+        lines: state.items.map((it) => ({
+          itemId: it.id,
+          name: it.name,
+          qty: it.qty,
+          price: it.price,
+        })),
+        payments: state.payments.map((p) => ({
+          paymentMethod: p.method,
+          amount: p.amount,
+        })),
+      }, "SALE_REGISTER_RES");
+      state.lastSale = result;
+      toast("Venta registrada.");
+      state.items = [];
+      state.payments = [];
+      renderTicket();
+    } catch (e) {
+      error(e.message);
+    }
+  });
+
+  /* ---------- Entrada / Salida de efectivo ---------- */
+  function openCashMovement(type) {
+    requireOperator();
+    openModal(
+      type === "ENTRADA" ? "Entrada de efectivo" : "Salida de efectivo",
+      `
+        <input id="movementAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
+        <input id="movementConcept" class="field" maxlength="500" placeholder="Concepto obligatorio">
+      `,
+      async () => {
+        const amount = num($("movementAmount").value);
+        const reason = $("movementConcept").value.trim();
+        if (amount <= 0 || reason.length < 3) {
+          throw new Error("Indica importe y concepto válidos.");
+        }
+        await keyedAction("CASH_" + type, "CASH_MOVEMENT", {
+          movementType: type,
+          amount,
+          reason,
+          operatorId: state.operatorId,
+        }, "CASH_MOVEMENT_RES");
+        toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
+      }
+    );
+  }
+  $("cashIn").onclick = () => openCashMovement("ENTRADA");
+  $("cashOut").onclick = () => openCashMovement("SALIDA");
+
+  /* ---------- Devolución ---------- */
+  $("refund").onclick = () => {
+    requireOperator();
+    openModal("Devolución", `
+      <input id="refundSaleId" class="field" placeholder="ID de venta">
+      <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
+      <select id="refundMethod" class="field">
+        <option value="EFECTIVO">Efectivo</option>
+        <option value="TARJETA">Tarjeta</option>
+        <option value="BIZUM">Bizum</option>
+        <option value="OTROS">Otros</option>
+      </select>
+      <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
+    `, async () => {
+      const saleId = $("refundSaleId").value.trim();
+      const amount = num($("refundAmount").value);
+      const paymentMethod = $("refundMethod").value;
+      const reason = $("refundReason").value.trim();
+      if (!saleId || amount <= 0 || reason.length < 3) {
+        throw new Error("Completa venta, importe y motivo.");
+      }
+      await keyedAction("REFUND", "REFUND", {
+        saleId,
+        reason,
+        operatorId: state.operatorId,
+        payments: [{ paymentMethod, amount }],
+      }, "REFUND_RES");
+      toast("Devolución registrada.");
+    });
+  };
+
+  /* ---------- Resumen e historial ---------- */
+  $("cashSummary").onclick = async () => {
+    try {
+      const result = await call("SESSION_SUMMARY", { sessionId: state.session?.sessionId }, "SESSION_SUMMARY_RES");
+      openModal("Resumen de caja", `
+        <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
+      `, async () => {});
+    } catch (e) { error(e.message); }
+  };
+
+  $("audit").onclick = async () => {
+    try {
+      const result = await call("AUDIT_LIST", { sessionId: state.session?.sessionId }, "AUDIT_LIST_RES");
+      const items = result.items || [];
+      openModal("Historial de operaciones", `
+        <div style="max-height:400px;overflow-y:auto;">
+          ${items.length ? items.map((i) => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--line);">
+              <strong>${esc(i.operationType || "Operación")}</strong>
+              <span style="float:right;">${money(i.amount || 0)}</span><br>
+              <small>${esc(i.status || "Registrada")}</small>
+              <small>${esc(i.reason || "")}</small>
+            </div>
+          `).join("") : "<p>No hay operaciones.</p>"}
+        </div>
+      `, async () => {});
+    } catch (e) { error(e.message); }
+  };
+
+  /* ---------- Control X ---------- */
+  $("ticketX").onclick = () => runOperation(async () => {
+    try {
+      const result = await call("TICKET_X", { sessionId: state.session?.sessionId }, "TICKET_X_RES");
+      openModal("Control X", `
+        <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
+      `, async () => {});
+    } catch (e) { error(e.message); }
+  });
+
+  /* ---------- Cierre Z ---------- */
+  $("ticketZ").onclick = () => {
+    requireOperator();
+    openModal("Cierre Z diario", `
+      <p>El cierre bloqueará la sesión actual.</p>
+      <input id="countedCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
+      <input id="differenceReason" class="field" maxlength="200" placeholder="Motivo si existe diferencia">
+    `, async () => {
+      const countedCash = num($("countedCash").value);
+      const differenceReason = $("differenceReason").value.trim();
+      await keyedAction("TICKET_Z", "TICKET_Z", {
+        sessionId: state.session?.sessionId,
+        countedCash,
+        differenceReason,
+        operatorId: state.operatorId,
+      }, "TICKET_Z_RES");
+      toast("Cierre Z registrado.");
+    });
+  };
+
+  /* ---------- Impresión ---------- */
+  $("printLast").onclick = () => {
+    if (!state.lastSale) {
+      toast("No hay último ticket.");
+      return;
+    }
+    window.print();
+  };
+
+  /* ---------- Escucha de mensajes del controlador ---------- */
+  window.addEventListener("message", (event) => {
+    const data = event.data || {};
+    if (data.type === "CATALOG_LOADED") {
+      renderCatalog(data.payload.items || []);
+    }
+    if (data.type === "STAFF_LOADED") {
+      state.staff = data.payload.items || [];
+      renderOperators();
+    }
+    if (data.type === "SESSION_STATE") {
+      state.session = data.payload.session || null;
+      $("sessionLabel").textContent = state.session?.sessionId || "—";
+      const isOpen = !!state.session;
+      $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
+      $("cashLabel").textContent = isOpen ? "Caja abierta" : "Caja cerrada";
+      $("openCash").disabled = isOpen;
+    }
+    if (data.type === "CONNECTION_STATE") {
+      const ok = !!data.payload.connected;
+      $("connStatus").className = "dot " + (ok ? "ok" : "error");
+      $("connLabel").textContent = ok ? "Conectado" : "Desconectado";
+    }
+  });
+
+  /* ---------- Inicialización: solicitar datos al controlador ---------- */
+  function init() {
+    window.parent.postMessage({ type: "TPV_READY" }, "*");
+    call("CATALOG_LIST", {}, "CATALOG_LOADED").then((r) => {
+      renderCatalog(r.items || []);
+    }).catch(() => {});
+    call("STAFF_LIST", {}, "STAFF_LOADED").then((r) => {
+      state.staff = r.items || [];
+      renderOperators();
+    }).catch(() => {});
+    call("SESSION_GET", {}, "SESSION_STATE").then((r) => {
+      state.session = r.session || null;
+      $("sessionLabel").textContent = state.session?.sessionId || "—";
+      $("cashStatus").className = "dot " + (state.session ? "ok" : "error");
+      $("cashLabel").textContent = state.session ? "Caja abierta" : "Caja cerrada";
+    }).catch(() => {});
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
