@@ -135,7 +135,7 @@ export function assertInsertAllowed(collection, item) {
             throw _policyError("CMS_TPV_LEDGER_CONTRACT_INVALID");
         }
     }
-    if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES &&
+    if (collection === BUSINESS_COLLECTIONS.TPV_IDENTITIES &&
         (item.syntheticOnly !== true ||
          item.environment !== "SANDBOX" ||
          item.testRunId !== TPV_RUNTIME_POLICY.LEGACY_RUN_ID)) {
