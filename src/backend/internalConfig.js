@@ -91,6 +91,14 @@ export const TPV_LEGACY_COLLECTIONS = Object.freeze({
 
 export const TPV_SYNTHETIC_SOURCE = "SYNTHETIC";
 export const TPV_NATIVE_SOURCE = "NATIVE";
+export const TPV_PAYMENT_METHOD = Object.freeze({
+  EFECTIVO: "EFECTIVO",
+  TARJETA: "TARJETA",
+  BIZUM: "BIZUM",
+  BONO: "BONO",
+  TARJETA_REGALO: "TARJETA_REGALO",
+  OTROS: "OTROS",
+});
 export const TPV_LEDGER_SOURCE = "TPV_LEDGER";
 export const TPV_MIN_LEDGER_VERSION = 1;
 
