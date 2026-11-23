@@ -103,7 +103,7 @@ GitHub no demuestra qué código está instalado en Wix. Wix Site Context no dev
 - #523: seis proyecciones CitasF2 divergentes frente a bookings nativos CANCELED.
 - #522: 16 discrepancias de pago online y 8 presenciales.
 - #188: E2E de Mis reservas/Mis pedidos y reservas duales.
-- #435: aceptación/migración del TPV QA.
+- #435: el adaptador actual ya persiste discriminadores TPV lógicos en MovimientosCaja y sesiones en CajaActual; reconciliar la issue abierta con este código y cerrar solo tras validar Runtime.
 - #237: verificar consumidores restantes del inventario custom antes de cerrar.
 - #173: Capa 3 no certificada.
 - #521: accesibilidad; el scanner anterior no procesó páginas y no equivale a cero findings.
