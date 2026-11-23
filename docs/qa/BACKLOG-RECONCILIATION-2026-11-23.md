@@ -11,7 +11,7 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | PR #528 ya integra lock compartido; falta prueba concurrente/recuperación en Wix Runtime. | No mutar singleton live durante auditoría. |
 | [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · actualizado 2026-11-23 | Conciliar cada compensación con pedido/ledger/transacción fuente y definir recuperación trazable. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
 | [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open · código de migración integrado; PR #556 en Draft | MapaStaff/consumidores alineados; PR #556 elimina fallback TERCERO/EMISOR. Falta CONFIG_SISTEMA legal verificado y Runtime. | No recrear DatosFiscales ni CONFIG_SISTEMA sin datos verificados. |
-| [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Auditar las 8 ACTIVE documentadas: 7 PREINSTALLED y 1 APPLICATION; inspeccionar definición e historial de la APPLICATION y contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
+| [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Última actualización: 7 PREINSTALLED ACTIVE; la APPLICATION «Configuración de control laboral» está INACTIVE, revisión 5. Inspeccionar efectos/historial de las siete preinstaladas y definir contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
 | [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Open | Validación normativa, técnica, proveedor y asesoría; contrato común de huella y pruebas. | Mantener writers, firma, QR, emisión y remisión deshabilitados. |
 | [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Open | Gate paraguas: consolidar evidencia de todos los P0/P1 y conservar NO-GO. | No duplicar implementación de issues especializadas. |
 
@@ -19,9 +19,9 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 
 | PR | Estado | Evidencia CI offline | Gate pendiente |
 |---|---|---|---|
-| [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | Draft / no merge | 79 suites / 726 tests PASS; secret scanning PASS | Git–Wix Editor, Preview, permisos, idempotencia y concurrencia Runtime |
-| [#554](https://github.com/nachoortegazgz/marianmadridz/pull/554) | Draft / no merge | 79 suites / 725 tests PASS; secret scanning PASS | Auditoría persistida por sesión en Wix Preview/Runtime |
-| [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | Draft / no merge | 79 suites / 728 tests PASS; secret scanning PASS | CONFIG_SISTEMA legal verificado y lectura Runtime |
+| [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | Draft / no merge | 79 suites / 726 tests PASS; secret scanning PASS | Actualizar rama (1 commit behind main); Git–Wix Editor, Preview, permisos, idempotencia y concurrencia Runtime |
+| [#554](https://github.com/nachoortegazgz/marianmadridz/pull/554) | Draft / no merge | 79 suites / 725 tests PASS; secret scanning PASS; contrato de respuesta HTML/controlador/WebMethod revisado estáticamente | Actualizar rama (1 commit behind main); auditoría persistida por sesión en Wix Preview/Runtime |
+| [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | Draft / no merge | 79 suites / 728 tests PASS; secret scanning PASS | Actualizar rama (1 commit behind main); CONFIG_SISTEMA legal verificado y lectura Runtime |
 
 ## P1 — gobierno y aceptación funcional
 
@@ -56,3 +56,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - [Plan maestro](../MASTER-EXECUTION-PLAN.md)
 - [Estado operativo](../PROJECT-STATUS.md)
 - [Índice documental](../README.md)
+
+## Revalidación de ramas — 2026-11-23
+
+`main` está en `84dbfecbba1ff5ea918d6199dbcde4b5ac4569eb`. Las ramas de PR #551, #554 y #556 comparten como merge-base `24f843d249bfb9636409ebc688dd5e13ff336892` y cada una está un commit por detrás de `main` (la actualización documental #557). No se detecta conflicto de merge en el metadato de GitHub, pero la actualización y repetición de CI sobre el candidato actualizado son gates previos a integrar. La revisión estática de #554 confirma que el controlador encapsula la respuesta WebMethod y el HTML recibe `data.items`; la discrepancia aparente de forma de respuesta queda descartada.
