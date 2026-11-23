@@ -114,8 +114,8 @@ export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
 });
 
 export const TPV_RUNTIME_POLICY = Object.freeze({
-  // Enabled for the isolated Wix Sandbox data plane. Every CajaActual mutation
-  // still requires the exact synthetic Sandbox run marker; fiscal/payment side effects stay disabled.
+  // Synthetic execution is isolated by explicit source/site/version/session/hash metadata.
+  // Legacy run markers remain compatibility-only; fiscal/payment side effects stay disabled.
   ENABLED: true,
   SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
   ALLOW_REAL_PAYMENTS: false,
