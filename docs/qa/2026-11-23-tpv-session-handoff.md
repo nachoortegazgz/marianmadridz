@@ -1,11 +1,10 @@
 # Relevo técnico — TPV y estabilización — 2026-11-23
 
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
 **PR #541:** integrada en main. **PR #540 y #542:** integradas. **PR #543:** integrada en main mediante 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. **PR #537:** preservada en el historial de #541.
 **PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.  
 **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
-**Rama de estabilización:** chore/phase1-repository-stabilization-20261123.  
 **Release:** **NO-GO**.
 
 ## Estado técnico
@@ -22,10 +21,9 @@ BONO y TARJETA_REGALO están aceptados como medios sintéticos y se reflejan por
 
 ## Estado CI en main
 
-- Backend offline quality gates: FAIL, run 45105979742.
-- Secret scanning: SUCCESS, run 45105979748.
-- El fallo inicial estaba en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis. La corrección inicial se integró por PR #542, pero el test continuó fallando por aserciones literales/escape incorrectas; PR #543 corrige el contrato completo.
-- PR #543 pasó CI pre-merge: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. Está integrada en main. Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning SUCCESS (run 45107058755).
+- Backend offline quality gates del HEAD actual: SUCCESS, run 45107377657 (Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint).
+- Gitleaks full-history: SUCCESS, run 45107377700.
+- Las aserciones obsoletas de los seis métodos de pago y del default de movimientos fueron corregidas por PR #543. Los runs fallidos anteriores son históricos; el HEAD actual pasa.
 
 ## Cambios de TPV ya integrados
 
