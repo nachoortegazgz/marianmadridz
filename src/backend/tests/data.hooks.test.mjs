@@ -703,7 +703,7 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
 });
 
 test('HOOK-CAJA-04 keeps MovimientosCaja append-only for synthetic TPV rows', async () => {
-  const runId = IC.TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
+  const runId = IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),
