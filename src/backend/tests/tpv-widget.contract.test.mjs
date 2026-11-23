@@ -50,8 +50,8 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     const html = await source("%23htmlTPV.txt");
     const types = [
         "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS",
-        "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND",
-        "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
+        "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "PARTIAL_CASH_COUNT", "REFUND",
+        "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST", "CASH_MOVEMENTS_EXPORT", "AUDIT_EXPORT",
     ];
     for (const type of types) {
         assert.ok(controller.includes('"' + type + '"'), "controller must dispatch " + type);
