@@ -404,6 +404,8 @@ body {
     paymentMethod: "EFECTIVO",
     busy: false,
     lastSale: null,
+    customerIdentityId: null,
+    customerLabel: null,
   };
 
   /* ---------- Toast ---------- */
@@ -497,6 +499,60 @@ body {
     const person = state.staff.find((item) => item.profesionalId === event.target.value);
     state.profesionalId = person ? person.profesionalId : null;
     toast(person ? "Profesional: " + person.nombre : "Profesional sin asignar");
+  };
+
+  function renderSelectedCustomer() {
+    $("selectClient").textContent = state.customerIdentityId
+      ? "Cliente: " + state.customerLabel
+      : "Cliente";
+  }
+
+  async function searchCustomers() {
+    const search = $("customerSearch").value.trim();
+    if (search.length < 2) throw new Error("Introduce al menos dos caracteres.");
+    const result = await call("CUSTOMERS_SEARCH", { search }, "CUSTOMERS_SEARCH_RES");
+    const items = Array.isArray(result?.items) ? result.items : [];
+    const container = $("customerResults");
+    container.innerHTML = items.length
+      ? items.map((item, index) => `
+          <button type="button" class="btn" data-customer-index="${index}" style="display:block;width:100%;text-align:left;margin:6px 0;">
+            ${esc(item.displayName)}${item.email ? " · " + esc(item.email) : ""}
+          </button>
+        `).join("")
+      : "<p>No se encontraron clientes sintéticos.</p>";
+    container.querySelectorAll("[data-customer-index]").forEach((button) => {
+      button.onclick = () => {
+        const selected = items[Number(button.dataset.customerIndex)];
+        if (!selected?.identityId) return;
+        state.customerIdentityId = selected.identityId;
+        state.customerLabel = selected.displayName;
+        renderSelectedCustomer();
+        closeModal();
+        toast("Cliente seleccionado.");
+      };
+    });
+  }
+
+  $("selectClient").onclick = () => {
+    openModal("Seleccionar cliente", `
+      <input id="customerSearch" class="field" maxlength="100" placeholder="Nombre o correo del cliente">
+      <button id="searchCustomers" type="button" class="btn">Buscar</button>
+      <button id="clearCustomer" type="button" class="btn danger">Quitar cliente</button>
+      <div id="customerResults" style="max-height:300px;overflow-y:auto;margin-top:10px;"></div>
+    `, async () => {
+      if (!state.customerIdentityId) throw new Error("Selecciona un cliente o utiliza Quitar cliente.");
+    });
+    $("searchCustomers").onclick = () => searchCustomers().catch((e) => error(e.message));
+    $("customerSearch").onkeydown = (event) => {
+      if (event.key === "Enter") searchCustomers().catch((e) => error(e.message));
+    };
+    $("clearCustomer").onclick = () => {
+      state.customerIdentityId = null;
+      state.customerLabel = null;
+      renderSelectedCustomer();
+      closeModal();
+      toast("Cliente quitado.");
+    };
   };
 
   function renderSession(session) {
@@ -812,6 +868,7 @@ body {
           change: payment.changeMinor / 100,
         })),
         paymentBreakdown: paymentTotals(),
+        customerIdentityId: state.customerIdentityId,
         subtotal: total,
         tax: 0,
         total,
@@ -1008,7 +1065,7 @@ body {
       await keyedAction("TICKET_Z", "TICKET_Z", {
         sessionId: state.session?.sessionId,
         countedCash,
-        differenceReason,
+        differenceReason: differenceReason,
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       renderSession(null);
