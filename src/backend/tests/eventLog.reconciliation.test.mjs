@@ -129,7 +129,7 @@ test("EVENTLOG-FISCAL-CONFIG-02 only complete explicit SIF configuration is acce
     tipoUsoPosibleSoloVerifactu: "N",
     tipoUsoPosibleMultiOT: "S",
     indicadorMultiplesOT: "S",
-    nifProductor: "X1234567X",
+    nifProductor: "B12345674",
     nombreRazonProductor: "Titular de prueba",
     fechaInicioVerifactu: "2027-07-01",
   });
