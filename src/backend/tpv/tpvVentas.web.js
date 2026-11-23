@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvSandboxIdentities";
+import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
