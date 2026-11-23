@@ -3,7 +3,7 @@ import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import { TPV_IDENTITY_TYPES } from "backend/internalConfig";
-import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvSandboxIdentities";
+import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
