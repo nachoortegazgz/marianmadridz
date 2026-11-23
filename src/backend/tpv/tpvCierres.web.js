@@ -75,7 +75,7 @@ export const generarControlX = webMethod(
             persisted = true;
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "TICKET_X_SANDBOX_GENERADO",
+                action: "TICKET_X_GENERATED",
                 actorId: operator.operatorId,
                 entityType: "TICKET_X",
                 entityId: reportId,
