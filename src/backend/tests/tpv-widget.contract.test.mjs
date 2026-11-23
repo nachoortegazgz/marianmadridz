@@ -80,3 +80,22 @@ test("TPV widget keeps all writes synthetic and does not implement a second paym
     assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);
 });
+
+test("TPV bridge permits the context response and retries READY until a valid context arrives", async () => {
+    const controller = await source("src/public/tpvPageController.js");
+    const bridge = await source("src/public/widgetBridge.js");
+    const html = await source("%23htmlTPV.txt");
+
+    assert.match(controller, /allowedTypes:\s*\[MESSAGE_TYPES\.READY,\s*MESSAGE_TYPES\.CONTEXT,\s*\.\.\.REQUEST_TYPES\]/);
+    assert.match(bridge, /function isAllowedType\(type\)[\s\S]*?allowedTypes\.has\(type\)/);
+    assert.match(bridge, /send\(MESSAGE_TYPES\.CONTEXT, context, message\.messageId \|\| null\)/);
+    assert.match(html, /const HANDSHAKE_RETRY_MS = 500/);
+    assert.match(html, /const HANDSHAKE_MAX_ATTEMPTS = 50/);
+    assert.match(html, /function sendHandshake\(\)[\s\S]*?type: "MM_READY"/);
+    assert.match(html, /data\.type !== "MM_CONTEXT"/);
+    assert.match(html, /context\.data\?\.component === "htmlTPV"/);
+    assert.match(html, /context\.data\?\.protocolVersion === BRIDGE_PROTOCOL_VERSION/);
+    assert.match(html, /if \(connected\) \{\s*initializeWidgetAfterHandshake\(\)/);
+    assert.match(html, /function initializeWidgetAfterHandshake\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
+    assert.doesNotMatch(html, /function init\(\)[\s\S]*?loadCatalog\("SERVICES"\)/);
+});
