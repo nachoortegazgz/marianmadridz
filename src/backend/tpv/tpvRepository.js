@@ -288,7 +288,8 @@ function _isRecognizedSyntheticLedgerItem(item) {
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""));
     const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
         envelope.isSynthetic === true && envelope.realPayment === false &&
-        envelope.externalSideEffects === false && validFingerprint && validHash;
+        envelope.externalSideEffects === false && validHash;
+    const validCurrentCommon = validCommon && validFingerprint;
     const validSessionOrAudit = envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
         Boolean(String(envelope.sessionId || "").trim());
     const validTraceForSite = String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
@@ -315,7 +316,7 @@ function _isRecognizedSyntheticLedgerItem(item) {
         legacyRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
         (String(item.traceId || "").startsWith("TPV:" + legacyRunId + ":") ||
             String(item.traceId || "") === legacyRunId);
-    return validCommon && (currentV2 || currentV1 || legacy);
+    return (validCurrentCommon && (currentV2 || currentV1)) || (validCommon && legacy);
 }
 
 function _virtualRecord(item) {
