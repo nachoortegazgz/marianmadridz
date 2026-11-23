@@ -195,7 +195,7 @@ describe("ControlOperativo hooks", () => {
       ...base(CONTROL_TYPE.TPV_REFUND_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
-      payload: { environment: "SANDBOX" },
+      payload: { sourceType: "SYNTHETIC", siteId: "188bed94-177c-4bc9-a9f0-35080d874f3e" },
     };
     assert.deepEqual(ControlOperativo_beforeInsert(original), original);
     seed(original);
@@ -215,7 +215,7 @@ describe("ControlOperativo hooks", () => {
       ...base(CONTROL_TYPE.TPV_SESSION_LOCK),
       version: 0,
       expiresAt: new Date(Date.now() + 60000),
-      payload: { sessionId: "SANDBOX-SESSION-20261116", environment: "SANDBOX" },
+      payload: { sessionId: "TPV-SESSION-20261116", sourceType: "SYNTHETIC", siteId: "188bed94-177c-4bc9-a9f0-35080d874f3e" },
     };
     assert.deepEqual(ControlOperativo_beforeInsert(original), original);
     seed(original);
@@ -303,7 +303,7 @@ describe("ControlOperativo hooks", () => {
       "SLOT_LOCK", "WEBHOOK_CLAIM", "WEBHOOK_EVENT", "IDEMPOTENCY", "RATE_LIMIT",
       "SYSTEM_FLAG", "DEDUPE_KEY", "LEDGER_IDEMPOTENCY",
       "COMPENSATION", "ALERT", "DAYS_CACHE", "DUAL_CACHE",
-      "DISPLAY_TOKEN", "TPV_SANDBOX_REFUND_LOCK", "TPV_SANDBOX_SESSION_LOCK",
+      "DISPLAY_TOKEN", "TPV_REFUND_LOCK", "TPV_SESSION_LOCK",
     ];
     assert.deepEqual(Object.values(CONTROL_TYPE).sort(), expected.sort());
   });
