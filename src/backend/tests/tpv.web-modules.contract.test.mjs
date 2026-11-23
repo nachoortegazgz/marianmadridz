@@ -392,7 +392,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /openCashMovement\("ENTRADA"\)/);
     assert.match(html, /openCashMovement\("SALIDA"\)/);
     assert.match(html, /keyedAction\("REFUND",\s*"REFUND"/);
-    assert.match(html, /keyedAction\("TICKET_X",\s*"TICKET_X"/);
+    assert.match(html, /call\("TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
     assert.match(html, /action\("TICKET_Z"/);
 });
  
