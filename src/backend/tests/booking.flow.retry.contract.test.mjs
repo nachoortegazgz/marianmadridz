@@ -85,6 +85,14 @@ test("BOOK-FLOW-STAFF-BALANCE-01 dual phases use the common available staff pool
   assert.match(sagaSource, /bookingBodyF1\.selectedPaymentOption = isOnline/);
 });
 
+test("BOOK-FLOW-F2-INTERNAL-AVAIL-01 internal F2 bypasses only the online-booking gate", () => {
+  assert.match(availabilitySource, /serviceId: linkedServiceId,[\s\S]{0,260}internalPhase: true/);
+  assert.match(availabilitySource, /bookOnlineDisabled: false/);
+  assert.match(availabilitySource, /violations\.bookOnlineDisabled === true/);
+  assert.match(managerSource, /serviceId: f2ServiceId,[\s\S]{0,260}internalPhase: true/);
+  assert.match(managerSource, /internalPhase: cita\?\.bookingType === BOOKING_TYPE\.DUAL_F2/);
+});
+
 test("BOOK-FLOW-SDK-ID-01 all @wix/bookings slot identifiers use the SDK _id shape", () => {
   assert.match(bookingCoreSource, /resource: \{ _id: resourceIdClean \}/);
   assert.match(bookingCoreSource, /\{ _id: incoming, locationType: "OWNER_BUSINESS" \}/);

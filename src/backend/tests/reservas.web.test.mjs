@@ -123,11 +123,14 @@ async function listAvailability(payload) {
   return { timeSlots: slots };
 }
 
-function availSlot(startLocal, endLocal, staffIds) {
+function availSlot(startLocal, endLocal, staffIds, overrides = {}) {
   return {
     localStartDate: startLocal,
     localEndDate: endLocal,
-    bookable: true,
+    bookable: overrides.bookable ?? true,
+    ...(overrides.bookingPolicyViolations
+      ? { bookingPolicyViolations: overrides.bookingPolicyViolations }
+      : {}),
     availableResources: [
       { resourceTypeId: STAFF_TYPE, resources: staffIds.map((id) => ({ _id: id })) },
     ],
@@ -889,6 +892,50 @@ test('RES-DUAL-04B customer availability returns only visible slots and persists
   assert.strictEqual(slotCacheRows.length, 0, 'no raw or complete slot inventory is persisted');
 });
 
+test('RES-DUAL-04C hidden F2 with online booking disabled still forms a same-staff pair', async () => {
+  resetState();
+  await invalidateStaffCache();
+  const staffResourceId = guid();
+  const f2ServiceId = guid();
+  const f1 = baseServiceRow({
+    allowCombine: true,
+    linkedPhases: f2ServiceId,
+    exposureDuration: 30,
+  });
+  seedService(f1);
+  seedService(baseServiceRow({ serviceId: f2ServiceId, clientHidden: true }));
+  slotsState.responses.set(f1.serviceId, [
+    availSlot('2026-10-20T09:00:00', '2026-10-20T09:30:00', [staffResourceId]),
+  ]);
+  slotsState.responses.set(f2ServiceId, [
+    availSlot('2026-10-20T10:00:00', '2026-10-20T10:40:00', [staffResourceId], {
+      bookable: false,
+      bookingPolicyViolations: {
+        bookOnlineDisabled: true,
+        tooEarlyToBook: false,
+        tooLateToBook: false,
+      },
+    }),
+  ]);
+
+  const result = await RW._getCertifiedDualSlotsInternal(f1.serviceId, '', '2026-10-20');
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.length, 1);
+  assert.strictEqual(result.data[0].slotF2.localStartDate, '2026-10-20T10:00:00');
+  assert.strictEqual(result.data[0].resourceId, staffResourceId);
+  assert.strictEqual(result.data[0].slotF2.resourceId, staffResourceId);
+
+  const f1Call = slotsState.calls.find((call) => call.serviceId === f1.serviceId);
+  const f2Call = slotsState.calls.find((call) => call.serviceId === f2ServiceId);
+  assert.strictEqual(f1Call.bookable, true, 'customer-facing F1 remains strictly bookable online');
+  assert.strictEqual(f2Call.bookable, undefined, 'internal F2 must not require online bookability');
+  assert.deepStrictEqual(f2Call.bookingPolicyViolations, {
+    tooEarlyToBook: false,
+    tooLateToBook: false,
+  });
+});
+
 test('RES-DUAL-05 gap below exposure -> no pair (fail-closed empty)', async () => {
   resetState();
   await invalidateStaffCache();
@@ -1055,7 +1102,14 @@ test('RES-RSF-07 dual exact match success: both slots normalized, same staff', a
   seedService(baseServiceRow({ serviceId: f2svc, clientHidden: true }));
   seedStaffApi([{ resourceId: st1, name: 'Ana', role: 'STYLIST' }]);
   slotsState.responses.set(row.serviceId, [availSlot('2026-10-20T09:00:00', '2026-10-20T10:00:00', [st1])]);
-  slotsState.responses.set(f2svc, [availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1])]);
+  slotsState.responses.set(f2svc, [availSlot('2026-10-20T10:10:00', '2026-10-20T10:40:00', [st1], {
+    bookable: false,
+    bookingPolicyViolations: {
+      bookOnlineDisabled: true,
+      tooEarlyToBook: false,
+      tooLateToBook: false,
+    },
+  })]);
   const res = await RW._resolveStaffForSlotInternal({
     serviceId: row.serviceId,
     f1Start: '2026-10-20T09:00:00', f1End: '2026-10-20T10:00:00',
@@ -1064,6 +1118,12 @@ test('RES-RSF-07 dual exact match success: both slots normalized, same staff', a
   assert.strictEqual(res.status, 'SUCCESS');
   assert.strictEqual(res.data.slotF2.serviceId, f2svc);
   assert.strictEqual(res.data.resourceId, st1);
+  const f2Call = slotsState.calls.find((call) => call.serviceId === f2svc);
+  assert.strictEqual(f2Call.bookable, undefined);
+  assert.deepStrictEqual(f2Call.bookingPolicyViolations, {
+    tooEarlyToBook: false,
+    tooLateToBook: false,
+  });
 });
 
 test('RES-RSF-08 dual F2 on different day -> F2_DIFFERENT_DAY', async () => {
@@ -1745,6 +1805,41 @@ test('RES-CONTRACT-01 exports surface frozen (v10)', () => {
   }
 });
 
+
+test('RES-RECHECK-02 exact internal F2 revalidation accepts only online-disabled policy violation', async () => {
+  resetState();
+  const row = baseServiceRow({ clientHidden: true });
+  const staffResourceId = guid();
+  seedService(row);
+  slotsState.responses.set(row.serviceId, [
+    availSlot('2026-10-20T12:00:00', '2026-10-20T12:40:00', [staffResourceId], {
+      bookable: false,
+      bookingPolicyViolations: {
+        bookOnlineDisabled: true,
+        tooEarlyToBook: false,
+        tooLateToBook: false,
+      },
+    }),
+  ]);
+
+  const result = await RW.revalidateExactAvailabilitySlot({
+    serviceId: row.serviceId,
+    localStartDate: '2026-10-20T12:00:00',
+    localEndDate: '2026-10-20T12:40:00',
+    resourceId: staffResourceId,
+    internalPhase: true,
+  });
+
+  assert.strictEqual(result.status, 'SUCCESS');
+  assert.strictEqual(result.data.resourceId, staffResourceId);
+  assert.deepStrictEqual(result.data.candidateResourceIds, [staffResourceId]);
+  assert.strictEqual(slotsState.calls.length, 1);
+  assert.strictEqual(slotsState.calls[0].bookable, undefined);
+  assert.deepStrictEqual(slotsState.calls[0].bookingPolicyViolations, {
+    tooEarlyToBook: false,
+    tooLateToBook: false,
+  });
+});
 
 // ---------------------------------------------------------------------------
 // STAFF SELECTION, LOAD BALANCING, FAIL-CLOSED, AND EXPOSURE GAP REGRESSIONS
