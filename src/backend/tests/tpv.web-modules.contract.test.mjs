@@ -448,7 +448,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     const config = await source("internalConfig.js");
     const utilities = await source("tpv/tpvUtils.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
-    assert.match(repository, /LEGACY_TPV_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC"/);
+    assert.match(config, /LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC"/);
     assert.match(config, /SIMULATED_TPV_/);
     assert.match(repository, /sequenceNumber: 0/);
     assert.match(repository, /cmsMovementType: item\.movementType/);
@@ -463,7 +463,7 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /TPV_CASH_REGISTER_NOT_PRESEEDED/);
     assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
     assert.match(utilities, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
-    assert.match(utilities, /TPV_SANDBOX_SYNTHETIC/);
+    assert.match(utilities, /LEGACY_LEDGER_SOURCE/);
     assert.match(repository, /export async function queryTpvLedgerRecords\(/);
     assert.match(repository, /dataCollectionId: BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
     assert.match(repository, /sort: \["recordTimestamp DESC"\]/);
@@ -473,11 +473,11 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
     assert.match(repository, /envelope\.sourceType === TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.match(repository, /MAX_TPV_PROJECTION_EVENTS = 1000/);
     assert.match(repository, /sourceState\?\.sessionId/);
-    assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
+    assert.match(repository, /snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE/);
     assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
     assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
-    assert.match(repository, /snapshotSource: TPV_CASH_REGISTER_SOURCE/);
+    assert.match(repository, /snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE/);
     assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
     assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
     assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
