@@ -282,3 +282,16 @@ Lectura oficial de Order Transactions API (sin mutaciones):
 **Discrepancia de contrato:** la combinación `paymentMethod=Cash` / `offlinePayment=false` de #10032 no encaja con la definición oficial de Wix: `offlinePayment` indica si el pago fue realizado offline (por ejemplo, efectivo o marcado como pagado en Business Manager). La respuesta tampoco identifica el proveedor de pago. En #10033 Wix registra un refund `SUCCEEDED` y `externalRefund=false`, pero no devuelve un identificador de refund del proveedor.
 
 **Conclusión limitada:** la API acredita los estados de los registros nativos, no una liquidación bancaria ni la identidad del PSP. Tampoco permite afirmar ausencia de efectos externos solo porque los pedidos fueran clasificados por el titular como sintéticos. Mantener #416 como P0 hasta contrastar modo de prueba / settlement con el proveedor o una evidencia equivalente. No reintentar, cobrar, devolver ni modificar transacciones.
+
+
+## Corrección TPV — ventana de reintentos del handshake — 2026-11-23
+
+La auditoría del protocolo detectó una desalineación concreta: `#htmlTPV.txt` dejaba de emitir `MM_READY` tras 50 intentos × 500 ms (25 s), mientras `src/public/tpvPageController.js` mantenía un watchdog de 65 s. Si el listener Velo no estaba listo durante la ventana de 25 s, el iframe dejaba de reintentar antes de que venciera el watchdog y podía terminar en `WIDGET_HANDSHAKE_TIMEOUT`.
+
+Corrección propuesta en `fix/tpv-handshake-retry-window-20261123`:
+- Extiende los reintentos a 120 × 500 ms (60 s), conservando 5 s de margen antes del watchdog.
+- Refuerza `tpv-widget.contract.test.mjs` para calcular y comprobar que la ventana de reintentos es positiva y estrictamente inferior al timeout Velo.
+- No modifica el protocolo, la allowlist, las operaciones de negocio ni las políticas de pagos/ledger.
+- Pendiente: CI de PR y aplicación del HTML actualizado en el componente `#htmlTPV` del Draft; no se afirma validación Wix Preview.
+
+La corrección reduce la causa temporal conocida del handshake, pero no certifica el runtime ni resuelve la caja singleton incoherente.

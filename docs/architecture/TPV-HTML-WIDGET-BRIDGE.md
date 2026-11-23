@@ -47,6 +47,7 @@ Correcciones aplicadas en la rama:
 Diagnóstico actualizado:
 - La causa histórica del rechazo de `MM_CONTEXT` fue que el mismo allowlist se aplicaba a mensajes entrantes y salientes, y `MM_CONTEXT` no estaba incluido. PR #572 lo corrigió y está fusionada en `main`.
 - La emisión única de `MM_READY` fue sustituida por reintentos en esa misma PR. El margen del watchdog se amplía ahora para evitar falsos positivos si el iframe tarda en inicializarse.
+- Revisión adicional: el HTML repetía `MM_READY` durante 25 s (50 × 500 ms), mientras el watchdog Velo esperaba 65 s. Esa ventana desigual podía dejar de emitir antes de que el controlador estuviera listo. Se amplía a 120 intentos (60 s), dejando 5 s de margen antes del watchdog; el test contractual comprueba matemáticamente la relación entre ambas ventanas.
 - Si los errores persisten con el código actual, el próximo log debe mostrar el tipo recibido y el allowlist activo. Si el tipo recibido es `MM_CONTEXT` o la allowlist no contiene `MM_CONTEXT`, el código de página Velo ejecutado en Wix no está sincronizado con el código versionado. Si el tipo es otra solicitud, debe compararse literalmente con `REQUEST_TYPES`.
 
 **Límite:** el merge de GitHub no acredita sincronización del Editor Wix. La verificación definitiva exige aplicar el código de página actual en Wix Draft, comprobar que `#htmlTPV.txt` contiene el handshake versionado y abrir Preview. No publicar ni ejecutar operaciones reales.
