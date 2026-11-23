@@ -6,10 +6,10 @@ Recuperar coherencia entre el código, los contratos de test y la documentación
 
 ## Diagnóstico verificado
 
-- main HEAD: b20304598f7017ebc283d5821a38b59fe41b90e0.
-- PR #541 y #540 están integradas en main. PR #537 quedó preservada en el historial de #541.
-- Backend offline quality gates falla en run 45105031715.
-- Secret scanning termina SUCCESS en run 45105031857.
+- main HEAD: 956356db48ee9d0ba363023c14105474316f84dd.
+- PR #541 y #540 están integradas en main. PR #537 quedó preservada en el historial de #541. PR #542 también se integró, produjo el HEAD actual y dejó el test aún fallido.
+- Backend offline quality gates falla en run 45105979742 sobre main.
+- Secret scanning termina SUCCESS en run 45105979748.
 - El fallo se localiza en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago, pero internalConfig.js define seis valores en TPV_PAYMENT_METHOD y tpvValidation.js obtiene Object.values(TPV_PAYMENT_METHOD).
 - tpvCierresCore.js clasifica BONO y TARJETA_REGALO; tpvDevoluciones.web.js inicializa asignaciones con el enum completo. El fallo es una expectativa de test obsoleta, no evidencia de que deba reducirse el enum.
 - La documentación TPV contenía una declaración contraria: decía que BONO y TARJETA_REGALO no estaban implementados. Se ha corregido distinguiendo el registro sintético de una redención/captura de valor real.
@@ -50,7 +50,7 @@ Rama: chore/phase1-repository-stabilization-20261123.
 
 - No se cambia el enum ni se habilita ningún pago real.
 - BONO y TARJETA_REGALO siguen siendo métodos sintéticos; no se acredita consumo de saldo Wix Gift Cards ni contabilidad de pasivo.
-- No se modifica main directamente.
+- No se modifica main directamente desde PR #543.
 - No se modifica CMS, Wix Editor, automatizaciones, reservas, pagos, fiscalidad ni datos.
 - main continúa sin protección efectiva hasta que un administrador resuelva #210.
 
