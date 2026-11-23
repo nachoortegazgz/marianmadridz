@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
+import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_SANDBOX_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -40,7 +40,7 @@ export const registrarVenta = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-sale");
         await requireAdmin(traceId);
-        const operator = await getTpvOperatorContext(traceId);
+        const operator = await resolveTpvContext(traceId);
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
