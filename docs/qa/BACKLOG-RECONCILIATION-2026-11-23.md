@@ -63,7 +63,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 ## Evidencia Wix CMS — 2026-11-23
 
-Consultas de solo lectura con `consistentRead=true`: `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`); `MovimientosCaja` 2 (ambas filas `synthetic=true`, `SIMULATED_SUCCESS`, `RECONCILED`, origen `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`); `CitasF2` 6 (5 CONFIRMED, 1 PENDING; tres `pairToken` vacíos, dos iguales y uno distinto); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA); `HistoricoCierresZ` 0; `LibroAsientosContablesDetalle` 0. No se mutaron colecciones.
+Consultas de solo lectura con `consistentRead=true` (última relectura 2026-11-23): `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; apertura 300 EUR / esperado 320 EUR); `MovimientosCaja` 5 (todas sintéticas; 3 nuevas con origen TPV_QA_DEVELOPMENT); `CitasF2` 6 (5 CONFIRMED, 1 PENDING); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA_FISCAL); `HistoricoCierresZ` 1 SIMULATED; `LibroAsientosContablesDetalle` 3 SIMULATED_ONLY. Los siete registros TPV-QA nuevos no cumplen el contrato de hooks actual y carecen de testRunId/siteId/sourceType/sessionId. No se mutaron colecciones.
 
 Consulta directa Bookings Reader V2 del 2026-11-23 confirma los seis bookingId proyectados: 6/6 nativos CANCELED desde 2026-11-20; dos paymentStatus=PAID y cuatro NOT_PAID/UNDEFINED. CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos paymentStatus PENDING_LEDGER. Véase [auditoría Bookings V2 y catálogo dual](../audits/2026-11-23-bookings-revalidation.md). No cerrar caja ni corregir CitasF2 por inferencia.
 
@@ -98,3 +98,15 @@ GetSiteContext indica que el sitio está Draft (Editor clásico, Velo habilitado
 Bookings Services V2 devuelve 94/94 servicios: 70 visibles, 24 ocultos; 74 con onlineBooking.enabled=true y 20 false. Los 70 visibles están habilitados; cuatro servicios F2 ocultos también están habilitados. Pago online: 70; presencial: 94. La lectura contradice el snapshot anterior 94/94 deshabilitados. No asumir que los flags cambiaron por una intervención concreta: no hay autoría ni historial de cambio disponible en esta lectura.
 
 **NO-GO de publicación:** mantener el sitio Draft hasta identificar la divergencia y validar que los servicios F2 ocultos no admiten una reserva directa que eluda el flujo dual personalizado. No modificar los 94 flags en bloque. La prueba de rutas directas y Runtime queda pendiente.
+
+
+## Integridad de TPV sintético — registros legacy fuera de contrato (2026-11-23)
+
+CMS devuelve siete registros con prefijo TPV-QA-1795437582366: tres movimientos sintéticos en MovimientosCaja (+20, +35, -35 EUR), tres filas LibroAsientosContablesDetalle marcadas SIMULATED_ONLY y un cierre Z marcado SIMULATED/TPV_CUSTOM_QA. Carecen de testRunId, siteId, sourceType y sessionId; no hay ControlOperativo que los correlacione.
+
+Los movimientos carecen de schemaVersion/hash/previousRecordHash. Los asientos incumplen assertAccountingLedgerRecord (journalEntryId, recordSource, documentId, sequenceNumber, desgloseDetallado y hashes ausentes). El cierre no cumple assertHistoricoCierresZ por fiscalPeriod/campos fiscales ausentes. El código actual en main rechazaría esos payloads; posible writer legacy, escritura CMS REST que elude hooks o desincronización Wix. Origen no acreditado.
+
+No tocar ni borrar: son colecciones append-only. Mantener #435/#434 abiertos; identificar el escritor, demostrar aislamiento y exclusión de lectores fiscales. Estos registros no están correlacionados con #10032/#10033 y no resuelven #416.
+
+
+Correlación de autoría: los siete registros TPV-QA comparten un único CMS owner, coincidente con el creador de los pedidos POS #10032/#10033; ambos pedidos comparten creador. Es una correlación de actor, no prueba de que los pedidos sean sintéticos ni de que no hubiera efecto económico. Mantenerlos como posibles hechos económicos hasta acreditación.
