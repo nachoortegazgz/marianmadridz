@@ -2,7 +2,7 @@
 
 **Corte verificado:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** 956356db48ee9d0ba363023c14105474316f84dd  
+**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
 **Sitio Wix:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Estado global:** desarrollo/QA; release **NO-GO**.
 
@@ -26,9 +26,9 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 ### 2.1 Repositorio e integración
 
-- main HEAD: 956356db48ee9d0ba363023c14105474316f84dd.
+- main HEAD: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
 - PR #541 integrada en main mediante merge commit e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.
-- PR #540 integrada antes; PR #542 también se fusionó después y produjo el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd. La ejecución CI de ese merge falló.
+- PR #540 integrada; PR #542 generó el HEAD intermedio 956356db48ee9d0ba363023c14105474316f84dd; PR #543 corrigió las pruebas y se integró en main con merge commit 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
 - PR #537 fue preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 - La rama main informa protected=false. No hay evidencia de required status checks ni protección efectiva.
 - PR #210 permanece abierta. La integración disponible no expone una acción autorizada para modificar branch protection/rulesets; requiere permisos de administración del repositorio.
@@ -37,7 +37,7 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 - Backend offline quality gates: **FAIL**, run [45105979742](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742).
 - Secret scanning: **SUCCESS**, run [45105979748](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748).
-- Main sigue fallida por la aserción TPV obsoleta integrada en PR #542. PR #543 corrige las expectativas de seis métodos, la clasificación de OTROS y el default/guard de movimientos de efectivo. En HEAD eee6d75e5cf843a38823e7fa4c908783db175208, Backend offline quality gates SUCCESS (run 45106697984): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run 45106698016). La corrección aún no está integrada en main.
+- PR #543 está integrada en main. Su CI previo al merge pasó: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS. CI backend post-merge run 45107058637 está en curso; secret scanning post-merge run 45107058755 SUCCESS. No declarar post-merge cerrado hasta que el primer run finalice.
 
 ### 2.3 Contrato de pagos TPV
 
