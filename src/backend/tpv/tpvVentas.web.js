@@ -44,9 +44,11 @@ export const registrarVenta = webMethod(
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             const sale = validateSaleDraft({
                 lineas: input.lineas,
@@ -212,7 +214,14 @@ export const registrarVenta = webMethod(
                 data: {
                     saleId,
                     ticketId: saleId,
+                    sessionId: session.sessionId,
                     status: committed.status,
+                    operationalStatus: "ABIERTA",
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     total: sale.totalVenta,
                     breakdown: sale.desgloseMedios,
                     customerContactId: commonPayload.customerContactId,
