@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getTpvOperatorContext } from "backend/tpv/tpvOperatorContext";
+import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
@@ -20,7 +20,7 @@ export const registrarMovimientoCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-sandbox-cash-movement");
         await requireAdmin(traceId);
-        const operator = await getTpvOperatorContext(traceId);
+        const operator = await resolveTpvContext(traceId);
 
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
