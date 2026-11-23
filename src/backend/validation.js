@@ -406,7 +406,7 @@ export function assertTpvIdentity(item, options = {}) {
             (item.metadata && typeof item.metadata === "object" &&
                 !Array.isArray(item.metadata) && Object.keys(item.metadata).length === 0))) {
         const legacyAllowedFields = new Set([
-            "_id", "_createdDate", "_updatedDate", "_owner", "revision",
+            "_id", "_createdDate", "_updatedDate", "_owner",
             "identityId", "identityType", "displayName", "email", "active",
             "syntheticOnly", "environment", "testRunId", "createdAt", "metadata",
         ]);
@@ -426,22 +426,16 @@ export function assertTpvIdentity(item, options = {}) {
         !/^\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
-    if (item.active !== true || item.syntheticOnly !== true ||
-        item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
-        item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
-        Number(item.schemaVersion) !== 2) {
-        throw new Error("SCHEMA_VIOLATION: TPV identity requires explicit synthetic source, site and schema version");
+    if (item.active !== true || item.syntheticOnly !== true) {
+        throw new Error("SCHEMA_VIOLATION: TPV identity must be active and synthetic-only");
     }
-    if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities customer email must use example.test");
-    }
-    if (identityType === "STAFF" && item.email && !/^[^\s@]+@example\.test$/i.test(String(item.email))) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities staff email must use example.test");
+    if (!/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
+        throw new Error("SCHEMA_VIOLATION: TPV synthetic identity email must use example.test");
     }
     if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata) || Object.keys(item.metadata).length !== 0)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an empty OBJECT");
     }
-    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "sourceType", "siteId", "schemaVersion", "createdAt", "metadata"]);
+    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "createdAt", "metadata"]);
     const unknownFields = Object.keys(item).filter((field) => !allowedFields.has(field));
     if (unknownFields.length) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities contains unsupported fields");
