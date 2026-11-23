@@ -78,7 +78,7 @@ test("EVENTLOG-FISCAL-CONFIG-01 missing SIF configuration fails closed", () => {
     () => eventLogTest.buildFiscalSystemConfig({
       _id: "CONFIG_SISTEMA_FISCAL",
       recordType: "CONFIG_SISTEMA",
-      taxId: "X1234567B",
+      taxId: "B12345674",
       legalName: "Titular de prueba",
       verifactuVersion: "1.0",
     }),
