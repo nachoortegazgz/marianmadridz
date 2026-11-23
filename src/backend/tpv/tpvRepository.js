@@ -20,7 +20,7 @@ import {
     makeTpvRefundLockId,
     makeTpvSessionLockId,
     makeTpvTransactionId,
-    makePreviousSandboxTransactionId,
+    makeLegacyTpvTransactionIdByCollection,
     makeLegacyTpvTransactionId,
 } from "backend/tpv/tpvUtils";
 import {
@@ -574,7 +574,7 @@ async function findByIdempotencyKey(collection, key) {
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const transactionIds = [
         _testTransactionId(collection, key),
-        makePreviousSandboxTransactionId(collection, key),
+        makeLegacyTpvTransactionIdByCollection(collection, key),
         makeLegacyTpvTransactionId(key),
     ];
     const uniqueTransactionIds = [...new Set(transactionIds)];
