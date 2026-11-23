@@ -186,11 +186,11 @@ Inválido:
 |---|---|---|---|---|
 | `_id` | string | Valor exacto `CONFIG_SISTEMA_FISCAL`; singleton | Sí | `src/backend/data.js:908-910`; `src/backend/eventLog.js:167-169` |
 | `recordType` | string/enum | Valor exacto `CONFIG_SISTEMA` | Sí | `src/backend/data.js:871-873`; `src/backend/validation.js:294-295` |
-| `schemaVersion` | integer | Exactamente `1` | Sí | `src/backend/validation.js:316-321` |
+| `schemaVersion` | number (campo CMS) | `Number(value) === 1` (el validador no impone tipo primitivo) | Sí | `src/backend/validation.js:316-321` |
 | `traceId` | string | No vacío tras trim | Sí | `src/backend/validation.js:320-322` |
 | `taxId` | string | NIF/NIE/CIF válido con control; VAT-UE validado por formato (sin consulta VIES); normalizado a mayúsculas | Sí | `src/backend/validation.js:355-363,709-713`; `src/backend/eventLog.js:172-193`; `src/backend/fiscalAggregator.web.js:473-485` |
 | `legalName` | string | Razón social no vacía tras trim | Sí | `src/backend/validation.js:356-365`; `src/backend/eventLog.js:181-190` |
-| `thirdPartyType` | null | Debe ser null o vacío; CONFIG_SISTEMA no es TERCERO | Sí | `src/backend/validation.js:367-369` |
+| `thirdPartyType` | null/string | No se exige; si se informa debe ser null o vacío | No | `src/backend/validation.js:367-369` |
 | `sistemaInformaticoNombre` | string | No vacío tras trim | Sí | `src/backend/eventLog.js:172-190` |
 | `idSistemaInformatico` | string | No vacío tras trim | Sí | `src/backend/eventLog.js:173-190` |
 | `verifactuVersion` | string | No vacío tras trim; se expone como `version` | Sí | `src/backend/eventLog.js:175-190` |
