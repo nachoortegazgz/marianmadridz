@@ -504,7 +504,7 @@ test("new TPV synthetic identifiers are neutral while historical Sandbox markers
     assert.match(utilities, /return "TPV-" \+ String\(prefix/);
     assert.match(utilities, /return "TPV_" \+ digest/);
     assert.match(utilities, /return "TPVSANDBOX_" \+ digest/);
-    assert.match(validation, /legacyPrefix = identityType === "CUSTOMER" \? "SANDBOX-CUSTOMER-"/);
+    assert.doesNotMatch(validation, /legacyPrefix|SANDBOX-CUSTOMER|TPV_IDENTITIES/);
     assert.match(repository, /"TPV-CUSTOMER-" \+ String/);
     assert.match(repository, /"TPV-STAFF-" \+ String/);
     assert.match(repository, /const traceId = "TPV:" \+ TPV_RUNTIME_POLICY\.SITE_ID/);
