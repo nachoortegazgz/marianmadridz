@@ -27,7 +27,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 main está en 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #543 se integró con ese merge commit después de CI pre-merge verde. PR #541, #540 y #542 también están integradas; PR #537 quedó preservada en el historial de #541.
 
-La regresión de test introducida por PR #542 se corrigió en PR #543 y ya está integrada en main. CI pre-merge de PR #543 pasó 736/736 pruebas offline, npm audit 0, contratos SDK, ESLint y secret scanning. La ejecución backend post-merge está pendiente de conclusión; no se declara todavía validación post-merge.
+La regresión de test introducida por PR #542 se corrigió en PR #543 y ya está integrada en main. CI pre-merge y post-merge pasaron: 736/736 pruebas offline, npm audit 0, contratos SDK, ESLint y secret scanning.
 
 main no tiene protección efectiva. La issue #210 sigue abierta y requiere intervención con permisos de administración para configurar required checks, PR obligatoria y bloqueo de force-push/borrado.
 
