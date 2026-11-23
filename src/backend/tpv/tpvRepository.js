@@ -217,7 +217,7 @@ export async function withTpvSaleLock(saleId, traceId, operation, sessionId = nu
 }
 
 export async function withTpvSessionLock(sessionId, traceId, operation) {
-    const caja = await _ensureCajaActualForSandbox();
+    const caja = await _ensureCajaActual();
     assertTpvCajaIntegrity(caja, { allowBootstrap: true });
     const lockId = makeTpvSessionLockId(sessionId);
     return withTpvScopedLock({
@@ -368,7 +368,7 @@ async function _getCajaActual() {
     return result.items[0] || null;
 }
 
-async function _ensureCajaActualForSandbox() {
+async function _ensureCajaActual() {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_SEEDED");
     assertTpvCajaIntegrity(caja, { allowBootstrap: true });
@@ -710,7 +710,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         return withCajaActualProjectionLock(
             "TPV_SESSION:" + key,
             async (lock) => {
-                const caja = await _ensureCajaActualForSandbox();
+                const caja = await _ensureCajaActual();
                 assertTpvCajaIntegrity(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
@@ -780,17 +780,19 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
     });
-    const records = result.items.map(_virtualRecord).filter((item) =>
-        _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
-    );
+    const records = result.items
+        .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
+        .filter((item) => _matchesFilter(item, filter));
     if (options.allowTruncated === true) return records;
     const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
     let page = result;
     while (page.hasNext && records.length < maxRecords) {
         page = await page.next();
-        records.push(...page.items.map(_virtualRecord).filter((item) =>
-            _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
-        ));
+        records.push(...page.items
+            .filter(_isRecognizedSyntheticLedgerItem)
+            .map(_virtualRecord)
+            .filter((item) => _matchesFilter(item, filter)));
     }
     if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     if (Array.isArray(options.sort) && options.sort.length) {
@@ -828,8 +830,8 @@ export async function queryTpvLedgerRecords(options = {}) {
         }),
     ]);
     const records = [...current.items, ...legacy.items]
-        .map(_virtualRecord)
         .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
         .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
         .slice(0, limit);
     return { records, hasMore: current.hasNext === true || legacy.hasNext === true ||
