@@ -3,8 +3,8 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendSandboxAudit, insertSandboxEvent, latestOpenSandboxSession, querySandboxRecords, withSandboxSaleLock } from "backend/tpv/tpvRepository";
-import { makeSandboxId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSaleLock } from "backend/tpv/tpvRepository";
+import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
 export const registrarDevolucion = webMethod(
@@ -20,21 +20,21 @@ export const registrarDevolucion = webMethod(
             const saleId = String(input.saleId || "").trim();
             const reason = String(input.reason || "").trim();
             if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_REFUND_REFERENCE_AND_REASON_REQUIRED");
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
 
-            return await withSandboxSaleLock(saleId, traceId, async () => {
-            const activeSession = await latestOpenSandboxSession();
+            return await withTpvSaleLock(saleId, traceId, async () => {
+            const activeSession = await latestOpenTpvSession();
             if (!activeSession || activeSession.sessionId !== session.sessionId) {
                 throw new Error("TPV_SESSION_CLOSED");
             }
-            const sales = await querySandboxRecords(TPV_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
+            const sales = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
             const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
             if (!original) throw new Error("TPV_ORIGINAL_SALE_NOT_FOUND");
             if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_REFUND_SESSION_MISMATCH");
 
-            const refundId = makeSandboxId("REFUND", key);
-            const originalPayments = await querySandboxRecords(TPV_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
+            const refundId = makeTpvId("REFUND", key);
+            const originalPayments = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
             for (const payment of originalPayments) {
                 if (payment.status !== "CONFIRMADO_SINTETICO") continue;
@@ -42,7 +42,7 @@ export const registrarDevolucion = webMethod(
                     remainingByMethod[payment.paymentMethod] += Number(payment.amountMinor || 0);
                 }
             }
-            const priorRefunds = await querySandboxRecords(TPV_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
+            const priorRefunds = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
             for (const refund of priorRefunds) {
                 if (refund.refundId === refundId || refund.status !== "CONFIRMADO_SINTETICO" || refund.payload?.sessionId !== session.sessionId) continue;
                 const allocations = refund.payload?.allocations || [];
@@ -68,7 +68,7 @@ export const registrarDevolucion = webMethod(
             const method = allocations.every((item) => item.paymentMethod === allocations[0].paymentMethod)
                 ? allocations[0].paymentMethod : "MIXTO";
 
-            await insertSandboxEvent(TPV_COLLECTIONS.REEMBOLSOS, key + ":REFUND", {
+            await insertTpvEvent(TPV_COLLECTIONS.REEMBOLSOS, key + ":REFUND", {
                 saleId,
                 refundId,
                 amountMinor,
@@ -82,7 +82,7 @@ export const registrarDevolucion = webMethod(
 
             for (let index = 0; index < allocations.length; index += 1) {
                 const allocation = allocations[index];
-                await insertSandboxEvent(TPV_COLLECTIONS.PAGOS, key + ":PAYMENT:" + String(index + 1).padStart(3, "0"), {
+                await insertTpvEvent(TPV_COLLECTIONS.PAGOS, key + ":PAYMENT:" + String(index + 1).padStart(3, "0"), {
                     saleId,
                     paymentMethod: allocation.paymentMethod,
                     amountMinor: -allocation.amountMinor,
@@ -95,7 +95,7 @@ export const registrarDevolucion = webMethod(
                     payload: { sessionId: session.sessionId, refundId, traceId },
                 });
                 if (allocation.paymentMethod === "EFECTIVO") {
-                    await insertSandboxEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key + ":CASH:" + String(index + 1).padStart(3, "0"), {
+                    await insertTpvEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key + ":CASH:" + String(index + 1).padStart(3, "0"), {
                         sessionId: session.sessionId,
                         movementType: "DEVOLUCION_EFECTIVO",
                         amountMinor: allocation.amountMinor,
@@ -108,7 +108,7 @@ export const registrarDevolucion = webMethod(
                 }
             }
 
-            await appendSandboxAudit({
+            await appendTpvAudit({
                 idempotencyKey: key + ":AUDIT",
                 action: "DEVOLUCION_CONFIRMADA",
                 actorId: operator.operatorId,
