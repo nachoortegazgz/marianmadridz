@@ -26,6 +26,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(operatorContext, /getMyStaffContext\(traceId\)/);
     assert.match(operatorContext, /actorId: memberId/);
     assert.match(operatorContext, /operatorId: memberId/);
+    assert.match(operatorContext, /operatorDisplayName: String\(staff\?\.displayName/);
     assert.match(context, /getTpvOperatorContext\(traceId\)/);
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
     assert.match(directory, /profesionalId: resourceId/);
@@ -184,12 +185,14 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(repository, /export async function latestTpvSession/);
     assert.match(repository, /status: "CERRADA"/);
     assert.match(repository, /operatorResourceId: String\(sourceState\?\.operatorResourceId/);
+    assert.match(repository, /operatorDisplayName: String\(sourceState\?\.operatorDisplayName/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
     assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
+    assert.match(cash, /operatorDisplayName: session\.operatorDisplayName/);
     assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
