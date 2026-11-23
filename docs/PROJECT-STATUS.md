@@ -195,3 +195,58 @@ Auditoría de ControlOperativo para explicar el delta: 63 registros, sin control
 - **BUG-14 / FROM_ADDRESS:** no cambiar `noreply@marianmadrid.com` por `.es` hasta verificar el dominio remitente en el proveedor Resend. El dominio público del sitio y la allowlist de destinatarios no demuestran la verificación del dominio emisor. La configuración permanece intacta.
 - **Conciliación POS:** PR #576 está integrada en main. #10030, #10031 y #10034 siguen sin clasificación del titular; no crear movimientos, asientos ni refunds. #10030 continúa como caso de atención por booking CANCELED con pedido PAID y sin refund visible.
 - **Seguridad:** no se han creado reservas, pedidos, pagos, devoluciones, asientos, facturas ni movimientos reales. Wix CMS y los ledgers permanecen sin cambios. Release NO-GO.
+
+
+## Revalidación de integraciones Wix — 2026-11-23 19:42 Europe/Madrid
+
+**Código Git:** PR #577 integrada en `main`, merge commit `37c74f24a13f4d097a7494587c78ef89ea7e3db7`. CI post-merge documentada como SUCCESS: Backend offline quality gates, Layer 1, Layer 2, suite offline completa, Wix Cart SDK, Wix Transactions SDK, Wix TPV SDK, ESLint y secret scanning (runs `45232928165` y `45232928095`).
+
+**Wix Site Context:** el sitio sigue en Draft, Editor clásico, Velo habilitado, timezone Europe/Madrid, EUR. La fecha de actualización devuelta por GetSiteContext es 2026-11-23 17:31, anterior al merge de PR #577 (17:55). Esto no demuestra que Git Integration esté desincronizada, pero tampoco permite acreditar que el SHA `37c74f2...` esté instalado. No se ha leído un SHA Velo del Editor ni ejecutado Preview/Runtime. El HTML Component `#htmlTPV` requiere aplicación manual de `#htmlTPV.txt`.
+
+### CMS / data plane
+
+Lectura oficial de Site Data Usage con `consistentRead=true`:
+- Total LIVE: 218 elementos.
+- Total SANDBOX: 112 elementos.
+- `CajaActual`: 1 LIVE / 1 SANDBOX.
+- `MovimientosCaja`: 5 LIVE / 2 SANDBOX.
+- `ControlOperativo`: 63 LIVE / 3 SANDBOX.
+- `CitasF2`: 6 LIVE / 6 SANDBOX.
+- `MapaStaff`: 5 LIVE / 5 SANDBOX.
+- `ServiciosCatalogo`: 95 LIVE / 95 SANDBOX.
+- `HistoricoCierresZ`: 1 LIVE / 0 SANDBOX.
+- `LibroAsientosContablesDetalle`: 3 LIVE / 0 SANDBOX.
+
+Consultas CMS de solo lectura con `consistentRead=true` devuelven las filas LIVE:
+- `CajaActual`: singleton `ABIERTA`, apertura 300 EUR, efectivo/esperado 320 EUR, `traceId=0`, `lastOperationType=RECONCILIATION_CORRECTION`. No cerrar ni corregir por inferencia.
+- `MovimientosCaja`: 5 filas sintéticas; 3 asociadas al lote `TPV-QA-1795437582366` y 2 con trazas históricas `TPV-SIM-*` / `TPV-FUNC-*`. No se ha demostrado movimiento bancario ni se ha modificado ninguna fila.
+- `CitasF2`: 6 proyecciones; dos con `paymentStatus=PENDING_LEDGER`, una pareja dual con `pairToken` compartido y una tercera fila dual independiente. No se han corregido estados.
+- `MapaStaff`: 5 filas (GESTORIA, TERCERO y 3 STAFF); no se encontró `CONFIG_SISTEMA` en los campos consultados.
+- `HistoricoCierresZ`: 1 cierre sintético. `LibroAsientosContablesDetalle`: 3 filas sintéticas del mismo lote.
+
+**Límite de entorno:** los recuentos SANDBOX proceden de Site Data Usage. Las consultas de elementos realizadas mediante CMS Data Items API devuelven el data plane LIVE; no se han inspeccionado las 2 filas SANDBOX de MovimientosCaja ni la sesión Sandbox desde Local Editor/Preview. Por tanto, los recuentos no equivalen a aceptación E2E ni demuestran aislamiento funcional.
+
+### Automatizaciones Wix
+
+Query Automations V2 paginada con cursor y deduplicación:
+- 159 automatizaciones distintas.
+- 7 `ACTIVE`; 152 `INACTIVE`.
+- Origen: 118 PREINSTALLED, 34 APPLICATION, 6 USER, 1 RECIPE.
+- Las 7 activas son PREINSTALLED y todas devuelven `settings.disableStatusChange=true`; dos también `settings.readonly=true`.
+- La automatización APPLICATION `Configuración de control laboral` no está activa; su estado `INACTIVE` / revisión 5 ya estaba verificado.
+- No se ejecutó Test Automation ni se modificó configuración/estado.
+
+**Decisión:** no intentar eludir los bloqueos Wix ni desinstalar aplicaciones. Los tests E2E que puedan disparar correo, notificaciones, cobros o acciones externas siguen bloqueados hasta disponer de aislamiento de triggers/entorno acreditado. El estado ACTIVE no demuestra ejecuciones recientes ni cancela ejecuciones ya iniciadas.
+
+### Estado de aceptación
+
+- Código y CI GitHub: PASS para el SHA indicado.
+- CMS live: lectura y recuentos verificados; incidencias de integridad sin resolver.
+- Wix Draft: confirmado.
+- SHA Git-Wix: pendiente de acreditar.
+- HTML Component TPV: pendiente de sincronización manual.
+- Wix Preview/Runtime, concurrencia, idempotencia y E2E: no ejecutados.
+- Fiscalidad/Veri*Factu y writers económicos: permanecen bloqueados.
+- Release: **NO-GO**.
+
+Se actualizaron los issues #435 y #520 con esta revalidación. No se realizaron escrituras CMS, cambios en automatizaciones, pagos, reservas, devoluciones, facturas, cierres, ledgers ni publicación.
