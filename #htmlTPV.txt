@@ -589,9 +589,9 @@ body {
     list.querySelectorAll(".catalog-item").forEach((element) => {
       element.onclick = () => {
         const item = items[Number(element.dataset.index)];
-        selectCatalogItem(item).catch((error) => error.message === "TPV_TIMEOUT"
+        selectCatalogItem(item).catch((err) => err.message === "TPV_TIMEOUT"
           ? toast("Tiempo de espera agotado.")
-          : error(error.message));
+          : error(err.message));
       };
     });
   }
@@ -721,16 +721,26 @@ body {
       const result = await keyedAction("SALE", "SALE_REGISTER", {
         sessionId: state.session?.sessionId,
         profesionalId: state.profesionalId,
-        lines: state.items.map((it) => ({
-          itemId: it.id,
-          name: it.name,
-          qty: it.qty,
-          price: it.price,
+        lineItems: state.items.map((item) => ({
+          tipoLinea: item.tipoLinea,
+          itemId: item.id,
+          varianteId: item.varianteId,
+          concepto: item.name,
+          cantidad: item.qty,
+          precioUnitario: item.price,
+          descuentoImporte: 0,
+          impuestosImporte: 0,
+          profesionalId: state.profesionalId,
+          stockAfectado: false,
         })),
-        payments: state.payments.map((p) => ({
-          paymentMethod: p.method,
-          amount: p.amount,
+        payments: state.payments.map((payment) => ({
+          method: payment.method,
+          amount: payment.amount,
+          change: 0,
         })),
+        subtotal: total,
+        tax: 0,
+        total,
       }, "SALE_REGISTER_RES");
       state.lastSale = result;
       toast("Venta registrada.");
@@ -790,6 +800,7 @@ body {
   $("refund").onclick = () => {
     
     openModal("Devolución sintética", `
+      <p>Registro interno sintético. No ejecuta un reembolso de Wix Payments ni confirma una devolución nativa.</p>
       <input id="refundSaleId" class="field" placeholder="ID de venta">
       <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
       <select id="refundMethod" class="field">
