@@ -21,7 +21,7 @@ import {
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvSandboxIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -659,7 +659,7 @@ function _clearStaleCajaClosedAt(item) {
 }
 
 export function TpvSandboxIdentities_beforeInsert(item) {
-    assertTpvSandboxIdentity(item);
+    assertTpvIdentity(item);
     if (item.createdAt !== undefined && item.createdAt !== null) {
         _normalizeCmsDateTime(item, "createdAt");
     }
