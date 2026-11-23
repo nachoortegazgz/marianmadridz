@@ -88,7 +88,7 @@ function _isSyntheticTpvRecord(item) {
             ) ||
             (
                 item.payloadFiscal?.sourceType == null &&
-                item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+                item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
         item.payloadFiscal?.isSynthetic === true &&
@@ -98,8 +98,8 @@ function _isSyntheticTpvRecord(item) {
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
         Number(item.sequenceNumber) === 0 &&
         (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
-            String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":") ||
-            String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":"));
+            String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":") ||
+            String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":"));
 }
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -138,7 +138,7 @@ export function assertInsertAllowed(collection, item) {
     if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES &&
         (item.syntheticOnly !== true ||
          item.environment !== "SANDBOX" ||
-         item.testRunId !== TPV_RUNTIME_POLICY.SANDBOX_RUN_ID)) {
+         item.testRunId !== TPV_RUNTIME_POLICY.LEGACY_RUN_ID)) {
         throw _policyError("CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
