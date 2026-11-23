@@ -726,11 +726,22 @@ export function isExplicitSimulationLedgerRecord(item) {
     const accountCode = upper(item.desgloseDetallado?.accountCode);
     const hash = upper(item.hash);
     const previousRecordHash = upper(item.previousRecordHash);
+    const projectionStatus = upper(item.projectionStatus);
+    const source = upper(item.source);
     const simulatedMovementType = movementType.startsWith("SIMULATED_") ||
         /(?:^|_)SIMULAD[AO]$/.test(movementType);
+    // Explicit legacy TPV-QA markers observed in CMS on 2026-11-23.
+    // Keep the triple condition for MovimientosCaja; a bare synthetic=true
+    // flag is not sufficient to hide a malformed financial record.
+    const legacyTpvDevelopmentRecord = item.synthetic === true &&
+        recordSource === "TPV_QA_DEVELOPMENT" &&
+        source === "TPV_FUNCTIONAL_TEST";
     return recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
+        eventType.endsWith("_SIMULATED") ||
         simulatedMovementType ||
+        projectionStatus === "SIMULATED_ONLY" ||
+        legacyTpvDevelopmentRecord ||
         accountCode === "SIMULATED" ||
         hash === "SIMULATED_HASH" ||
         previousRecordHash === "SIMULATED_PREVIOUS_HASH";
