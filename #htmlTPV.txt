@@ -600,8 +600,7 @@ body {
     state.busy = value;
     const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
     const isOpen = operationalStatus === "ABIERTA";
-    const isClosed = operationalStatus === "CERRADA";
-    const canOpenSession = state.session?.canOpenSession ?? operationalStatus === "SIN_SESION";
+    const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession;
     ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       const el = $(id);
