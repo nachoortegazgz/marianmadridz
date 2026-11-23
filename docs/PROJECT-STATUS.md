@@ -84,3 +84,12 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - `MapaStaff`: 5 registros, 3 `STAFF`; no existe `recordType=CONFIG_SISTEMA`. No se consultaron ni expusieron NIF.
 - `HistoricoCierresZ` y `LibroAsientosContablesDetalle`: 0 registros.
 - Todas las lecturas CMS se ejecutaron con `consistentRead=true`; no hubo mutaciones.
+
+
+## Contrato dual personalizado — precisión arquitectónica (2026-11-23)
+
+Wix Bookings V2 no se utiliza como motor de multiservicio. La composición de dos fases es responsabilidad del backend Marian Madrid: dos bookings individuales e independientes (F1 y F2), vinculados por la identidad de pareja del flujo dual. Entre ambas existe un **gap de exposición** que debe permanecer libre. F2 debe comenzar exactamente en `F1.end + exposureDuration`; la disponibilidad de ambas fases debe corresponder al mismo `resourceId` (profesional/recurso).
+
+Evidencia estática: `src/backend/reservas.web.js` declara las correcciones `DUAL-GAP-01` y `DUAL-GAP-02` (búsqueda del slot F2 en el instante local exacto calculado), y `DUAL-PERF-01` (consulta F1/F2 por jornada en paralelo). El módulo `src/backend/booking/bookingSaga.js` declara la orquestación de reserva simple y dual con gap. Esta evidencia no sustituye una ejecución Wix Runtime.
+
+Criterios de aceptación Runtime pendientes: (1) F1 y F2 son bookings nativos independientes; (2) `F2.start = F1.end + exposureDuration` sin redondeo; (3) el intervalo de exposición no se reserva ni bloquea como servicio; (4) F1 y F2 mantienen el mismo resourceId; (5) un tercero no puede ocupar el gap ni crear solapamientos; (6) cancelación/reprogramación/reintento conserva la pareja e idempotencia; (7) F2 se crea `OFFLINE`, importe cero y sin segundo checkout/cobro. No usar el endpoint de multiservicio de Wix ni interpretar la ausencia de multiservicio nativo como defecto.
