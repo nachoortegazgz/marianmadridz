@@ -275,7 +275,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución sintética</button>
+          <button id="refund" class="btn danger">Devolución interna</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
           <button id="exportMovements" class="btn">Exportar movimientos</button>
@@ -381,7 +381,7 @@ body {
 <script>
 /* ============================================================
    TPV Marian Madrid — Interfaz mejorada
-   Codificación neutra: sin referencias a sandbox/qa/live.
+   Interfaz TPV: contrato de comunicación con el controlador Wix.
    ============================================================ */
 (function () {
   "use strict";
@@ -519,7 +519,7 @@ body {
             ${esc(item.displayName)}${item.email ? " · " + esc(item.email) : ""}
           </button>
         `).join("")
-      : "<p>No se encontraron clientes sintéticos.</p>";
+      : "<p>No se encontraron clientes.</p>";
     container.querySelectorAll("[data-customer-index]").forEach((button) => {
       button.onclick = () => {
         const selected = items[Number(button.dataset.customerIndex)];
@@ -561,7 +561,7 @@ body {
     const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     $("cashLabel").textContent = isOpen
-      ? "Caja abierta · operación sintética no conciliada"
+      ? "Caja abierta · operación interna pendiente de conciliación"
       : "Caja cerrada";
     $("openCash").disabled = isOpen || state.busy;
     ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
@@ -896,7 +896,7 @@ body {
       terminalId: "TPV",
     }, "SESSION_OPEN_RES");
     renderSession(session);
-    toast("Sesión sintética abierta.");
+    toast("Sesión abierta.");
   });
 
   /* ---------- Entrada / Salida de efectivo ---------- */
@@ -932,7 +932,7 @@ body {
   /* ---------- Devolución ---------- */
   $("refund").onclick = () => {
     
-    openModal("Devolución sintética", `
+    openModal("Devolución interna", `
       <p>Registro interno sintético. No ejecuta un reembolso de Wix Payments ni confirma una devolución nativa.</p>
       <input id="refundSaleId" class="field" placeholder="ID de venta">
       <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
@@ -1015,7 +1015,6 @@ body {
   }
 
   async function exportData(operationType, filename, columns) {
-    requireOperator();
     const sessionId = state.session?.sessionId;
     if (!sessionId) throw new Error("No hay una sesión de caja seleccionada.");
     const result = await call(operationType, { sessionId }, operationType + "_RES");
