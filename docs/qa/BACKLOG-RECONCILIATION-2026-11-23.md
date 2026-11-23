@@ -3,7 +3,7 @@
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **main HEAD verificado:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536).  
 **PR #541:** abierta sobre `main`; rama `feat/tpv-payment-exports-after-p0-20261123`; último HEAD de código validado `1d7e99d66fcc14165bf2482885e583176c2b06ef` (los commits posteriores de la rama son solo documentación).  
-**PR solapadas:** PR #537 sigue abierta; sus 16 archivos modificados coinciden con 16 rutas de PR #541, que añade 24 rutas más. El grafo de commits está divergido (113 ahead / 28 behind). No fusionar ambas ramas sin reconciliar los commits exclusivos de #537.  
+**PR reconciliadas:** PR #537 integrada en la rama de PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b`; conserva los dos padres y los 28 commits exclusivos. PR #541 permanece abierta contra `main`; main intacta. CI del árbol idéntico previamente validado: 732/732, pero pendiente confirmar CI del nuevo merge commit. Wix E2E pendiente; release NO-GO.  
 **CI de PR #541:** Backend offline quality gates SUCCESS (run 45100967570): Layer 1 364/364, Layer 2 255/255, suite offline completa 732/732; npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run 45100967567).  
 **Estado Wix:** no se ha acreditado sincronización del SHA en Wix Editor ni runtime E2E.  
 **Release:** **NO-GO**.
