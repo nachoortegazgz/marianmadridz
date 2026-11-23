@@ -76,6 +76,11 @@ export const TPV_COLLECTIONS = Object.freeze({
   AUDITORIA: "SANDBOX_LOGICAL_AUDITORIA",
 });
 
+export const TPV_SYNTHETIC_SOURCE = "SYNTHETIC";
+export const TPV_NATIVE_SOURCE = "NATIVE";
+export const TPV_LEDGER_SOURCE = "TPV_LEDGER";
+export const TPV_MIN_LEDGER_VERSION = 1;
+
 export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
   [TPV_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
   [TPV_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
@@ -91,7 +96,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   // Enabled for the isolated Wix Sandbox data plane. Every CajaActual mutation
   // still requires the exact synthetic Sandbox run marker; fiscal/payment side effects stay disabled.
   ENABLED: true,
-  SOURCE_TYPE: "SYNTHETIC",
+  SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
   ALLOW_REAL_PAYMENTS: false,
   ALLOW_NATIVE_WRITES: false,
   CURRENCY: "EUR",
