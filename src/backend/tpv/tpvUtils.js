@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
@@ -38,12 +38,12 @@ export function makeTpvTransactionId(collection, idempotencyKey) {
 }
 
 export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKey) {
-    if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
-        throw new Error("TPV_COLLECTION_NOT_ALLOWED");
-    }
+    const logicalKey = Object.keys(TPV_COLLECTIONS).find((key) => TPV_COLLECTIONS[key] === collection);
+    const legacyCollection = logicalKey ? TPV_LEGACY_COLLECTIONS[logicalKey] : null;
+    if (!legacyCollection) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
-        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + collection + ":" + key, "utf8")
+        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + legacyCollection + ":" + key, "utf8")
         .digest("hex");
     return "TPV_" + digest;
 }
