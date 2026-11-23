@@ -25,6 +25,11 @@ export const obtenerResumenCaja = webMethod(
                 status: "SUCCESS",
                 data: {
                     ...totals,
+                    sessionId: session.sessionId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     grossSales: fromMinorUnits(totals.grossSalesMinor),
                     netSales: fromMinorUnits(totals.netSalesMinor),
                     totalRefunds: fromMinorUnits(totals.totalRefundsMinor),
