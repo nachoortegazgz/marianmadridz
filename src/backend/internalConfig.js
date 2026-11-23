@@ -560,16 +560,13 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
     [CONTROL_TYPE.SLOT_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType"]),
       anyConditionFields: Object.freeze(["version", "expiresAt"]),
-      allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt", "ownerToken"]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt"]),
       fields: Object.freeze({
-        ownerToken: Object.freeze(["SET_FIELD"]),
-        status: Object.freeze(["SET_FIELD"]),
         expiresAt: Object.freeze(["SET_FIELD"]),
         heartbeatAt: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
         version: Object.freeze(["SET_FIELD", "INCREMENT_FIELD"]),
         serviceId: Object.freeze(["SET_FIELD"]),
-        traceId: Object.freeze(["SET_FIELD"]),
       }),
     }),
     [CONTROL_TYPE.SYSTEM_FLAG]: Object.freeze({
