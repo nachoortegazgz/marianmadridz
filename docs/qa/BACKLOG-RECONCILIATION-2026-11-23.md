@@ -2,8 +2,8 @@
 
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **main HEAD verificado:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536).  
-**PR #541:** abierta sobre `main`; rama `feat/tpv-payment-exports-after-p0-20261123`, HEAD `f799e5e56ad0bf9d10cdb5958a964641f8576118`.  
-**CI de PR #541:** secret scanning SUCCESS (run 45099716725); Backend offline quality gates en ejecución (run 45099716665). La ejecución anterior de HEAD `72013651be10bed2af3085431fb58309e94f07a0` quedó en 363/364 pruebas de Layer 1 por una aserción estática desactualizada; no se considera validación aprobada.  
+**PR #541:** abierta sobre `main`; rama `feat/tpv-payment-exports-after-p0-20261123`, HEAD `651faa2775d8733d465cea5f33ab9d4a41f80f69`.  
+**CI de PR #541:** Backend offline quality gates SUCCESS (run 45100503963): Layer 1 364/364, Layer 2 255/255, suite offline completa 732/732; npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run 45100503949).  
 **Estado Wix:** no se ha acreditado sincronización del SHA en Wix Editor ni runtime E2E.  
 **Release:** **NO-GO**.
 
