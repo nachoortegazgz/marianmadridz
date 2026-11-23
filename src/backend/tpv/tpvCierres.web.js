@@ -4,7 +4,7 @@ import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
-import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
+import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
@@ -18,7 +18,7 @@ export const obtenerResumenCaja = webMethod(
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             return {
                 status: "SUCCESS",
                 data: {
