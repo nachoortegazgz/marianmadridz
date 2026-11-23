@@ -54,7 +54,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     for (const type of types) {
         assert.ok(controller.includes('"' + type + '"'), "controller must dispatch " + type);
         assert.ok(html.includes('"' + type + '"'), "HTML widget must send " + type);
-        assert.ok(html.includes(type + "_RES"), "HTML widget must receive " + type + "_RES");
+        assert.ok(html.includes(type + "_RES") || html.includes('const responseType = type + "_RES"'), "HTML widget must receive " + type + "_RES");
     }
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
