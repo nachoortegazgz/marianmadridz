@@ -296,3 +296,14 @@ Get Order V1 devuelve para ambos pedidos:
 La clasificación del titular como artefactos sintéticos de QA se conserva como declaración, pero no equivale a que Wix los haya creado en Test Mode. La API no acredita si el proveedor estaba en modo test/live ni la liquidación bancaria; sí demuestra que no tienen el indicador nativo de pedido de prueba. Junto con el refund #10033 `SUCCEEDED` / `externalRefund=false` y el payment #10032 `APPROVED`, no se puede dar por probado que no existieran efectos económicos externos.
 
 **Bloqueo:** #416 permanece P0. Obtener evidencia del Dashboard/proveedor de pagos sobre modo test/live, liquidación y devolución, y confirmar la operativa POS que generó estos pedidos. No cambiar su clasificación, no repetir cobros/refunds y no ejecutar compensaciones hasta resolver la contradicción.
+
+
+### Estado de publicación del sitio — Query Sites V2, 2026-11-23
+
+Consulta account-level Query Sites V2 filtrada por el ID del sitio:
+- `published=false`.
+- `viewUrl` vacío.
+- `domainConnected=true`, `premium=true`, `editorType=EDITOR`.
+- `updatedDate=2026-11-23T17:31:35.124Z`.
+
+GetSiteContext devuelve igualmente `Status: Draft`. El sitio no está publicado ni accesible públicamente en este momento; cualquier baseline anterior que lo describiera como Published queda obsoleta. No se ha llamado a Publish/Unpublish ni cambiado el estado. La ausencia de acceso público reduce el riesgo de triggers por visitantes, pero no acredita que automatizaciones programadas/internas no puedan ejecutarse.
