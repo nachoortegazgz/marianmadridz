@@ -142,3 +142,8 @@ No limpiar ni actualizar: MovimientosCaja, LibroAsientosContablesDetalle e Histo
 
 
 Propietario/origen ampliado: los siete registros TPV-QA tienen un único CMS _owner y ese propietario coincide con el createdBy.userId de los pedidos POS #10032/#10033. Los dos pedidos comparten también el mismo creador. Esto acredita un actor común entre el test-run y los pedidos, pero no demuestra que los pedidos sean sintéticos ni que las operaciones no tuvieran efecto económico. No se exponen identificadores personales; la clasificación QA/real sigue pendiente de evidencia del titular/recibos/adquirente.
+
+
+## Discrepancia histórica de MovimientosCaja — 2026-11-23
+
+El snapshot de 2026-11-12 (mismo siteId) registraba 10 filas: 4 SMOKE_TEST, 1 INTERNAL/VENTA_ONLINE clasificada no sintética y 5 SIMULATED_PAYMENT con sequenceNumber 1–5. La consulta actual con consistentRead=true y returnTotalCount=true devuelve 5 filas, todas sintéticas (totalCount=5, hasNext=false). Diferencia: -5 filas frente al snapshot histórico; la fila antes clasificada como no sintética ya no aparece. El snapshot antiguo no guardó IDs, por lo que no se puede identificar el conjunto desaparecido ni atribuir la causa. No se ha mutado nada en esta sesión. No afirmar limpieza autorizada ni borrado no autorizado; revisar Activity Logs/backup y confirmar si hubo reset/limpieza entre el 12 y el 23 de noviembre. P0 integridad abierto hasta explicar la diferencia.
