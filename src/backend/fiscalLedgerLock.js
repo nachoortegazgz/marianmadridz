@@ -220,7 +220,7 @@ function _lockVersion(item) {
 }
 
 function _lockOwner(item) {
-    return String(item?.ownerToken || _readPayload(item).lockOwnerId || "");
+    return String(_readPayload(item).lockOwnerId || "");
 }
 
 function _lockPatchSucceeded(result) {
@@ -234,12 +234,13 @@ function _lockPatchSucceeded(result) {
     return Array.isArray(result?.updatedItemIds) && result.updatedItemIds.includes(LOCK_ID);
 }
 
-function _lockPayload(ownerId, acquiredAt, previousPayload = {}) {
+function _lockPayload(ownerId, acquiredAt, previousPayload = {}, traceId = "") {
     return {
         ...previousPayload,
         lockOwnerId: ownerId,
         lockStatus: "ACTIVE",
         acquiredAt: acquiredAt.toISOString(),
+        lastTraceId: String(traceId || ""),
         purpose: "FISCAL_LEDGER_APPEND",
     };
 }
@@ -284,15 +285,11 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     expiresAt: { $eq: expiresAt },
                 };
                 if (currentVersion !== null) condition.version = { $eq: currentVersion };
-                if (existing.ownerToken) condition.ownerToken = { $eq: String(existing.ownerToken) };
 
                 const modifications = [
-                    { fieldPath: "ownerToken", action: "SET_FIELD", value: ownerId },
-                    { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
                     { fieldPath: "expiresAt", action: "SET_FIELD", value: nextExpiry },
                     { fieldPath: "heartbeatAt", action: "SET_FIELD", value: acquiredAt },
-                    { fieldPath: "traceId", action: "SET_FIELD", value: lockTraceId },
-                    { fieldPath: "payload", action: "SET_FIELD", value: _lockPayload(ownerId, acquiredAt, _readPayload(existing)) },
+                    { fieldPath: "payload", action: "SET_FIELD", value: _lockPayload(ownerId, acquiredAt, _readPayload(existing), lockTraceId) },
                     {
                         fieldPath: "version",
                         action: currentVersion === null ? "SET_FIELD" : "INCREMENT_FIELD",
@@ -335,12 +332,11 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
             dedupeKey: LOCK_DEDUPE_KEY,
             serviceId: LOCK_SERVICE_ID,
             resourceId: LOCK_RESOURCE_ID,
-            ownerToken: ownerId,
             version: 0,
             status: "ACTIVE",
             expiresAt,
             heartbeatAt: acquiredAt,
-            payload: _lockPayload(ownerId, acquiredAt),
+            payload: _lockPayload(ownerId, acquiredAt, {}, lockTraceId),
             traceId: lockTraceId,
             _createdDate: acquiredAt,
             _updatedDate: acquiredAt,
@@ -418,7 +414,6 @@ export async function releaseFiscalLedgerLock(lock) {
     const releasedAt = new Date();
     const condition = {
         controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
-        ownerToken: { $eq: lock.ownerId },
         version: { $eq: expectedVersion },
         expiresAt: { $eq: expiresAt },
     };
@@ -428,7 +423,6 @@ export async function releaseFiscalLedgerLock(lock) {
         releasedAt: releasedAt.toISOString(),
     };
     const modifications = [
-        { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
         { fieldPath: "expiresAt", action: "SET_FIELD", value: releasedAt },
         { fieldPath: "heartbeatAt", action: "SET_FIELD", value: releasedAt },
         { fieldPath: "payload", action: "SET_FIELD", value: payload },
