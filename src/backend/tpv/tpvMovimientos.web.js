@@ -2,8 +2,9 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES } from "backend/internalConfig";
 import { insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { listTpvIdentities } from "backend/tpv/tpvIdentities";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
@@ -38,17 +39,26 @@ export const registrarMovimientoCaja = webMethod(
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const profesionalId = String(input.profesionalId || "").trim();
+            if (profesionalId) {
+                const staff = await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF);
+                if (!staff.some((person) => person.identityId === profesionalId)) {
+                    throw new Error("TPV_STAFF_NOT_ALLOWED");
+                }
+            }
             const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,
                 amountMinor,
                 paymentMethod: "EFECTIVO",
+                profesionalId: profesionalId || null,
                 reason,
                 status: "CONFIRMADO_SINTETICO",
                 createdAt: new Date(),
                 payload: {
                     actorId: operator.actorId,
                     operatorId: operator.operatorId,
+                    profesionalId: profesionalId || null,
                     authorizedBy: movementType === "ENTRADA" ? null : operator.operatorId,
                     affectsPhysicalCash: true,
                     traceId,
