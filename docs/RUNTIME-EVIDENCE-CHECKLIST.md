@@ -35,39 +35,6 @@ El segundo error también puede ser `TPV_IDEMPOTENCY_CONFLICT`; un replay idént
 2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
 3. Si era el último P0 pendiente, registra la decisión GO.
 
-### Si FAIL
-1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
-2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
-3. El issue debe citar **P2** y la referencia oficial indicada: P2 — identidad Bookings; Wix Staff Member Object / Query Staff Members V2 y PR #587..
-4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
-
-### Si PASS
-1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
-2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
-3. Si era el último P0 pendiente, registra la decisión GO.
-
-### Si FAIL
-1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
-2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
-3. El issue debe citar **P3** y la referencia oficial indicada: P3 — idempotencia; contrato de insert Wix Data y PR #587..
-4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
-
-### Si PASS
-1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
-2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
-3. Si era el último P0 pendiente, registra la decisión GO.
-
-### Si FAIL
-1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
-2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
-3. El issue debe citar **P4** y la referencia oficial indicada: P4 — hook beforeInsert; https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert..
-4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
-
-### Si PASS
-1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
-2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
-3. Si era el último P0 pendiente, registra la decisión GO.
-
 **PEGAR_RESULTADO_AQUI**
 ```json
 ```
@@ -93,6 +60,17 @@ Caso de miembro distinto:
 {"memberIdMatch":false,"authorized":false,"errorCode":"ACCESS_DENIED"}
 ```
 
+### Si FAIL
+1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
+2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
+3. El issue debe citar **P2** y la referencia oficial indicada: P2 — identidad Bookings; Wix Staff Member Object / Query Staff Members V2 y PR #587..
+4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
+
+### Si PASS
+1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
+2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
+3. Si era el último P0 pendiente, registra la decisión GO.
+
 **PEGAR_RESULTADO_AQUI**
 ```json
 ```
@@ -114,6 +92,17 @@ Caso de miembro distinto:
 {"first":{"persisted":true,"replayed":false},"retry":{"persisted":true,"replayed":true},"sameId":true,"recordCount":1}
 ```
 No debe invocarse Wix Payments.
+
+### Si FAIL
+1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
+2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
+3. El issue debe citar **P3** y la referencia oficial indicada: P3 — idempotencia; contrato de insert Wix Data y PR #587..
+4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
+
+### Si PASS
+1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
+2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
+3. Si era el último P0 pendiente, registra la decisión GO.
 
 **PEGAR_RESULTADO_AQUI**
 ```json
@@ -142,6 +131,17 @@ Inválido:
 {"inserted":false,"errorCode":"SCHEMA_VIOLATION"}
 ```
 
+### Si FAIL
+1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
+2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
+3. El issue debe citar **P4** y la referencia oficial indicada: P4 — hook beforeInsert; https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert..
+4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
+
+### Si PASS
+1. Pega el JSON íntegro y anota fecha + ejecutor en la tabla resumen.
+2. Actualiza `docs/RELEASE-READINESS.md` a PASS y enlaza este bloque de evidencia.
+3. Si era el último P0 pendiente, registra la decisión GO.
+
 **PEGAR_RESULTADO_AQUI**
 ```json
 ```
@@ -166,7 +166,7 @@ Inválido:
 ### Si FAIL
 1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
 2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
-3. El issue debe citar **F5** y https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update.
+3. El issue debe citar **F5** y la referencia oficial indicada: F5 — hook beforeUpdate; https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update..
 4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
 
 ### Si PASS
@@ -210,7 +210,7 @@ Inválido:
 ### Si FAIL
 1. Captura el JSON real en el bloque PEGAR_RESULTADO_AQUI.
 2. Abre un issue con la etiqueta `runtime-fail` y adjunta el JSON íntegro.
-3. El issue debe citar **F1** y el contrato de `src/backend/eventLog.js` + `src/backend/validation.js`; añade referencia oficial AEAT aplicable al SIF/VERI*FACTU.
+3. El issue debe citar **F1** y la referencia oficial indicada: F1 — contrato fiscal de eventLog.js/validation.js y documentación técnica AEAT SIF/VERI*FACTU aplicable..
 4. No reintentes sin fusionar un fix; repetir el mismo test sin cambio de código no aporta evidencia nueva.
 
 ### Si PASS
