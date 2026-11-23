@@ -37,8 +37,7 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 - Backend offline quality gates: **FAIL**, run [45105979742](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742).
 - Secret scanning: **SUCCESS**, run [45105979748](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748).
-- El fallo localizado en run 45105979742 es una aserción obsoleta en src/backend/tests/tpv.native-reconciliation.contract.test.mjs: la prueba esperaba cuatro métodos de pago, pero el contrato centralizado contiene seis. El merge PR #542 incorporó una primera versión de la corrección que todavía fallaba; PR #543 contiene la corrección de las aserciones restantes. El código obtiene métodos desde Object.values(TPV_PAYMENT_METHOD).
-- La corrección se prepara en la rama chore/phase1-repository-stabilization-20261123. No declarar CI verde hasta que los workflows de esa rama/PR terminen SUCCESS.
+- Main sigue fallida por la aserción TPV obsoleta integrada en PR #542. PR #543 corrige las expectativas de seis métodos, la clasificación de OTROS y el default/guard de movimientos de efectivo. En HEAD eee6d75e5cf843a38823e7fa4c908783db175208, Backend offline quality gates SUCCESS (run 45106697984): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run 45106698016). La corrección aún no está integrada en main.
 
 ### 2.3 Contrato de pagos TPV
 
