@@ -1,7 +1,7 @@
 # TPV — matriz de aceptación funcional y conciliación con Wix nativo
 
 **Fecha:** 2026-11-23  
-**Base vigente:** main 0ba7b684d6f4d6465718ae4317d10d8f422de2ff (PR #541, #540, #542 y #543 integradas)
+**Base vigente:** main ccdac0347e86f430c4f8086765815d9d5d7e00af (PR #541, #540, #542, #543 y #544 integradas)
 **Alcance:** `#htmlTPV.txt`, `src/public/tpvPageController.js`, WebMethods TPV, seguridad, persistencia y pruebas de contrato.  
 **Naturaleza:** auditoría estática y definición de pruebas. No equivale a una prueba Wix Runtime ni autoriza pagos, facturación o despliegue.
 
@@ -187,4 +187,4 @@ Estas pruebas son contractuales/estáticas; no demuestran la ejecución de Wix R
 7. Ejecutar las pruebas Runtime de la matriz en Sandbox real; prueba negativa Published sin efectos externos.
 8. Verificar SHA instalado en Wix Editor, diff, CI, rollback y permisos antes de autorizar despliegue.
 
-**Estado de aceptación:** **NO-GO**. PR #543 corrigió las aserciones contractuales y está integrada en main. CI pre-merge SUCCESS: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK, ESLint y secret scanning. El CI backend post-merge terminó SUCCESS (run 45107058637): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK y ESLint; secret scanning SUCCESS (run 45107058755). La suite estática no certifica Wix Runtime ni producción. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
+**Estado de aceptación:** **NO-GO**. PR #543 corrigió las aserciones contractuales y está integrada en main. CI del HEAD actual SUCCESS (run 45107377657): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint. Gitleaks full-history SUCCESS (run 45107377700). La suite estática no certifica Wix Runtime ni producción. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
