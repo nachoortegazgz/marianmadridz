@@ -396,4 +396,4 @@ No se declara ejecutada ninguna prueba local, Runtime o E2E por esta actualizaci
 - [Matriz de aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
 - [Baseline nativo-first PR #548](audits/2026-11-23-native-vs-custom-functionality-matrix.md)
 - [Revisión de minimización PR #548](audits/2026-11-23-code-minimization-review.md)
-- [Auditoría Capa 0 aportada por el propietario](../)
+- Auditoría Capa 0: archivo de entrada aportado por el propietario en esta conversación; sus hallazgos se han incorporado y contrastado parcialmente con el SHA main indicado.
