@@ -12,7 +12,7 @@
 | #210 (P1) | Protección de main y obligatoriedad de checks. | — | RUNTIME-EVIDENCE-CHECKLIST.md; evidencia de rulesets/branch protection y checks requeridos. | PENDIENTE | Propietario | — |
 | #435 (P1) | Aislamiento y persistencia del TPV QA en Sandbox Wix. | #587 (parcial: P1–P4 TPV) | P1, P3 y P4; evidencia específica de aislamiento Sandbox de #435. | PENDIENTE | QA | — |
 
-P0: 0 con evidencia PASS / 5 pendientes (3 con PR listo; 2 sin PR).
+P0: 0 con evidencia PASS / 5 pendientes.
 
 P1: 0 con evidencia PASS / 4 pendientes.
 
