@@ -88,7 +88,7 @@ export const registrarVenta = webMethod(
                 ticketId: saleId,
                 professionalId: requestedProfessionalId || null,
                 customerIdentityId: customer?.identityId || null,
-                customerLabel: customer?.displayName || "CLIENTE ANONIMO SANDBOX",
+                customerLabel: customer?.displayName || "CLIENTE ANONIMO",
                 bookingId: null,
                 bookingStatus: null,
                 bookingPaymentStatus: null,
@@ -97,7 +97,7 @@ export const registrarVenta = webMethod(
                 bookingServiceId: null,
                 bookingProfessionalId: null,
                 bookingTitle: null,
-                source: "TPV_SANDBOX",
+                source: "TPV",
                 traceId,
             };
 
@@ -118,7 +118,6 @@ export const registrarVenta = webMethod(
                 profesionalId: requestedProfessionalId,
                 createdAt,
                 traceId,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 payload: { ...commonPayload, phase: "PREPARED" },
             });
             persisted = true;
@@ -172,7 +171,6 @@ export const registrarVenta = webMethod(
                 cashierMemberId: operator.operatorId,
                 createdAt,
                 traceId,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
                 payload: {
                     ...commonPayload,
                     phase: "COMMITTED",
@@ -184,7 +182,7 @@ export const registrarVenta = webMethod(
 
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "VENTA_SANDBOX_CONFIRMADA",
+                action: "VENTA_CONFIRMADA",
                 actorId: operator.operatorId,
                 entityType: "VENTA",
                 entityId: saleId,
