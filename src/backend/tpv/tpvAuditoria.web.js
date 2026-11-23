@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS } from "backend/internalConfig";
-import { querySandboxRecords } from "backend/tpv/tpvSandboxRepository";
+import { querySandboxRecords } from "backend/tpv/tpvRepository";
 import { wql } from "backend/dataAccess";
 
 export const obtenerMovimientosCaja = webMethod(
