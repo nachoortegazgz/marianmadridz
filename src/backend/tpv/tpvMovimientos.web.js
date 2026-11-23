@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvRepository";
+import { insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
@@ -25,11 +25,11 @@ export const registrarMovimientoCaja = webMethod(
         try {
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
-            const session = await latestOpenSandboxSession();
+            const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
 
-            return await withSandboxSessionLock(session.sessionId, traceId, async () => {
-                const activeSession = await latestOpenSandboxSession();
+            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+                const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
@@ -38,7 +38,7 @@ export const registrarMovimientoCaja = webMethod(
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const { item, replayed } = await insertSandboxEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
+            const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,
                 amountMinor,
@@ -55,7 +55,7 @@ export const registrarMovimientoCaja = webMethod(
                 },
             });
             persisted = true;
-            await insertSandboxEvent(TPV_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
+            await insertTpvEvent(TPV_COLLECTIONS.AUDITORIA, key + ":AUDIT", {
                 action: "MOVIMIENTO_CAJA_" + movementType,
                 actorId: operator.operatorId,
                 entityType: "MOVIMIENTO_CAJA",
@@ -85,7 +85,7 @@ export const obtenerMovimientosCaja = webMethod(
                 throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
             }
             const sessionId = String(input.sessionId || "").trim();
-            const ledger = await querySandboxLedgerRecords({ limit: 1000 });
+            const ledger = await queryTpvLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
                 .filter((record) => {
