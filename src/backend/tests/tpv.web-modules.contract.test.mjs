@@ -384,6 +384,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /call\("CASHIER_STATE"/);
     assert.match(html, /call\("CUSTOMERS_SEARCH"/);
     assert.match(html, /customerIdentityId/);
+    assert.match(html, /call\("CUSTOMERS_SEARCH"/);
     assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /call\("CATALOG_VARIANTS"/);
     assert.match(html, /keyedAction\("SALE","SALE_REGISTER"/);
