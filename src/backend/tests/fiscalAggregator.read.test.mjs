@@ -72,7 +72,7 @@ test('READ-06 fiscal aggregator prefers canonical ledger hash over historical al
 test('TAXID-01 business tax id reads MapaStaff CONFIG_SISTEMA taxId', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: null, schemaVersion: 1, traceId: 'test-config-sistema' },
+    { _id: 'CONFIG_SISTEMA_FISCAL', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: null, schemaVersion: 1, traceId: 'test-config-sistema' },
   ]);
   const id = await T.getBusinessTaxId('trace-taxid-1');
   assert.strictEqual(id, 'B12345674');
@@ -87,21 +87,54 @@ test('TAXID-01 business tax id reads MapaStaff CONFIG_SISTEMA taxId', async () =
   assert.ok(!collectionsQueried.includes('ConfiguracionFiscal'), 'FORBIDDEN collection must NOT be queried');
 });
 
-test('TAXID-02 historical MapaStaff EMISOR adapter returns taxId with warn when no config row', async () => {
+test('TAXID-02 TERCERO/EMISOR is never used as a fallback for the business tax identity', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.TERCERO, thirdPartyType: 'EMISOR', taxId: 'b99999999' },
+    { _id: 'legacy-emitter', recordType: IC.RECORD_TYPE.TERCERO, thirdPartyType: 'EMISOR', taxId: 'b99999999' },
   ]);
-  const warns = [];
-  const orig = loggerMod.logger.warn;
-  loggerMod.logger.warn = (m) => { warns.push(m); };
-  try {
-    const id = await T.getBusinessTaxId('trace-taxid-2');
-    assert.strictEqual(id, 'B99999999');
-    assert.ok(warns.length >= 1, 'expected historical adapter warning');
-  } finally {
-    loggerMod.logger.warn = orig;
-  }
+  await assert.rejects(
+    () => T.getBusinessTaxId('trace-taxid-2'),
+    /FISCAL_CONFIG_MISSING/
+  );
+  const configQueries = wixDataMock._calls.filter(
+    (call) => (call.op === 'query' || call.op === 'query_v2') &&
+      call.collection === IC.BUSINESS_COLLECTIONS.MAPA_STAFF
+  );
+  assert.equal(configQueries.length, 1, 'only the canonical CONFIG_SISTEMA query is permitted');
+});
+
+test('TAXID-04 duplicate CONFIG_SISTEMA records are rejected', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    { _id: 'CONFIG_SISTEMA_FISCAL', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674' },
+    { _id: 'duplicate-config', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B99999999' },
+  ]);
+  await assert.rejects(
+    () => T.getBusinessTaxId('trace-taxid-4'),
+    /FISCAL_CONFIG_NOT_UNIQUE/
+  );
+});
+
+test('TAXID-05 non-canonical CONFIG_SISTEMA id is rejected', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    { _id: 'wrong-config-id', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674' },
+  ]);
+  await assert.rejects(
+    () => T.getBusinessTaxId('trace-taxid-5'),
+    /FISCAL_CONFIG_MISSING/
+  );
+});
+
+test('TAXID-06 CONFIG_SISTEMA without taxId fails closed', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    { _id: 'CONFIG_SISTEMA_FISCAL', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: '  ' },
+  ]);
+  await assert.rejects(
+    () => T.getBusinessTaxId('trace-taxid-6'),
+    /FISCAL_CONFIG_INCOMPLETE/
+  );
 });
 
 test('TAXID-03 throws FISCAL_CONFIG_MISSING when nothing found (SSOT v20.1: placeholder BXXXXXXXX ERRADICADO)', async () => {
