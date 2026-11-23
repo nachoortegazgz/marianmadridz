@@ -1,59 +1,63 @@
-# Relevo técnico — 2026-11-23
+# Relevo técnico — TPV y estabilización — 2026-11-23
 
-**Repositorio:** `nachoortegazgz/marianmadridz`  
-**main:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536)  
-**PR de trabajo:** [#541](https://github.com/nachoortegazgz/marianmadridz/pull/541) — abierta, no integrada  
-**Rama:** `feat/tpv-payment-exports-after-p0-20261123`  
-**HEAD de código validado:** `1d7e99d66fcc14165bf2482885e583176c2b06ef`  
-Los commits posteriores a ese SHA son únicamente documentación; el HEAD actual de la rama se consulta en [PR #541](https://github.com/nachoortegazgz/marianmadridz/pull/541).
+**Repositorio:** nachoortegazgz/marianmadridz  
+**main:** 956356db48ee9d0ba363023c14105474316f84dd  
+**PR #541:** integrada en main mediante e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.  
+**PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd.  
+**PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
+**Rama de estabilización:** chore/phase1-repository-stabilization-20261123.  
+**Release:** **NO-GO**.
 
-## Objetivo
-Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompatibilidades entre widget, WebMethods, validadores y contratos de persistencia, y mantener el release bloqueado hasta obtener evidencia Wix Runtime.
+## Estado técnico
 
-## Cambios implementados
+La integración TPV está en main, pero el sistema no está aceptado en Wix Runtime. No se ha demostrado la sincronización del SHA Git con Wix Editor ni se han ejecutado los flujos E2E en Preview.
 
-1. **Selección de cliente en #htmlTPV:** el botón Cliente abre búsqueda de identidades sintéticas con `CUSTOMERS_SEARCH`; los resultados se renderizan escapados, se conserva `customerIdentityId` y se envía en `SALE_REGISTER`. El backend vuelve a validar la identidad.
-2. **Identidades canónicas:** `assertTpvIdentity` exige `sourceType=SYNTHETIC`, `siteId` y `schemaVersion=2`, además de tipo/ID, email de prueba, estado activo y `syntheticOnly=true`. La política de inserción ya exigía esos campos; el validador está alineado.
-3. **Compatibilidad histórica:** la validación legacy solo se activa con `allowLegacyRead: true`, admite los IDs históricos `SANDBOX-*` y el formato transicional `TPV-*` con `environment/testRunId`, y no autoriza nuevas escrituras. El fixture histórico se valida exclusivamente por esa ruta.
-4. **Idempotencia:** la búsqueda de eventos contempla ID canónico, ID legacy por colección y el formato legacy compartido.
-5. **WebMethods/exportaciones:** la clasificación de seguridad contempla exportaciones que escriben una entrada de auditoría; mantienen autorización backend antes de la persistencia.
-6. **Widget/contratos:** selección de variantes, DTO de venta, búsqueda de cliente, Control X read-only, cierre Z idempotente y operaciones de caja comparten las aserciones contractuales correspondientes.
-7. **Concurrencia CajaActual:** el test FLOW-CAJA-05C ahora verifica que el lock CAS queda en estado RELEASED y expirado. El registro no se elimina: la implementación lo conserva para compare-and-swap; la expectativa antigua de borrar la fila no correspondía al contrato actual.
-8. **Fixtures y validación:** el ledger de test incorpora schemaVersion/reconciliationStatus; el simulador diario inicializa todos los métodos canónicos (incluidos BONO y TARJETA_REGALO); las pruebas de identidad distinguen escritura neutral y lectura legacy.
-9. **Contrato de módulos:** la revisión manual detectó que `tpvCaja.web.js` y `tpvCierres.web.js` importaban una función de resumen con nombre distinto al export; se renombró el export y todas las llamadas a `buildTpvSessionSummary`, y se añadió una aserción import/export al contrato WebMethods. La suite offline ahora cubre este fallo de carga estática.
-10. **Documentación:** backlog, README TPV y este relevo reflejan el baseline real de main, PR, Wix y CI.
+El backend TPV mantiene escritura sintética con políticas que impiden pagos reales y escrituras nativas/fiscales. Los registros sintéticos no equivalen a pedidos, recibos o facturas nativas Wix.
 
-## Evidencia CI — HEAD validado
+## Contrato de pagos
 
-<badge color="success">SUCCESS</badge> **Backend offline quality gates — run 45100967570**  
-- Layer 1: 30 suites, 364/364 pruebas, 0 fallos.
-- Layer 2: 17 suites, 255/255 pruebas, 0 fallos.
-- Suite offline completa: 77 suites, 732/732 pruebas, 0 fallos.
-- npm audit: 0 vulnerabilidades reportadas.
-- Contratos Wix SDK, Wix eCommerce Order Transactions y Wix TPV Catalog: SUCCESS.
-- ESLint: SUCCESS.
+El enum centralizado TPV_PAYMENT_METHOD contiene seis valores: EFECTIVO, TARJETA, BIZUM, BONO, TARJETA_REGALO y OTROS. El validador usa Object.values(TPV_PAYMENT_METHOD); ventas, devoluciones y resumen de sesión referencian el enum.
 
-<badge color="success">SUCCESS</badge> **Secret scanning — run 45100967567**.
+BONO y TARJETA_REGALO están aceptados como medios sintéticos y se reflejan por separado en el resumen. No se ha acreditado consumo de saldo Wix Gift Cards, pasivo contable, captura de valor ni integración con proveedor. No describirlos como canje real.
 
-## Estado Wix verificado
+## Estado CI en main
 
-Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Marian Madrid Peluquería y Estética. Estado **Draft**, editor clásico, Velo Enabled, EUR, Europe/Madrid. Apps: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO. Esta lectura no prueba que el HEAD de Git esté sincronizado con Wix Editor ni acredita Preview/Runtime.
+- Backend offline quality gates: FAIL, run 45105979742.
+- Secret scanning: SUCCESS, run 45105979748.
+- El fallo inicial estaba en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis. La corrección inicial se integró por PR #542, pero el test continuó fallando por aserciones literales/escape incorrectas; PR #543 corrige el contrato completo.
+- PR #543 HEAD eee6d75e5cf843a38823e7fa4c908783db175208 pasa CI: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. La corrección aún no está integrada en main.
 
-## Consolidación de ramas — 2026-11-23 (estado posterior)
+## Cambios de TPV ya integrados
 
-- PR #537 se integró y cerró como merged en PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b`.
-- El merge commit conserva ambos padres: HEAD anterior de #541 `fad42e421e9698dd79b4e051b1f6784c37bf2d95` y HEAD de #537 `37325b4db8114631f220d5348a15902896a3d854`. Por tanto, los 28 commits exclusivos de #537 quedan en el historial, no solo sus cambios de archivos.
-- El árbol del merge (`4c66c5b835b87c7260b729e2fe10033af25e90d9`) es idéntico al árbol del HEAD #541 anterior al merge. La reconciliación no descartó código de #541 ni introdujo una combinación textual riesgosa: el diff de PR #537 estaba funcionalmente representado/superado por la versión más completa de #541 en las 16 rutas compartidas.
-- PR #541 permanece abierta contra `main`. `main` no se ha modificado. El merge de #537 se hizo exclusivamente dentro de la rama de integración.
-- CI offline aprobado en el árbol idéntico `1d7e99d66fcc14165bf2482885e583176c2b06ef` sigue siendo evidencia de ese contenido. Debe confirmarse la ejecución de CI asociada al nuevo merge commit antes de solicitar merge de PR #541.
-- Wix Preview/Runtime E2E continúa pendiente. **NO-GO para producción y publicación.**
+- Selección de cliente sintético con validación backend.
+- Identidad del actor obtenida desde miembro Wix autenticado; profesional seleccionado no debe confundirse con actor/autorización.
+- Lectura legacy explícita y escrituras nuevas con metadatos sintéticos versionados.
+- Idempotencia de operaciones, locks por sesión/venta y flujos de apertura, venta, movimientos, devoluciones y X/Z.
+- Exportaciones con autorización backend y auditoría.
+- Writers de pago real, escritura nativa y emisión fiscal deshabilitados.
 
-## Pendiente / release gate
+## Gates Runtime pendientes
 
-- Confirmar read-back del SHA `651faa2775d8733d465cea5f33ab9d4a41f80f69` en Wix Git Integration/Editor; no se ha demostrado sincronización.
-- Ejecutar aceptación en Wix Preview con CMS Sandbox: abrir sesión, catálogo, seleccionar cliente/profesional, venta sintética, pago mixto, entrada/salida, devolución sintética, X, Z, exportaciones e idempotencia/replay.
-- Ejecutar pruebas negativas en Published sin escrituras: llamadas no autorizadas, datos legacy en ruta de escritura, siteId ajeno, hash/version inválidos y capacidades externas deshabilitadas.
-- Aclarar semántica de `AUDIT_LIST`: el controlador lo conecta al lector de movimientos de `tpvMovimientos.web.js`, mientras `tpvAuditoria.web.js` conserva un método homónimo no referenciado por consumidores del repositorio. No renombrar ni eliminar sin resolver compatibilidad externa.
-- Reconciliar #416 (compensaciones fiscales), #520 (automatizaciones), #526 (reservas online), #525 (lock CajaActual) y demás gates del backlog antes del release.
+1. Mapear identidad Staff sintética con resourceId real de Wix Bookings y rechazar mismatch.
+2. Verificar roles y permisos efectivos con cuentas de prueba.
+3. Apertura → venta → pagos mixtos → movimientos → devolución → X → Z → cierre.
+4. Concurrencia, retry, replay e idempotencia de sesión, venta, devolución y cierre.
+5. Conciliación de CajaActual y ledger bajo CMS real.
+6. Aislamiento Sandbox/Online y prueba negativa de efectos en Published.
+7. Verificar historial, exportaciones, impresión y denegaciones auditadas.
+8. No activar pagos nativos ni fiscalidad hasta completar sus gates y autorizaciones.
 
-**Estado:** PR #541 abierta; CI offline completo aprobado en su HEAD actual; Wix Runtime pendiente; **NO-GO para producción**. No se han ejecutado escrituras CMS, pagos, reembolsos, cambios de configuración Wix ni despliegues durante esta revisión.
+## Seguridad y límites
+
+- No borrar ni sobrescribir ledgers append-only.
+- No modificar CajaActual ni compensaciones por inferencia.
+- No realizar pagos, reembolsos, facturas ni comunicaciones reales.
+- No considerar un test offline como evidencia de runtime.
+- No publicar ni desplegar hasta CI verde, E2E, diff revisado, rollback y autorización.
+
+## Referencias
+
+- [Aceptación TPV](TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
+- [Backlog reconciliado](BACKLOG-RECONCILIATION-2026-11-23.md)
+- [Auditoría Wix TPV](2026-11-23-tpv-wix-audit-validation.md)
+- [README técnico TPV](../../src/backend/tpv/README.md)

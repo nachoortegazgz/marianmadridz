@@ -108,15 +108,13 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.match(validation, /TPV_CHANGE_REQUIRES_CASH/);
     assert.match(summary, /case "EFECTIVO": totals\.cashMinor \+= amount/);
     assert.match(summary, /case "TARJETA": totals\.cardMinor \+= amount/);
-    assert.match(summary, /case "BIZUM": totals\.bizumMinor \+= amount/);    assert.match(summary, /case TPV_PAYMENT_METHOD\\.BONO:/);
+    assert.match(summary, /case "BIZUM": totals\.bizumMinor \+= amount/);
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.BONO:"));
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.TARJETA_REGALO:"));
     assert.ok(refunds.includes("Object.values(TPV_PAYMENT_METHOD)"));
-    assert.match(summary, /case TPV_PAYMENT_METHOD\\.TARJETA_REGALO:/);
-    assert.match(refunds, /Object\\.values\\(TPV_PAYMENT_METHOD\\)/);
-    assert.match(summary, /case "OTROS": totals\.otherMinor \+= amount/);
+    assert.ok(summary.includes("case TPV_PAYMENT_METHOD.OTROS:"));
     assert.match(summary, /totals\.expectedCashMinor = totals\.openingCashMinor \+ totals\.cashMinor \+ totals\.cashInMinor - totals\.cashOutMinor/);
-    assert.match(movements, /paymentMethod: "EFECTIVO"/);
+    assert.match(movements, /input\.paymentMethod \|\| TPV_PAYMENT_METHOD\.EFECTIVO/);
     assert.match(movements, /affectsPhysicalCash: true/);
     assert.match(movements, /normalizeClientIdempotencyKey\(input\.idempotencyKey\)/);
     assert.match(refunds, /paymentMethod: "EFECTIVO"/);
