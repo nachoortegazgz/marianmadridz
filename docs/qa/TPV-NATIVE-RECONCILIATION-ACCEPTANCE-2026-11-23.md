@@ -24,11 +24,12 @@
 
 **PARCIAL — bloqueo funcional de conciliación:**
 - El widget selecciona `profesionalId` desde `CATALOG_STAFF` y lo guarda como `state.profesionalId`.
+- `tpvCatalogo.web.js` deriva ese identificador de `staff.identityId` (identidad Staff sintética) y expone `resourceId` con el mismo valor; no es el `resourceId` real que devuelve `getMyStaffContext` desde la ficha Staff de Wix Bookings.
 - El controlador del candidato PR #538 adapta `lineItems/payments` a `lineas/pagos` y reenvía `profesionalId`; también adapta la apertura usando `openingCash` al contrato de `abrirSesionCaja`.
-- El backend valida que el profesional solicitado pertenece a la lista de identidades Staff sintéticas permitidas, pero no compara ese ID con `operatorResourceId` del miembro Wix autenticado.
+- El backend valida que el profesional solicitado pertenece a la lista de identidades Staff sintéticas permitidas, pero no existe una relación comprobada entre esa identidad sintética y el `operatorResourceId` real del miembro Wix autenticado.
 - Por tanto, la identidad autenticada no se suplanta desde el navegador, pero tampoco queda demostrada la regla «profesional seleccionado = empleado autenticado/autorizado». No se debe presentar el selector como login ni como prueba de autorización.
 
-**Aceptación pendiente:** con cuentas Wix de prueba distintas, intentar enviar un `profesionalId` válido de otra persona; backend debe rechazar el mismatch y persistir identidad Wix + recurso Staff autorizado, diferenciados.
+**Aceptación pendiente:** definir un mapeo canónico y verificable entre identidad Staff sintética y recurso Staff real; con cuentas Wix distintas, intentar enviar un `profesionalId` de otra persona y exigir rechazo del mismatch. Persistir identidad Wix y recurso Staff autorizado en campos diferenciados.
 
 ### 1.2 Roles y permisos
 
