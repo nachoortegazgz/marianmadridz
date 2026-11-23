@@ -1,6 +1,6 @@
 # TPV Marian Madrid — contrato vigente HTML / Velo / backend
 
-**Estado:** contrato de código en revisión; validación Wix Runtime pendiente.  
+**Estado:** corrección del contrato de handshake en rama; CI y validación Wix Runtime pendientes.  
 **Página:** `src/pages/TPV.yl5th.js` · **HTML Component:** `#htmlTPV` · **HTML fuente:** `#htmlTPV.txt`  
 **Controlador:** `src/public/tpvPageController.js` · **Puente:** `src/public/widgetBridge.js`
 
@@ -25,8 +25,31 @@ El controlador usa `createWidgetBridge` para:
 - validar mensajes, versión, tamaño y correlación;
 - usar `onMessage/postMessage` del HTML Component;
 - admitir el origen opaco propio del iframe Wix sin desactivar la validación de orígenes no opacos;
-- gestionar `MM_READY` / `MM_CONTEXT`;
+- permitir explícitamente los mensajes entrantes `MM_READY` y `MM_CONTEXT`, además de las solicitudes TPV;
+- gestionar `MM_READY` / `MM_CONTEXT` y las respuestas `*_RES`;
 - delegar toda operación de negocio a WebMethods backend.
+
+### 2.1 Handshake y errores conocidos
+
+El flujo tiene dos mensajes distintos:
+1. El iframe envía `MM_READY`; el controlador recibe el evento Wix `onMessage` y responde con `MM_CONTEXT`.
+2. El iframe valida `status=SUCCESS`, `data.component=htmlTPV` y `data.protocolVersion=1`. Solo entonces inicia catálogo, staff y estado de caja.
+
+Correcciones aplicadas en la rama:
+- `MESSAGE_TYPES.CONTEXT` se incluye en `allowedTypes`. Antes se permitía recibir `MM_READY`, pero `send(MM_CONTEXT)` se rechazaba por el mismo filtro de tipos; eso explica el registro `WIDGET_MESSAGE_TYPE_NOT_ALLOWED` al publicar el contexto.
+- El iframe reenvía `MM_READY` cada 500 ms, hasta 50 intentos (25 s), con `messageId` nuevo. Esto cubre la carrera en la que el iframe termina de cargar antes de que el page code haya registrado `onMessage`. El controlador ignora los READY duplicados una vez completado el handshake.
+- Las llamadas de negocio ya no se disparan inmediatamente después del primer `postMessage(MM_READY)`; esperan un `MM_CONTEXT` válido. Esto evita solicitudes iniciales perdidas o prematuras.
+- El log del controlador añade `error.detail` (tipo y versión recibidos, sin volcar payloads de negocio) para identificar futuros rechazos.
+
+Diagnóstico: el código contiene dos defectos que corresponden a los dos errores comunicados. El rechazo de `MM_CONTEXT` queda explicado directamente por la lista de tipos permitidos. El timeout es compatible con la emisión única de `MM_READY` y la carrera de inicialización; la confirmación definitiva exige repetir la apertura en Wix Draft después de aplicar el HTML actualizado.
+
+### 2.2 Sincronización del HTML Component
+
+`#htmlTPV.txt` es la fuente versionada del widget, pero al estar guardado como HTML pegado en un HTML Component del Editor, no se debe asumir que Git Integration actualiza ese contenido. Después de integrar la corrección:
+- copiar el contenido completo de `#htmlTPV.txt` al HTML Component `#htmlTPV` en Wix Draft y aplicar/guardar;
+- comprobar que el código de página Velo sí corresponde al SHA sincronizado;
+- abrir la página en Preview y verificar ausencia de ambos errores;
+- no publicar durante estas pruebas.
 
 No se utiliza `postMessage(..., "*")` desde el controlador. El HTML no accede a CMS, backend ni APIs Wix directamente.
 
