@@ -259,7 +259,7 @@ test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets',
 test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
-    { recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
+    { _id: 'CONFIG_SISTEMA_FISCAL', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
   ]);
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
     {
