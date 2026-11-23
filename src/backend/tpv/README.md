@@ -4,7 +4,7 @@
 
 ## Estado CI vigente
 
-- Backend offline quality gates post-merge: run 45107058637 en curso. Pre-merge PR #543 pasó 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint.
+- Backend offline quality gates post-merge: SUCCESS, run 45107058637 (736/736 pruebas offline, npm audit 0, SDK contracts y ESLint). Pre-merge PR #543 pasó 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint.
 - Secret scanning post-merge: SUCCESS, run 45107058755.
 - El único fallo localizado corresponde a una aserción de test obsoleta que esperaba cuatro medios de pago; el enum TPV_PAYMENT_METHOD define seis.
 
