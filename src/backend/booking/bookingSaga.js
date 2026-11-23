@@ -28,7 +28,7 @@ FIXES HEREDADOS v5014: SAGA-36..SAGA-45.
 =============================================================================
 */
 
-import { bookings } from "@wix/bookings";
+import { bookings, services } from "@wix/bookings";
 import { auth } from "@wix/essentials";
 import { query as dalQuery, insertItem as dalInsert } from "backend/dataAccess";
 import {
@@ -97,6 +97,7 @@ import {
 const log = logger;
 
 const getBookingForCompensationElevated = auth.elevate(bookings.getBooking);
+const getNativeServiceElevated = auth.elevate(services.getService);
 
 const LOCK_TTL_MS =
     Number(CONCURRENCY && CONCURRENCY.MS_TTL_MUTEX) || 300000;
@@ -1178,6 +1179,38 @@ export async function executeBookingSaga(unsafePayload) {
 
         const serviceRes = await _getServiceBySlugOrIdInternal(serviceId, traceId);
         const serviceConfig = (serviceRes && serviceRes.data) || {};
+
+        // The public SiteMember writer must honor the native Bookings service
+        // onlineBooking flag. ServiciosCatalogo.onlinePayment is a payment
+        // method setting and is not an equivalent booking-availability gate.
+        // Check only the parent service: a linked F2 phase may be intentionally
+        // hidden and is still created internally as part of the parent booking.
+        let nativeService;
+        try {
+            nativeService = await withTimeout(
+                () => getNativeServiceElevated(serviceId),
+                API_TIMEOUT_MS,
+                "getNativeBookingService"
+            );
+        } catch (nativeServiceError) {
+            log.error("Native booking availability could not be verified", {
+                traceId,
+                serviceId,
+                error: nativeServiceError?.message || String(nativeServiceError),
+            });
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Native booking availability could not be verified; booking is blocked.",
+                { traceId, serviceId }
+            );
+        }
+        if (nativeService?.onlineBooking?.enabled !== true) {
+            throw createBookingError(
+                ERROR_CODES.INVALID_PAYLOAD,
+                "Online booking is disabled for this service.",
+                { traceId, serviceId }
+            );
+        }
 
         const requestedChannel = _safeTrim(
             (unsafePayload && unsafePayload.channelType) ||
