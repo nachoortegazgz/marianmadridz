@@ -2,7 +2,7 @@
 
 **Corte de verificación:** 2026-11-23  
 **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación TPV sintética legacy) y #569 (sesión TPV nativa) también integradas. Último `main` verificado en `bf6e9966526716eef00ff1e304eb22459e2ef46e`.  
+**Integración documental:** PR #545, #546, #558, #559, #561, #562, #563 y #564 fusionadas; PR #566 (clasificación TPV sintética legacy) y #569 (sesión TPV nativa) también integradas. Último merge de código TPV verificado en `bf6e9966526716eef00ff1e304eb22459e2ef46e`.  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.
 
 ## Estado ejecutivo
