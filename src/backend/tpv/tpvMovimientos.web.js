@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvSandboxRepository";
+import { insertSandboxEvent, latestOpenSandboxSession, querySandboxLedgerRecords, withSandboxSessionLock } from "backend/tpv/tpvRepository";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
