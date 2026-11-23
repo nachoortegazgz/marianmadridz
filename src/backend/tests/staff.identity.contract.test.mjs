@@ -28,7 +28,7 @@ test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events sc
             eventsSchedule: { _id: EVENTS_SCHEDULE_ID },
           },
           associatedWixIdentity: {
-            identificationData: { contactId: CONTACT_ID },
+            identificationData: { contactId: CONTACT_ID, memberId: '66666666-6666-4666-8666-666666666666' },
             connection: { status: 'CONNECTED' },
           },
         }],
@@ -42,6 +42,7 @@ test('STAFF-SDK-01 separates working-hours schedule IDs from the staff events sc
     staffMemberId: STAFF_MEMBER_ID,
     resourceId: RESOURCE_ID,
     contactId: CONTACT_ID,
+    memberId: '66666666-6666-4666-8666-666666666666',
     displayName: 'Ana',
     roleWebsite: '',
     workingHoursScheduleIds: [WORKING_HOURS_SCHEDULE_ID],
@@ -121,7 +122,7 @@ test('SECWEB-MEMBER-01 manager identity matches canonical Wix contactId and fail
         name: 'Marian',
         resource: { workingHoursSchedules: [], eventsSchedule: {} },
         associatedWixIdentity: {
-          identificationData: { contactId },
+          identificationData: { contactId, memberId },
           connection: { status: 'CONNECTED' },
         },
       }];
@@ -140,7 +141,7 @@ test('SECWEB-MEMBER-01 manager identity matches canonical Wix contactId and fail
     assert.equal(result.data.isAdmin, true);
 
     staff.invalidateStaffCache();
-    mocks.members._current = { _id: memberId, contactId: '88888888-8888-4888-8888-888888888888' };
+    mocks.members._current = { _id: '99999999-9999-4999-8999-999999999999', contactId };
     const denied = await securityWeb.checkStaffCollaboratorAccess({ traceId: 'member-sdk-manager-mismatch' });
     assert.equal(denied.status, 'SUCCESS');
     assert.equal(denied.data.isMarianManager, false);

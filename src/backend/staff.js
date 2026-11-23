@@ -14,6 +14,11 @@ IDENTITY: staffMemberId identifica al profesional Bookings; resourceId
   workingHoursScheduleIds identifica las referencias de horarios laborales.
 =============================================================================
 */
+ /*
+ P2 OFFICIAL REFERENCE: dev.wix.com — Bookings Staff Member Object.
+ Identity authorization must compare associatedWixIdentity.identificationData.memberId
+ with the authenticated Wix Members memberId; connection.status alone is insufficient.
+ */
 import { staffMembers } from "@wix/bookings";
 import { contactsV5 } from "@wix/crm";
 import { auth } from "@wix/essentials";
@@ -90,6 +95,9 @@ function _normalizeStaffMember(staff) {
     const contactId = identityStatus === "CONNECTED"
         ? _safeTrim(identificationData.contactId || "")
         : "";
+    const memberId = identityStatus === "CONNECTED"
+        ? _safeTrim(identificationData.memberId || "")
+        : "";
     const workingHoursSchedules = Array.isArray(resource.workingHoursSchedules)
         ? resource.workingHoursSchedules
         : [];
@@ -105,6 +113,7 @@ function _normalizeStaffMember(staff) {
         staffMemberId: _safeTrim(staff._id || ""),
         resourceId,
         contactId,
+        memberId,
         displayName: _safeTrim(staff.name || ""),
         roleWebsite: _safeTrim(STAFF.WEBSITE_ROLE_BY_RESOURCE_ID[resourceId] || ""),
         workingHoursScheduleIds,
@@ -170,11 +179,11 @@ async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
  * query. resourceId is not the staffMemberId, so getStaffMember(id) is not
  * valid for this lookup.
  */
-async function _fetchStaffByResourceId(resourceId, traceId) {
+async function _fetchStaffByResourceId(resourceId, traceId, { fresh = false } = {}) {
     const id = _safeTrim(resourceId);
     if (!id || !isValidGuid(id)) return null;
 
-    const cached = _cacheGet(`staff:rid:${id}`);
+    const cached = fresh ? null : _cacheGet(`staff:rid:${id}`);
     if (cached) return cached;
 
     try {
@@ -236,8 +245,8 @@ export async function findStaffByContactId(contactId, traceId = null) {
     return found;
 }
 
-export async function findStaffByResourceId(resourceId, traceId = null) {
-    return _fetchStaffByResourceId(resourceId, traceId);
+export async function findStaffByResourceId(resourceId, traceId = null, options = {}) {
+    return _fetchStaffByResourceId(resourceId, traceId, options);
 }
 
 export async function getSiteMemberIdByContactId(contactId, traceId = null) {

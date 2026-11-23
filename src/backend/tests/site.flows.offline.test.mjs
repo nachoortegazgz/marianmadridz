@@ -63,6 +63,7 @@ async function seedStaff(overrides = {}) {
     associatedWixIdentity: {
       identificationData: {
         contactId: rec.contactId,
+        memberId: rec.siteMemberId,
         identityType: 'MEMBER',
         wixUserId: '77777777-7777-4777-8777-777777777777',
       },
@@ -283,7 +284,7 @@ test('FLOW-STAFF-01 native staff identity and site-member ID resolve through can
   assert.strictEqual(staff.contactId, GUID_CONTACT);
   assert.strictEqual(staff.resourceId, GUID_RESOURCE);
   assert.strictEqual(staff.roleWebsite, 'ESTILISTA');
-  assert.strictEqual(staff.memberId, undefined, 'Bookings does not provide a site-member ID');
+  assert.strictEqual(staff.memberId, GUID_MEMBER, 'Bookings associated identity exposes the linked site-member ID');
   assert.strictEqual(await staffApi.getSiteMemberIdByContactId(GUID_CONTACT), GUID_MEMBER);
 });
 
