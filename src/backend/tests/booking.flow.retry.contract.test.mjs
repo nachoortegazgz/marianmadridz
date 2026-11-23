@@ -93,6 +93,15 @@ test("BOOK-FLOW-F2-INTERNAL-AVAIL-01 internal F2 bypasses only the online-bookin
   assert.match(managerSource, /internalPhase: cita\?\.bookingType === BOOKING_TYPE\.DUAL_F2/);
 });
 
+test("BOOK-FLOW-DUAL-DIAGNOSTICS-01 separates missing F2 time from same-staff mismatch", () => {
+  assert.match(availabilitySource, /discardedForNoExactF2Start/);
+  assert.match(availabilitySource, /discardedForNoSameStaffF2/);
+  assert.match(availabilitySource, /discardedForInvalidF2Slot/);
+  assert.match(availabilitySource, /totalSlotsF2:\s*\(slotsF2\s*\|\|\s*\[\]\)\.length/);
+  assert.match(availabilitySource, /distinctF2StartTimes:\s*f2SlotsByStart\.size/);
+  assert.match(availabilitySource, /NoSameStaffF2: existe hora F2 pero no comparte resourceId con F1/);
+});
+
 test("BOOK-FLOW-SDK-ID-01 all @wix/bookings slot identifiers use the SDK _id shape", () => {
   assert.match(bookingCoreSource, /resource: \{ _id: resourceIdClean \}/);
   assert.match(bookingCoreSource, /\{ _id: incoming, locationType: "OWNER_BUSINESS" \}/);
