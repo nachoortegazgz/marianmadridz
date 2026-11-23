@@ -103,6 +103,22 @@ La auditoría nativa anterior documentó seis bookings proyectados, seis cancela
 
 ## 5. Diagnóstico arquitectónico
 
+### Revisión estática del contrato TPV
+
+El código confirma que el TPV actual no implementa una pasarela de escritura POS nativa:
+- `src/backend/internalConfig.js:124-141`: `ALLOW_NATIVE_WRITES=false`, `PROCESSING_MODE=INTERNAL`, `RECONCILIATION_STATUS=NOT_RECONCILED`, `allowNativePayments=false` y `allowNativeRefunds=false`.
+- `src/backend/tpv/tpvPagos.web.js:5,51-89`: los pagos y reembolsos invocan únicamente `simulateGatewayPayment` y `simulateGatewayRefund`.
+- `src/backend/tpv/tpvPaymentSimulator.js:16-30,33-34,67`: simulador determinista, `providerCalled=false`, `dataPlane=NO_CMS_ACCESS`, `externalSideEffects=false`.
+- `src/backend/tpv/tpvCatalogo.web.js:2-5`: lee catálogo nativo Bookings Services y Stores Catalog V3; `obtenerReservasClienteTPV()` devuelve `items=[]`.
+- `src/backend/tpv/tpvVentas.web.js:79-84`: la venta rechaza `bookingId` con `TPV_BOOKINGS_DISABLED`.
+- `src/backend/tpv/tpvRepository.js:657-715,812-829`: los eventos lógicos se materializan como registros sintéticos en `MovimientosCaja`; los lectores TPV consultan esa colección y filtran el envelope sintético.
+
+Por tanto, la integración actual es **lectura de directorios/catálogos nativos + persistencia TPV sintética interna**. No existe actualmente un adaptador de órdenes/pagos POS nativos ni una conciliación automática TPV↔Wix POS. Esto coincide con la política deliberada de no producir efectos externos durante QA.
+
+### Integridad de CajaActual
+
+La fila actual `CajaActual` está `ABIERTA`, tiene `snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS`, `traceId=0` y no contiene `conceptOperations.tpvRuntime` canónico. El guard `assertTpvCajaIntegrity()` de `src/backend/tpv/tpvUtils.js` acepta bootstrap cerrado o una sesión `SIMULACION` con envelope neutral/hash válidos; no contempla una fila legacy ABIERTA de ese origen. **Inferencia estática:** la fila actual no supera el guard y los writers TPV que la validan deben fallar cerrados. No se invocaron webMethods ni se modificó el singleton para probarlo.
+
 1. **Separación de circuitos confirmada:** el TPV personalizado persiste eventos sintéticos propios en `MovimientosCaja`; Wix POS conserva sus pedidos y transacciones nativos.
 2. **Sin vínculo TPV↔POS:** no existe un `orderId`, `paymentId`, `refundId` o referencia nativa en los cinco movimientos de caja leídos ni en la sesión singleton `CajaActual`.
 3. **Compensaciones pendientes:** los webhooks han creado referencias recuperables en `ControlOperativo`, pero no hay ledger fiscal real asociado. No se debe ejecutar recuperación para pedidos que el titular ha clasificado como sintéticos.
