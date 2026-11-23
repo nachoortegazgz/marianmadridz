@@ -140,7 +140,7 @@ async function dispatch(message) {
                 subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
                 impuestosTotal: numeric(payload.tax, "TAX"),
                 totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: payload.profesionalId || null,
+                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
                 customerIdentityId: payload.customerIdentityId || null,
             });
         }
@@ -151,6 +151,7 @@ async function dispatch(message) {
                 movementType: String(payload.movementType || "").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
                 reason: String(payload.reason || "").trim(),
+                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
             });
 
         case "REFUND": {
@@ -163,6 +164,7 @@ async function dispatch(message) {
                     paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
                     amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
                 })),
+                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
             });
         }
 
