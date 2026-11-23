@@ -89,3 +89,12 @@ La escritura fiscal y contable permanece bloqueada intencionadamente: internalCo
 MapaStaff contiene 5 registros (GESTORIA 1, TERCERO 1, STAFF 3) y no contiene el singleton CONFIG_SISTEMA_FISCAL. La ausencia de configuración es un bloqueo independiente: no activar LEDGER_WRITES_ENABLED hasta que configuración, firma/SIF, permisos y Runtime estén certificados.
 
 Las tres compensaciones de #416 corresponden a #10032 (+92,45 EUR), #10033 (+18,15 EUR) y el refund de #10033 (-18,15 EUR). La secuencia de recuperación debe respetar causalidad: pago original antes del refund. No completar ni reintentar automáticamente. Primero acreditar si los pedidos son sintéticos QA o hechos económicos reales; después, bajo procedimiento aprobado, insertar nuevos registros append-only y verificar su correlación.
+
+
+## Revalidación de sitio/Bookings — 2026-11-23 (solo lectura)
+
+GetSiteContext indica que el sitio está Draft (Editor clásico, Velo habilitado, Premium; Wix Stores Catalog V3 e Invoices V1). Este estado reemplaza la referencia histórica Published de los snapshots anteriores.
+
+Bookings Services V2 devuelve 94/94 servicios: 70 visibles, 24 ocultos; 74 con onlineBooking.enabled=true y 20 false. Los 70 visibles están habilitados; cuatro servicios F2 ocultos también están habilitados. Pago online: 70; presencial: 94. La lectura contradice el snapshot anterior 94/94 deshabilitados. No asumir que los flags cambiaron por una intervención concreta: no hay autoría ni historial de cambio disponible en esta lectura.
+
+**NO-GO de publicación:** mantener el sitio Draft hasta identificar la divergencia y validar que los servicios F2 ocultos no admiten una reserva directa que eluda el flujo dual personalizado. No modificar los 94 flags en bloque. La prueba de rutas directas y Runtime queda pendiente.

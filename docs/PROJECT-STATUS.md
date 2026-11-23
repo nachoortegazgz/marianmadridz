@@ -121,3 +121,12 @@ El estado PENDING_RECOVERY de #10032/#10033 es consecuencia de los gates fail-cl
 Los tres registros PENDING_RECOVERY vinculados a #10032/#10033 son coherentes con ese flujo: +92,45 EUR (#10032), +18,15 EUR (#10033) y -18,15 EUR (#10033). El último espera el asiento original ausente. No reintentar ni completar recuperaciones mientras LEDGER_WRITES_ENABLED siga false y falte la configuración canónica.
 
 **Criterio de salida P0:** determinar si #10032/#10033 son operaciones QA sintéticas o hechos económicos reales mediante evidencia externa de origen (app creadora, checkout, recibos/caja y, si procede, banco/adquirente); validar configuración fiscal y SIF; certificar Runtime en entorno aislado; reconciliar primero el pago original de #10032 y #10033, y después el refund de #10033, con nuevos registros trazables sin sobrescribir ni borrar ledger. No basta con cambiar un booleano ni con el estado PAID/REFUNDED de Wix.
+
+
+## Revalidación de estado del sitio y disponibilidad Bookings — 2026-11-23
+
+GetSiteContext actual (site 188bed94-177c-4bc9-a9f0-35080d874f3e; actualización de Wix 23-11-2026 08:59): sitio **Draft**, plan Premium, Editor clásico, Velo habilitado, Europe/Madrid, EUR. Apps instaladas: Bookings, Forms & Payments, Gift Cards, Invoices V1, Members Area, Wix Payments y Stores Catalog V3. La evidencia anterior de Published queda como snapshot histórico, no como estado actual.
+
+Consulta consistente de Bookings Services V2 (94/94): 70 servicios visibles, 24 ocultos; onlineBooking.enabled=true en 74 y false en 20; los 70 visibles están habilitados, y cuatro servicios F2 ocultos también tienen onlineBooking habilitado. Payment online habilitado en 70 y presencial en 94. Esto contradice la evidencia anterior de 94/94 online deshabilitados; se debe tratar como regresión o divergencia de snapshots hasta identificar el cambio y su autoría. El sitio Draft evita asumir exposición pública actual, pero si se publica, los 70 servicios visibles están configurados para reserva online.
+
+**Gate de publicación:** mantener Draft. Antes de publicar, verificar por ID los 24 servicios F2 ocultos, las cuatro fases secundarias con onlineBooking activo, rutas directas/SEO y el comportamiento del writer F2 OFFLINE/importe cero. No cambiar flags masivamente ni probar rutas con reservas reales. La disponibilidad de F2 por URL directa no se ha validado en Runtime.
