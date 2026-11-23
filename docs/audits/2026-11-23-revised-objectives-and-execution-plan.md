@@ -110,6 +110,10 @@ GitHub no demuestra qué código está instalado en Wix. Wix Site Context no dev
 - Runtime/E2E de pagos, webhooks, concurrencia, TPV y seguridad.
 - Reset preproducción y autorización final.
 
+## 4.1 Directriz de inicio TPV incorporada
+
+Se añade como documento de referencia obligatorio el [Baseline de adaptación neutral del TPV](2026-11-23-tpv-neutral-adaptation-baseline.md). La adaptación debe continuar sobre `internalConfig.js`, `tpvUtils.js` y `tpvRepository.js`; no crear un segundo repositorio ni un módulo `tpvRuntimePolicy.js`. La política única, persistencia, IDs, estados, envelope, locks y contratos se consideran diseño objetivo pendiente de reconciliación y pruebas. No se autoriza aún ningún cambio de código ni migración de datos.
+
 ## 5. Plan de acción priorizado
 
 ### HITO 0 — Reconciliación de fuentes (en curso)
