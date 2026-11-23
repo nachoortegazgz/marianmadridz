@@ -626,52 +626,13 @@ test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-
 });
 
 
-test('HOOK-PACKAGE-01 validates immutable accountant package snapshot inserts', () => {
-  const valid = {
-    _id: 'DOC_GESTORIA_2026_T1_PAQUETE_GESTORIA_V0001',
-    periodType: 'QUARTERLY',
-    fiscalYear: 2026,
-    fiscalQuarter: 1,
-    packageVersion: 1,
-    summaryData: { totalOperaciones: 1 },
-    invoiceData: [{ invoiceNumber: 'F-1' }],
-    packageStatus: 'PREPARED',
-    createdAt: '2026-11-11T20:05:00.000Z',
-    snapshotHash: 'a'.repeat(64),
-    schemaVersion: '1.0',
-    source: 'FISCAL_AGGREGATOR',
-    traceId: 'trace-package-1',
-  };
-  assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
-  assert.ok(valid.createdAt instanceof Date);
-  assert.strictEqual(valid.createdAt.toISOString(), '2026-11-11T20:05:00.000Z');
-  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, createdAt: undefined }), /createdAt/);
-  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, snapshotHash: 'invalid' }), /SHA-256/);
-  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
-});
-
-test('HOOK-PACKAGE-02 monthly package requires month and forbids quarter', () => {
-  const valid = {
-    periodType: 'MONTHLY',
-    fiscalYear: 2026,
-    fiscalMonth: 2,
-    packageVersion: 1,
-    summaryData: {},
-    invoiceData: [],
-    packageStatus: 'PREPARED',
-    createdAt: '2026-11-20T10:00:00.000Z',
-    snapshotHash: 'b'.repeat(64),
-    schemaVersion: '1.0',
-    source: 'FISCAL_AGGREGATOR',
-    traceId: 'trace-package-2',
-  };
-  assert.strictEqual(H.PaquetesGestoria_beforeInsert(valid), valid);
-  assert.throws(() => H.PaquetesGestoria_beforeInsert({ ...valid, fiscalQuarter: 1 }), /no admite fiscalQuarter/);
-});
-
-test('HOOK-PACKAGE-03 preserves immutable gestoría package snapshots', () => {
-  assert.throws(() => H.PaquetesGestoria_beforeUpdate({ _id: 'synthetic-package-1' }), /append-only/);
-  assert.throws(() => H.PaquetesGestoria_beforeRemove('synthetic-package-1'), /append-only/);
+test('HOOK-REMOVED-01 deleted CMS collection hooks are not exported', () => {
+  assert.equal(H.PaquetesGestoria_beforeInsert, undefined);
+  assert.equal(H.PaquetesGestoria_beforeUpdate, undefined);
+  assert.equal(H.PaquetesGestoria_beforeRemove, undefined);
+  assert.equal(H.TpvSandboxIdentities_beforeInsert, undefined);
+  assert.equal(H.TpvSandboxIdentities_beforeUpdate, undefined);
+  assert.equal(H.TpvSandboxIdentities_beforeRemove, undefined);
 });
 
 test('HOOK-CITAS-INSERT-01 enforces all physical required booking fields', () => {

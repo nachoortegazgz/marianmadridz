@@ -21,7 +21,7 @@ import {
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, assertPaquetesGestoriaRecord, assertTpvIdentity, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 import { stableSerialize } from "backend/tpv/tpvUtils";
 
@@ -591,24 +591,6 @@ export function HistoricoCierresZ_beforeRemove() {
     _fiscalError("Borrado de HistoricoCierresZ prohibido: registro fiscal append-only");
 }
 
-// PaquetesGestoria is a dedicated immutable snapshot store. Dispatch state is
-// never written back into a package; every package is a new append-only item.
-export function PaquetesGestoria_beforeInsert(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-        _schemaError("PaquetesGestoria item invalido");
-    }
-    _normalizeCmsDateTime(item, "createdAt");
-    assertPaquetesGestoriaRecord(item);
-    return item;
-}
-export function PaquetesGestoria_beforeUpdate() {
-    _fiscalError("Modificacion de PaquetesGestoria prohibida: snapshot append-only");
-}
-
-export function PaquetesGestoria_beforeRemove() {
-    _fiscalError("Borrado de PaquetesGestoria prohibido: snapshot append-only");
-}
-
 // =============================================================================
 // BLOQUE 3 - REGISTROS HORARIOS
 // =============================================================================
@@ -658,22 +640,6 @@ function _clearStaleCajaClosedAt(item) {
         item.closedAt = null;
     }
     return item;
-}
-
-export function TpvSandboxIdentities_beforeInsert(item) {
-    assertTpvIdentity(item);
-    if (item.createdAt !== undefined && item.createdAt !== null) {
-        _normalizeCmsDateTime(item, "createdAt");
-    }
-    return item;
-}
-
-export function TpvSandboxIdentities_beforeUpdate() {
-    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
-}
-
-export function TpvSandboxIdentities_beforeRemove() {
-    throw new Error("TPV_IDENTITIES_APPEND_ONLY");
 }
 
 export function CajaActual_beforeInsert(item) {

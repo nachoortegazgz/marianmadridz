@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@wix/bookings": "1.0.1704",
+    "@wix/crm": "1.0.1686",
     "@wix/data": "1.0.527",
     "@wix/ecom": "1.0.2539",
     "@wix/essentials": "1.0.15",

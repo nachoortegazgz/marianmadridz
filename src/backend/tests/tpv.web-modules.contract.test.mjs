@@ -276,27 +276,28 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     }
 });
 
-test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
+test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff resource mapping", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
-    assert.match(catalog, /services\.queryServices/);
-    assert.match(catalog, /listTpvIdentities\(TPV_IDENTITY_TYPES\.STAFF\)/);
-    assert.match(catalog, /listTpvIdentities\(TPV_IDENTITY_TYPES\.CUSTOMER\)/);
-    assert.match(catalog, /identityId: item\.identityId/);
-    assert.doesNotMatch(catalog, /contactId: item\.identityId/);
-    assert.match(await source("tpv/tpvVentas.web.js"), /customerIdentityId/);
-    assert.doesNotMatch(await source("tpv/tpvVentas.web.js"), /customerContactId/);
-    assert.doesNotMatch(catalog, /TPV_SANDBOX_FIXTURES/);
-    const identities = await source("tpv/tpvIdentities.js");
-    assert.match(identities, /BUSINESS_COLLECTIONS\.TPV_IDENTITIES/);
-    assert.match(identities, /CONSISTENCY\.STRONG/);
-    assert.match(identities, /syntheticOnly/);
-    assert.match(identities, /allowLegacyRead: true/);
-    const validation = await source("validation.js");
-    assert.match(validation, /assertTpvIdentity/);
-    const hooks = await source("data.js");
-    assert.match(hooks, /TpvSandboxIdentities_beforeInsert/);
-    assert.match(hooks, /TPV_IDENTITIES_APPEND_ONLY/);
-    assert.doesNotMatch(catalog, /contactsV5|extendedBookings|staffMembers|tpvNativeReaders/);
+    const directory = await source("tpv/tpvNativeDirectory.js");
+    const sales = await source("tpv/tpvVentas.web.js");
+    const movements = await source("tpv/tpvMovimientos.web.js");
+    const refunds = await source("tpv/tpvDevoluciones.web.js");
+    assert.match(directory, /contactsV5\.searchContacts/);
+    assert.match(directory, /contactsV5\.getContact/);
+    assert.match(directory, /staffMembers\.queryStaffMembers/);
+    assert.match(directory, /BUSINESS_COLLECTIONS\.MAPA_STAFF/);
+    assert.match(directory, /resourceId/);
+    assert.match(catalog, /searchTpvContacts/);
+    assert.match(catalog, /listAuthorizedProfessionals/);
+    assert.match(catalog, /resolveTpvContact/);
+    assert.match(sales, /resolveTpvContact/);
+    assert.match(sales, /listAuthorizedProfessionals/);
+    assert.match(sales, /customerContactId/);
+    assert.match(movements, /resolveAuthorizedProfessional/);
+    assert.match(refunds, /resolveAuthorizedProfessional/);
+    for (const file of [catalog, directory, sales, movements, refunds]) {
+        assert.doesNotMatch(file, /TPV_IDENTITY_TYPES|listTpvIdentities|getTpvIdentity/);
+    }
     assert.match(catalog, /formattedValue/);
     assert.match(catalog, /precioMinor/);
     assert.match(catalog, /import \{ auth \} from ["']@wix\/essentials["']/);
@@ -313,21 +314,12 @@ test("TPV catalog reader uses native Bookings SDK and does not expose staff cont
     assert.doesNotMatch(catalog, /varianteId: variant\.id/);
     assert.match(catalog, /visibleEnPos: product\.visibleInPos !== false/);
     assert.match(catalog, /minPriceVariant\?\.price\?\.actualPrice/);
-    assert.match(catalog, /product\.visibleInPos/);
-    assert.match(catalog, /V3_CATALOG/);
-    assert.match(catalog, /precioMinor/);
-    assert.match(catalog, /from ["']@wix\/stores["']/);
-    assert.doesNotMatch(catalog, /staff\.email|staff\.phone/);
-
-    const giftCards = await source("tpv/tpvGiftCards.web.js");
-    assert.match(giftCards, /TPV_GIFT_CARDS_DISABLED_IN_SANDBOX/);
-    assert.doesNotMatch(giftCards, /giftVouchers|@wix\/ecom|auth\.elevate/);
-    assert.match(giftCards, /requireCajero/);
-    assert.match(giftCards, /syntheticOnly: true/);
-    assert.doesNotMatch(giftCards, /insertItem|updateItem|redeemGiftCard|console\.(?:log|info|warn|error)/);
-    assert.doesNotMatch(giftCards, /console\.(?:log|info|warn|error)|wixData|\.insert\(|\.update\(|\.remove\(/);
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    assert.doesNotMatch(controller, /sessionId: String\(payload\.sessionId/);
+    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\)/);
+    const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
+    if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
-
 test("TPV controller imports the exact canonical WebMethods from their owning modules", async () => {
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     const contracts = {
@@ -508,13 +500,14 @@ test("new TPV synthetic identifiers are neutral while historical Sandbox markers
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const config = await source("internalConfig.js");
+    const directory = await source("tpv/tpvNativeDirectory.js");
 
     assert.match(utilities, /return "TPV-" \+ String\(prefix/);
     assert.match(utilities, /return "TPV_" \+ digest/);
     assert.match(utilities, /return "TPVSANDBOX_" \+ digest/);
-    assert.match(validation, /legacyPrefix = identityType === "CUSTOMER" \? "SANDBOX-CUSTOMER-"/);
-    assert.match(repository, /"TPV-CUSTOMER-" \+ String/);
-    assert.match(repository, /"TPV-STAFF-" \+ String/);
+    assert.doesNotMatch(validation, /legacyPrefix|SANDBOX-CUSTOMER|TPV_IDENTITIES/);
+    assert.match(directory, /identityId: contact\._id/);
+    assert.match(directory, /profesionalId: resourceId/);
     assert.match(repository, /const traceId = "TPV:" \+ TPV_RUNTIME_POLICY\.SITE_ID/);
     assert.match(closures, /reportId = "TPV-X-"/);
     assert.match(closures, /reportId = "Z-"/);

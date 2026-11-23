@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, initializeTpvCaja, seedTpvIdentities, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -28,14 +28,10 @@ export const inicializarCaja = webMethod(
 
         try {
             const result = await initializeTpvCaja();
-            const identities = await seedTpvIdentities();
             return {
                 status: "SUCCESS",
                 data: {
-                    syntheticReady: true,
                     initialized: result.created,
-                    identitiesCreated: identities.created,
-                    identitiesTotal: identities.total,
                     cashRegisterStatus: result.item.cashRegisterStatus,
                     snapshotSource: result.item.snapshotSource,
                 },

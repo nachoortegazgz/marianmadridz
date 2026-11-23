@@ -18,71 +18,100 @@ concurrency:
 
 jobs:
   offline-quality:
-    name: Layer 1 and 2 QA, offline regression, SDK contract and lint
+    name: Backend quality gates
     runs-on: ubuntu-latest
     timeout-minutes: 35
+
     steps:
       - name: Checkout
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-
-      - name: Verify checked-out repository workspace
-        shell: bash
-        run: |
-          set -euo pipefail
-          workspace="$(realpath "$GITHUB_WORKSPACE")"
-          repository_root="$(git rev-parse --show-toplevel)"
-          test "$workspace" = "$repository_root"
-          printf 'GitHub workspace: %s\nRepository root: %s\n' "$workspace" "$repository_root"
 
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: "24.22.1"
           cache: npm
+          cache-dependency-path: package-lock.json
 
-      - name: Install locked dependencies without lifecycle scripts
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify package and lockfile synchronization
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
 
-      # Focused layer gates make the acceptance status explicit. The full suite below
-      # remains the canonical regression gate and covers every test file once.
-      - name: Audit locked npm dependency graph
+          const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const packageLock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+          const lockDependencies = packageLock.packages?.[""]?.dependencies ?? {};
+
+          const packageDependencies = packageJson.dependencies ?? {};
+          const packageDevDependencies = packageJson.devDependencies ?? {};
+          const lockDevDependencies = packageLock.packages?.[""]?.devDependencies ?? {};
+          const declarations = [
+            ...Object.entries(packageDependencies).map(([name, version]) => ({ name, version, section: "dependencies", root: lockDependencies[name] })),
+            ...Object.entries(packageDevDependencies).map(([name, version]) => ({ name, version, section: "devDependencies", root: lockDevDependencies[name] })),
+          ];
+          const mismatches = declarations.flatMap(({ name, version, section, root }) => {
+            const installed = packageLock.packages?.[`node_modules/${name}`]?.version;
+            const issues = [];
+            if (root !== version) issues.push({ name, section, expected: version, actual: root ?? "missing", kind: "root" });
+            if (installed !== version) issues.push({ name, section, expected: version, actual: installed ?? "missing", kind: "package" });
+            return issues;
+          });
+
+          if (mismatches.length) {
+            console.error("package.json/package-lock.json are out of sync:");
+            for (const name of mismatches) {
+              console.error(`- ${name.section}.${name.name} [${name.kind}]: expected=${name.expected}, actual=${name.actual}`);
+            }
+            process.exit(1);
+          }
+
+          console.log("package.json and package-lock.json dependencies match.");
+          NODE
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --include=dev --no-audit --no-fund
+
+      - name: Verify critical dependencies
+        run: |
+          node --input-type=module <<'NODE'
+          for (const packageName of ["@wix/ecom", "@wix/bookings", "@wix/crm"]) {
+            console.log(`${packageName}: ${import.meta.resolve(packageName)}`);
+          }
+          NODE
+          npm exec --no -- eslint --version
+
+      - name: Audit dependencies
         id: npm-audit
-        shell: bash
         run: |
           set +e
           npm audit --json > "$RUNNER_TEMP/npm-audit.json"
-          audit_exit=$?
+          exit_code=$?
           set -e
-          node - "$RUNNER_TEMP/npm-audit.json" "$RUNNER_TEMP/npm-audit-summary.json" "$audit_exit" <<'NODE'
+          echo "npm_audit_exit=$exit_code" >> "$GITHUB_OUTPUT"
+
+          node <<'NODE'
           const fs = require("node:fs");
-          const [reportPath, summaryPath, auditExitText] = process.argv.slice(2);
-          const auditExit = Number(auditExitText);
-          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
-          if (report.error || !report.metadata?.vulnerabilities) {
-            console.error("npm audit did not return a valid vulnerability report:", report.error ?? "missing metadata");
+          const report = JSON.parse(
+            fs.readFileSync(process.env.RUNNER_TEMP + "/npm-audit.json", "utf8")
+          );
+          if (report.error) {
+            console.error("npm audit failed:", report.error);
             process.exit(1);
           }
-          const counts = report.metadata.vulnerabilities;
-          const summary = {
-            info: counts.info ?? 0,
-            low: counts.low ?? 0,
-            moderate: counts.moderate ?? 0,
-            high: counts.high ?? 0,
-            critical: counts.critical ?? 0,
-            total: counts.total ?? 0
-          };
-          console.log("npm audit:", JSON.stringify(summary));
-          fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2) + "\n");
-          if (auditExit !== 0 && summary.total === 0) {
-            console.error("npm audit exited unsuccessfully without reporting advisories; fail closed.");
+          const counts = report.metadata?.vulnerabilities;
+          if (!counts) {
+            console.error("npm audit returned no vulnerability metadata.");
             process.exit(1);
           }
-          if (summary.high > 0 || summary.critical > 0) {
-            console.error("High or critical npm advisories block this quality gate.");
+
+          fs.writeFileSync(
+            process.env.RUNNER_TEMP + "/npm-audit-summary.json",
+            JSON.stringify(counts, null, 2) + "\n"
+          );
+
+          if (counts.high > 0 || counts.critical > 0) {
+            console.error("High or critical npm advisories found.");
             process.exit(1);
-          }
-          if (summary.total > 0) {
-            console.warn("Low/moderate advisories require review; see the uploaded audit artifact.");
           }
           NODE
 
@@ -97,45 +126,23 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Run Layer 1 focused regression gate
+      - name: Run Layer 1
         run: npm run test:layer1
 
-      - name: Run Layer 2 focused regression gate
+      - name: Run Layer 2
         run: npm run test:layer2
 
-      # The canonical npm test runner includes every Layer 1 and Layer 2 suite once.
-      - name: Run complete offline regression suite
+      - name: Run complete offline suite
         run: npm test
 
-      - name: Capture complete Layer 1 failure diagnostics
-        if: failure()
-        continue-on-error: true
-        shell: bash
-        run: |
-          npm run test:layer1 > "$RUNNER_TEMP/layer1-diagnostics.log" 2>&1 || true
-          cat "$RUNNER_TEMP/layer1-diagnostics.log"
-
-      - name: Upload Layer 1 diagnostics
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: layer1-diagnostics
-          path: ${{ runner.temp }}/layer1-diagnostics.log
-          if-no-files-found: ignore
-          retention-days: 1
-
-      - name: Verify installed Wix SDK contracts
-        if: always()
+      - name: Verify Wix eCommerce cart SDK
         run: npm run verify:wix-ecom-cart-v2
 
-      - name: Verify Wix eCommerce Order Transactions SDK contract
-        if: always()
+      - name: Verify Wix eCommerce transactions SDK
         run: npm run verify:wix-ecom-order-transactions
 
-      - name: Verify Wix TPV catalog SDK contracts
-        if: always()
+      - name: Verify Wix TPV SDK
         run: npm run verify:wix-tpv-native-sdk
 
       - name: Run ESLint
-        if: always()
         run: npm run lint

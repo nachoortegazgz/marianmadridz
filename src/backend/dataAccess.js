@@ -21,8 +21,6 @@ import {
     assertHistoricoCierresZ,
     assertMovimientosCajaRequiredFields,
     assertAccountingLedgerRecord,
-    assertPaquetesGestoriaRecord,
-    assertTpvIdentity,
 } from "backend/validation";
 import {
     assertBulkPatchAllowed,
@@ -339,16 +337,12 @@ export function insertItem(collection, item) {
         assertMapaStaffRecord(item);
     } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
         assertCajaActualRecord(item);
-    } else if (collection === BUSINESS_COLLECTIONS.TPV_IDENTITIES) {
-        assertTpvIdentity(item);
     } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
         assertMovimientosCajaRequiredFields(item);
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
         assertHistoricoCierresZ(item);
     } else if (collection === BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE) {
         assertAccountingLedgerRecord(item);
-    } else if (collection === BUSINESS_COLLECTIONS.PAQUETES_GESTORIA) {
-        assertPaquetesGestoriaRecord(item);
     }
     return elevatedInsert(collection, item);
 }

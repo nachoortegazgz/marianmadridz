@@ -103,8 +103,8 @@ async function dispatch(message) {
         case "SESSION_OPEN":
             return abrirSesionCaja({
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
-                terminalId: String(payload.terminalId || "TPV").slice(0, 80),
-                reason: String(payload.reason || "Apertura desde TPV").slice(0, 200),
+                terminalId: optionalString(payload.terminalId, 80) || "TPV",
+                reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
 
         case "CATALOG_SERVICES":
@@ -125,7 +125,7 @@ async function dispatch(message) {
             return obtenerStaff();
 
         case "CUSTOMERS_SEARCH":
-            return buscarClientesTPV({ search: String(payload.search || "").trim() });
+            return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
 
         case "SALE_REGISTER": {
             const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
@@ -139,7 +139,7 @@ async function dispatch(message) {
                 throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
             }
             return registrarVenta({
-                sessionId: String(payload.sessionId || ""),
+                sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 lineas: lineItems.map((line) => ({
                     tipoLinea: String(line.tipoLinea || "").toUpperCase(),
@@ -170,11 +170,11 @@ async function dispatch(message) {
         case "CASH_MOVEMENT":
             return registrarMovimientoCaja({
                 idempotencyKey: key,
-                sessionId: String(payload.sessionId || ""),
-                movementType: String(payload.movementType || "").toUpperCase(),
-                paymentMethod: String(payload.paymentMethod || "EFECTIVO").toUpperCase(),
+                sessionId: optionalString(payload.sessionId) || "",
+                movementType: (optionalString(payload.movementType, 40) || "").toUpperCase(),
+                paymentMethod: (optionalString(payload.paymentMethod, 40) || "EFECTIVO").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
-                reason: String(payload.reason || "").trim(),
+                reason: optionalString(payload.reason, 500) || "",
                 profesionalId: optionalString(payload.profesionalId),
             });
 
@@ -182,8 +182,8 @@ async function dispatch(message) {
             const payments = Array.isArray(payload.payments) ? payload.payments : [];
             return registrarDevolucion({
                 idempotencyKey: key,
-                saleId: String(payload.saleId || "").trim(),
-                reason: String(payload.reason || "").trim(),
+                saleId: optionalString(payload.saleId) || "",
+                reason: optionalString(payload.reason, 500) || "",
                 payments: payments.map((payment) => ({
                     paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
                     amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
@@ -194,36 +194,36 @@ async function dispatch(message) {
 
         case "TICKET_X":
             return generarControlX({
-                sessionId: String(payload.sessionId || ""),
+                sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "TICKET_Z":
             return generarCierreZ({
-                sessionId: String(payload.sessionId || ""),
+                sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
-                differenceReason: String(payload.differenceReason || "").trim(),
+                differenceReason: optionalString(payload.differenceReason, 500) || "",
             });
 
         case "SESSION_SUMMARY":
-            return obtenerResumenCaja({ sessionId: String(payload.sessionId || "") });
+            return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId) || "" });
 
         case "AUDIT_LIST":
             return obtenerMovimientosCaja({
-                sessionId: payload.sessionId ? String(payload.sessionId) : undefined,
+                sessionId: optionalString(payload.sessionId) || undefined,
                 limit: boundedInteger(payload.limit ?? 50, "MOVEMENTS_LIMIT", 1, 100),
             });
 
         case "CASH_MOVEMENTS_EXPORT":
             return exportarMovimientosCaja({
-                sessionId: String(payload.sessionId || ""),
+                sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "AUDIT_EXPORT":
             return exportarAuditoriaTPV({
-                sessionId: String(payload.sessionId || ""),
+                sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 

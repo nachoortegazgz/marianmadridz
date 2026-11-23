@@ -2,9 +2,9 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
-import { listTpvIdentities } from "backend/tpv/tpvIdentities";
+import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
@@ -87,13 +87,10 @@ export const registrarMovimientoCaja = webMethod(
             const reason = String(input.reason || "").trim();
             if (reason.length < 3 || reason.length > 500) throw new Error("TPV_REASON_REQUIRED");
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const profesionalId = String(input.profesionalId || "").trim();
-            if (profesionalId) {
-                const staff = await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF);
-                if (!staff.some((person) => person.identityId === profesionalId)) {
-                    throw new Error("TPV_STAFF_NOT_ALLOWED");
-                }
-            }
+            const requestedProfessionalId = String(input.profesionalId || "").trim();
+            const profesionalId = requestedProfessionalId
+                ? (await resolveAuthorizedProfessional(requestedProfessionalId)).resourceId
+                : null;
             const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key, {
                 sessionId: session.sessionId,
                 movementType,

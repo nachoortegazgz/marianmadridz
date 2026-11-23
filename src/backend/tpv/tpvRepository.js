@@ -8,8 +8,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
-import { listTpvIdentities } from "backend/tpv/tpvIdentities";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
 import {
 
@@ -346,24 +345,6 @@ function _virtualRecord(item) {
     };
 }
 
-
-export async function seedTpvIdentities() {
-
-    const requiredIds = [
-        ...Array.from({ length: 3 }, (_, index) => "TPV-CUSTOMER-" + String(index + 1).padStart(2, "0")),
-        ...Array.from({ length: 3 }, (_, index) => "TPV-STAFF-" + String(index + 1).padStart(2, "0")),
-    ];
-    const [customers, staff] = await Promise.all([
-        listTpvIdentities(TPV_IDENTITY_TYPES.CUSTOMER),
-        listTpvIdentities(TPV_IDENTITY_TYPES.STAFF),
-    ]);
-    const existing = new Map([...customers, ...staff].map((item) => [item.identityId, item]));
-    const missing = requiredIds.filter((identityId) => !existing.has(identityId));
-    if (missing.length) {
-        throw new Error("TPV_IDENTITIES_NOT_PRESEEDED:" + missing.join(","));
-    }
-    return { created: 0, total: requiredIds.length };
-}
 
 export async function initializeTpvCaja() {
 

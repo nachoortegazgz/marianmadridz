@@ -43,19 +43,6 @@ test("all CMS write-policy collection lists contain unique canonical strings", (
 test("dataAccess validates physical required fields before elevated CMS inserts", () => {
     assert.throws(() => insertItem(C.MOVIMIENTOS_CAJA, {}), /MovimientosCaja requires/);
     assert.throws(() => insertItem(C.HISTORICO_CIERRES_Z, {}), /HistoricoCierresZ requires/);
-    assert.throws(() => insertItem(C.PAQUETES_GESTORIA, {
-        periodType: "QUARTERLY",
-        fiscalYear: 2026,
-        fiscalQuarter: 1,
-        packageVersion: 1,
-        summaryData: {},
-        invoiceData: [],
-        packageStatus: "PREPARED",
-        snapshotHash: "a".repeat(64),
-        schemaVersion: "1.0",
-        source: "FISCAL_AGGREGATOR",
-        traceId: "trace-package-dal-missing-createdAt",
-    }), /createdAt/);
     assert.throws(() => insertItem(C.CITAS_F2, {
         bookingId: "e556070a-6d6a-402e-8422-11133033ea76",
         scheduleId: "e556070a-6d6a-402e-8422-11133033ea76",
@@ -158,7 +145,6 @@ test("update policy keeps operational projections mutable and append-only ledger
         C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
         C.REGISTROS_HORARIOS_STAFF,
         C.HISTORICO_CIERRES_Z,
-        C.PAQUETES_GESTORIA,
     ]) {
         assert.throws(() => assertUpdateAllowed(collection, {
             _id: "synthetic-ledger-row",
@@ -168,35 +154,10 @@ test("update policy keeps operational projections mutable and append-only ledger
         controlType: T.SYSTEM_FLAG,
     }), { code: "CMS_UPDATE_ID_REQUIRED" });
 });
-test("TPV identities require explicit source and site metadata and remain append-only", () => {
-    const identity = {
-        _id: "TPV-CUSTOMER-01",
-        identityId: "TPV-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sintético 01",
-        email: "cliente01@example.test",
-        active: true,
-        syntheticOnly: true,
-        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-        siteId: TPV_RUNTIME_POLICY.SITE_ID,
-        schemaVersion: 2,
-        metadata: {},
-    };
-    assert.doesNotThrow(() => assertInsertAllowed(C.TPV_IDENTITIES, identity));
-    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
-        ...identity, sourceType: "NATIVE",
-    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => assertInsertAllowed(C.TPV_IDENTITIES, {
-        ...identity, siteId: "00000000-0000-4000-8000-000000000000",
-    }), { code: "CMS_TPV_IDENTITY_CONTRACT_INVALID" });
-    assert.throws(() => insertItem(C.TPV_IDENTITIES, {
-        ...identity, identityId: "INVALID-CUSTOMER",
-    }), /SCHEMA_VIOLATION/);
-    assert.throws(() => assertUpdateAllowed(C.TPV_IDENTITIES, {
-        ...identity, _id: identity._id,
-    }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+test("removed CMS collections are absent from the canonical registry", () => {
+    assert.equal(C.TPV_IDENTITIES, undefined);
+    assert.equal(C.PAQUETES_GESTORIA, undefined);
 });
-
 test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     const item = {
         _id: "TPV_TEST_ROW",
@@ -281,7 +242,6 @@ test("single-item removal keeps ControlOperativo scoped and denies append-only l
         C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
         C.REGISTROS_HORARIOS_STAFF,
         C.HISTORICO_CIERRES_Z,
-        C.PAQUETES_GESTORIA,
     ]) {
         assert.throws(() => assertRemoveAllowed(collection, "synthetic-ledger-row"), {
             code: "CMS_REMOVE_SCOPE_DENIED",

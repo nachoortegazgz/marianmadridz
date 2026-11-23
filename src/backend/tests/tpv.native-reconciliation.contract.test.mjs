@@ -10,11 +10,12 @@ async function source(path) {
 }
 
 test("TPV identity is resolved from the authenticated Wix member, not client-supplied actor IDs", async () => {
-    const [security, operatorContext, context, catalog, controller, html] = await Promise.all([
+    const [security, operatorContext, context, catalog, directory, controller, html] = await Promise.all([
         source("security.js"),
         source("tpv/tpvOperatorContext.js"),
         source("tpv/tpvContext.js"),
         source("tpv/tpvCatalogo.web.js"),
+        source("tpv/tpvNativeDirectory.js"),
         readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
         readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
     ]);
@@ -27,12 +28,12 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(operatorContext, /operatorId: memberId/);
     assert.match(context, /getTpvOperatorContext\(traceId\)/);
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
-    assert.match(catalog, /profesionalId: staff\.identityId/);
-    assert.match(catalog, /resourceId: staff\.identityId/);
+    assert.match(directory, /profesionalId: resourceId/);
+    assert.match(catalog, /items: await listAuthorizedProfessionals\(\)/);
     assert.match(operatorContext, /operatorResourceId: String\(staff\?\.resourceId/);
 
-    // The UI selects a synthetic TPV staff identity. The backend actor context
-    // is independently resolved from the authenticated Wix member.
+    // The UI selects the MapaStaff/Wix Bookings resourceId. The backend actor
+    // context is independently resolved from the authenticated Wix member.
     assert.match(html, /state\.profesionalId = person \? person\.profesionalId : null/);
     assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
     const caja = await source("tpv/tpvCaja.web.js");

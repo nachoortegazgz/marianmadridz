@@ -2,11 +2,11 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSaleLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
-import { listTpvIdentities } from "backend/tpv/tpvIdentities";
+import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 
 export const registrarDevolucion = webMethod(
     Permissions.SiteMember,
@@ -18,13 +18,10 @@ export const registrarDevolucion = webMethod(
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const profesionalId = String(input.profesionalId || "").trim();
-            if (profesionalId) {
-                const staff = await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF);
-                if (!staff.some((person) => person.identityId === profesionalId)) {
-                    throw new Error("TPV_STAFF_NOT_ALLOWED");
-                }
-            }
+            const requestedProfessionalId = String(input.profesionalId || "").trim();
+            const profesionalId = requestedProfessionalId
+                ? (await resolveAuthorizedProfessional(requestedProfessionalId)).resourceId
+                : null;
             const saleId = String(input.saleId || "").trim();
             const reason = String(input.reason || "").trim();
             if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_REFUND_REFERENCE_AND_REASON_REQUIRED");

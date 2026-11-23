@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { assertTpvIdentity } from "../validation.js";
 import {
     assertBulkPatchAllowed,
     assertInsertAllowed,
@@ -124,44 +123,6 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(legacyCaja), "historical markers remain accepted for compatibility");
 });
-test("TPV identities follow the physical CMS schema and admit legacy IDs only for reads", () => {
-    const neutralCustomer = {
-        identityId: "TPV-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sintético 01",
-        email: "cliente.01@example.test",
-        active: true,
-        syntheticOnly: true,
-        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-        siteId: TPV_RUNTIME_POLICY.SITE_ID,
-        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-        metadata: {},
-    };
-    assert.doesNotThrow(() => assertTpvIdentity(neutralCustomer));
-    assert.throws(
-        () => assertTpvIdentity({ ...neutralCustomer, environment: "SANDBOX", testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID }),
-        /unsupported fields/
-    );
-
-    const legacyCustomer = {
-        identityId: "SANDBOX-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sandbox 01",
-        email: "cliente.01@example.test",
-        active: true,
-        syntheticOnly: true,
-        environment: "SANDBOX",
-        testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-        metadata: {},
-    };
-    assert.throws(() => assertTpvIdentity(legacyCustomer), /identity key\/type invalid/);
-    assert.doesNotThrow(() => assertTpvIdentity(legacyCustomer, { allowLegacyRead: true }));
-    assert.throws(
-        () => assertTpvIdentity({ ...legacyCustomer, testRunId: "UNAPPROVED-RUN" }, { allowLegacyRead: true }),
-        /identity key\/type invalid/
-    );
-});
-
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
@@ -468,20 +429,18 @@ function getWebMethodSource(source, methodName) {
 }
 
 
-test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", async () => {
+test("TPV bootstrap no longer depends on the deleted identity collection", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
+    const caja = await readFile(new URL("../tpv/tpvCaja.web.js", import.meta.url), "utf8");
+    assert.doesNotMatch(repository, /seedTpvIdentities|listTpvIdentities|TPV_IDENTITIES_NOT_PRESEEDED/);
+    assert.doesNotMatch(caja, /seedTpvIdentities|identitiesCreated|identitiesTotal/);
     const initializeStart = repository.indexOf("export async function initializeTpvCaja(");
-    const identitiesStart = repository.indexOf("export async function seedTpvIdentities(");
     const getCajaStart = repository.indexOf("async function _getCajaActual", initializeStart);
     assert.notEqual(initializeStart, -1);
-    assert.notEqual(identitiesStart, -1);
     assert.notEqual(getCajaStart, -1);
     const initializeBlock = repository.slice(initializeStart, getCajaStart);
-    const identitiesBlock = repository.slice(identitiesStart, initializeStart);
     assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_CASH_REGISTER_NOT_PRESEEDED"\)/);
     assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
-    assert.match(identitiesBlock, /TPV_IDENTITIES_NOT_PRESEEDED/);
-    assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertTpvEvent(");
     const insertEnd = repository.indexOf("export async function queryTpvRecords", insertStart);

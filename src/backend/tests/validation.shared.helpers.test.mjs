@@ -61,25 +61,9 @@ test("VALIDATION-FISCAL-02 MapaStaff fiscal record types use the shared fiscal v
 });
 
 
-test("VALIDATION-PACKAGE-01 validates accountant package snapshots centrally", () => {
-    const valid = {
-        periodType: "QUARTERLY",
-        fiscalYear: 2026,
-        fiscalQuarter: 1,
-        packageVersion: 1,
-        summaryData: { totalOperaciones: 1 },
-        invoiceData: [{ invoiceNumber: "F-1" }],
-        packageStatus: "PREPARED",
-        createdAt: "2026-11-11T20:05:00.000Z",
-        snapshotHash: "a".repeat(64),
-        schemaVersion: "1.0",
-        source: "FISCAL_AGGREGATOR",
-        traceId: "trace-package-validation-1",
-    };
-    assert.equal(V.assertPaquetesGestoriaRecord(valid), true);
-    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, createdAt: "invalid" }), /createdAt/);
-    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, fiscalMonth: 2 }), /no admite fiscalMonth/);
-    assert.throws(() => V.assertPaquetesGestoriaRecord({ ...valid, packageStatus: "SENT" }), /PREPARED/);
+test("VALIDATION-REMOVED-01 deleted CMS collection validators are no longer exported", () => {
+    assert.equal(V.assertPaquetesGestoriaRecord, undefined);
+    assert.equal(V.assertTpvIdentity, undefined);
 });
 
 test("VALIDATION-CAJA-01 validates CajaActual object schema without MapaStaff requirements", () => {
@@ -128,65 +112,4 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
 });
 
 
-test("VALIDATION-TPV-IDENTITY-01 validates canonical neutral identities and explicit legacy reads", () => {
-    const base = {
-        identityId: "TPV-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sintético 01",
-        email: "cliente.sandbox@example.test",
-        active: true,
-        syntheticOnly: true,
-        sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
-        siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
-        schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-        metadata: {},
-    };
-    assert.equal(V.assertTpvIdentity(base), true);
-    assert.throws(() => V.assertTpvIdentity({ ...base, environment: "SANDBOX" }), /unsupported fields/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, syntheticOnly: false }), /active and synthetic-only/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, sourceType: "NATIVE" }), /source metadata invalid/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, email: "cliente@real.es" }), /example.test/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, phone: "+34600000000" }), /unsupported fields/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, metadata: { externalId: "real-id" } }), /empty OBJECT/);
-    assert.throws(() => V.assertTpvIdentity({ ...base, displayName: "Nombre Real" }), /displayName/);
 
-    const legacy = {
-        identityId: "SANDBOX-CUSTOMER-01",
-        identityType: "CUSTOMER",
-        displayName: "Cliente Sandbox 01",
-        email: "cliente.sandbox@example.test",
-        active: true,
-        syntheticOnly: true,
-        environment: "SANDBOX",
-        testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-        metadata: {},
-    };
-    assert.throws(() => V.assertTpvIdentity(legacy), /identity key\/type invalid/);
-    assert.equal(V.assertTpvIdentity(legacy, { allowLegacyRead: true }), true);
-    assert.throws(
-        () => V.assertTpvIdentity({ ...legacy, testRunId: "UNAPPROVED-RUN" }, { allowLegacyRead: true }),
-        /identity key\/type invalid/
-    );
-
-    const {
-        sourceType: _sourceType,
-        siteId: _siteId,
-        schemaVersion: _schemaVersion,
-        ...transitionalIdentity
-    } = base;
-    const transitionalLegacy = {
-        ...transitionalIdentity,
-        environment: "SANDBOX",
-        testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-    };
-    assert.throws(() => V.assertTpvIdentity(transitionalLegacy), /SCHEMA_VIOLATION/);
-    assert.equal(V.assertTpvIdentity(transitionalLegacy, { allowLegacyRead: true }), true);
-
-    assert.equal(V.assertTpvIdentity({
-        ...base,
-        identityId: "TPV-STAFF-01",
-        identityType: "STAFF",
-        displayName: "Profesional Sintético 01",
-        email: "staff.sandbox@example.test",
-    }), true);
-});
