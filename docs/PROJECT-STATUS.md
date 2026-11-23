@@ -14,7 +14,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 | Área | Estado | Evidencia / límite |
 |---|---|---|
 | Integración Git | Integrada | PR #541 y #540 están merged en main. |
-| CI backend post-merge | En curso | Run 45107058637 sobre main 0ba7b684; pre-merge PR #543 736/736 SUCCESS. |
+| CI backend post-merge | Correcto | Run 45107058637: 736/736, npm audit 0, SDK contracts y ESLint. Secret scanning run 45107058755 SUCCESS. |
 | Secret scanning | Correcto | Run 45105979748 sobre el HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
