@@ -150,3 +150,6 @@ El snapshot de 2026-11-12 (mismo siteId) registraba 10 filas: 4 SMOKE_TEST, 1 IN
 
 
 Seguimiento tras PR #566: isExplicitSimulationLedgerRecord() ahora reconoce los marcadores legacy TPV_QA_DEVELOPMENT + TPV_FUNCTIONAL_TEST + synthetic=true, projectionStatus=SIMULATED_ONLY y eventType terminado en _SIMULATED para excluirlos de lectores fiscales/contables. Esto no convierte las filas en asientos válidos: los hooks de inserción y el lector TPV canónico siguen rechazando los payloads legacy por falta de contrato completo, hashes y aislamiento.
+
+
+Auditoría de ControlOperativo para explicar el delta: 63 registros, sin controlType/kind/status/operationType/traceId con términos CLEANUP/RESET/MIGRAT/PURGE/DELETE/TRUNCAT/RESTORE. No hay handler dataItemDeleted ni wixData_onDataItemDeleted en src/. Wix ofrece el webhook REST Data Item Deleted, pero no hay evidencia de suscripción ni historial en la conexión actual. Esto no prueba que no existiera limpieza; la autoría sigue sin resolver.
