@@ -6,9 +6,10 @@
 
 - PR #543: corrección de aserciones TPV obsoletas; integrada en main.
 - PR #544: reconciliación documental previa; integrada en main.
-- PR #545: consolidación documental; HEAD validado `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`.
+- PR #545: consolidación documental. Su versión previa, HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`, pasó ambos workflows.
 - Backend offline quality gates SUCCESS: run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142), Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint.
 - Secret scanning SUCCESS: run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155).
+- La consolidación documental posterior debe validarse en el HEAD final de PR #545; consultar los checks asociados a ese commit.
 
 ## Alcance
 
