@@ -85,6 +85,27 @@ El backend emite `now` como ISO UTC y `timeZone=Europe/Madrid`. El widget format
 - [ ] Clonar el repo conectado y ejecutar `wix dev` para abrir el Local Editor y probar el código en tiempo real; no ejecutar `wix publish`.
 - [ ] Validar UI version `15941` de `wix.config.json` contra la UI version del sitio en Wix.
 
+## Corrección de errores del Widget Bridge — 2026-11-23
+
+**Errores comunicados al abrir TPV:**
+- `WIDGET_MESSAGE_TYPE_NOT_ALLOWED`
+- `WIDGET_HANDSHAKE_TIMEOUT`
+
+**Hallazgo estático:** el controlador permitía `MM_READY`, pero omitía `MM_CONTEXT` de `allowedTypes`. El puente valida también los mensajes que él mismo envía; por tanto, al responder al READY, `send(MM_CONTEXT)` era rechazado. Este defecto explica directamente el primer error.
+
+El iframe enviaba `MM_READY` una sola vez durante su inicialización. Si el iframe completaba esa inicialización antes de que el page code Wix registrara `onMessage`, el mensaje podía perderse y el watchdog de 30 segundos disparaba el timeout. Es una carrera de inicialización compatible con el segundo error; falta confirmarla con Runtime.
+
+**Correcciones incorporadas en esta rama:**
+- Añadir `MESSAGE_TYPES.CONTEXT` a la lista permitida del controlador.
+- Reintentar `MM_READY` cada 500 ms, hasta 50 intentos (25 segundos), con un identificador nuevo por intento.
+- Esperar un `MM_CONTEXT` válido (`status=SUCCESS`, componente `htmlTPV`, protocolo 1) antes de cargar catálogo, staff o estado de caja.
+- Exponer en el log el detalle seguro del rechazo (tipo y versión recibidos), sin volcar payloads.
+- Añadir pruebas contractuales y prueba de ejecución del puente `READY → CONTEXT`.
+
+**Gate manual obligatorio:** el archivo `#htmlTPV.txt` debe copiarse al HTML Component `#htmlTPV` desde Wix Editor Draft. Git Integration no debe darse por prueba de que el contenido pegado en el iframe se haya actualizado. Después, abrir la página en Preview y verificar que desaparecen ambos errores. No publicar.
+
+**Estado:** corrección de código en rama; CI y Wix Preview/Runtime pendientes.
+
 ## Integración GitHub ↔ Wix Editor
 
 - Repositorio: `nachoortegazgz/marianmadridz`; rama por defecto verificada: `main`.
