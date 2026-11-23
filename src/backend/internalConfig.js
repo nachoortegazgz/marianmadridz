@@ -115,12 +115,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   SANDBOX_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
 });
 
-// Compatibility aliases retained for historical imports and persisted contracts.
-export const TPV_SANDBOX_COLLECTIONS = TPV_COLLECTIONS;
-export const TPV_SANDBOX_EVENT_MOVEMENT_TYPES = TPV_EVENT_MOVEMENT_TYPES;
-export const TPV_SANDBOX_RUNTIME_POLICY = TPV_RUNTIME_POLICY;
-
-export const TPV_SANDBOX_IDENTITY_TYPES = Object.freeze({
+export const TPV_IDENTITY_TYPES = Object.freeze({
   CUSTOMER: "CUSTOMER",
   STAFF: "STAFF",
 });
