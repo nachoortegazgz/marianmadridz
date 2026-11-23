@@ -393,7 +393,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /openCashMovement\("SALIDA"\)/);
     assert.match(html, /keyedAction\("REFUND",\s*"REFUND"/);
     assert.match(html, /call\("TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
-    assert.match(html, /action\("TICKET_Z"/);
+    assert.match(html, /keyedAction\("TICKET_Z",\s*"TICKET_Z"/);
 });
  
 test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
