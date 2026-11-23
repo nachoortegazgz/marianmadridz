@@ -294,7 +294,7 @@ function _isRecognizedSyntheticLedgerItem(item) {
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
-    const legacy = item.recordSource === LEGACY_TPV_LEDGER_SOURCE &&
+    const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
         envelope.sandboxRunId === SANDBOX_RUN_ID &&
         String(item.traceId || "").startsWith("TPV:" + SANDBOX_RUN_ID + ":");
     return validCommon && (current || legacy);
@@ -377,6 +377,7 @@ function _sessionFromCaja(caja) {
         sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        sandboxState?.externalSideEffects === false &&
         Boolean(sessionId);
     const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
         caja?.traceId === SANDBOX_RUN_ID && Boolean(sessionId);
@@ -418,11 +419,12 @@ async function _writeCajaProjection(collection, record, eventId) {
             const explicitSynthetic = preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                preflightSandboxState.externalSideEffects === false &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
             const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
                 caja.traceId === SANDBOX_RUN_ID;
             if (!explicitSynthetic && !legacySynthetic) {
-                throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
+                throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             }
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
@@ -482,6 +484,9 @@ async function _writeCajaProjection(collection, record, eventId) {
             sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
             sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
             sandboxState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
+            sandboxState.externalSideEffects = false;
+            sandboxState.schemaVersion = 2;
+            sandboxState.reconciliationStatus = "NOT_RECONCILED";
             sandboxState.sessionId = String(sandboxState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
             sandboxState.lastProjectedAt = now;
@@ -539,6 +544,9 @@ function _sessionCajaPatch(caja, record, fingerprint) {
                 sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 siteId: TPV_RUNTIME_POLICY.SITE_ID,
                 ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                schemaVersion: 2,
+                externalSideEffects: false,
+                reconciliationStatus: "NOT_RECONCILED",
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorId: String(record.operatorId || record.cashierMemberId || "").trim() || null,
