@@ -60,9 +60,12 @@ test("FISCAL-LOCK-03 a previous owner cannot release a reclaimed lock", async ()
   wixDataMock._reset();
   const first = await acquireFiscalLedgerLock("trace-fiscal-lock-005", { waitMs: 0 });
   const row = wixDataMock._store.get(CONTROL).find((item) => item._id === first.id);
-  row.version = Number(first.version) + 1;
-  row.expiresAt = new Date(Date.now() + 60_000);
-  row.payload = { ...row.payload, lockOwnerId: "new-owner" };
+  wixDataMock._seed(CONTROL, [{
+    ...row,
+    version: Number(first.version) + 1,
+    expiresAt: new Date(Date.now() + 60_000),
+    payload: { ...row.payload, lockOwnerId: "new-owner" },
+  }]);
 
   const result = await releaseFiscalLedgerLock(first);
   assert.deepEqual(result, { released: false, reason: "OWNERSHIP_CHANGED" });
