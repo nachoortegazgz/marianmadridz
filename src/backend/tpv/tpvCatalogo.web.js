@@ -2,8 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
-import { TPV_IDENTITY_TYPES } from "backend/internalConfig";
-import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
+import { searchTpvContacts, resolveTpvContact, listAuthorizedProfessionals } from "backend/tpv/tpvNativeDirectory";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
@@ -73,24 +72,10 @@ export const buscarClientesTPV = webMethod(
         const traceId = makeTraceId("tpv-customer-search");
         await requireCajero(traceId);
         try {
-            const search = String(input.search || "").trim().slice(0, 100).toLowerCase();
-            if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
-            const customers = await listTpvIdentities(TPV_IDENTITY_TYPES.CUSTOMER);
-            const matches = customers.filter((item) =>
-                item.displayName.toLowerCase().includes(search) ||
-                String(item.email || "").toLowerCase().includes(search)
-            );
+            const result = await searchTpvContacts(input.search);
             return {
                 status: "SUCCESS",
-                data: {
-                    items: matches.map((item) => ({
-                        identityId: item.identityId,
-                        displayName: item.displayName,
-                        email: item.email || "",
-                        phone: "",
-                    })),
-                    pagingMetadata: null,
-                },
+                data: result,
                 error: null,
                 traceId,
             };
@@ -110,23 +95,31 @@ export const obtenerReservasClienteTPV = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-customer-bookings");
         await requireCajero(traceId);
-        const identityId = String(input.identityId || "").trim();
-        const customer = await getTpvIdentity(identityId, TPV_IDENTITY_TYPES.CUSTOMER);
-        if (!customer) {
+        try {
+            const contactId = String(input.identityId || "").trim();
+            const customer = await resolveTpvContact(contactId);
+            if (!customer) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TPV_CUSTOMER_NOT_ALLOWED" },
+                    traceId,
+                };
+            }
+            return {
+                status: "SUCCESS",
+                data: { items: [], pagingMetadata: null },
+                error: null,
+                traceId,
+            };
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_SANDBOX_CUSTOMER_NOT_ALLOWED" },
-                syntheticOnly: true,
+                error: { code: String(error?.message || "TPV_CUSTOMER_BOOKINGS_FAILED") },
                 traceId,
             };
         }
-        return {
-            status: "SUCCESS",
-            data: { items: [], pagingMetadata: null },
-            error: null,
-            traceId,
-        };
     }
 );
 
@@ -171,22 +164,24 @@ export const obtenerStaff = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-staff-read");
         await requireCajero(traceId);
-        return {
-            status: "SUCCESS",
-            data: {
-                items: (await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF)).map((staff) => ({
-                    profesionalId: staff.identityId,
-                    nombre: staff.displayName,
-                    resourceId: staff.identityId,
-                    esProveedorServicio: true,
-                    isSynthetic: true,
-                })),
-                pagingMetadata: null,
-                syntheticOnly: true,
-            },
-            error: null,
-            traceId,
-        };
+        try {
+            return {
+                status: "SUCCESS",
+                data: {
+                    items: await listAuthorizedProfessionals(),
+                    pagingMetadata: null,
+                },
+                error: null,
+                traceId,
+            };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: String(error?.message || "TPV_STAFF_READ_FAILED") },
+                traceId,
+            };
+        }
     }
 );
 
