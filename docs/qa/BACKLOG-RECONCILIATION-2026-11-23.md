@@ -69,7 +69,7 @@ Este documento sustituye las matrices de seguimiento anteriores del plan maestro
 
 1. **F0 — Seguridad y control de efectos:** confirmar estado de siete automatizaciones PREINSTALLED y rutas custom de reservas; mantener contención 94/94. No iniciar E2E con efectos externos no clasificados.
 2. **F1 — Integridad P0:** resolver #416 solo mediante conciliación documental y evidencia externa; validar runtime del lock #525; conservar todos los registros históricos.
-3. **F2 — TPV Sandbox:** verificar SHA en Editor, toggle Sandbox, caja y seis identidades desde CMS Sandbox; comprobar aislamiento con lectura antes/después; después ejecutar idempotencia, payload conflictivo, reintentos, concurrencia, venta/devolución/X/Z. No tocar Online.
+3. **F2 — TPV Sandbox:** verificar SHA en Editor, toggle Sandbox, caja y seis identidades desde CMS Sandbox; comprobar aislamiento con lectura antes/después; después ejecutar idempotencia, payload conflictivo, reintentos, concurrencia, venta/devolución/X/Z. No tocar Online. Añadir como gate la matriz [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md](TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md): identidad Wix vs operador seleccionado, roles, sesión, documentos nativos, medios, movimientos físicos, X/Z, auditoría y Veri*Factu.
 4. **F3 — Bookings y área privada:** resolver #523, validar #522 para servicios internos, y ejecutar #162/#188 solo en ventana controlada.
 5. **F4/F5 — Stores y fiscalidad:** comprobar inventario nativo (#237 residual), POS guard (#441), SIF/VERI*FACTU (#209/#415) y snapshot de gestoría (#223). No activar writers fiscales.
 6. **F6/F7 — Webhooks, Capa 3 y calidad:** completar runtime de #290/#159/#164/#291, pipeline #173 y accesibilidad #521.
