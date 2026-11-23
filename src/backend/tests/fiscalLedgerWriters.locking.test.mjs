@@ -111,7 +111,7 @@ test("FISCAL-CHAIN-09 CajaActual projections and TPV Sandbox share the fiscal lo
   const [cajas, eventLog, tpv] = await Promise.all([
     source("cajas.web.js"),
     source("eventLog.js"),
-    source("tpv/tpvSandboxRepository.js"),
+    source("tpv/tpvRepository.js"),
   ]);
 
   const projectionStart = cajas.indexOf("async function _updateCajaActual");
