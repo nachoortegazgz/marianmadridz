@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
-const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
+const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     const state = caja?.conceptOperations?.tpvSandbox;
