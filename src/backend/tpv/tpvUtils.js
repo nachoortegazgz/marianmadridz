@@ -82,6 +82,10 @@ export function normalizePaymentMethod(value) {
     return method;
 }
 
+export function makeRequestFingerprint(value) {
+    return createHash("sha256").update(stableSerialize(value), "utf8").digest("hex");
+}
+
 export function stableSerialize(value) {
     if (value instanceof Date) return JSON.stringify(value.toISOString());
     if (Array.isArray(value)) return "[" + value.map(stableSerialize).join(",") + "]";
