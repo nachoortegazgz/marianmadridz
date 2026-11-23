@@ -141,7 +141,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
-  TPV_SANDBOX_IDENTITIES: "TpvSandboxIdentities",
+  TPV_IDENTITIES: "TpvSandboxIdentities",
 });
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
