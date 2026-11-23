@@ -498,8 +498,11 @@ function _isCurrentSyntheticTpvRow(value) {
                 value?.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 value?.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 value?.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                Number(value?.payloadFiscal?.schemaVersion) === 2 &&
-                value?.payloadFiscal?.reconciliationStatus === "NOT_RECONCILED" &&
+                Number(value?.payloadFiscal?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+                value?.payloadFiscal?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS &&
+                (value?.payloadFiscal?.processingMode === undefined || value.payloadFiscal.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+                (value?.payloadFiscal?.allowNativePayments === undefined || value.payloadFiscal.allowNativePayments === false) &&
+                (value?.payloadFiscal?.allowNativeRefunds === undefined || value.payloadFiscal.allowNativeRefunds === false) &&
                 (value?.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
                     Boolean(String(value?.payloadFiscal?.sessionId || "").trim()))
             ) ||
