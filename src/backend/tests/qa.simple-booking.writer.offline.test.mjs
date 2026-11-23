@@ -84,6 +84,8 @@ mocks.sdk['@wix/bookings::bookings'] = {
   },
 };
 
+mocks.sdk['@wix/bookings::services'] = { getService: async () => ({ onlineBooking: { enabled: true } }) };
+
 const { executeBookingSaga } = await import('backend/booking/bookingSaga.js');
 
 test('QA-SIMPLE-BOOKING-01 resolves real catalogue and staff mocks, creates one Writer V2 booking and persists CitasF2', async () => {
