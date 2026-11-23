@@ -22,7 +22,7 @@ import {
     assertMovimientosCajaRequiredFields,
     assertAccountingLedgerRecord,
     assertPaquetesGestoriaRecord,
-    assertTpvSandboxIdentity,
+    assertTpvIdentity,
 } from "backend/validation";
 import {
     assertBulkPatchAllowed,
@@ -339,8 +339,8 @@ export function insertItem(collection, item) {
         assertMapaStaffRecord(item);
     } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
         assertCajaActualRecord(item);
-    } else if (collection === BUSINESS_COLLECTIONS.TPV_SANDBOX_IDENTITIES) {
-        assertTpvSandboxIdentity(item);
+    } else if (collection === BUSINESS_COLLECTIONS.TPV_IDENTITIES) {
+        assertTpvIdentity(item);
     } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
         assertMovimientosCajaRequiredFields(item);
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {

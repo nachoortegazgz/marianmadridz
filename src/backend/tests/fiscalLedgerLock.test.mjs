@@ -24,7 +24,14 @@ test("FISCAL-LOCK-01 serializes concurrent fiscal ledger writers", async () => {
 
   const second = await acquireFiscalLedgerLock("trace-fiscal-lock-003", { waitMs: 0 });
   assert.notEqual(second.ownerId, first.ownerId);
+  assert.equal(second.version, first.version + 2);
+  const stored = wixDataMock._store.get(CONTROL).find((row) => row._id === second.id);
+  assert.equal(stored.payload.lockOwnerId, second.ownerId);
+  assert.equal(stored.status, "ACTIVE");
   await releaseFiscalLedgerLock(second);
+  const releasedRow = wixDataMock._store.get(CONTROL).find((row) => row._id === second.id);
+  assert.equal(releasedRow.payload.lockStatus, "RELEASED");
+  assert.equal(releasedRow.version, second.version + 1);
 });
 
 test("FISCAL-LOCK-02 reclaims only an expired lock", async () => {
@@ -44,6 +51,8 @@ test("FISCAL-LOCK-02 reclaims only an expired lock", async () => {
   assert.notEqual(lock.ownerId, "expired-owner");
   const stored = wixDataMock._store.get(CONTROL).find((row) => row._id === lock.id);
   assert.equal(stored.payload.lockOwnerId, lock.ownerId);
+  assert.equal(stored.payload.lockOwnerId, lock.ownerId);
+  assert.equal(stored.version, 1);
   await releaseFiscalLedgerLock(lock);
 });
 
@@ -51,11 +60,49 @@ test("FISCAL-LOCK-03 a previous owner cannot release a reclaimed lock", async ()
   wixDataMock._reset();
   const first = await acquireFiscalLedgerLock("trace-fiscal-lock-005", { waitMs: 0 });
   const row = wixDataMock._store.get(CONTROL).find((item) => item._id === first.id);
-  row.payload = { ...row.payload, lockOwnerId: "new-owner" };
+  wixDataMock._seed(CONTROL, [{
+    ...row,
+    version: Number(first.version) + 1,
+    expiresAt: new Date(Date.now() + 60_000),
+    payload: { ...row.payload, lockOwnerId: "new-owner" },
+  }]);
 
   const result = await releaseFiscalLedgerLock(first);
   assert.deepEqual(result, { released: false, reason: "OWNERSHIP_CHANGED" });
   assert.equal(wixDataMock._store.get(CONTROL).length, 1);
+  assert.equal(wixDataMock._store.get(CONTROL)[0].payload.lockOwnerId, "new-owner");
+});
+
+test("FISCAL-LOCK-07 concurrent reclaim of one expired lock has a single CAS winner", async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(CONTROL, [{
+    _id: "FISCAL_LEDGER_CHAIN_LOCK",
+    controlType: "SLOT_LOCK",
+    dedupeKey: "FISCAL_LEDGER_HASH_SEQUENCE",
+    serviceId: "00000000-0000-4000-8000-000000000001",
+    resourceId: "00000000-0000-4000-8000-000000000002",
+    version: 4,
+    status: "ACTIVE",
+    expiresAt: new Date(Date.now() - 1000),
+    payload: { lockOwnerId: "expired-owner", lockStatus: "ACTIVE" },
+    traceId: "trace-expired-lock-concurrent",
+  }]);
+
+  const results = await Promise.allSettled([
+    acquireFiscalLedgerLock("trace-fiscal-lock-cas-a", { waitMs: 0 }),
+    acquireFiscalLedgerLock("trace-fiscal-lock-cas-b", { waitMs: 0 }),
+  ]);
+  const winners = results.filter((result) => result.status === "fulfilled");
+  const losers = results.filter((result) => result.status === "rejected");
+
+  assert.equal(winners.length, 1, "only one contender can reclaim the expired lock");
+  assert.equal(losers.length, 1, "the competing contender must observe the active lease");
+  assert.equal(losers[0].reason?.code, "FISCAL_LEDGER_LOCK_BUSY");
+  const winner = winners[0].value;
+  const stored = wixDataMock._store.get(CONTROL).find((row) => row._id === winner.id);
+  assert.equal(stored.payload.lockOwnerId, winner.ownerId);
+  assert.equal(stored.version, 5);
+  await releaseFiscalLedgerLock(winner);
 });
 
 test("FISCAL-LOCK-04 release reports CMS read failure without throwing", async () => {

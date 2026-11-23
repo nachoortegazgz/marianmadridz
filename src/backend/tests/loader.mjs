@@ -530,6 +530,39 @@ for (const _name of ['createBooking', 'getBooking', 'updateBooking', 'listBookin
   });
 }
 export const bookings = _bookingsRoot;
+// Official @wix/bookings Services API. Resolve getService mocks lazily so
+// tests can configure the native onlineBooking gate before each saga call.
+const _currentServicesRootMock = (name) => {
+  const nsKey = MODULE_KEY + '::services';
+  const ns = nsKey in sdkNamespaceState ? sdkNamespaceState[nsKey]
+    : ('services' in sdkNamespaceState) ? sdkNamespaceState['services']
+    : null;
+  if (ns && typeof ns[name] === 'function') return ns[name];
+  const direct = MODULE_KEY + '::services::' + name;
+  if (direct in sdkNamespaceState && typeof sdkNamespaceState[direct] === 'function') {
+    return sdkNamespaceState[direct];
+  }
+  const short = 'services::' + name;
+  if (short in sdkNamespaceState && typeof sdkNamespaceState[short] === 'function') {
+    return sdkNamespaceState[short];
+  }
+  return null;
+};
+const _servicesRoot = {};
+for (const _name of ['getService']) {
+  Object.defineProperty(_servicesRoot, _name, {
+    value: async (...args) => {
+      const method = _currentServicesRootMock(_name);
+      if (method) return method(...args);
+      const error = new Error('Missing @wix/bookings services mock: ' + _name);
+      error.code = 'MISSING_SDK_MOCK';
+      throw error;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+}
+export const services = _servicesRoot;
 // Official @wix/bookings Staff Members API. Methods resolve the current mock
 // lazily because test fixtures are installed after ESM module evaluation.
 const _staffMembersMethods = new Map();

@@ -13,7 +13,7 @@ import {
     getItem as dalGet,
     insertItem as dalInsert,
     updateItem as dalUpdate,
-    removeById as dalRemove,
+    bulkPatchItems,
 } from "backend/dataAccess";
 import {
     BUSINESS_COLLECTIONS,
@@ -212,8 +212,46 @@ export async function rollbackFiscalSequence(lock, sequence) {
     return false;
 }
 
+function _lockVersion(item) {
+    const raw = item?.version;
+    if (raw === undefined || raw === null || raw === "") return null;
+    const value = Number(raw);
+    return Number.isSafeInteger(value) && value >= 0 ? value : Number.NaN;
+}
+
+function _lockOwner(item) {
+    return String(_readPayload(item).lockOwnerId || "");
+}
+
+function _lockPatchSucceeded(result) {
+    const errors = Array.isArray(result?.errors) ? result.errors : [];
+    if (errors.length) {
+        if (errors.every(_isNotFound)) return false;
+        const error = new Error(errors.map((entry) => entry?.message || entry?.code || "unknown").join("; "));
+        error.code = errors[0]?.code || "FISCAL_LEDGER_LOCK_PATCH_FAILED";
+        throw error;
+    }
+    return Array.isArray(result?.updatedItemIds) && result.updatedItemIds.includes(LOCK_ID);
+}
+
+function _lockPayload(ownerId, acquiredAt, previousPayload = {}, traceId = "") {
+    return {
+        ...previousPayload,
+        lockOwnerId: ownerId,
+        lockStatus: "ACTIVE",
+        acquiredAt: acquiredAt.toISOString(),
+        lastTraceId: String(traceId || ""),
+        purpose: "FISCAL_LEDGER_APPEND",
+    };
+}
+
+function _lockResult(ownerId, version, expiresAt, traceId, revision = null) {
+    return { id: LOCK_ID, ownerId, version, revision, expiresAt, traceId };
+}
+
 export async function acquireFiscalLedgerLock(traceId, options = {}) {
     const ownerId = makeTraceId("fiscal-lock");
+    const lockTraceId = String(traceId || makeTraceId("fiscal-lock"));
     const waitMs = Math.max(0, Number(options.waitMs ?? DEFAULT_WAIT_MS));
     const deadline = Date.now() + waitMs;
 
@@ -225,21 +263,56 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
             const expiresAt = existing.expiresAt instanceof Date
                 ? existing.expiresAt
                 : new Date(existing.expiresAt);
-            const existingOwner = String(_readPayload(existing).lockOwnerId || "");
+            if (!Number.isFinite(expiresAt.getTime())) {
+                const error = new Error("FISCAL_LEDGER_LOCK_INVALID_EXPIRY");
+                error.code = "FISCAL_LEDGER_LOCK_INVALID_EXPIRY";
+                throw error;
+            }
 
-            if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= now.getTime()) {
+            if (expiresAt.getTime() <= now.getTime()) {
+                const currentVersion = _lockVersion(existing);
+                if (Number.isNaN(currentVersion)) {
+                    const error = new Error("FISCAL_LEDGER_LOCK_INVALID_VERSION");
+                    error.code = "FISCAL_LEDGER_LOCK_INVALID_VERSION";
+                    throw error;
+                }
+
+                const acquiredAt = new Date();
+                const nextVersion = currentVersion === null ? 1 : currentVersion + 1;
+                const nextExpiry = new Date(acquiredAt.getTime() + LOCK_TTL_MS);
+                const condition = {
+                    controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+                    expiresAt: { $eq: expiresAt },
+                };
+                if (currentVersion !== null) condition.version = { $eq: currentVersion };
+
+                const modifications = [
+                    { fieldPath: "expiresAt", action: "SET_FIELD", value: nextExpiry },
+                    { fieldPath: "heartbeatAt", action: "SET_FIELD", value: acquiredAt },
+                    { fieldPath: "payload", action: "SET_FIELD", value: _lockPayload(ownerId, acquiredAt, _readPayload(existing), lockTraceId) },
+                    {
+                        fieldPath: "version",
+                        action: currentVersion === null ? "SET_FIELD" : "INCREMENT_FIELD",
+                        value: 1,
+                    },
+                ];
+
+                let patched;
                 try {
-                    await dalRemove(CONTROL_COL, LOCK_ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
-                    continue;
+                    patched = await bulkPatchItems(CONTROL_COL, [LOCK_ID], [modifications], {
+                        condition: { filter: condition },
+                    });
                 } catch (error) {
                     if (_isNotFound(error)) continue;
-                    // A competing worker may have reclaimed it. Re-read before
-                    // deciding whether the lock is still unavailable.
-                    const latest = await dalGet(CONTROL_COL, LOCK_ID, "strong");
-                    if (!latest || String(_readPayload(latest).lockOwnerId || "") !== existingOwner) {
-                        continue;
-                    }
+                    throw error;
                 }
+
+                if (_lockPatchSucceeded(patched)) {
+                    return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId);
+                }
+
+                // Another worker won the compare-and-swap. Re-read the row.
+                continue;
             }
 
             if (Date.now() >= deadline) {
@@ -252,35 +325,26 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
         }
 
         const acquiredAt = new Date();
+        const expiresAt = new Date(acquiredAt.getTime() + LOCK_TTL_MS);
         const lock = {
             _id: LOCK_ID,
             controlType: CONTROL_TYPE.SLOT_LOCK,
             dedupeKey: LOCK_DEDUPE_KEY,
             serviceId: LOCK_SERVICE_ID,
             resourceId: LOCK_RESOURCE_ID,
+            version: 0,
             status: "ACTIVE",
-            expiresAt: new Date(acquiredAt.getTime() + LOCK_TTL_MS),
+            expiresAt,
             heartbeatAt: acquiredAt,
-            payload: {
-                lockOwnerId: ownerId,
-                lockStatus: "ACTIVE",
-                acquiredAt: acquiredAt.toISOString(),
-                purpose: "FISCAL_LEDGER_APPEND",
-            },
-            traceId: String(traceId || makeTraceId("fiscal-lock")),
+            payload: _lockPayload(ownerId, acquiredAt, {}, lockTraceId),
+            traceId: lockTraceId,
             _createdDate: acquiredAt,
             _updatedDate: acquiredAt,
         };
 
         try {
             const saved = await dalInsert(CONTROL_COL, lock);
-            return {
-                id: LOCK_ID,
-                ownerId,
-                revision: saved?._revision ?? null,
-                expiresAt: lock.expiresAt,
-                traceId: lock.traceId,
-            };
+            return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null);
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
             if (Date.now() >= deadline) {
@@ -294,15 +358,22 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
 }
 
 export async function assertFiscalLedgerLock(lock) {
-    if (!lock?.ownerId) throw new Error("FISCAL_LEDGER_LOCK_INVALID");
+    const expectedVersion = Number(lock?.version);
+    if (
+        !lock?.ownerId ||
+        !Number.isSafeInteger(expectedVersion) ||
+        expectedVersion < 0
+    ) throw new Error("FISCAL_LEDGER_LOCK_INVALID");
+
     const current = await dalGet(CONTROL_COL, LOCK_ID, "strong");
     if (!current) throw new Error("FISCAL_LEDGER_LOCK_LOST");
-    const payload = _readPayload(current);
+
     const expiresAt = current.expiresAt instanceof Date
         ? current.expiresAt
         : new Date(current.expiresAt);
     if (
-        payload.lockOwnerId !== lock.ownerId ||
+        _lockOwner(current) !== lock.ownerId ||
+        Number(current.version) !== expectedVersion ||
         !Number.isFinite(expiresAt.getTime()) ||
         expiresAt.getTime() <= Date.now()
     ) {
@@ -312,7 +383,11 @@ export async function assertFiscalLedgerLock(lock) {
 }
 
 export async function releaseFiscalLedgerLock(lock) {
-    if (!lock?.ownerId) return { released: false, reason: "INVALID_OWNER" };
+    const expectedVersion = Number(lock?.version);
+    if (!lock?.ownerId || !Number.isSafeInteger(expectedVersion) || expectedVersion < 0) {
+        return { released: false, reason: "INVALID_OWNER" };
+    }
+
     let current;
     try {
         current = await dalGet(CONTROL_COL, LOCK_ID, "strong");
@@ -324,12 +399,44 @@ export async function releaseFiscalLedgerLock(lock) {
         };
     }
     if (!current) return { released: true, missing: true };
-    if (_readPayload(current).lockOwnerId !== lock.ownerId) {
+
+    const expiresAt = current.expiresAt instanceof Date
+        ? current.expiresAt
+        : new Date(current.expiresAt);
+    if (
+        _lockOwner(current) !== lock.ownerId ||
+        Number(current.version) !== expectedVersion ||
+        !Number.isFinite(expiresAt.getTime())
+    ) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };
     }
+
+    const releasedAt = new Date();
+    const condition = {
+        controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+        version: { $eq: expectedVersion },
+        expiresAt: { $eq: expiresAt },
+    };
+    const payload = {
+        ..._readPayload(current),
+        lockStatus: "RELEASED",
+        releasedAt: releasedAt.toISOString(),
+    };
+    const modifications = [
+        { fieldPath: "expiresAt", action: "SET_FIELD", value: releasedAt },
+        { fieldPath: "heartbeatAt", action: "SET_FIELD", value: releasedAt },
+        { fieldPath: "payload", action: "SET_FIELD", value: payload },
+        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+    ];
+
     try {
-        await dalRemove(CONTROL_COL, LOCK_ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
-        return { released: true };
+        const patched = await bulkPatchItems(CONTROL_COL, [LOCK_ID], [modifications], {
+            condition: { filter: condition },
+        });
+        if (_lockPatchSucceeded(patched)) {
+            return { released: true, version: expectedVersion + 1 };
+        }
+        return { released: false, reason: "OWNERSHIP_CHANGED" };
     } catch (error) {
         if (_isNotFound(error)) return { released: true, missing: true };
         return { released: false, reason: error?.message || "RELEASE_FAILED" };

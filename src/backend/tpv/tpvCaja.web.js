@@ -4,7 +4,7 @@ import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, initializeTpvCaja, seedTpvIdentities, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
-import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
+import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -23,7 +23,7 @@ function madridDayKey(date = new Date()) {
 export const inicializarCaja = webMethod(
     Permissions.SiteMember,
     async () => {
-        const traceId = makeTraceId("tpv-sandbox-bootstrap");
+        const traceId = makeTraceId("tpv-bootstrap");
         await requireCajero(traceId);
 
         try {
@@ -32,7 +32,7 @@ export const inicializarCaja = webMethod(
             return {
                 status: "SUCCESS",
                 data: {
-                    sandboxReady: true,
+                    syntheticReady: true,
                     initialized: result.created,
                     identitiesCreated: identities.created,
                     identitiesTotal: identities.total,
@@ -61,12 +61,12 @@ export const inicializarCaja = webMethod(
 export const obtenerEstadoCaja = webMethod(
     Permissions.SiteMember,
     async () => {
-        const traceId = makeTraceId("tpv-sandbox-session-read");
+        const traceId = makeTraceId("tpv-session-read");
         await requireCajero(traceId);
 
         const session = await latestOpenTpvSession();
         if (!session) return { status: "SUCCESS", data: null, error: null, traceId };
-        const summary = await buildSandboxSessionSummary(session);
+        const summary = await buildTpvSessionSummary(session);
         return {
             status: "SUCCESS",
             data: {
@@ -92,7 +92,7 @@ export const abrirSesionCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-session-open");
+        const traceId = makeTraceId("tpv-session-open");
         await requireAdmin(traceId);
         const operator = await resolveTpvContext(traceId);
 
@@ -163,7 +163,7 @@ export const registrarArqueoParcial = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-partial-count");
+        const traceId = makeTraceId("tpv-partial-count");
         await requireAdmin(traceId);
         const operator = await resolveTpvContext(traceId);
 
@@ -177,7 +177,7 @@ export const registrarArqueoParcial = webMethod(
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
-            const summary = await buildSandboxSessionSummary(session);
+            const summary = await buildTpvSessionSummary(session);
             const expectedMinor = Number(summary.expectedCashMinor || 0);
             const differenceMinor = countedMinor - expectedMinor;
             const reason = differenceMinor === 0 ? "" : String(input.reason || "").trim();

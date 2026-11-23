@@ -1,4 +1,6 @@
-const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
+import { TPV_PAYMENT_METHOD } from "backend/internalConfig";
+
+const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 
 function toMinorUnits(value, field) {
     const amount = Number(value);
@@ -172,12 +174,9 @@ export function validateSaleDraft(input = {}) {
 
     const paymentResult = normalizePayments(input.pagos, totalMinor);
     const importePendienteMinor = totalMinor - paymentResult.importePagadoMinor;
-    const paymentBreakdown = Object.freeze({
-        EFECTIVO: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
-        TARJETA: paymentResult.paymentBreakdownMinor.TARJETA / 100,
-        BIZUM: paymentResult.paymentBreakdownMinor.BIZUM / 100,
-        OTROS: paymentResult.paymentBreakdownMinor.OTROS / 100,
-    });
+    const paymentBreakdown = Object.freeze(Object.fromEntries(
+        PAYMENT_METHODS.map((method) => [method, paymentResult.paymentBreakdownMinor[method] / 100])
+    ));
 
     return Object.freeze({
         currency: "EUR",

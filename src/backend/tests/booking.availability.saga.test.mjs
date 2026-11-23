@@ -19,6 +19,9 @@ const BC = await import('backend/booking/bookingCore.js');
 const BS = await import('backend/booking/bookingSaga.js');
 const IC = await import('backend/internalConfig');
 const MU = await import('public/mmUtils');
+mocks.sdk['@wix/bookings::services'] = {
+  getService: async () => ({ onlineBooking: { enabled: true } }),
+};
 
 test('CMS-CONTROL-01 slot lock persists only physical ControlOperativo columns', () => {
   const lock = BC._buildSlotLockControl(
@@ -356,6 +359,58 @@ test('BSAGA-VAL-05 contract freeze: saga returns envelope, never throws', async 
   assert.ok(!threw, 'executeBookingSaga no debe lanzar (contrato envelope)');
   assert.strictEqual(env.status, 'ERROR');
   assert.ok(env.error && env.error.code, 'error.code presente');
+});
+
+test('BSAGA-BOOK-01 native onlineBooking=false blocks the public booking writer', async () => {
+  wixDataMock._reset();
+  const serviceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa10';
+  seedPaymentTestService(serviceId);
+  let nativeLookupCalls = 0;
+  let writerCalls = 0;
+  const previousServicesMock = mocks.sdk['@wix/bookings::services'];
+  const previousBookingsMock = mocks.sdk['@wix/bookings::bookings'];
+  mocks.sdk['@wix/bookings::services'] = {
+    getService: async (requestedId) => {
+      nativeLookupCalls += 1;
+      assert.equal(requestedId, serviceId);
+      return { id: serviceId, onlineBooking: { enabled: false } };
+    },
+  };
+  mocks.sdk['@wix/bookings::bookings'] = {
+    createBooking: async () => {
+      writerCalls += 1;
+      throw new Error('Writer must not be called when native online booking is disabled');
+    },
+  };
+  mocks.webMethods.register(RESERVAS_SPEC, '_resolveServiceIdInternal',
+    async (raw) => raw === serviceId ? serviceId : '');
+  mocks.webMethods.register(RESERVAS_SPEC, '_getServiceBySlugOrIdInternal',
+    async () => ({
+      status: 'OK',
+      data: { _id: serviceId, allowCombine: false, onlinePayment: true, inPersonPayment: true },
+      error: null,
+    }));
+  try {
+    const env = await sagaEnvelope({
+      email: 'client@example.com',
+      rgpdConsent: true,
+      serviceId,
+      channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+      slotF1: {
+        localStartDate: '2026-10-15T09:00:00',
+        localEndDate: '2026-10-15T10:00:00',
+      },
+      traceId: 'tr-native-booking-disabled',
+    });
+    assertRejected(env, 'INVALID_PAYLOAD|online booking is disabled',
+      'onlineBooking nativo desactivado debe bloquear la reserva');
+    assert.equal(nativeLookupCalls, 1, 'consulta la configuración nativa una vez');
+    assert.equal(writerCalls, 0, 'no invoca el Writer V2');
+  } finally {
+    mocks.sdk['@wix/bookings::services'] = previousServicesMock;
+    mocks.sdk['@wix/bookings::bookings'] = previousBookingsMock;
+    mocks.webMethods.clear();
+  }
 });
 
 test('BSAGA-PAY-01 online channel is rejected when service disables online payment', async () => {

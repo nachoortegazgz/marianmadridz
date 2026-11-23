@@ -1,12 +1,14 @@
 # Reconciliación del backlog — 2026-11-23
 
 **Repositorio:** `nachoortegazgz/marianmadridz`  
-**main HEAD verificado:** `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`  
-**CI post-merge de ese SHA:** Layer 1/2 + regresión offline + SDK contracts + lint SUCCESS (run 45082870340); Gitleaks full-history SUCCESS (run 45082870366).  
+**main HEAD verificado:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536).  
+**PR #541:** abierta sobre `main`; rama `feat/tpv-payment-exports-after-p0-20261123`; último HEAD de código validado `1d7e99d66fcc14165bf2482885e583176c2b06ef` (los commits posteriores de la rama son solo documentación).  
+**PR reconciliadas:** PR #537 integrada en la rama de PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b`; conserva los dos padres y los 28 commits exclusivos. PR #541 permanece abierta contra `main`; main intacta. CI posterior a la reconciliación: Backend offline quality gates SUCCESS (run `45102063911`): Layer 1 364/364, Layer 2 255/255, suite offline 732/732, npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run `45102063815`). Wix E2E pendiente; release NO-GO.  
+**CI de PR #541:** Backend offline quality gates SUCCESS (run 45100967570): Layer 1 364/364, Layer 2 255/255, suite offline completa 732/732; npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run 45100967567).  
 **Estado Wix:** no se ha acreditado sincronización del SHA en Wix Editor ni runtime E2E.  
 **Release:** **NO-GO**.
 
-Este documento sustituye las matrices de seguimiento anteriores del plan maestro cuando haya contradicción. La revisión es documental y de GitHub; no se han ejecutado escrituras CMS, cambios de automatizaciones, pagos, reembolsos, publicación ni despliegue.
+Este documento sustituye las matrices de seguimiento anteriores del plan maestro cuando haya contradicción. El bloque de estado superior refleja el corte de GitHub de 2026-11-23; los estados de issues se mantienen sujetos a la evidencia y límites indicados. La revisión es documental y de GitHub; no se han ejecutado escrituras CMS, cambios de automatizaciones, pagos, reembolsos, publicación ni despliegue.
 
 ## 1. Criterio de clasificación
 

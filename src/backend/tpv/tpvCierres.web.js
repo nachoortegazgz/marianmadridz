@@ -4,7 +4,7 @@ import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
-import { buildSandboxSessionSummary } from "backend/tpv/tpvCierresCore";
+import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 
@@ -18,7 +18,7 @@ export const obtenerResumenCaja = webMethod(
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             return {
                 status: "SUCCESS",
                 data: {
@@ -32,6 +32,8 @@ export const obtenerResumenCaja = webMethod(
                         EFECTIVO: fromMinorUnits(totals.cashMinor),
                         TARJETA: fromMinorUnits(totals.cardMinor),
                         BIZUM: fromMinorUnits(totals.bizumMinor),
+                        BONO: fromMinorUnits(totals.bonoMinor),
+                        TARJETA_REGALO: fromMinorUnits(totals.giftCardMinor),
                         OTROS: fromMinorUnits(totals.otherMinor),
                     },
                 },
@@ -62,13 +64,14 @@ export const generarControlX = webMethod(
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             const reportId = "TPV-X-" + session.sessionId + "-" + key.slice(0, 20);
             const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
                 sessionId: session.sessionId,
                 reportId,
                 generatedAt: new Date(),
-                status: "GENERADO_SINTETICO",
+                status: "GENERADO",
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 totals,
                 payload: { traceId, readOnly: true, closesSession: false },
             });
@@ -162,7 +165,7 @@ export const generarCierreZ = webMethod(
             const pendingRefunds = await getPendingTpvRefunds(session.sessionId);
             if (pendingRefunds.length > 0) throw new Error("TPV_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             if (totals.reconciliationOk !== true) {
                 throw new Error("TPV_RECONCILIATION_FAILED");
             }
@@ -210,7 +213,8 @@ export const generarCierreZ = webMethod(
                 sessionId: session.sessionId,
                 reportId,
                 generatedAt: new Date(),
-                status: "CERRADO_SINTETICO",
+                status: "CERRADO",
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 closed: true,
                 clientIdempotencyKey,
                 requestFingerprint,

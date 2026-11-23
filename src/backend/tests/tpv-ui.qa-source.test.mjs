@@ -11,7 +11,7 @@ test("TPV HTML script parses and wires every visible POS operation", async () =>
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
     assert.ok(script);
     assert.doesNotThrow(() => new Script(script));
-    for (const id of ["openSession", "operatorBtn", "customer", "refresh", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "cashSummary", "audit", "printLast"]) {
+    for (const id of ["openCash", "professionalSelect", "selectClient", "refreshCatalog", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "cashSummary", "audit", "printLast"]) {
         assert.ok(html.includes('id="' + id + '"'), "missing visible POS control " + id);
     }
     for (const type of ["SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS", "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) {
@@ -23,23 +23,25 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     const html = await read("%23htmlTPV.txt");
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
-    assert.match(script, /payments:\[\{paymentMethod,amount\}\]/);
-    assert.match(script, /differenceReason:/);
-    assert.match(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId\}/);
-    assert.doesNotMatch(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId,countedCash/);
-    assert.match(script, /impuestosImporte:0/);
+    assert.match(script, /payments: state\.payments\.map/);
+    assert.match(script, /differenceReason(?:\s*:|\s*,)/);
+    assert.match(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
+    assert.doesNotMatch(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*,\s*countedCash/);
+    assert.match(script, /impuestosImporte: 0/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
-    assert.match(script, /varianteId:variant\.varianteId/);
-    assert.match(script, /keyedAction\("SALE","SALE_REGISTER"[\s\S]*?\.then\(result=>\{state\.lastSale=result/);
+    assert.match(script, /addCatalogLine\(item, selected\.precioMinor, selected\.varianteId, selected\.concepto\)/);
+    assert.match(script, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(script, /customerIdentityId: state\.customerIdentityId/);
+    assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
     assert.match(controller, /lineas: lineItems\.map/);
     assert.match(controller, /pagos: payments\.map/);
     assert.match(controller, /medioPago:/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
     assert.match(script, /function keyedAction/);
-    assert.match(script, /sessionStorage\.setItem\("mmTPVOperationKeys"/);
-    assert.match(script, /operationScope\(kind\)/);
+    assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
+    assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);
 });
 
 test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {

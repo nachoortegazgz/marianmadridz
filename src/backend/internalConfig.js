@@ -91,6 +91,14 @@ export const TPV_LEGACY_COLLECTIONS = Object.freeze({
 
 export const TPV_SYNTHETIC_SOURCE = "SYNTHETIC";
 export const TPV_NATIVE_SOURCE = "NATIVE";
+export const TPV_PAYMENT_METHOD = Object.freeze({
+  EFECTIVO: "EFECTIVO",
+  TARJETA: "TARJETA",
+  BIZUM: "BIZUM",
+  BONO: "BONO",
+  TARJETA_REGALO: "TARJETA_REGALO",
+  OTROS: "OTROS",
+});
 export const TPV_LEDGER_SOURCE = "TPV_LEDGER";
 export const TPV_MIN_LEDGER_VERSION = 1;
 
@@ -114,8 +122,8 @@ export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
 });
 
 export const TPV_RUNTIME_POLICY = Object.freeze({
-  // Enabled for the isolated Wix Sandbox data plane. Every CajaActual mutation
-  // still requires the exact synthetic Sandbox run marker; fiscal/payment side effects stay disabled.
+  // Synthetic execution is isolated by explicit source/site/version/session/hash metadata.
+  // Legacy run markers remain compatibility-only; fiscal/payment side effects stay disabled.
   ENABLED: true,
   SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
   ALLOW_REAL_PAYMENTS: false,
@@ -123,6 +131,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   CURRENCY: "EUR",
   SITE_ID: "188bed94-177c-4bc9-a9f0-35080d874f3e",
   LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
+  SCHEMA_VERSION: 2,
   CAPABILITIES: Object.freeze({
     realPayments: false,
     nativeWrites: false,
@@ -138,6 +147,9 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
   LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
+  CASH_REGISTER_SOURCE: "TPV_SYNTHETIC",
+  LEGACY_CASH_REGISTER_SOURCE: "TPV_SANDBOX_INITIALIZED",
+  LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC",
 });
 
 export const TPV_IDENTITY_TYPES = Object.freeze({

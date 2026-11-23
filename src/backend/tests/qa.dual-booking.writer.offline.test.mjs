@@ -118,6 +118,8 @@ mocks.sdk['@wix/bookings::bookings'] = {
   },
 };
 
+mocks.sdk['@wix/bookings::services'] = { getService: async () => ({ onlineBooking: { enabled: true } }) };
+
 const { executeBookingSaga } = await import('backend/booking/bookingSaga.js');
 
 function seedCatalog() {

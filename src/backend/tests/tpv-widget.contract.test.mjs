@@ -54,7 +54,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     for (const type of types) {
         assert.ok(controller.includes('"' + type + '"'), "controller must dispatch " + type);
         assert.ok(html.includes('"' + type + '"'), "HTML widget must send " + type);
-        assert.ok(html.includes(type + "_RES"), "HTML widget must receive " + type + "_RES");
+        assert.ok(html.includes(type + "_RES") || html.includes('const responseType = type + "_RES"'), "HTML widget must receive " + type + "_RES");
     }
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
@@ -64,13 +64,15 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
 test("TPV widget keeps all writes synthetic and does not implement a second payment gateway", async () => {
     const html = await source("%23htmlTPV.txt");
     const config = await source("src/backend/internalConfig.js");
-    assert.match(config, /ENVIRONMENT: "SANDBOX"/);
+    assert.match(config, /CAPABILITIES: Object\.freeze/);
     assert.match(config, /SYNTHETIC_ONLY: true/);
     assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
+    assert.match(config, /TPV_LEDGER_SOURCE = "TPV_LEDGER"/);
     assert.match(config, /FISCAL_WRITES_ENABLED: false/);
-    assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled/);
-    assert.match(html, /m\.payload\?\.status!=="SUCCESS"/);
-    assert.match(html, /textContent="TPV"/);
+    assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
+    assert.match(html, /response\.status === "ERROR"/);
+    assert.match(html, /type: "MM_READY"/);
+    assert.match(html, /data\.type === "MM_CONTEXT"/);
     assert.match(html, /customerIdentityId/);
     assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /id="tax"[^>]*disabled/);

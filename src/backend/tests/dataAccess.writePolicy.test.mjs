@@ -17,6 +17,7 @@ import {
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
     TPV_RUNTIME_POLICY,
+    TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     BOOKING_TYPE,
     CITAS_BOOKING_STATUS,
@@ -199,7 +200,7 @@ test("TPV identities require explicit source and site metadata and remain append
 test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     const item = {
         _id: "TPV_TEST_ROW",
-        recordSource: "TPV_SYNTHETIC",
+        recordSource: TPV_LEDGER_SOURCE,
         movementType: "SIMULATED_TPV_PAYMENT",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":SESSION-1",
         sequenceNumber: 0,
@@ -208,6 +209,8 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+            reconciliationStatus: "NOT_RECONCILED",
             sessionId: "SESSION-1",
             sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
@@ -226,7 +229,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
         payloadFiscal: { ...item.payloadFiscal, externalSideEffects: true },
-    }), { code: "CMS_TPV_SANDBOX_SYNTHETIC_LEDGER_CONTRACT_INVALID" });
+    }), { code: "CMS_TPV_LEDGER_CONTRACT_INVALID" });
 });
 
 test("WEBHOOK_EVENT is neither mutable nor removable", () => {

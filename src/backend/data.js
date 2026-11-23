@@ -421,7 +421,7 @@ export function MovimientosCaja_beforeInsert(item) {
     if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
         String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
         if (!_isCurrentSyntheticTpvRow(item)) {
-            _schemaError("Evento TPV sintético no cumple el contrato del test-run activo.");
+            _schemaError("Evento TPV no cumple el contrato neutral de origen, sitio y versión.");
         }
     }
 
@@ -498,6 +498,8 @@ function _isCurrentSyntheticTpvRow(value) {
                 value?.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 value?.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 value?.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                Number(value?.payloadFiscal?.schemaVersion) === 2 &&
+                value?.payloadFiscal?.reconciliationStatus === "NOT_RECONCILED" &&
                 (value?.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
                     Boolean(String(value?.payloadFiscal?.sessionId || "").trim()))
             ) ||

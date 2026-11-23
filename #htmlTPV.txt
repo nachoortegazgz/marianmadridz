@@ -241,8 +241,8 @@ body {
   <div class="bar session-bar">
     <span>Sesión: <strong id="sessionLabel">—</strong></span>
 
-    <label for="operatorSelect" class="status">Operador:</label>
-    <select id="operatorSelect" class="field">
+    <label for="professionalSelect" class="status">Profesional:</label>
+    <select id="professionalSelect" class="field">
       <option value="">Sin asignar</option>
     </select>
 
@@ -275,9 +275,11 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución</button>
+          <button id="refund" class="btn danger">Devolución sintética</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
+          <button id="exportMovements" class="btn">Exportar movimientos</button>
+          <button id="exportAudit" class="btn">Exportar auditoría</button>
           <button id="printLast" class="btn">Imprimir último ticket</button>
         </div>
       </section>
@@ -302,7 +304,7 @@ body {
 
         <div class="totals">
           <div class="row"><span>Subtotal</span><span id="subtotal">0,00 €</span></div>
-          <div class="row"><span>Impuestos (pendientes de configuración)</span><span id="taxes">0,00 €</span></div>
+          <div class="row"><span>Impuestos (reglas Wix pendientes)</span><input id="tax" type="text" value="0,00 €" disabled aria-label="Impuestos (reglas Wix pendientes)" /></div>
           <div class="row total"><span>Total</span><span id="total">0,00 €</span></div>
         </div>
       </section>
@@ -315,6 +317,8 @@ body {
           <button class="btn active" data-method="EFECTIVO">Efectivo</button>
           <button class="btn" data-method="TARJETA">Tarjeta</button>
           <button class="btn" data-method="BIZUM">Bizum</button>
+          <button class="btn" data-method="BONO">Bono</button>
+          <button class="btn" data-method="TARJETA_REGALO">Tarjeta regalo</button>
           <button class="btn" data-method="OTROS">Otros</button>
         </div>
 
@@ -388,17 +392,20 @@ body {
   }[c]));
   const num = (v) => Number.parseFloat(v) || 0;
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
+  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"];
 
   /* ---------- Estado local ---------- */
   const state = {
     session: null,
-    operatorId: null,
+    profesionalId: null,
     staff: [],
     items: [],
     payments: [],
     paymentMethod: "EFECTIVO",
     busy: false,
     lastSale: null,
+    customerIdentityId: null,
+    customerLabel: null,
   };
 
   /* ---------- Toast ---------- */
@@ -435,21 +442,31 @@ body {
   /* ---------- Envío al controlador (postMessage) ---------- */
   function call(type, payload, responseType) {
     return new Promise((resolve, reject) => {
-      const id = "req-" + Math.random().toString(36).slice(2);
+      const id = "req-" + crypto.randomUUID().replace(/-/g, "");
+      let timer = null;
+      const cleanup = () => {
+        window.removeEventListener("message", handler);
+        if (timer) clearTimeout(timer);
+      };
       const handler = (event) => {
+        if (event.source !== window.parent) return;
         const data = event.data || {};
-        if (data.type === responseType && data.requestId === id) {
-          window.removeEventListener("message", handler);
-          if (data.error) reject(new Error(data.error));
-          else resolve(data.payload);
+        if (data.type === responseType && (data.messageId === id || data.requestId === id)) {
+          cleanup();
+          const response = data.payload || {};
+          if (data.error || response.status === "ERROR") {
+            reject(new Error(response.error?.code || data.error || "TPV_OPERATION_FAILED"));
+          } else {
+            resolve(response.data !== undefined ? response.data : response);
+          }
         }
       };
       window.addEventListener("message", handler);
-      window.parent.postMessage({ type, payload, requestId: id }, "*");
-      setTimeout(() => {
-        window.removeEventListener("message", handler);
+      timer = setTimeout(() => {
+        cleanup();
         reject(new Error("TPV_TIMEOUT"));
       }, 15000);
+      window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
     });
   }
 
@@ -458,7 +475,7 @@ body {
     const storageKey = "tpv_key_" + keyPrefix;
     let key = sessionStorage.getItem(storageKey);
     if (!key) {
-      key = keyPrefix + ":" + crypto.randomUUID();
+      key = keyPrefix + "_" + crypto.randomUUID().replace(/-/g, "");
       sessionStorage.setItem(storageKey, key);
     }
     const fullPayload = Object.assign({}, payload, { idempotencyKey: key });
@@ -468,35 +485,98 @@ body {
     });
   }
 
-  /* ---------- Operador ---------- */
-  function requireOperator() {
-    if (!state.operatorId) {
-      toast("Selecciona el operador antes de continuar.");
-      throw new Error("TPV_OPERATOR_REQUIRED");
-    }
-  }
-
-  function renderOperators() {
-    const select = $("operatorSelect");
+  /* ---------- Profesional seleccionado; el operador real procede del backend ---------- */
+  function renderProfessionals() {
+    const select = $("professionalSelect");
     select.innerHTML = '<option value="">Sin asignar</option>' +
-      state.staff.map((p) =>
-        `<option value="${esc(p.profesionalId)}">${esc(p.nombre)}</option>`
+      state.staff.map((person) =>
+        `<option value="${esc(person.profesionalId)}">${esc(person.nombre)}</option>`
       ).join("");
-    if (state.operatorId) select.value = state.operatorId;
+    if (state.profesionalId) select.value = state.profesionalId;
   }
 
-  $("operatorSelect").onchange = (e) => {
-    const person = state.staff.find((p) => p.profesionalId === e.target.value);
-    state.operatorId = person ? person.profesionalId : null;
-    toast(person ? "Operador: " + person.nombre : "Operador sin asignar");
+  $("professionalSelect").onchange = (event) => {
+    const person = state.staff.find((item) => item.profesionalId === event.target.value);
+    state.profesionalId = person ? person.profesionalId : null;
+    toast(person ? "Profesional: " + person.nombre : "Profesional sin asignar");
   };
+
+  function renderSelectedCustomer() {
+    $("selectClient").textContent = state.customerIdentityId
+      ? "Cliente: " + state.customerLabel
+      : "Cliente";
+  }
+
+  async function searchCustomers() {
+    const search = $("customerSearch").value.trim();
+    if (search.length < 2) throw new Error("Introduce al menos dos caracteres.");
+    const result = await call("CUSTOMERS_SEARCH", { search }, "CUSTOMERS_SEARCH_RES");
+    const items = Array.isArray(result?.items) ? result.items : [];
+    const container = $("customerResults");
+    container.innerHTML = items.length
+      ? items.map((item, index) => `
+          <button type="button" class="btn" data-customer-index="${index}" style="display:block;width:100%;text-align:left;margin:6px 0;">
+            ${esc(item.displayName)}${item.email ? " · " + esc(item.email) : ""}
+          </button>
+        `).join("")
+      : "<p>No se encontraron clientes sintéticos.</p>";
+    container.querySelectorAll("[data-customer-index]").forEach((button) => {
+      button.onclick = () => {
+        const selected = items[Number(button.dataset.customerIndex)];
+        if (!selected?.identityId) return;
+        state.customerIdentityId = selected.identityId;
+        state.customerLabel = selected.displayName;
+        renderSelectedCustomer();
+        closeModal();
+        toast("Cliente seleccionado.");
+      };
+    });
+  }
+
+  $("selectClient").onclick = () => {
+    openModal("Seleccionar cliente", `
+      <input id="customerSearch" class="field" maxlength="100" placeholder="Nombre o correo del cliente">
+      <button id="searchCustomers" type="button" class="btn">Buscar</button>
+      <button id="clearCustomer" type="button" class="btn danger">Quitar cliente</button>
+      <div id="customerResults" style="max-height:300px;overflow-y:auto;margin-top:10px;"></div>
+    `, async () => {
+      if (!state.customerIdentityId) throw new Error("Selecciona un cliente o utiliza Quitar cliente.");
+    });
+    $("searchCustomers").onclick = () => searchCustomers().catch((e) => error(e.message));
+    $("customerSearch").onkeydown = (event) => {
+      if (event.key === "Enter") searchCustomers().catch((e) => error(e.message));
+    };
+    $("clearCustomer").onclick = () => {
+      state.customerIdentityId = null;
+      state.customerLabel = null;
+      renderSelectedCustomer();
+      closeModal();
+      toast("Cliente quitado.");
+    };
+  };
+
+  function renderSession(session) {
+    state.session = session || null;
+    $("sessionLabel").textContent = state.session?.sessionId || "—";
+    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
+    $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
+    $("cashLabel").textContent = isOpen
+      ? "Caja abierta · operación sintética no conciliada"
+      : "Caja cerrada";
+    $("openCash").disabled = isOpen || state.busy;
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
+      $(id).disabled = !isOpen || state.busy;
+    });
+  }
 
   /* ---------- Bloqueo de operaciones ---------- */
   function setBusy(value) {
     state.busy = value;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
+    $("openCash").disabled = value || isOpen;
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       const el = $(id);
-      if (el) el.disabled = value;
+      if (el) el.disabled = value || !isOpen;
     });
   }
 
@@ -510,29 +590,104 @@ body {
     }
   }
 
-  /* ---------- Catálogo (ejemplo mínimo; el controlador lo carga) ---------- */
-  function renderCatalog(items) {
-    const list = $("catalogList");
-    if (!items || !items.length) {
-      list.innerHTML = "<p>No hay elementos.</p>";
+  /* ---------- Catálogo nativo: Bookings y Stores Catalog V3 ---------- */
+  function addCatalogLine(item, priceMinor, varianteId = null, variantLabel = "") {
+    if (!Number.isSafeInteger(priceMinor) || priceMinor < 0) {
+      toast("El artículo no tiene un precio válido.");
       return;
     }
-    list.innerHTML = items.map((it) => `
-      <div class="catalog-item" data-id="${esc(it.id)}" data-name="${esc(it.nombre)}" data-price="${num(it.precio)}">
-        <span>${esc(it.nombre)}</span>
-        <span class="price">${money(it.precio)}</span>
-      </div>
-    `).join("");
-    list.querySelectorAll(".catalog-item").forEach((el) => {
-      el.onclick = () => {
-        const id = el.dataset.id;
-        const name = el.dataset.name;
-        const price = num(el.dataset.price);
-        state.items.push({ id, name, price, qty: 1 });
-        renderTicket();
+    state.items.push({
+      id: item.itemId,
+      tipoLinea: item.tipoLinea || "PERSONALIZADA",
+      name: [item.concepto, variantLabel].filter(Boolean).join(" · "),
+      price: priceMinor / 100,
+      qty: 1,
+      varianteId,
+      stockAfectado: false,
+    });
+    renderTicket();
+  }
+
+  async function selectCatalogItem(item) {
+    if (item.tipoLinea === "PRODUCTO" && item.requiereSeleccionVariante === true) {
+      const result = await call("CATALOG_VARIANTS", { productId: item.itemId }, "CATALOG_VARIANTS_RES");
+      const variants = (result?.variantes || []).filter((variant) =>
+        variant.disponible === true && Number.isSafeInteger(variant.precioMinor)
+      );
+      if (!variants.length) {
+        toast("No hay variantes disponibles con precio válido.");
+        return;
+      }
+      openModal("Seleccionar variante", `
+        <select id="variantChoice" class="field">
+          ${variants.map((variant) => `<option value="${esc(variant.varianteId)}">${esc(variant.concepto)} · ${money(variant.precioMinor / 100)}</option>`).join("")}
+        </select>
+      `, async () => {
+        const selected = variants.find((variant) => variant.varianteId === $("variantChoice").value);
+        if (!selected) throw new Error("TPV_VARIANT_REQUIRED");
+        addCatalogLine(item, selected.precioMinor, selected.varianteId, selected.concepto);
+      });
+      return;
+    }
+    if (!Number.isSafeInteger(item.precioMinor)) {
+      toast("El artículo no tiene un precio fijo configurado.");
+      return;
+    }
+    addCatalogLine(item, item.precioMinor);
+  }
+
+  function renderCatalog(items) {
+    const list = $("catalogList");
+    if (!Array.isArray(items) || !items.length) {
+      list.innerHTML = "<p>No hay elementos disponibles.</p>";
+      return;
+    }
+    list.innerHTML = items.map((item, index) => {
+      const priceMinor = Number.isSafeInteger(item.precioMinor)
+        ? item.precioMinor
+        : (item.precioFijo !== null && item.precioFijo !== undefined
+          ? Math.round(Number(item.precioFijo) * 100)
+          : null);
+      const priceLabel = item.requiereSeleccionVariante === true
+        ? "Seleccionar variante"
+        : (Number.isSafeInteger(priceMinor) ? money(priceMinor / 100) : "Precio no configurado");
+      return `
+        <div class="catalog-item" data-index="${index}">
+          <span>${esc(item.concepto || "Artículo")}</span>
+          <span class="price">${esc(priceLabel)}</span>
+        </div>
+      `;
+    }).join("");
+    list.querySelectorAll(".catalog-item").forEach((element) => {
+      element.onclick = () => {
+        const item = items[Number(element.dataset.index)];
+        selectCatalogItem(item).catch((err) => err.message === "TPV_TIMEOUT"
+          ? toast("Tiempo de espera agotado.")
+          : error(err.message));
       };
     });
   }
+
+  async function loadCatalog(kind) {
+    const type = kind === "PRODUCTS" ? "CATALOG_PRODUCTS" : "CATALOG_SERVICES";
+    const responseType = type + "_RES";
+    const result = await call(type, { limit: 100 }, responseType);
+    renderCatalog(result?.items || []);
+  }
+
+  $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
+  $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e.message));
+  $("tabPersonalizada").onclick = () => openModal("Tarifa personalizada", `
+    <input id="customConcept" class="field" maxlength="160" placeholder="Concepto">
+    <input id="customPrice" class="field" type="number" min="0.01" step="0.01" placeholder="Precio">
+  `, async () => {
+    const concept = $("customConcept").value.trim();
+    const price = num($("customPrice").value);
+    if (concept.length < 2 || price <= 0) throw new Error("Indica concepto e importe válidos.");
+    state.items.push({ id: null, tipoLinea: "PERSONALIZADA", name: concept, price, qty: 1, varianteId: null, stockAfectado: false });
+    renderTicket();
+  });
+  $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
 
   /* ---------- Ticket ---------- */
   function renderTicket() {
@@ -565,7 +720,7 @@ body {
     }
     const subtotal = state.items.reduce((s, it) => s + it.price * it.qty, 0);
     $("subtotal").textContent = money(subtotal);
-    $("taxes").textContent = money(0);
+    $("tax").value = money(0);
     $("total").textContent = money(subtotal);
     renderPaymentSummary();
   }
@@ -577,17 +732,48 @@ body {
   };
 
   /* ---------- Pagos ---------- */
+  function paymentTotals() {
+    const totalsMinor = Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]));
+    state.payments.forEach((payment) => {
+      totalsMinor[payment.method] += Math.max(0, payment.amountMinor - payment.changeMinor);
+    });
+    return Object.fromEntries(
+      PAYMENT_METHODS.map((method) => [method, totalsMinor[method] / 100])
+    );
+  }
+
   function renderPaymentSummary() {
-    const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
-    const pending = Math.max(0, total - applied);
-    const change = Math.max(0, applied - total);
-    $("applied").textContent = money(applied);
-    $("pending").textContent = money(pending);
-    $("change").textContent = money(change);
-    $("paymentList").innerHTML = state.payments.length
-      ? state.payments.map((p) => `<div>${esc(p.method)}: ${money(p.amount)}</div>`).join("")
+    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) =>
+      sum + payment.amountMinor - payment.changeMinor, 0);
+    const pendingMinor = Math.max(0, totalMinor - appliedMinor);
+    const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
+    $("applied").textContent = money(appliedMinor / 100);
+    $("pending").textContent = money(pendingMinor / 100);
+    $("change").textContent = money(changeMinor / 100);
+
+    const totals = paymentTotals();
+    const rows = state.payments.map((payment, index) => `
+      <div class="payment-row" style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+        <span style="flex:1;">${esc(payment.method)}</span>
+        <strong>${money(payment.amountMinor / 100)}</strong>
+        <small>Aplicado: ${money((payment.amountMinor - payment.changeMinor) / 100)}${payment.changeMinor ? " · Cambio: " + money(payment.changeMinor / 100) : ""}</small>
+        <button type="button" class="btn danger" data-remove-payment="${index}">Quitar</button>
+      </div>
+    `).join("");
+    const breakdown = Object.entries(totals)
+      .filter(([, amount]) => amount > 0)
+      .map(([method, amount]) => `<div>${esc(method)}: ${money(amount)}</div>`)
+      .join("");
+    $("paymentList").innerHTML = rows
+      ? rows + (breakdown ? `<hr><strong>Desglose aplicado:</strong>${breakdown}` : "")
       : "Sin pagos añadidos.";
+    $("paymentList").querySelectorAll("[data-remove-payment]").forEach((button) => {
+      button.onclick = () => {
+        state.payments.splice(Number(button.dataset.removePayment), 1);
+        renderPaymentSummary();
+      };
+    });
   }
 
   $("paymentMethods").querySelectorAll("button[data-method]").forEach((btn) => {
@@ -611,43 +797,81 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    const amount = num($("paymentAmount").value);
-    if (amount <= 0) {
-      toast("Introduce un importe válido.");
+    const amount = Number($("paymentAmount").value);
+    if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
+      toast("Introduce un importe válido con un máximo de dos decimales.");
       return;
     }
-    state.payments.push({ method: state.paymentMethod, amount });
+    if (!PAYMENT_METHODS.includes(state.paymentMethod)) {
+      toast("Selecciona un medio de pago válido.");
+      return;
+    }
+    const amountMinor = Math.round(amount * 100);
+    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) =>
+      sum + payment.amountMinor - payment.changeMinor, 0);
+    const remainingMinor = totalMinor - appliedMinor;
+    if (!state.items.length || remainingMinor <= 0) {
+      toast("No hay importe pendiente de cobro.");
+      return;
+    }
+    if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
+      toast("Este medio de pago no admite cambio ni puede superar el pendiente.");
+      return;
+    }
+    const changeMinor = state.paymentMethod === "EFECTIVO"
+      ? Math.max(0, amountMinor - remainingMinor)
+      : 0;
+    state.payments.push({
+      method: state.paymentMethod,
+      amountMinor,
+      changeMinor,
+    });
     $("paymentAmount").value = "";
     renderPaymentSummary();
+    if (changeMinor > 0) toast("Pago añadido. Cambio: " + money(changeMinor / 100));
   };
 
   /* ---------- Guardar venta ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
-    requireOperator();
+    
     if (!state.items.length) {
       toast("El ticket está vacío.");
       return;
     }
     const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
-    if (Math.abs(applied - total) > 0.001) {
+    const totalMinor = Math.round(total * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
+    if (appliedMinor !== totalMinor) {
       toast("El pago no cubre el total exacto.");
       return;
     }
     try {
       const result = await keyedAction("SALE", "SALE_REGISTER", {
         sessionId: state.session?.sessionId,
-        operatorId: state.operatorId,
-        lines: state.items.map((it) => ({
-          itemId: it.id,
-          name: it.name,
-          qty: it.qty,
-          price: it.price,
+        profesionalId: state.profesionalId,
+        lineItems: state.items.map((item) => ({
+          tipoLinea: item.tipoLinea,
+          itemId: item.id,
+          varianteId: item.varianteId,
+          concepto: item.name,
+          cantidad: item.qty,
+          precioUnitario: item.price,
+          descuentoImporte: 0,
+          impuestosImporte: 0,
+          profesionalId: state.profesionalId,
+          stockAfectado: false,
         })),
-        payments: state.payments.map((p) => ({
-          paymentMethod: p.method,
-          amount: p.amount,
+        payments: state.payments.map((payment) => ({
+          method: payment.method,
+          amount: payment.amountMinor / 100,
+          change: payment.changeMinor / 100,
         })),
+        paymentBreakdown: paymentTotals(),
+        customerIdentityId: state.customerIdentityId,
+        subtotal: total,
+        tax: 0,
+        total,
       }, "SALE_REGISTER_RES");
       state.lastSale = result;
       toast("Venta registrada.");
@@ -659,9 +883,25 @@ body {
     }
   });
 
+  /* ---------- Apertura de caja ---------- */
+  $("openCash").onclick = () => openModal("Abrir caja", `
+    <input id="openingCash" class="field" type="number" min="0" step="0.01" placeholder="Fondo inicial">
+    <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
+  `, async () => {
+    const openingCash = num($("openingCash").value);
+    if (openingCash < 0) throw new Error("El fondo inicial no puede ser negativo.");
+    const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
+      openingCash,
+      reason: $("openingReason").value.trim(),
+      terminalId: "TPV",
+    }, "SESSION_OPEN_RES");
+    renderSession(session);
+    toast("Sesión sintética abierta.");
+  });
+
   /* ---------- Entrada / Salida de efectivo ---------- */
   function openCashMovement(type) {
-    requireOperator();
+    
     openModal(
       type === "ENTRADA" ? "Entrada de efectivo" : "Salida de efectivo",
       `
@@ -675,10 +915,12 @@ body {
           throw new Error("Indica importe y concepto válidos.");
         }
         await keyedAction("CASH_" + type, "CASH_MOVEMENT", {
+          sessionId: state.session?.sessionId,
           movementType: type,
+          paymentMethod: "EFECTIVO",
           amount,
           reason,
-          operatorId: state.operatorId,
+          profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
         toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
       }
@@ -689,8 +931,9 @@ body {
 
   /* ---------- Devolución ---------- */
   $("refund").onclick = () => {
-    requireOperator();
-    openModal("Devolución", `
+    
+    openModal("Devolución sintética", `
+      <p>Registro interno sintético. No ejecuta un reembolso de Wix Payments ni confirma una devolución nativa.</p>
       <input id="refundSaleId" class="field" placeholder="ID de venta">
       <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
       <select id="refundMethod" class="field">
@@ -711,7 +954,7 @@ body {
       await keyedAction("REFUND", "REFUND", {
         saleId,
         reason,
-        operatorId: state.operatorId,
+        profesionalId: state.profesionalId,
         payments: [{ paymentMethod, amount }],
       }, "REFUND_RES");
       toast("Devolución registrada.");
@@ -746,6 +989,58 @@ body {
       `, async () => {});
     } catch (e) { error(e.message); }
   };
+  function csvCell(value) {
+    let text = value === null || value === undefined
+      ? ""
+      : (typeof value === "object" ? JSON.stringify(value) : String(value));
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return "\"" + text.replaceAll("\"", "\"\"") + "\"";
+  }
+
+  function downloadCsv(rows, filename, columns) {
+    const csv = [
+      columns.map(csvCell).join(";"),
+      ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(";")),
+    ].join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function exportData(operationType, filename, columns) {
+    requireOperator();
+    const sessionId = state.session?.sessionId;
+    if (!sessionId) throw new Error("No hay una sesión de caja seleccionada.");
+    const result = await call(operationType, { sessionId }, operationType + "_RES");
+    if (result?.truncated === true) throw new Error("La exportación está incompleta; no se ha generado el CSV.");
+    const rows = Array.isArray(result?.items) ? result.items : [];
+    if (!rows.length) {
+      toast("No hay datos para exportar.");
+      return;
+    }
+    downloadCsv(rows, filename, columns);
+    toast("Exportación CSV generada: " + rows.length + " registros.");
+  }
+
+  $("exportMovements").onclick = () => runOperation(() => exportData(
+    "CASH_MOVEMENTS_EXPORT",
+    "movimientos-caja.csv",
+    ["movementId", "sessionId", "movementType", "sourceType", "amount", "paymentMethod", "reason", "reference", "status", "createdAt", "currency"]
+  )).catch((e) => error(e.message));
+
+  $("exportAudit").onclick = () => runOperation(() => exportData(
+    "AUDIT_EXPORT",
+    "auditoria-tpv.csv",
+    ["auditId", "action", "operatorId", "sessionId", "entityType", "entityId", "createdAt", "source", "traceId", "format", "filters", "details"]
+  )).catch((e) => error(e.message));
+
 
   /* ---------- Control X ---------- */
   $("ticketX").onclick = () => runOperation(async () => {
@@ -759,7 +1054,7 @@ body {
 
   /* ---------- Cierre Z ---------- */
   $("ticketZ").onclick = () => {
-    requireOperator();
+    
     openModal("Cierre Z diario", `
       <p>El cierre bloqueará la sesión actual.</p>
       <input id="countedCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
@@ -770,10 +1065,11 @@ body {
       await keyedAction("TICKET_Z", "TICKET_Z", {
         sessionId: state.session?.sessionId,
         countedCash,
-        differenceReason,
-        operatorId: state.operatorId,
+        differenceReason: differenceReason,
+        profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
-      toast("Cierre Z registrado.");
+      renderSession(null);
+      toast("Cierre Z registrado; sesión cerrada.");
     });
   };
 
@@ -786,47 +1082,31 @@ body {
     window.print();
   };
 
-  /* ---------- Escucha de mensajes del controlador ---------- */
+  /* ---------- Handshake y contexto del controlador Wix ---------- */
   window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
     const data = event.data || {};
-    if (data.type === "CATALOG_LOADED") {
-      renderCatalog(data.payload.items || []);
-    }
-    if (data.type === "STAFF_LOADED") {
-      state.staff = data.payload.items || [];
-      renderOperators();
-    }
-    if (data.type === "SESSION_STATE") {
-      state.session = data.payload.session || null;
-      $("sessionLabel").textContent = state.session?.sessionId || "—";
-      const isOpen = !!state.session;
-      $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
-      $("cashLabel").textContent = isOpen ? "Caja abierta" : "Caja cerrada";
-      $("openCash").disabled = isOpen;
-    }
-    if (data.type === "CONNECTION_STATE") {
-      const ok = !!data.payload.connected;
-      $("connStatus").className = "dot " + (ok ? "ok" : "error");
-      $("connLabel").textContent = ok ? "Conectado" : "Desconectado";
+    if (data.type === "MM_CONTEXT") {
+      const context = data.payload || {};
+      const connected = context.status === "SUCCESS";
+      $("connStatus").className = "dot " + (connected ? "ok" : "error");
+      $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
     }
   });
 
-  /* ---------- Inicialización: solicitar datos al controlador ---------- */
+  /* ---------- Inicialización ---------- */
   function init() {
-    window.parent.postMessage({ type: "TPV_READY" }, "*");
-    call("CATALOG_LIST", {}, "CATALOG_LOADED").then((r) => {
-      renderCatalog(r.items || []);
-    }).catch(() => {});
-    call("STAFF_LIST", {}, "STAFF_LOADED").then((r) => {
-      state.staff = r.items || [];
-      renderOperators();
-    }).catch(() => {});
-    call("SESSION_GET", {}, "SESSION_STATE").then((r) => {
-      state.session = r.session || null;
-      $("sessionLabel").textContent = state.session?.sessionId || "—";
-      $("cashStatus").className = "dot " + (state.session ? "ok" : "error");
-      $("cashLabel").textContent = state.session ? "Caja abierta" : "Caja cerrada";
-    }).catch(() => {});
+    window.parent.postMessage({
+      type: "MM_READY",
+      version: 1,
+      messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
+    }, "*");
+    loadCatalog("SERVICES").catch((e) => error(e.message));
+    call("CATALOG_STAFF", {}, "CATALOG_STAFF_RES").then((data) => {
+      state.staff = data.items || [];
+      renderProfessionals();
+    }).catch((e) => error(e.message));
+    call("CASHIER_STATE", {}, "CASHIER_STATE_RES").then(renderSession).catch((e) => error(e.message));
   }
 
   init();

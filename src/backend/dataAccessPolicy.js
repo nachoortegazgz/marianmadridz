@@ -83,6 +83,8 @@ function _isSyntheticTpvRecord(item) {
                 item.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 item.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 item.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                Number(item.payloadFiscal?.schemaVersion) === 2 &&
+                item.payloadFiscal?.reconciliationStatus === "NOT_RECONCILED" &&
                 (item.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
                     Boolean(String(item.payloadFiscal?.sessionId || "").trim()))
             ) ||

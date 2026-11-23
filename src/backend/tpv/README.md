@@ -1,3 +1,22 @@
+> **Estado vigente — 2026-11-23:** PR #537 integrada en PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b` con ambos padres; #541 abierta sobre main y main intacta. Árbol idéntico al HEAD de código previamente validado. CI posterior a la reconciliación: Backend offline quality gates SUCCESS (run `45102063911`): Layer 1 364/364, Layer 2 255/255, suite offline 732/732, npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run `45102063815`).  main permanece en `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536). PR #541 está abierta sobre `main`; el último HEAD de código validado en `feat/tpv-payment-exports-after-p0-20261123` es `1d7e99d66fcc14165bf2482885e583176c2b06ef` (los commits posteriores de la rama son solo documentación). CI del HEAD de código actual SUCCESS: Layer 1 364/364, Layer 2 255/255, suite offline completa 732/732; npm audit sin vulnerabilidades, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS (runs 45100967570 y 45100967567). El sitio Wix Marian Madrid sigue en estado Draft, Velo Enabled y Stores Catalog V3. No está integrado en `main` ni validado en Wix Preview/Runtime. **Release NO-GO.** Las notas fechadas más abajo son snapshots históricos y no sustituyen este estado.
+
+
+
+> **Wix site context verificado (solo lectura, 2026-11-23):** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; estado Draft, editor clásico, Velo Enabled, EUR y zona horaria Europe/Madrid. Apps instaladas: Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Payments, Wix Stores Catalog V3, Wix Invoices V1, Wix Members Area, Wix Blog y Promote SEO. La lectura de contexto no demuestra sincronización del HEAD Git con Wix Editor ni ejecución de Preview.
+
+## Contrato TPV vigente — escritura neutral, lectura legacy controlada
+
+- Las nuevas filas del ledger usan `recordSource=TPV_LEDGER`, `movementType=SIMULATED_TPV_*` y metadatos explícitos `sourceType=SYNTHETIC`, `siteId`, `ledgerVersion`, `schemaVersion`, `sessionId`, `requestFingerprint` y huella/hash. El entorno no acredita el origen ni autoriza escrituras.
+- Los marcadores históricos `TPV_SANDBOX_SYNTHETIC`, `sandboxRunId` y trazas antiguas se conservan únicamente para lectura/compatibilidad; las nuevas escrituras no dependen de `SANDBOX_RUN_ID`.
+- Las identidades nuevas de `TpvSandboxIdentities` exigen `sourceType`, `siteId` y `schemaVersion=2`, además de `syntheticOnly=true`. Las filas históricas con `environment=SANDBOX` y `testRunId` solo se aceptan mediante `allowLegacyRead: true`; no son válidas para nuevas escrituras.
+- El fixture `docs/qa/fixtures/tpv-sandbox-identities.json` representa el formato transicional histórico y se valida exclusivamente por la ruta de lectura legacy. No copiarlo como plantilla de nuevas identidades.
+- La TPV HTML incorpora selección de cliente sintético mediante `CUSTOMERS_SEARCH` y envía `customerIdentityId`; el backend vuelve a validar la identidad antes de registrar la venta.
+- Persistencia sintética no significa captura de pago, actualización de Stores/Bookings, emisión fiscal ni conciliación. Esas capacidades siguen deshabilitadas.
+
+## Estado de validación
+
+El último CI completado antes del HEAD actual registró 363/364 pruebas de Layer 1; el único fallo restante era una aserción contractual que esperaba el formato compacto de la llamada REFUND. El HEAD actual contiene el ajuste de esa aserción y la corrección de validación de identidades, pero la suite debe finalizar en SUCCESS antes de integrar. No hay evidencia de Preview E2E, pruebas negativas Published ni escrituras CMS ejecutadas durante esta revisión.
+
 > **Estado de rama TPV (2026-11-21):** PR #514 `fix/tpv-native-pos-contract-alignment` sigue abierto en revisión; no está integrado en `main`. Commit validado `e790f7ed361e822fbbca1de8298456a80172b9e1`: Layer 1 343 tests, Layer 2 268 tests y suite offline completa 724 tests/77 suites, 0 fallos; contratos SDK y ESLint correctos; Gitleaks SUCCESS. La validación Wix Editor/Preview y E2E runtime siguen pendientes. No publicar ni desplegar hasta completar esas pruebas.
 
 > **Estado actualizado (2026-11-20, main a231e5c):** PR #512 integrada. El simulador de proveedor sintético y fixture de identidades están versionados. CI post-merge SUCCESS: Layer 1, Layer 2, regresión offline completa, auditoría npm, contratos SDK Wix/eCommerce/TPV, ESLint y Gitleaks. No hay evidencia de Preview, preseed ejecutado ni E2E runtime. No publicar ni declarar listo el TPV hasta obtener esa evidencia.

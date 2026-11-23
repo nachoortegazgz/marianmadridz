@@ -379,41 +379,84 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
  * TpvSandboxIdentities stores synthetic-only customer and staff projections.
  * It must never contain Wix CRM, Bookings or personal identity references.
  */
-export function assertTpvIdentity(item) {
+export function assertTpvIdentity(item, options = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
     }
+
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
+    if (!["CUSTOMER", "STAFF"].includes(identityType) || item.identityType !== identityType) {
+        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity type invalid");
+    }
+
+    const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
     const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
-    if (!["CUSTOMER", "STAFF"].includes(identityType) ||
-        item.identityType !== identityType ||
-        !identityId.startsWith(expectedPrefix) ||
+    const legacySuffix = identityId.startsWith(legacyPrefix)
+        ? identityId.slice(legacyPrefix.length)
+        : identityId.startsWith(expectedPrefix)
+            ? identityId.slice(expectedPrefix.length)
+            : "";
+    const isLegacyIdentityId = identityId.startsWith(legacyPrefix);
+    const expectedLegacyNamePrefix = isLegacyIdentityId
+        ? (identityType === "CUSTOMER" ? "Cliente Sandbox " : "Profesional Sandbox ")
+        : expectedNamePrefix;
+    const validSuffix = ["01", "02", "03"].includes(legacySuffix);
+    const validEmail = /^[^\s@]+@example\.test$/i.test(String(item.email || ""));
+    const validMetadata = item.metadata === undefined ||
+        (item.metadata && typeof item.metadata === "object" &&
+            !Array.isArray(item.metadata) && Object.keys(item.metadata).length === 0);
+
+    // Read-only compatibility for historical and transitional Sandbox identities.
+    // The caller must opt in; these records are never accepted for new writes.
+    if (options.allowLegacyRead === true &&
+        validSuffix &&
+        item.environment === "SANDBOX" &&
+        item.testRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
+        item.active === true &&
+        item.syntheticOnly === true &&
+        displayName === expectedLegacyNamePrefix + legacySuffix &&
+        validEmail &&
+        validMetadata) {
+        const legacyAllowedFields = new Set([
+            "_id", "_createdDate", "_updatedDate", "_owner",
+            "identityId", "identityType", "displayName", "email", "active",
+            "syntheticOnly", "environment", "testRunId", "createdAt", "metadata",
+        ]);
+        if (Object.keys(item).every((field) => legacyAllowedFields.has(field))) return true;
+    }
+
+    const identitySuffix = identityId.startsWith(expectedPrefix)
+        ? identityId.slice(expectedPrefix.length)
+        : "";
+    if (!["01", "02", "03"].includes(identitySuffix) ||
         !/^[A-Z0-9-]{12,48}$/.test(identityId)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities identity key/type invalid");
     }
-    if (!displayName.startsWith(expectedNamePrefix) ||
-        !/^\d{2}$/.test(displayName.slice(expectedNamePrefix.length))) {
+    if (displayName !== expectedNamePrefix + identitySuffix) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities displayName invalid");
     }
-    if (item.active !== true || item.syntheticOnly !== true ||
-        item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+    if (item.active !== true || item.syntheticOnly !== true) {
+        throw new Error("SCHEMA_VIOLATION: TPV identity must be active and synthetic-only");
+    }
+    if (item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
         item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
-        Number(item.schemaVersion) !== 2) {
-        throw new Error("SCHEMA_VIOLATION: TPV identity requires explicit synthetic source, site and schema version");
+        Number(item.schemaVersion) !== TPV_RUNTIME_POLICY.SCHEMA_VERSION) {
+        throw new Error("SCHEMA_VIOLATION: TPV identity source metadata invalid");
     }
-    if (identityType === "CUSTOMER" && !/^[^\s@]+@example\.test$/i.test(String(item.email || ""))) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities customer email must use example.test");
+    if (!validEmail) {
+        throw new Error("SCHEMA_VIOLATION: TPV synthetic identity email must use example.test");
     }
-    if (identityType === "STAFF" && item.email && !/^[^\s@]+@example\.test$/i.test(String(item.email))) {
-        throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities staff email must use example.test");
-    }
-    if (item.metadata !== undefined && (!item.metadata || typeof item.metadata !== "object" || Array.isArray(item.metadata) || Object.keys(item.metadata).length !== 0)) {
+    if (!validMetadata) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities metadata must be an empty OBJECT");
     }
-    const allowedFields = new Set(["_id", "_createdDate", "_updatedDate", "_owner", "identityId", "identityType", "displayName", "email", "active", "syntheticOnly", "sourceType", "siteId", "schemaVersion", "createdAt", "metadata"]);
+    const allowedFields = new Set([
+        "_id", "_createdDate", "_updatedDate", "_owner",
+        "identityId", "identityType", "displayName", "email", "active",
+        "syntheticOnly", "sourceType", "siteId", "schemaVersion", "createdAt", "metadata",
+    ]);
     const unknownFields = Object.keys(item).filter((field) => !allowedFields.has(field));
     if (unknownFields.length) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities contains unsupported fields");
@@ -595,7 +638,7 @@ export function assertControlOperativo(item) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventType");
         }
         assertValidEnum(item.status, WEBHOOK_CLAIM_STATUS, "status");
-        // traceId is the canonical CMS fencing token; ownerToken was removed from the schema.
+        // traceId is the canonical fencing token for WEBHOOK_CLAIM. The physical ControlOperativo ownerToken column is retired/non-canonical; SLOT_LOCK uses payload.lockOwnerId with version/expiry CAS.
         if (!Number.isSafeInteger(Number(item.version)) || Number(item.version) < 1) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires version >= 1");
         }
