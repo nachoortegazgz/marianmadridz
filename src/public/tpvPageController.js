@@ -7,7 +7,8 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, obtenerMovimientosCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
@@ -210,9 +211,9 @@ async function dispatch(message) {
             return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId) || "" });
 
         case "AUDIT_LIST":
-            return obtenerMovimientosCaja({
+            return obtenerAuditoriaTPV({
                 sessionId: optionalString(payload.sessionId) || undefined,
-                limit: boundedInteger(payload.limit ?? 50, "MOVEMENTS_LIMIT", 1, 100),
+                limit: boundedInteger(payload.limit ?? 50, "AUDIT_LIMIT", 1, 100),
             });
 
         case "CASH_MOVEMENTS_EXPORT":
