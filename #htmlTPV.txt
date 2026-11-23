@@ -278,6 +278,8 @@ body {
           <button id="refund" class="btn danger">Devolución sintética</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
+          <button id="exportMovements" class="btn">Exportar movimientos</button>
+          <button id="exportAudit" class="btn">Exportar auditoría</button>
           <button id="printLast" class="btn">Imprimir último ticket</button>
         </div>
       </section>
@@ -315,6 +317,8 @@ body {
           <button class="btn active" data-method="EFECTIVO">Efectivo</button>
           <button class="btn" data-method="TARJETA">Tarjeta</button>
           <button class="btn" data-method="BIZUM">Bizum</button>
+          <button class="btn" data-method="BONO">Bono</button>
+          <button class="btn" data-method="TARJETA_REGALO">Tarjeta regalo</button>
           <button class="btn" data-method="OTROS">Otros</button>
         </div>
 
@@ -388,6 +392,7 @@ body {
   }[c]));
   const num = (v) => Number.parseFloat(v) || 0;
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
+  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"];
 
   /* ---------- Estado local ---------- */
   const state = {
@@ -503,7 +508,7 @@ body {
       ? "Caja abierta · operación sintética no conciliada"
       : "Caja cerrada";
     $("openCash").disabled = isOpen || state.busy;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       $(id).disabled = !isOpen || state.busy;
     });
   }
@@ -513,7 +518,7 @@ body {
     state.busy = value;
     const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
     $("openCash").disabled = value || isOpen;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = value || !isOpen;
     });
@@ -671,17 +676,48 @@ body {
   };
 
   /* ---------- Pagos ---------- */
+  function paymentTotals() {
+    const totalsMinor = Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]));
+    state.payments.forEach((payment) => {
+      totalsMinor[payment.method] += Math.max(0, payment.amountMinor - payment.changeMinor);
+    });
+    return Object.fromEntries(
+      PAYMENT_METHODS.map((method) => [method, totalsMinor[method] / 100])
+    );
+  }
+
   function renderPaymentSummary() {
-    const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
-    const pending = Math.max(0, total - applied);
-    const change = Math.max(0, applied - total);
-    $("applied").textContent = money(applied);
-    $("pending").textContent = money(pending);
-    $("change").textContent = money(change);
-    $("paymentList").innerHTML = state.payments.length
-      ? state.payments.map((p) => `<div>${esc(p.method)}: ${money(p.amount)}</div>`).join("")
+    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) =>
+      sum + payment.amountMinor - payment.changeMinor, 0);
+    const pendingMinor = Math.max(0, totalMinor - appliedMinor);
+    const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
+    $("applied").textContent = money(appliedMinor / 100);
+    $("pending").textContent = money(pendingMinor / 100);
+    $("change").textContent = money(changeMinor / 100);
+
+    const totals = paymentTotals();
+    const rows = state.payments.map((payment, index) => `
+      <div class="payment-row" style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+        <span style="flex:1;">${esc(payment.method)}</span>
+        <strong>${money(payment.amountMinor / 100)}</strong>
+        <small>Aplicado: ${money((payment.amountMinor - payment.changeMinor) / 100)}${payment.changeMinor ? " · Cambio: " + money(payment.changeMinor / 100) : ""}</small>
+        <button type="button" class="btn danger" data-remove-payment="${index}">Quitar</button>
+      </div>
+    `).join("");
+    const breakdown = Object.entries(totals)
+      .filter(([, amount]) => amount > 0)
+      .map(([method, amount]) => `<div>${esc(method)}: ${money(amount)}</div>`)
+      .join("");
+    $("paymentList").innerHTML = rows
+      ? rows + (breakdown ? `<hr><strong>Desglose aplicado:</strong>${breakdown}` : "")
       : "Sin pagos añadidos.";
+    $("paymentList").querySelectorAll("[data-remove-payment]").forEach((button) => {
+      button.onclick = () => {
+        state.payments.splice(Number(button.dataset.removePayment), 1);
+        renderPaymentSummary();
+      };
+    });
   }
 
   $("paymentMethods").querySelectorAll("button[data-method]").forEach((btn) => {
@@ -705,14 +741,39 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    const amount = num($("paymentAmount").value);
-    if (amount <= 0) {
-      toast("Introduce un importe válido.");
+    const amount = Number($("paymentAmount").value);
+    if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
+      toast("Introduce un importe válido con un máximo de dos decimales.");
       return;
     }
-    state.payments.push({ method: state.paymentMethod, amount });
+    if (!PAYMENT_METHODS.includes(state.paymentMethod)) {
+      toast("Selecciona un medio de pago válido.");
+      return;
+    }
+    const amountMinor = Math.round(amount * 100);
+    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) =>
+      sum + payment.amountMinor - payment.changeMinor, 0);
+    const remainingMinor = totalMinor - appliedMinor;
+    if (!state.items.length || remainingMinor <= 0) {
+      toast("No hay importe pendiente de cobro.");
+      return;
+    }
+    if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
+      toast("Este medio de pago no admite cambio ni puede superar el pendiente.");
+      return;
+    }
+    const changeMinor = state.paymentMethod === "EFECTIVO"
+      ? Math.max(0, amountMinor - remainingMinor)
+      : 0;
+    state.payments.push({
+      method: state.paymentMethod,
+      amountMinor,
+      changeMinor,
+    });
     $("paymentAmount").value = "";
     renderPaymentSummary();
+    if (changeMinor > 0) toast("Pago añadido. Cambio: " + money(changeMinor / 100));
   };
 
   /* ---------- Guardar venta ---------- */
@@ -723,8 +784,9 @@ body {
       return;
     }
     const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const applied = state.payments.reduce((s, p) => s + p.amount, 0);
-    if (Math.abs(applied - total) > 0.001) {
+    const totalMinor = Math.round(total * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
+    if (appliedMinor !== totalMinor) {
       toast("El pago no cubre el total exacto.");
       return;
     }
@@ -795,7 +857,9 @@ body {
           throw new Error("Indica importe y concepto válidos.");
         }
         await keyedAction("CASH_" + type, "CASH_MOVEMENT", {
+          sessionId: state.session?.sessionId,
           movementType: type,
+          paymentMethod: "EFECTIVO",
           amount,
           reason,
           profesionalId: state.profesionalId,
@@ -867,6 +931,58 @@ body {
       `, async () => {});
     } catch (e) { error(e.message); }
   };
+  function csvCell(value) {
+    let text = value === null || value === undefined
+      ? ""
+      : (typeof value === "object" ? JSON.stringify(value) : String(value));
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return "\"" + text.replaceAll("\"", "\"\"") + "\"";
+  }
+
+  function downloadCsv(rows, filename, columns) {
+    const csv = [
+      columns.map(csvCell).join(";"),
+      ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(";")),
+    ].join("\\n");
+    const blob = new Blob(["\\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function exportData(operationType, filename, columns) {
+    requireOperator();
+    const sessionId = state.session?.sessionId;
+    if (!sessionId) throw new Error("No hay una sesión de caja seleccionada.");
+    const result = await call(operationType, { sessionId }, operationType + "_RES");
+    if (result?.truncated === true) throw new Error("La exportación está incompleta; no se ha generado el CSV.");
+    const rows = Array.isArray(result?.items) ? result.items : [];
+    if (!rows.length) {
+      toast("No hay datos para exportar.");
+      return;
+    }
+    downloadCsv(rows, filename, columns);
+    toast("Exportación CSV generada: " + rows.length + " registros.");
+  }
+
+  $("exportMovements").onclick = () => runOperation(() => exportData(
+    "CASH_MOVEMENTS_EXPORT",
+    "movimientos-caja.csv",
+    ["movementId", "sessionId", "movementType", "sourceType", "amount", "paymentMethod", "reason", "reference", "status", "createdAt", "currency"]
+  )).catch((e) => error(e.message));
+
+  $("exportAudit").onclick = () => runOperation(() => exportData(
+    "AUDIT_EXPORT",
+    "auditoria-tpv.csv",
+    ["auditId", "action", "operatorId", "sessionId", "entityType", "entityId", "createdAt", "source", "traceId", "format", "filters", "details"]
+  )).catch((e) => error(e.message));
+
 
   /* ---------- Control X ---------- */
   $("ticketX").onclick = () => runOperation(async () => {
