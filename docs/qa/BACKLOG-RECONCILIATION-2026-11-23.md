@@ -1,9 +1,8 @@
 # Reconciliación del backlog — estado actual 2026-11-23
 
-**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
-**PR #541:** integrada en main. **PR #540 y #542:** integradas. **PR #543:** integrada en main con merge commit 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. **PR #537:** preservada en el historial de #541.
-**PR #540:** integrada. **PR #542:** integrada; su merge produce el HEAD actual y CI falló.  
-**PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
+**main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
+**PRs integradas:** #541, #540, #542, #543 y #544. **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
+**Último merge:** PR #544, documentación, merge commit ccdac0347e86f430c4f8086765815d9d5d7e00af.  
 **Release:** **NO-GO**.
 
 Esta matriz sustituye los estados de backlog anteriores que contradigan la fecha de corte. Las issues siguen siendo el registro de trabajo; su descripción puede contener evidencia histórica y no debe interpretarse como lectura live actual.
@@ -48,18 +47,18 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 ## Estado de Fase 1 — estabilización del repositorio
 
 - main HEAD y PRs reconciliadas: verificados.
-- Fallo de CI localizado: aserción TPV desactualizada que esperaba cuatro métodos, frente a seis valores en TPV_PAYMENT_METHOD.
+- Incidencia histórica: aserciones TPV desactualizadas; corregidas en PR #543. No persiste en el HEAD actual.
 - Corrección completa integrada por PR #543 tras CI pre-merge SUCCESS.
-- CI pre-merge PR #543: SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. CI backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning SUCCESS (run 45107058755).
+- CI del HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af: SUCCESS, Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint (run 45107377657). Gitleaks full-history SUCCESS (run 45107377700).
 - Secret scanning de main: SUCCESS.
 - Protección de main: pendiente de administración (#210); main continúa sin protección.
-- PR #543 ya integrada en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
+- PR #543 y actualización documental #544 integradas en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
 
 ## Evidencia
 
-- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/0ba7b684d6f4d6465718ae4317d10d8f422de2ff)
-- [CI backend fallido en main](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742)
-- [Secret scanning correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748)
+- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/ccdac0347e86f430c4f8086765815d9d5d7e00af)
+- [CI backend correcto en HEAD actual](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377657)
+- [Gitleaks full-history correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377700)
 - [Issue #210](https://github.com/nachoortegazgz/marianmadridz/issues/210)
 - [Plan maestro](../MASTER-EXECUTION-PLAN.md)
 - [Estado del proyecto](../PROJECT-STATUS.md)
