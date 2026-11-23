@@ -31,8 +31,8 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(catalog, /resourceId: staff\.identityId/);
     assert.match(operatorContext, /operatorResourceId: String\(staff\?\.resourceId/);
 
-    // The UI currently selects a Bookings professional/resource ID. The controller
-    // forwards it, but the backend actor context is independently resolved from Wix.
+    // The UI selects a synthetic TPV staff identity. The backend actor context
+    // is independently resolved from the authenticated Wix member.
     assert.match(html, /state\.operatorId = person \? person\.profesionalId : null/);
     assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
     const caja = await source("tpv/tpvCaja.web.js");
