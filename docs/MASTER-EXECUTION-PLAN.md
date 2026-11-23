@@ -46,7 +46,7 @@ Este es el plan de ejecución. El estado real y las evidencias se mantienen en [
 
 ## 4. Estabilización del repositorio — resultado y límite
 
-**Completado en código, pruebas automatizadas y documentación:** corrección contractual TPV integrada por PR #543; consolidación documental #544 y actualización #545. Los workflows de la versión actual de PR #545 finalizaron SUCCESS: Backend offline quality gates run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142) y Secret scanning run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155).
+**Completado en código, pruebas automatizadas y documentación:** corrección contractual TPV integrada por PR #543; consolidación documental #544 y actualización #545. La versión previa del HEAD de PR #545 (`c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`) pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155)). La consolidación documental posterior se valida en el HEAD más reciente de la PR; consultar sus checks directamente y no trasladar resultados entre SHAs.
 
 **Pendiente de gobierno:** la rama `main` sigue sin protección efectiva (`protected=false`); issue #210 abierta. El CI verde no sustituye required checks ni reglas de protección.
 
