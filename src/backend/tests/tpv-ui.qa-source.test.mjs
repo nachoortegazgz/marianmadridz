@@ -30,7 +30,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /impuestosImporte: 0/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
-    assert.match(script, /varianteId, selected\.varianteId/);
+    assert.match(script, /addCatalogLine\(item, selected\.precioMinor, selected\.varianteId, selected\.concepto\)/);
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
     assert.match(script, /customerIdentityId: state\.customerIdentityId/);
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
