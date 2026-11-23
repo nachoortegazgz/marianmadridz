@@ -109,7 +109,7 @@ No verificado:
 **Aceptación Runtime pendiente (no ejecutada en esta auditoría):**
 1. Se crean dos bookings nativos individuales, F1 y F2, con IDs independientes y asociación dual persistida.
 2. `F2.start` coincide exactamente con `F1.end + exposureDuration` en la zona horaria del sitio, sin redondeo ni sustitución por el primer slot posterior.
-3. El intervalo de exposición no genera booking y no queda ocupado por F1/F2 como servicio; sin embargo, el algoritmo debe impedir que otro booking incompatible lo ocupe mientras se confirma la pareja.
+3. El intervalo de exposición no genera un booking F1/F2. La posibilidad de que otro servicio del mismo profesional ocupe ese intervalo es una decisión operativa independiente que debe quedar especificada; el código inspeccionado no muestra una reserva explícita del gap ni una exclusión general de terceros.
 4. Ambas fases conservan el mismo `resourceId`/profesional.
 5. Conflictos concurrentes sobre F1, F2 o el gap no producen parejas parciales ni doble asignación.
 6. F2 se escribe `OFFLINE`, con importe cero y sin segundo checkout/cobro.
