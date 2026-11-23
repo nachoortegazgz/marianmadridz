@@ -9,6 +9,7 @@ import {
 } from "../tpv/tpvNativeDirectory.js";
 
 const STAFF_MEMBER_ID = "0114748d-2806-3928-9b97-ff0d09853759";
+const STALE_MAPPED_STAFF_MEMBER_ID = "11111111-1111-4111-8111-111111111111";
 const RESOURCE_ID = "e556070a-6d6a-402e-8422-11133033ea76";
 const SCHEDULE_ID = "06af20d4-1ec3-49fa-9075-f0691dfa7fd4";
 const CONTACT_ID = "085ccffa-6686-427f-a310-9b5e3058ebbc";
@@ -47,7 +48,7 @@ beforeEach(() => {
     mocks.wixData._seed("MapaStaff", [{
         _id: "mapa-staff-1",
         recordType: "STAFF",
-        staffMemberId: STAFF_MEMBER_ID,
+        staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
         resourceId: RESOURCE_ID,
         scheduleId: SCHEDULE_ID,
         displayName: "Marian",
@@ -78,15 +79,15 @@ test("TPV-NATIVE-DIRECTORY-03 rejects ambiguous MapaStaff resource mappings", as
         {
             _id: "mapa-staff-1",
             recordType: "STAFF",
-            staffMemberId: STAFF_MEMBER_ID,
+            staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
             resourceId: RESOURCE_ID,
             scheduleId: SCHEDULE_ID,
         },
         {
             _id: "mapa-staff-2",
             recordType: "STAFF",
-            staffMemberId: STAFF_MEMBER_ID,
-            resourceId: "99999999-9999-4999-8999-999999999999",
+            staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
+            resourceId: RESOURCE_ID,
             scheduleId: SCHEDULE_ID,
         },
     ]);
