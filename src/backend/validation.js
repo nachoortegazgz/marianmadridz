@@ -595,7 +595,7 @@ export function assertControlOperativo(item) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires eventType");
         }
         assertValidEnum(item.status, WEBHOOK_CLAIM_STATUS, "status");
-        // traceId remains the canonical fencing token for WEBHOOK_CLAIM. The ControlOperativo ownerToken field is used by SLOT_LOCK CAS and is not part of the WEBHOOK_CLAIM contract.
+        // traceId is the canonical fencing token for WEBHOOK_CLAIM. The physical ControlOperativo ownerToken column is retired/non-canonical; SLOT_LOCK uses payload.lockOwnerId with version/expiry CAS.
         if (!Number.isSafeInteger(Number(item.version)) || Number(item.version) < 1) {
             throw new Error("SCHEMA_VIOLATION: WEBHOOK_CLAIM requires version >= 1");
         }
