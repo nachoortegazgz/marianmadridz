@@ -18,9 +18,9 @@ function extractWebMethod(methodName) {
 
 test("FDOC-REMOVED-01 removed accountant package storage cannot be queried or recreated", () => {
   const runtimeSource = source
-    .replace(/\\/\\*[\\s\\S]*?\\*\\//g, "")
-    .replace(/(^|[^:])\\/\\/.*$/gm, "$1");
-  assert.doesNotMatch(runtimeSource, /DOCS_COL|BUSINESS_COLLECTIONS\\.PAQUETES_GESTORIA|PaquetesGestoria/);
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+  assert.doesNotMatch(runtimeSource, /DOCS_COL|BUSINESS_COLLECTIONS\.PAQUETES_GESTORIA|PaquetesGestoria/);
   for (const methodName of [
     "createManagerPackageVersion",
     "getManagerPackageHistory",
