@@ -118,7 +118,7 @@ En las seis filas: `active=true`, `syntheticOnly=true`, `environment=SANDBOX`, `
 
 ## Runtime Sandbox y arranque de caja
 
-El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige sesión autorizada y delega en `initializeSandboxCaja`, que consulta el singleton `CajaActual` en el data plane seleccionado por Wix. No lo crea ni lo actualiza: si falta o no cumple el marcador de Sandbox, falla sin escribir.
+El controlador del widget solicita `inicializarCaja` al completar el handshake. El WebMethod exige sesión autorizada y delega en `initializeTpvCaja`, que consulta el singleton `CajaActual` en el data plane seleccionado por Wix. No lo crea ni lo actualiza: si falta o no cumple el marcador de Sandbox, falla sin escribir.
 
 La apertura de sesión y los eventos posteriores requieren el marcador `TPV_SANDBOX_INITIALIZED` o `TPV_SANDBOX_SYNTHETIC` y el `SANDBOX_RUN_ID` exacto. Pagos reales, escrituras fiscales, notificaciones, hardware y mutaciones de Bookings/Stores permanecen deshabilitados.
 
@@ -175,7 +175,7 @@ La simulación de reembolso no mantiene un acumulado. El llamador debe comprobar
 
 ## Fixture de identidades sintéticas
 
-docs/qa/fixtures/tpv-sandbox-identities.json contiene seis registros que cumplen assertTpvSandboxIdentity: tres clientes y tres profesionales, todos con correo @example.test, syntheticOnly=true, environment=SANDBOX, active=true y el SANDBOX_RUN_ID actual.
+docs/qa/fixtures/tpv-sandbox-identities.json contiene seis registros que cumplen assertTpvIdentity: tres clientes y tres profesionales, todos con correo @example.test, syntheticOnly=true, environment=SANDBOX, active=true y el SANDBOX_RUN_ID actual.
 
 El fixture es para importación manual desde CMS > Sandbox únicamente después de comprobar visualmente que el Editor está en Sandbox. No importar mediante Management API ni sincronizar Sandbox → Online. Los registros no son miembros Wix ni contactos CRM y no se deben convertir en memberId, contactId o resourceId.
 
@@ -192,7 +192,7 @@ El fixture es para importación manual desde CMS > Sandbox únicamente después 
 
 La colección física `MovimientosCaja` mantiene el índice `transactionId_unique` (`unique=true`). No se elimina: es una garantía de unicidad del ledger. Los eventos lógicos del TPV comparten esta colección física, por lo que el identificador CMS debe estar namespaced por `logicalCollection` además del `SANDBOX_RUN_ID` y la clave de idempotencia.
 
-`makeSandboxTransactionId(collection, key)` genera el `transactionId` y el `_id` determinista con el ámbito completo. La búsqueda de idempotencia también consulta el identificador histórico anterior (sin namespace) para reconocer reintentos ya persistidos; no migra, modifica ni elimina filas históricas. La clave de idempotencia sigue siendo estable dentro de la misma colección lógica.
+`makeTpvTransactionId(collection, key)` genera el `transactionId` y el `_id` determinista con el ámbito completo. La búsqueda de idempotencia también consulta el identificador histórico anterior (sin namespace) para reconocer reintentos ya persistidos; no migra, modifica ni elimina filas históricas. La clave de idempotencia sigue siendo estable dentro de la misma colección lógica.
 
 La inspección read-only del 2026-11-20 confirmó el índice único sobre `transactionId`; no hay índice único de usuario sobre `traceId`, `operationType`, `singletonKey` o `posTransactionId`. La consulta CMS devolvió un registro sintético de prueba sin `transactionId`, por lo que no se identificó un valor histórico duplicado concreto. La causa de colisión se atribuye al espacio de nombres incompleto del generador, no a una fila concreta demostrada.
 
