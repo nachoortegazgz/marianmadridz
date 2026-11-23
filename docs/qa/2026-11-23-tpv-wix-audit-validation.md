@@ -1,43 +1,38 @@
-# Auditoría Wix — TPV — corte 2026-11-23
+# Read-back Wix Site Context — 2026-11-23
 
-**Repositorio/main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
-**PR #541, #540, #542 y #543:** integradas en main. Merge commit de #543: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
-**PR #540:** integrada en main. **PR #542:** integrada; CI posterior falló.  
-**PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
-**Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
-**Estado de aceptación:** **NO-GO Runtime / producción**.
+**Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
+**Fuente:** lectura directa de Wix Site Context (GetSiteContext), no inferencia documental.  
+**Naturaleza:** consulta de contexto; no se realizaron cambios ni operaciones.
 
-## Conclusión vigente
+## Resultado observado
 
-La integración de código TPV está en main. La aceptación estática no demuestra ejecución en Wix Preview, sincronización Git-Editor, esquema CMS real, permisos efectivos ni conciliación operacional. No hay autorización para publicar ni para habilitar pagos o writers fiscales.
+| Propiedad | Valor |
+|---|---|
+| Estado de publicación devuelto | **Draft** |
+| Editor | Wix Editor |
+| Velo | Habilitado |
+| Plan | Premium |
+| Dominio | Personalizado configurado |
+| Moneda | EUR |
+| Zona regional | Europe/Madrid |
+| Apps observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog, Promote SEO |
 
-## CI de referencia
+## Reconciliación con evidencia histórica
 
-- Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
-- Secret scanning: SUCCESS, run 45105979748.
-- PR #543 corrigió las aserciones y se integró tras CI pre-merge SUCCESS (736/736 pruebas offline, npm audit 0, SDK contracts, ESLint y secret scanning). Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning post-merge SUCCESS.
+La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526), cerrada el 2026-11-23, conserva una auditoría previa que describía el sitio como Published y reservas online habilitadas en 94/94 servicios. La lectura directa posterior de Site Context devuelve Draft. Esto resuelve únicamente el estado de publicación devuelto en el momento del read-back; no demuestra cuándo ni cómo cambió el estado, ni que el bloqueo de reservas se haya verificado en Runtime.
 
-## Contrato de pagos comprobado estáticamente
+La issue [#520](https://github.com/nachoortegazgz/marianmadridz/issues/520) registra ocho automatizaciones ACTIVE: siete PREINSTALLED con restricciones de cambio y una APPLICATION. Su estado operativo y sus efectos requieren inspección específica; el estado Draft del sitio no demuestra que no puedan ejecutarse.
 
-TPV_PAYMENT_METHOD contiene EFECTIVO, TARJETA, BIZUM, BONO, TARJETA_REGALO y OTROS. El validador obtiene los métodos desde el enum centralizado. El resumen separa seis categorías y las devoluciones conservan la asignación por medio.
+## Límites probatorios
 
-BONO y TARJETA_REGALO son medios sintéticos de registro; no equivalen a canje real ni a integración de saldo con Wix Gift Cards. Esta distinción se mantiene en la matriz de aceptación.
+- Draft no acredita sincronización entre el SHA Git y Wix Editor.
+- La lectura de contexto no demuestra que Preview/Runtime ejecute el código del repositorio.
+- No acredita permisos efectivos, aislamiento Sandbox/Online, configuración de CMS ni ausencia de efectos externos.
+- No sustituye la prueba negativa de reservas, pagos, automatizaciones ni writers fiscales.
+- No se han ejecutado escrituras CMS, pagos, reembolsos, facturación, emisión Veri*Factu, cambios de automatizaciones, publicación ni despliegue.
 
-## Pendientes de aceptación
+## Resultado
 
-- Identidad del operador Wix y recurso Staff real.
-- Matriz de roles y permisos efectivos.
-- Sesión, lock y concurrencia de CajaActual.
-- Ventas mixtas, movimientos, devoluciones parciales y conciliación física de efectivo.
-- Ticket X, cierre Z, replay, vínculo X/Z y auditoría.
-- Exportaciones, lecturas, impresión y denegaciones.
-- Aislamiento Sandbox/Online y prueba negativa Published.
-- Sincronización exacta de Git con Wix Editor y validación Preview.
+**Estado de publicación observado: Draft. Aceptación Runtime y producción: NO-GO.**
 
-## Límites de esta auditoría
-
-Es una revisión de repositorio/GitHub y documentación. No se han ejecutado escrituras CMS, pagos, reembolsos, facturación, emisión Veri*Factu, automatizaciones externas, publicación ni despliegue. La última lectura de contexto Wix disponible indicaba Draft y Velo Enabled; no se interpreta como prueba de sincronización del código.
-
-## Historial
-
-La comparación detallada de ramas, los hashes de merge y las notas del candidato PR #537/#541 quedan en el historial Git y en los commits correspondientes. Este documento sustituye las afirmaciones antiguas de «PR abierta», «main intacta» o «sin CI» que ya no describen el estado actual.
+Para el estado global, backlog y aceptación TPV, consultar [PROJECT-STATUS](../PROJECT-STATUS.md), [BACKLOG](BACKLOG-RECONCILIATION-2026-11-23.md) y [matriz TPV](TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md).
