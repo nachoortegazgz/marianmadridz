@@ -65,8 +65,10 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - La interfaz no es una barrera de seguridad: cada WebMethod vuelve a comprobar permisos.
 - No se llama a Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` se actualiza únicamente como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
-- Las escrituras de eventos QA se limitan a `MovimientosCaja` con marcadores `TPV_QA_SYNTHETIC` y `SIMULATED_TPV_*`; `CajaActual` recibe exclusivamente la proyección backend. No existen colecciones físicas `TPV_QA_*`.
-- El identificador de auditoría persistido es `QA_ACTOR`, nunca el ID real del miembro.
+- Las nuevas escrituras sintéticas en `MovimientosCaja` usan IDs neutrales `TPV_*` / `TPV-*` y metadatos explícitos de origen, sitio, sesión, versión, fingerprint y hash; no deben introducir nuevos prefijos `SANDBOX`/ `QA` en identificadores.
+- Los registros antiguos con prefijos o marcadores Sandbox se reconocen solo en las rutas de compatibilidad de lectura/idempotencia. No se reutilizan para nuevas inserciones ni se migran mediante sobrescritura.
+- La proyección de `CajaActual` escribe `conceptOperations.tpvRuntime`; el fallback `tpvSandbox` es exclusivamente de lectura histórica.
+- La identidad del miembro autenticado, el operador autorizado y el profesional atribuido son conceptos distintos; cada uno se resuelve/valida en backend conforme a su función.
 
 ## Limpieza legacy
 
