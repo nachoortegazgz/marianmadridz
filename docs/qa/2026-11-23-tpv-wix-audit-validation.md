@@ -15,7 +15,7 @@ La integración de código TPV está en main. La aceptación estática no demues
 
 - Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
 - Secret scanning: SUCCESS, run 45105979748.
-- PR #543 corrigió las aserciones y se integró tras CI pre-merge SUCCESS (736/736 pruebas offline, npm audit 0, SDK contracts, ESLint y secret scanning). Backend post-merge run 45107058637 en curso; secret scanning post-merge SUCCESS.
+- PR #543 corrigió las aserciones y se integró tras CI pre-merge SUCCESS (736/736 pruebas offline, npm audit 0, SDK contracts, ESLint y secret scanning). Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning post-merge SUCCESS.
 
 ## Contrato de pagos comprobado estáticamente
 
