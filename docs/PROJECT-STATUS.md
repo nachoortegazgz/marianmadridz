@@ -282,3 +282,17 @@ Lectura oficial de Order Transactions API (sin mutaciones):
 **Discrepancia de contrato:** la combinación `paymentMethod=Cash` / `offlinePayment=false` de #10032 no encaja con la definición oficial de Wix: `offlinePayment` indica si el pago fue realizado offline (por ejemplo, efectivo o marcado como pagado en Business Manager). La respuesta tampoco identifica el proveedor de pago. En #10033 Wix registra un refund `SUCCEEDED` y `externalRefund=false`, pero no devuelve un identificador de refund del proveedor.
 
 **Conclusión limitada:** la API acredita los estados de los registros nativos, no una liquidación bancaria ni la identidad del PSP. Tampoco permite afirmar ausencia de efectos externos solo porque los pedidos fueran clasificados por el titular como sintéticos. Mantener #416 como P0 hasta contrastar modo de prueba / settlement con el proveedor o una evidencia equivalente. No reintentar, cobrar, devolver ni modificar transacciones.
+
+
+### Hallazgo P0: #10032 y #10033 no están marcados como test orders — 2026-11-23
+
+Get Order V1 devuelve para ambos pedidos:
+- `demo=false` (Wix no los clasifica como test orders; el campo es inmutable).
+- `imported=false`.
+- `channelInfo.type=POS`.
+- `createdBy` corresponde al usuario propietario del sitio.
+- Fecha de creación: 2026-11-14.
+
+La clasificación del titular como artefactos sintéticos de QA se conserva como declaración, pero no equivale a que Wix los haya creado en Test Mode. La API no acredita si el proveedor estaba en modo test/live ni la liquidación bancaria; sí demuestra que no tienen el indicador nativo de pedido de prueba. Junto con el refund #10033 `SUCCEEDED` / `externalRefund=false` y el payment #10032 `APPROVED`, no se puede dar por probado que no existieran efectos económicos externos.
+
+**Bloqueo:** #416 permanece P0. Obtener evidencia del Dashboard/proveedor de pagos sobre modo test/live, liquidación y devolución, y confirmar la operativa POS que generó estos pedidos. No cambiar su clasificación, no repetir cobros/refunds y no ejecutar compensaciones hasta resolver la contradicción.
