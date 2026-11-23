@@ -379,7 +379,7 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
  * TpvSandboxIdentities stores synthetic-only customer and staff projections.
  * It must never contain Wix CRM, Bookings or personal identity references.
  */
-export function assertTpvSandboxIdentity(item) {
+export function assertTpvIdentity(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
     }
