@@ -15,8 +15,9 @@ export async function listTpvIdentities(identityType) {
         dataCollectionId: BUSINESS_COLLECTIONS.TPV_IDENTITIES,
         filter: wql.and(
             wql.eq("identityType", identityType),
-            wql.eq("environment", "SANDBOX"),
-            wql.eq("testRunId", TPV_RUNTIME_POLICY.SANDBOX_RUN_ID),
+            wql.eq("sourceType", TPV_RUNTIME_POLICY.SOURCE_TYPE),
+            wql.eq("siteId", TPV_RUNTIME_POLICY.SITE_ID),
+            wql.eq("schemaVersion", 2),
             wql.eq("syntheticOnly", true),
             wql.eq("active", true)
         ),
