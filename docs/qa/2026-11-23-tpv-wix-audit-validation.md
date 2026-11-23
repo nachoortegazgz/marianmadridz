@@ -1,7 +1,7 @@
 # Auditoría Wix — TPV — corte 2026-11-23
 
-**Repositorio/main:** 956356db48ee9d0ba363023c14105474316f84dd  
-**PR #541:** integrada en main.  
+**Repositorio/main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**PR #541, #540, #542 y #543:** integradas en main. Merge commit de #543: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
 **PR #540:** integrada en main. **PR #542:** integrada; CI posterior falló.  
 **PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
 **Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
@@ -15,7 +15,7 @@ La integración de código TPV está en main. La aceptación estática no demues
 
 - Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
 - Secret scanning: SUCCESS, run 45105979748.
-- PR #542 integró una primera corrección incompleta y el CI post-merge falló. PR #543 corrige las aserciones; CI backend y secret scanning pasan en HEAD eee6d75e5cf843a38823e7fa4c908783db175208 (736/736 pruebas offline, npm audit 0, SDK contracts y ESLint SUCCESS). La corrección no está integrada en main.
+- PR #543 corrigió las aserciones y se integró tras CI pre-merge SUCCESS (736/736 pruebas offline, npm audit 0, SDK contracts, ESLint y secret scanning). Backend post-merge run 45107058637 en curso; secret scanning post-merge SUCCESS.
 
 ## Contrato de pagos comprobado estáticamente
 
