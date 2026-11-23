@@ -1,12 +1,13 @@
 # Reconciliación del backlog — 2026-11-23
 
 **Repositorio:** `nachoortegazgz/marianmadridz`  
-**main HEAD verificado:** `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`  
-**CI post-merge de ese SHA:** Layer 1/2 + regresión offline + SDK contracts + lint SUCCESS (run 45082870340); Gitleaks full-history SUCCESS (run 45082870366).  
+**main HEAD verificado:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536).  
+**PR #541:** abierta sobre `main`; rama `feat/tpv-payment-exports-after-p0-20261123`, HEAD `f799e5e56ad0bf9d10cdb5958a964641f8576118`.  
+**CI de PR #541:** secret scanning SUCCESS (run 45099716725); Backend offline quality gates en ejecución (run 45099716665). La ejecución anterior de HEAD `72013651be10bed2af3085431fb58309e94f07a0` quedó en 363/364 pruebas de Layer 1 por una aserción estática desactualizada; no se considera validación aprobada.  
 **Estado Wix:** no se ha acreditado sincronización del SHA en Wix Editor ni runtime E2E.  
 **Release:** **NO-GO**.
 
-Este documento sustituye las matrices de seguimiento anteriores del plan maestro cuando haya contradicción. La revisión es documental y de GitHub; no se han ejecutado escrituras CMS, cambios de automatizaciones, pagos, reembolsos, publicación ni despliegue.
+Este documento sustituye las matrices de seguimiento anteriores del plan maestro cuando haya contradicción. El bloque de estado superior refleja el corte de GitHub de 2026-11-23; los estados de issues se mantienen sujetos a la evidencia y límites indicados. La revisión es documental y de GitHub; no se han ejecutado escrituras CMS, cambios de automatizaciones, pagos, reembolsos, publicación ni despliegue.
 
 ## 1. Criterio de clasificación
 
