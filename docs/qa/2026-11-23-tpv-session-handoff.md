@@ -25,7 +25,7 @@ BONO y TARJETA_REGALO están aceptados como medios sintéticos y se reflejan por
 - Backend offline quality gates: FAIL, run 45105979742.
 - Secret scanning: SUCCESS, run 45105979748.
 - El fallo inicial estaba en la prueba contractual TPV que esperaba una lista fija de cuatro métodos, obsoleta frente al enum centralizado de seis. La corrección inicial se integró por PR #542, pero el test continuó fallando por aserciones literales/escape incorrectas; PR #543 corrige el contrato completo.
-- PR #543 pasó CI pre-merge: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. Está integrada en main. Backend post-merge run 45107058637 en curso y secret scanning 45107058755 SUCCESS.
+- PR #543 pasó CI pre-merge: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS; Secret scanning SUCCESS. Está integrada en main. Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning SUCCESS (run 45107058755).
 
 ## Cambios de TPV ya integrados
 
