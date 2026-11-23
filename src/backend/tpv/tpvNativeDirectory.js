@@ -104,13 +104,10 @@ export async function listAuthorizedProfessionals() {
     });
     if (mappingResult.hasNext) throw new Error("TPV_STAFF_MAPPING_QUERY_LIMIT_EXCEEDED");
 
-    const nativeResult = await queryStaffMembersElevated(
-        {
-            filter: { serviceProvider: true },
-            cursorPaging: { limit: 100 },
-        },
-        { fields: ["RESOURCE_DETAILS"] }
-    );
+    // Query Staff Members v1 returns service providers only by default.
+    const nativeResult = await queryStaffMembersElevated({
+        cursorPaging: { limit: 100 },
+    });
     if (nativeResult?.pagingMetadata?.cursors?.next) {
         throw new Error("TPV_NATIVE_STAFF_QUERY_LIMIT_EXCEEDED");
     }
