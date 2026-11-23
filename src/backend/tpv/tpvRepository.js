@@ -297,7 +297,7 @@ function _isRecognizedSyntheticLedgerItem(item) {
         envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Number(envelope.schemaVersion) === 2 &&
+        Number(envelope.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         envelope.reconciliationStatus === "NOT_RECONCILED" &&
         validSessionOrAudit && validTraceForSite;
     const currentV1 = currentRecordSources.includes(item.recordSource) &&
@@ -426,7 +426,7 @@ function _sessionFromCaja(caja) {
         sourceState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sourceState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Number(sourceState?.schemaVersion) === 2 &&
+        Number(sourceState?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         sourceState?.externalSideEffects === false &&
         /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
@@ -474,7 +474,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                 preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                Number(preflightSandboxState.schemaVersion) === 2 &&
+                Number(preflightSandboxState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
                 preflightSandboxState.externalSideEffects === false &&
                 /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
@@ -542,7 +542,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             sourceState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
             sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
             sourceState.externalSideEffects = false;
-            sourceState.schemaVersion = 2;
+            sourceState.schemaVersion = TPV_RUNTIME_POLICY.SCHEMA_VERSION;
             sourceState.reconciliationStatus = "NOT_RECONCILED";
             sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
             sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
@@ -602,7 +602,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
                 sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 siteId: TPV_RUNTIME_POLICY.SITE_ID,
                 ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-                schemaVersion: 2,
+                schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
                 externalSideEffects: false,
                 reconciliationStatus: "NOT_RECONCILED",
                 eventHash: String(eventHash || ""),
@@ -677,7 +677,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
-        schemaVersion: 2,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         reconciliationStatus: "NOT_RECONCILED",
         ledgerRecord: record,
         isSynthetic: true,
@@ -703,7 +703,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash: TPV_GENESIS_HASH,
         recordTimestamp: timestamp,
-        schemaVersion: 2,
+        schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
         traceId,
         movementType,
         totalAmount: amount,
