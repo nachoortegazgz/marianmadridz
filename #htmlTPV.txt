@@ -240,6 +240,8 @@ body {
   <!-- Barra de sesión -->
   <div class="bar session-bar">
     <span>Sesión: <strong id="sessionLabel">—</strong></span>
+    <span id="operatorLabel" class="status">Operador: —</span>
+    <span id="cashTime" class="status">Hora: —</span>
 
     <label for="professionalSelect" class="status">Profesional:</label>
     <select id="professionalSelect" class="field">
@@ -276,6 +278,7 @@ body {
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
           <button id="refund" class="btn danger">Devolución interna</button>
+          <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
           <button id="exportMovements" class="btn">Exportar movimientos</button>
@@ -560,16 +563,32 @@ body {
 
   function renderSession(session) {
     state.session = session || null;
+    const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
+    const isOpen = operationalStatus === "ABIERTA";
+    const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
+    $("operatorLabel").textContent = "Operador: " + (state.session?.operatorId || "—");
+    const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
+    const parsedTimestamp = timestamp ? new Date(timestamp) : null;
+    const timeZone = state.session?.timeZone || "Europe/Madrid";
+    $("cashTime").textContent = parsedTimestamp && !Number.isNaN(parsedTimestamp.getTime())
+      ? "Hora: " + new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone }).format(parsedTimestamp)
+      : "Hora: —";
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
+    const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
-      ? "Caja abierta · operación interna pendiente de conciliación"
-      : "Caja cerrada";
-    $("openCash").disabled = isOpen || state.busy;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
+      ? "ABIERTA · Integración: " + integrationStatus + (state.session?.isSynthetic ? " · Simulación" : "")
+      : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
+    $("openCash").disabled = isOpen || isClosed || state.busy;
+    ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       $(id).disabled = !isOpen || state.busy;
     });
+  }
+
+  async function refreshCashState() {
+    const session = await call("CASHIER_STATE", {}, "CASHIER_STATE_RES");
+    renderSession(session);
+    return session;
   }
 
   /* ---------- Bloqueo de operaciones ---------- */
@@ -577,7 +596,7 @@ body {
     state.busy = value;
     const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
     $("openCash").disabled = value || isOpen;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
+    ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = value || !isOpen;
     });
@@ -587,7 +606,9 @@ body {
     if (state.busy) return;
     setBusy(true);
     try {
-      return await fn();
+      const result = await fn();
+      await refreshCashState();
+      return result;
     } finally {
       setBusy(false);
     }
@@ -899,6 +920,7 @@ body {
       terminalId: "TPV",
     }, "SESSION_OPEN_RES");
     renderSession(session);
+    await refreshCashState();
     toast("Sesión abierta.");
   });
 
@@ -925,6 +947,7 @@ body {
           reason,
           profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
+        await refreshCashState();
         toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
       }
     );
@@ -956,13 +979,31 @@ body {
       }
       await keyedAction("REFUND", "REFUND", {
         saleId,
+        sessionId: state.session?.sessionId,
         reason,
         profesionalId: state.profesionalId,
         payments: [{ paymentMethod, amount }],
       }, "REFUND_RES");
+      await refreshCashState();
       toast("Devolución registrada.");
     });
   };
+
+  /* ---------- Arqueo parcial de caja ---------- */
+  $("partialCount").onclick = () => openModal("Arqueo parcial", `
+    <input id="partialCountCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
+    <input id="partialCountReason" class="field" maxlength="500" placeholder="Motivo si existe diferencia">
+  `, async () => {
+    const countedCash = num($("partialCountCash").value);
+    const reason = $("partialCountReason").value.trim();
+    await keyedAction("PARTIAL_COUNT", "PARTIAL_CASH_COUNT", {
+      sessionId: state.session?.sessionId,
+      countedCash,
+      reason,
+    }, "PARTIAL_CASH_COUNT_RES");
+    await refreshCashState();
+    toast("Arqueo parcial registrado; la sesión sigue abierta.");
+  });
 
   /* ---------- Resumen e historial ---------- */
   $("cashSummary").onclick = async () => {
@@ -1114,7 +1155,7 @@ body {
       state.staff = data.items || [];
       renderProfessionals();
     }).catch((e) => error(e.message));
-    call("CASHIER_STATE", {}, "CASHIER_STATE_RES").then(renderSession).catch((e) => error(e.message));
+    refreshCashState().catch((e) => error(e.message));
   }
 
   init();
