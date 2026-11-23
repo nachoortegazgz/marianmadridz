@@ -189,6 +189,34 @@ test('HOOK-CMS-DATETIME-04 normalizes CajaActual DateTime fields without changin
   wixDataMock._reset();
 });
 
+test('HOOK-CAJA-SEQ-01 normalizes object JSON and rejects invalid sequenceCounters types', () => {
+  const base = (sequenceCounters, includeSequenceCounters = true) => ({
+    _id: 'SINGLE_ITEM_ID',
+    singletonKey: 'CAJA_PRINCIPAL',
+    ...(includeSequenceCounters ? { sequenceCounters } : {}),
+  });
+
+  const objectValue = { seqGlobal: 7, appliedMovementIds: ['movement-1'] };
+  const objectItem = base(objectValue);
+  H.CajaActual_beforeInsert(objectItem);
+  assert.strictEqual(objectItem.sequenceCounters, objectValue);
+
+  const jsonItem = base('{"seqGlobal":8}');
+  H.CajaActual_beforeInsert(jsonItem);
+  assert.deepStrictEqual(jsonItem.sequenceCounters, { seqGlobal: 8 });
+
+  const nullItem = base(null);
+  assert.doesNotThrow(() => H.CajaActual_beforeInsert(nullItem));
+
+  for (const invalid of [[], 0, 1, false, true, 'null', '[]', '"value"', '42', 'true', 'not-json']) {
+    assert.throws(
+      () => H.CajaActual_beforeInsert(base(invalid)),
+      /CajaActual\.sequenceCounters debe ser un objeto JSON valido/,
+      'invalid sequenceCounters must be rejected'
+    );
+  }
+});
+
 test('HOOK-CAJA-00 permits projection idempotency metadata on CajaActual principal', async () => {
   wixDataMock._reset();
   const previous = { _id: 'CAJA_PRINCIPAL', singletonKey: 'CAJA_PRINCIPAL', sequenceCounters: { seqGlobal: 5, appliedMovementIds: ['movement-1'] } };
