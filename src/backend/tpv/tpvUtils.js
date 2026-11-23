@@ -25,7 +25,9 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         Number(state?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         state?.externalSideEffects === false &&
         (state?.processingMode === undefined || state?.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
-        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS);
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
+        (state?.allowNativePayments === undefined || state.allowNativePayments === false) &&
+        (state?.allowNativeRefunds === undefined || state.allowNativeRefunds === false);
     const validEventHash = /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
     const validRequestFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
     const validV1Trace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
@@ -36,6 +38,8 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         (state?.schemaVersion === undefined || state?.schemaVersion === null || Number(state.schemaVersion) === 1) &&
         (state?.reconciliationStatus === undefined || state?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
         (state?.processingMode === undefined || state?.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+        (state?.allowNativePayments === undefined || state.allowNativePayments === false) &&
+        (state?.allowNativeRefunds === undefined || state.allowNativeRefunds === false) &&
         state?.externalSideEffects === false &&
         Boolean(sessionId) &&
         (validRequestFingerprint || validV1Trace);
