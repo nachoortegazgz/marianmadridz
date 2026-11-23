@@ -67,7 +67,7 @@ test("FISCAL-LOCK-03 a previous owner cannot release a reclaimed lock", async ()
   const result = await releaseFiscalLedgerLock(first);
   assert.deepEqual(result, { released: false, reason: "OWNERSHIP_CHANGED" });
   assert.equal(wixDataMock._store.get(CONTROL).length, 1);
-  assert.equal(wixDataMock._store.get(CONTROL)[0].ownerToken, "new-owner");
+  assert.equal(wixDataMock._store.get(CONTROL)[0].payload.lockOwnerId, "new-owner");
 });
 
 test("FISCAL-LOCK-07 concurrent reclaim of one expired lock has a single CAS winner", async () => {
