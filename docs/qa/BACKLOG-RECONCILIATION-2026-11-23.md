@@ -28,7 +28,9 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 | Issue / área | Estado GitHub | Acción pendiente |
 |---|---|---|
 | [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210) | Open | Administrador: PR obligatoria, checks requeridos, bloqueo force-push y borrado. API ha devuelto `protected=false`. |
-| [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Closed · 2026-11-23 | No reactivar sin read-back y prueba negativa Runtime. Issue conserva evidencia histórica Published que contradice el read-back actual Draft; no asumir el estado de reservas solo por el cierre. |\n| [#523 Cancelaciones CitasF2](https://github.com/nachoortegazgz/marianmadridz/issues/523) | Open · revalidado 2026-11-23 | 6/6 bookings nativos CANCELED; CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos native PAID vs CMS PENDING_LEDGER. Verificar event delivery/runtime y correlacionar #416. | No corregir proyección, reenviar eventos ni tocar pagos/ledgers por inferencia. |\n| [#522 Canales de pago Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522) | Open · revalidado 2026-11-23 | 70 servicios visibles sin discrepancias; 24 hijos duales ocultos, F2 OFFLINE/noFee y native inPerson=true. Probar Writer con onlineBooking deshabilitado en Runtime. | No modificar masivamente flags ni servicios nativos. |
+| [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Closed · 2026-11-23 | No reactivar sin read-back y prueba negativa Runtime. Issue conserva evidencia histórica Published que contradice el read-back actual Draft; no asumir el estado de reservas solo por el cierre. |
+| [#523 Cancelaciones CitasF2](https://github.com/nachoortegazgz/marianmadridz/issues/523) | Open · revalidado 2026-11-23 | 6/6 bookings nativos CANCELED; CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos native PAID vs CMS PENDING_LEDGER. Verificar event delivery/runtime y correlacionar #416. | No corregir proyección, reenviar eventos ni tocar pagos/ledgers por inferencia. |
+| [#522 Canales de pago Bookings](https://github.com/nachoortegazgz/marianmadridz/issues/522) | Open · revalidado 2026-11-23 | 70 servicios visibles sin discrepancias; 24 hijos duales ocultos, F2 OFFLINE/noFee y native inPerson=true. Probar Writer con onlineBooking deshabilitado en Runtime. | No modificar masivamente flags ni servicios nativos. |
 | TPV E2E | Pendiente | Identidad Staff, roles, sesión, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS en Preview/Runtime. |
 | Bookings/Payments E2E | Pendiente | Checkout, reserva, webhook, cancelación y devolución en Sandbox sin efectos externos reales. |
 
@@ -48,7 +50,8 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - Documentación consolidada por PR #544 y estabilizada por PR #545.
 - PR #545 quedó fusionada en main mediante merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`. El HEAD pre-merge `57013eed25a5f8c755a2e5cd3434c792b3dec78c` pasó backend (run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881)) y Gitleaks (run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897)); el merge commit pasó backend (run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859)) y Gitleaks (run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890)).
 - main sigue sin protección efectiva; #210 es un gate administrativo abierto.
-- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.\n- Nueva revalidación Bookings V2/CitasF2 y catálogo dual en [auditoría](../audits/2026-11-23-bookings-revalidation.md).
+- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
+- Nueva revalidación Bookings V2/CitasF2 y catálogo dual en [auditoría](../audits/2026-11-23-bookings-revalidation.md).
 - PR #554, #551 y #556 fusionadas en `main`; sus merge commits y CI se detallan arriba.
 
 ## Evidencia y navegación
