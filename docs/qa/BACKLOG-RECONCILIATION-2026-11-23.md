@@ -80,3 +80,12 @@ Lectura de cuatro páginas Bookings Reader V2 y CMS consistente: 354 bookings (3
 Las seis filas actuales CitasF2 se componen de 2 fases duales y 4 reservas simples. La pareja dual mantiene pairToken/resourceId comunes y gap exacto de 40 minutos, pero ambos bookings nativos están CANCELED mientras CMS indica CONFIRMED.
 
 **Bloqueo financiero P0 relacionado con #416:** pedidos #10032 (92,45 EUR, PAID/Cash) y #10033 (18,15 EUR, FULLY_REFUNDED; refund REFUNDED) tienen bookings nativos cancelados y proyecciones PENDING_LEDGER, importe cero y sin cashMovementId. Existen tres compensaciones PENDING_RECOVERY enlazadas a esos pedidos (+92,45; +18,15; -18,15 EUR). La devolución #10033 falla por ORIGINAL_ORDER_LEDGER_MISSING. No hay movimiento de caja correlacionado; las cinco filas actuales de MovimientosCaja son sintéticas y no enlazan pedidos/bookings; el detalle del libro contable está vacío. No tocar ni reconstruir ledgers hasta demostrar el origen económico y la correlación completa.
+
+
+## Causa raíz de #416 y prerequisitos fiscales (2026-11-23)
+
+La escritura fiscal y contable permanece bloqueada intencionadamente: internalConfig.js declara LEDGER_WRITES_ENABLED=false, ACCOUNTING_LEDGER_WRITES_ENABLED=false y ALLOW_SIMULATION_RECORDS=false. eventLog.js devuelve FISCAL_LEDGER_WRITES_DISABLED antes de insertar en el ledger. events.js encola los pagos fallidos y el webhook de refund espera a que exista ORDER-{orderId}; si no lo encuentra, deja ORIGINAL_ORDER_LEDGER_MISSING. queueFiscalRecovery() genera identidad determinista con hash/dedupeKey y hace comprobación fuerte de duplicado.
+
+MapaStaff contiene 5 registros (GESTORIA 1, TERCERO 1, STAFF 3) y no contiene el singleton CONFIG_SISTEMA_FISCAL. La ausencia de configuración es un bloqueo independiente: no activar LEDGER_WRITES_ENABLED hasta que configuración, firma/SIF, permisos y Runtime estén certificados.
+
+Las tres compensaciones de #416 corresponden a #10032 (+92,45 EUR), #10033 (+18,15 EUR) y el refund de #10033 (-18,15 EUR). La secuencia de recuperación debe respetar causalidad: pago original antes del refund. No completar ni reintentar automáticamente. Primero acreditar si los pedidos son sintéticos QA o hechos económicos reales; después, bajo procedimiento aprobado, insertar nuevos registros append-only y verificar su correlación.

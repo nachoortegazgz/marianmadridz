@@ -107,3 +107,17 @@ Consulta Wix de solo lectura, con cuatro páginas de Bookings Reader V2 y contra
 **Bloqueo P0 de conciliación económica:** los pedidos #10032 (92,45 EUR, PAID, método Cash) y #10033 (18,15 EUR, FULLY_REFUNDED) están asociados a dos proyecciones simples Barba Perfecta, ambas con booking nativo CANCELED y CitasF2.paymentStatus=PENDING_LEDGER, totalAmount=0, sin cashMovementId. #10033 tiene transacción REFUNDED y refund registrado. En ControlOperativo hay tres compensaciones PENDING_RECOVERY vinculadas a esos dos pedidos: +92,45 EUR (#10032), +18,15 EUR y -18,15 EUR (#10033). El refund señala ORIGINAL_ORDER_LEDGER_MISSING. MovimientosCaja tiene 5 filas, todas sintéticas y sin orderId/bookingId; no hay movimiento correlacionado. LibroAsientosContablesDetalle permanece vacío. No se ha escrito ni corregido ningún ledger.
 
 La clasificación demuestra que la ausencia de CitasF2 no debe aplicarse indiscriminadamente a todas las reservas: hay 222 reservas de servicios no duales y 130 reservas históricas en servicios duales sin proyección. Las 34 parejas son solo candidatas; su origen y vínculo deben acreditarse antes de reconciliar.
+
+
+## Causa raíz verificada — bloqueo fiscal y recuperaciones (2026-11-23)
+
+El estado PENDING_RECOVERY de #10032/#10033 es consecuencia de los gates fail-closed actuales, no una autorización para reintentar escrituras:
+- src/backend/internalConfig.js: FISCAL_RUNTIME_POLICY mantiene LEDGER_WRITES_ENABLED=false, ACCOUNTING_LEDGER_WRITES_ENABLED=false y ALLOW_SIMULATION_RECORDS=false.
+- src/backend/eventLog.js: registrarEventoEconomico() devuelve FISCAL_LEDGER_WRITES_DISABLED antes de cualquier inserción o reserva de secuencia.
+- src/backend/events.js: el webhook de pago encola recuperación cuando registrarEventoEconomico no devuelve SUCCESS/PARTIAL; processCompletedEcommerceRefund() busca primero ORDER-{orderId} y, si falta, encola WAIT_FOR_ORIGINAL_ORDER_LEDGER / ORIGINAL_ORDER_LEDGER_MISSING.
+- src/backend/cajas.web.js: queueFiscalRecovery() usa identidad determinista hash/dedupeKey y comprueba duplicado antes de considerar la cola idempotente.
+- MapaStaff tiene 5 registros (1 GESTORIA, 1 TERCERO, 3 STAFF) y no contiene CONFIG_SISTEMA_FISCAL. Por tanto, además del gate de Runtime, falta el maestro fiscal canónico.
+
+Los tres registros PENDING_RECOVERY vinculados a #10032/#10033 son coherentes con ese flujo: +92,45 EUR (#10032), +18,15 EUR (#10033) y -18,15 EUR (#10033). El último espera el asiento original ausente. No reintentar ni completar recuperaciones mientras LEDGER_WRITES_ENABLED siga false y falte la configuración canónica.
+
+**Criterio de salida P0:** determinar si #10032/#10033 son operaciones QA sintéticas o hechos económicos reales mediante evidencia externa de origen (app creadora, checkout, recibos/caja y, si procede, banco/adquirente); validar configuración fiscal y SIF; certificar Runtime en entorno aislado; reconciliar primero el pago original de #10032 y #10033, y después el refund de #10033, con nuevos registros trazables sin sobrescribir ni borrar ledger. No basta con cambiar un booleano ni con el estado PAID/REFUNDED de Wix.
