@@ -181,10 +181,6 @@ function _buildFiscalSystemConfig(config) {
         nombreRazonProductor: _safeTrim(config.legalName),
         fechaInicioVerifactu: _toFiscalStartDateText(config.fechaInicioVerifactu),
     };
-    if (!isValidNifOrEuVat(resolved.nifProductor)) {
-        throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
-    }
-
     const missing = Object.entries(resolved)
         .filter(([, value]) => value === "" || value === null)
         .map(([key]) => key);
@@ -192,6 +188,9 @@ function _buildFiscalSystemConfig(config) {
         throw new Error(
             `FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de campos verificados: ${missing.join(", ")}`
         );
+    }
+    if (!isValidNifOrEuVat(resolved.nifProductor)) {
+        throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
     }
     return Object.freeze(resolved);
 }
