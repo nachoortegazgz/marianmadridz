@@ -68,7 +68,7 @@ Acción: confirmar la retirada completa en páginas, HTML Components, imports, j
 
 El TPV propio registra operaciones sintéticas. No se ha acreditado integración transaccional de pagos nativos, redención de gift cards, emisión de recibos nativos ni facturación fiscal real.
 
-Acción: decidir si el TPV propio es necesario y acotar su alcance. Si se mantiene, usar Wix Bookings/Stores para leer catálogo y Wix Payments/checkout para pagos nativos autorizados; el TPV custom debe limitarse a funciones no cubiertas por Wix, por ejemplo una interfaz de caja interna y conciliación, sin simular una pasarela.
+La persistencia actual no utiliza nueve colecciones CMS TPV_QA_*: TPV_COLLECTIONS son discriminadores lógicos; tpvRepository los almacena en MovimientosCaja y proyecta sesiones en CajaActual. Esto es evidencia de que la migración prevista en #435 está implementada en el adaptador de main, aunque falta aceptar su comportamiento en Runtime y reconciliar los registros live. Acción: decidir si el TPV propio es necesario y acotar su alcance. Si se mantiene, usar Wix Bookings/Stores para leer catálogo y Wix Payments/checkout para pagos nativos autorizados; el TPV custom debe limitarse a funciones no cubiertas por Wix, por ejemplo una interfaz de caja interna y conciliación, sin simular una pasarela.
 
 ### 3.5 Facturación y fiscalidad
 
