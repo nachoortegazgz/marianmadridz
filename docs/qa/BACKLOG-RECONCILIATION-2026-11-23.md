@@ -110,3 +110,17 @@ No tocar ni borrar: son colecciones append-only. Mantener #435/#434 abiertos; id
 
 
 Correlación de autoría: los siete registros TPV-QA comparten un único CMS owner, coincidente con el creador de los pedidos POS #10032/#10033; ambos pedidos comparten creador. Es una correlación de actor, no prueba de que los pedidos sean sintéticos ni de que no hubiera efecto económico. Mantenerlos como posibles hechos económicos hasta acreditación.
+
+
+## Discrepancia de recuento MovimientosCaja
+
+Snapshot auditado 2026-11-12: 10 filas (4 SMOKE_TEST, 1 INTERNAL/VENTA_ONLINE no sintética, 5 SIMULATED_PAYMENT secuencia 1–5). Lectura consistente actual 2026-11-23: 5 filas, todas sintéticas, totalCount=5 y hasNext=false. Diferencia de -5; la fila no sintética del snapshot no está presente. No se registraron IDs en el snapshot anterior y no hay historial CMS disponible en la consulta actual; causa desconocida. No limpiar ni reconstruir. Revisar backup/Activity Logs y confirmar si hubo reset autorizado. Mantener P0 de integridad abierto.
+
+
+Seguimiento PR #566: el clasificador fiscal ahora reconoce esos marcadores legacy para excluirlos de lectores. No los convierte en registros válidos: los hooks de inserción y el lector TPV canónico siguen rechazando los payloads incompletos.
+
+
+Actualización de gobierno 2026-11-23: PR #566 integrada en main con CI completo SUCCESS; el clasificador reconoce marcadores legacy de simulación, sin legitimar los registros ni habilitar writers. PR #568 documenta la discrepancia histórica 10→5 de MovimientosCaja; CI pendiente. Último main base de esta rama: a5e611da1d98b743e14ea6dc6f4bfee8b26e00a6.
+
+
+ControlOperativo (63 registros) no contiene eventos CLEANUP/RESET/MIGRAT/PURGE/DELETE/TRUNCAT/RESTORE; src/ no tiene handler dataItemDeleted. Wix dispone de webhook REST Data Item Deleted, pero la suscripción no está verificada. No atribuir el delta a una limpieza sin Activity Logs/backup.
