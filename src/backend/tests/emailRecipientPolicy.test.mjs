@@ -48,20 +48,13 @@ test("EMAIL-QA-04 validates every recipient and rejects empty or mixed recipient
   assert.equal(areAllowedEmailRecipients([]), false);
 });
 
-test("EMAIL-QA-05 central Resend dispatch validates recipients before reading secrets or calling provider", async () => {
+test("EMAIL-QA-05 removed fiscal package storage has no active provider dispatch or secret lookup", async () => {
   const { readFileSync } = await import("node:fs");
   const { dirname, join } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
   const here = dirname(fileURLToPath(import.meta.url));
   const source = readFileSync(join(here, "..", "fiscalDocuments.web.js"), "utf8");
-  const start = source.indexOf("async function _dispatchEmailViaResend({");
-  assert.notEqual(start, -1);
-  const allowlist = source.indexOf("areAllowedEmailRecipients(to)", start);
-  const apiKeyLookup = source.indexOf("_getResendApiKey()", start);
-  const providerCall = source.indexOf("wixFetch(RESEND_ENDPOINT", start);
-  const rejectionCode = source.indexOf("EMAIL_RECIPIENT_NOT_ALLOWED", start);
-  assert.notEqual(allowlist, -1);
-  assert.ok(apiKeyLookup > allowlist, "Allowlist must run before reading the Resend secret");
-  assert.ok(providerCall > allowlist, "Allowlist must run before the provider request");
-  assert.ok(rejectionCode > allowlist);
-});
+
+  assert.doesNotMatch(source, /_dispatchEmailViaResend|_getResendApiKey|wixFetch\\s*\\(\\s*RESEND_ENDPOINT/);
+  assert.match(source, /PACKAGE_STORAGE_REMOVED/);
+});;
