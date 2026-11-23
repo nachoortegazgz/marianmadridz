@@ -131,7 +131,7 @@ export const abrirSesionCaja = webMethod(
                     entityId: sessionId,
                     occurredAt: new Date(),
                     source: "TPV_WEB_METHOD",
-                    payload: makeSyntheticPayload({ traceId, replayed }),
+                    payload: makeSyntheticPayload({ traceId, replayed, sessionId }),
                 });
                 return {
                     status: "SUCCESS",
@@ -209,7 +209,7 @@ export const registrarArqueoParcial = webMethod(
                 entityType: "ARQUEO_CAJA",
                 entityId: session.sessionId,
                 traceId,
-                payload: { expectedMinor, countedMinor, differenceMinor, reason },
+                payload: { sessionId: session.sessionId, expectedMinor, countedMinor, differenceMinor, reason },
             });
             return {
                 status: "SUCCESS",
