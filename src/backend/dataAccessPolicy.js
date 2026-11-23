@@ -140,7 +140,7 @@ export function assertInsertAllowed(collection, item) {
          item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
          item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
          Number(item.schemaVersion) !== 2)) {
-        throw _policyError("CMS_TPV_SANDBOX_IDENTITY_CONTRACT_INVALID");
+        throw _policyError("CMS_TPV_IDENTITY_CONTRACT_INVALID");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
