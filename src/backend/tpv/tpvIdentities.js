@@ -1,9 +1,9 @@
-import { BUSINESS_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, TPV_IDENTITY_TYPES } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 import { assertTpvIdentity } from "backend/validation";
 
 function isEligibleIdentity(item, identityType) {
-    assertTpvIdentity(item);
+    assertTpvIdentity(item, { allowLegacyRead: true });
     return item.identityType === identityType;
 }
 
@@ -13,11 +13,10 @@ export async function listTpvIdentities(identityType) {
     }
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.TPV_IDENTITIES,
+        // Query the identity type and active synthetic records; the validator
+        // admits either the current neutral contract or the six exact legacy IDs.
         filter: wql.and(
             wql.eq("identityType", identityType),
-            wql.eq("sourceType", TPV_RUNTIME_POLICY.SOURCE_TYPE),
-            wql.eq("siteId", TPV_RUNTIME_POLICY.SITE_ID),
-            wql.eq("schemaVersion", 2),
             wql.eq("syntheticOnly", true),
             wql.eq("active", true)
         ),
