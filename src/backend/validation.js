@@ -379,13 +379,41 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
  * TpvSandboxIdentities stores synthetic-only customer and staff projections.
  * It must never contain Wix CRM, Bookings or personal identity references.
  */
-export function assertTpvIdentity(item) {
+export function assertTpvIdentity(item, options = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TpvSandboxIdentities item must be an object");
     }
     const identityType = String(item.identityType || "").trim().toUpperCase();
     const identityId = String(item.identityId || "").trim();
     const displayName = String(item.displayName || "").trim();
+
+    // Read-only compatibility for the six pre-neutral Sandbox identities.
+    // Writes remain strict: callers must not set allowLegacyRead.
+    const legacyPrefix = identityType === "CUSTOMER" ? "SANDBOX-CUSTOMER-" : "SANDBOX-STAFF-";
+    const legacySuffix = identityId.startsWith(legacyPrefix) ? identityId.slice(legacyPrefix.length) : "";
+    if (options.allowLegacyRead === true &&
+        ["CUSTOMER", "STAFF"].includes(identityType) &&
+        item.identityType === identityType &&
+        ["01", "02", "03"].includes(legacySuffix) &&
+        item.environment === "SANDBOX" &&
+        item.testRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
+        item.active === true &&
+        item.syntheticOnly === true &&
+        displayName.length > 0 &&
+        displayName.length <= 120 &&
+        /^[^\s@]+@example\.test$/i.test(String(item.email || "")) &&
+        (item.metadata === undefined ||
+            (item.metadata && typeof item.metadata === "object" &&
+                !Array.isArray(item.metadata) && Object.keys(item.metadata).length === 0))) {
+        const legacyAllowedFields = new Set([
+            "_id", "_createdDate", "_updatedDate", "_owner", "revision",
+            "identityId", "identityType", "displayName", "email", "active",
+            "syntheticOnly", "environment", "testRunId", "createdAt", "metadata",
+        ]);
+        const legacyUnknownFields = Object.keys(item).filter((field) => !legacyAllowedFields.has(field));
+        if (legacyUnknownFields.length === 0) return true;
+    }
+
     const expectedPrefix = identityType === "CUSTOMER" ? "TPV-CUSTOMER-" : "TPV-STAFF-";
     const expectedNamePrefix = identityType === "CUSTOMER" ? "Cliente Sintético " : "Profesional Sintético ";
     if (!["CUSTOMER", "STAFF"].includes(identityType) ||
