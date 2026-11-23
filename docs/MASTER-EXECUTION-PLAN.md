@@ -2,7 +2,7 @@
 
 **Corte verificado:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**main:** 956356db48ee9d0ba363023c14105474316f84dd  
 **Sitio Wix:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Estado global:** desarrollo/QA; release **NO-GO**.
 
@@ -26,18 +26,18 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 ### 2.1 Repositorio e integración
 
-- main HEAD: b20304598f7017ebc283d5821a38b59fe41b90e0.
+- main HEAD: 956356db48ee9d0ba363023c14105474316f84dd.
 - PR #541 integrada en main mediante merge commit e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.
-- PR #540 integrada después; merge commit actual b20304598f7017ebc283d5821a38b59fe41b90e0.
+- PR #540 integrada antes; PR #542 también se fusionó después y produjo el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd. La ejecución CI de ese merge falló.
 - PR #537 fue preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 - La rama main informa protected=false. No hay evidencia de required status checks ni protección efectiva.
 - PR #210 permanece abierta. La integración disponible no expone una acción autorizada para modificar branch protection/rulesets; requiere permisos de administración del repositorio.
 
 ### 2.2 CI del HEAD actual
 
-- Backend offline quality gates: **FAIL**, run [45105031715](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031715).
-- Secret scanning: **SUCCESS**, run [45105031857](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031857).
-- El fallo localizado es una aserción obsoleta en src/backend/tests/tpv.native-reconciliation.contract.test.mjs: la prueba esperaba cuatro métodos de pago, pero el contrato centralizado contiene seis. El código obtiene métodos desde Object.values(TPV_PAYMENT_METHOD).
+- Backend offline quality gates: **FAIL**, run [45105979742](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742).
+- Secret scanning: **SUCCESS**, run [45105979748](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748).
+- El fallo localizado en run 45105979742 es una aserción obsoleta en src/backend/tests/tpv.native-reconciliation.contract.test.mjs: la prueba esperaba cuatro métodos de pago, pero el contrato centralizado contiene seis. El merge PR #542 incorporó una primera versión de la corrección que todavía fallaba; PR #543 contiene la corrección de las aserciones restantes. El código obtiene métodos desde Object.values(TPV_PAYMENT_METHOD).
 - La corrección se prepara en la rama chore/phase1-repository-stabilization-20261123. No declarar CI verde hasta que los workflows de esa rama/PR terminen SUCCESS.
 
 ### 2.3 Contrato de pagos TPV
