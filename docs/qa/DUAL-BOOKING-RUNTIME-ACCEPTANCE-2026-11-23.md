@@ -20,7 +20,7 @@
 | DUAL-RT-02 | Slot F2 anterior al objetivo | Rechazo; no aproximar al primer slot posterior | P1 |
 | DUAL-RT-03 | Slot F2 posterior al objetivo | Rechazo; gap exacto obligatorio | P1 |
 | DUAL-RT-04 | Recurso F2 distinto | Rechazo de pareja | P0 |
-| DUAL-RT-05 | Tercero intenta ocupar el gap durante la operación | No se confirma pareja incompatible; lock/claim cubre la ventana completa | P0 |
+| DUAL-RT-05 | Política de ocupación del gap | Verificar si un tercer servicio puede ocupar el intervalo de exposición; el resultado debe coincidir con la política aprobada | P1 |
 | DUAL-RT-06 | Concurrencia sobre F1/F2/gap | Como máximo una pareja válida; sin booking parcial huérfano | P0 |
 | DUAL-RT-07 | F2 con onlineBooking deshabilitado | Writer crea F2 interno OFFLINE si el contrato nativo lo permite; sin segundo checkout | P1 |
 | DUAL-RT-08 | Reintento mismo payload | Reutiliza la transacción/pareja existente; no duplica bookings | P0 |
