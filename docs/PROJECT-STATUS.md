@@ -170,4 +170,13 @@ Auditoría de ControlOperativo para explicar el delta: 63 registros, sin control
 - Los tres registros COMPENSATION vinculados a #10032/#10033 permanecen PENDING_RECOVERY; no reintentar ni generar ledger real por confirmación del titular de que son QA.
 - CajaActual permanece ABIERTA (300 € apertura / 320 € esperado), con referencias nativas nulas y envelope TPV V2 no acreditado. No mutar.
 - CitasF2 mantiene dos proyecciones CONFIRMED/PENDING_LEDGER para bookings nativos documentados como CANCELED/PAID. #523 sigue abierta.
+
+### Ampliación de alcance POS — consulta completa 1–24 noviembre
+
+- La búsqueda completa de pedidos eCommerce devuelve 5 pedidos con canal POS: #10030–#10034. #10032/#10033 son sintéticos QA por confirmación del titular; #10030 (18,15 €), #10031 (27,71 €) y #10034 (18,15 €) siguen sin clasificación.
+- Los tres no clasificados no tienen referencias en MovimientosCaja ni LibroAsientosContablesDetalle; ControlOperativo tampoco devuelve markers asociados. No inferir si son reales o QA.
+- #10030: pedido PAID, booking nativo CANCELED/PAID y sin refund en historial. #10034: pedido PAID y booking nativo CONFIRMED/PAID, sin proyección CitasF2. #10031 es producto tienda.
+- Los cuatro bookings asociados a pedidos POS consultados: #10030 y #10032/#10033 están CANCELED/PAID; #10034 está CONFIRMED/PAID. CitasF2 carece de proyección para #10030 y #10034.
+- Wix Payments Transactions API devuelve cinco transacciones POS, todas sin providerTransactionId. No es evidencia de liquidación bancaria ni de ausencia de movimiento externo.
+- Se actualiza informe [TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23](qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md). Solicitar clasificación del titular para #10030/#10031/#10034 antes de cualquier actuación económica/fiscal. No mutar datos ni reintentar compensaciones.
 - Sin cambios Wix/CMS, pedidos, transacciones, pagos, refunds ni ledgers. Release NO-GO.
