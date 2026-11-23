@@ -1,3 +1,12 @@
+## Consolidación de ramas — 2026-11-23 (estado posterior)
+
+- PR #537 se integró y cerró como merged en PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b`.
+- El merge commit conserva ambos padres: HEAD anterior de #541 `fad42e421e9698dd79b4e051b1f6784c37bf2d95` y HEAD de #537 `37325b4db8114631f220d5348a15902896a3d854`. Por tanto, los 28 commits exclusivos de #537 quedan en el historial, no solo sus cambios de archivos.
+- El árbol del merge (`4c66c5b835b87c7260b729e2fe10033af25e90d9`) es idéntico al árbol del HEAD #541 anterior al merge. La reconciliación no descartó código de #541 ni introdujo una combinación textual riesgosa: el diff de PR #537 estaba funcionalmente representado/superado por la versión más completa de #541 en las 16 rutas compartidas.
+- PR #541 permanece abierta contra `main`. `main` no se ha modificado. El merge de #537 se hizo exclusivamente dentro de la rama de integración.
+- CI offline aprobado en el árbol idéntico `1d7e99d66fcc14165bf2482885e583176c2b06ef` sigue siendo evidencia de ese contenido. Debe confirmarse la ejecución de CI asociada al nuevo merge commit antes de solicitar merge de PR #541.
+- Wix Preview/Runtime E2E continúa pendiente. **NO-GO para producción y publicación.**
+
 > ## Addendum de consolidación — 2026-11-23
 >
 > Esta nota se redactó originalmente para la rama `feat/tpv-neutral-contract-block1-v2-20261123` / PR #537. PR #537 sigue abierta. La rama consolidada que se está validando ahora es `feat/tpv-payment-exports-after-p0-20261123` / PR #541, también abierta y basada en el mismo `main` (`995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d`).
