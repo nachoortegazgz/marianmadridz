@@ -576,8 +576,9 @@ body {
       : "Hora: —";
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
+    const simulationStatus = state.session?.simulationStatus || (state.session?.isSynthetic ? "SYNTHETIC" : "NOT_APPLICABLE");
     $("cashLabel").textContent = isOpen
-      ? "ABIERTA · Integración: " + integrationStatus + (state.session?.isSynthetic ? " · Simulación" : "")
+      ? "ABIERTA · Integración: " + integrationStatus + " · Simulación: " + simulationStatus
       : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
     $("openCash").disabled = isOpen || isClosed || state.busy;
     ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
@@ -900,7 +901,9 @@ body {
         total,
       }, "SALE_REGISTER_RES");
       state.lastSale = result;
-      toast("Venta registrada.");
+      toast(result?.paymentStatus === "SIMULATED_ONLY"
+        ? "Venta sintética registrada; no se ha ejecutado ningún cobro real."
+        : "Venta registrada.");
       state.items = [];
       state.payments = [];
       renderTicket();
@@ -987,7 +990,7 @@ body {
         payments: [{ paymentMethod, amount }],
       }, "REFUND_RES");
       await refreshCashState();
-      toast("Devolución registrada.");
+      toast("Devolución sintética registrada; no se ha ejecutado ningún reembolso real.");
     });
   };
 
