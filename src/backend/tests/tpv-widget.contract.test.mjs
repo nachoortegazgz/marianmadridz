@@ -74,7 +74,7 @@ test("TPV widget keeps all writes synthetic and does not implement a second paym
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);
-    assert.match(html, /data\.type === "MM_CONTEXT"/);
+    assert.match(html, /data\.type !== "MM_CONTEXT"/);
     assert.match(html, /customerIdentityId/);
     assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /id="tax"[^>]*disabled/);
