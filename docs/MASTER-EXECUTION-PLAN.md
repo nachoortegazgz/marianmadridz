@@ -47,7 +47,7 @@ BONO y TARJETA_REGALO están soportados como medios sintéticos de registro y co
 
 ### 2.4 Wix y entorno
 
-Última lectura documental de Wix del 2026-11-23: Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e, Editor Classic, Velo Enabled, EUR, Europe/Madrid, estado Draft. Apps observadas: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO.
+Último contexto documentado: Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e, Editor Classic, Velo Enabled, EUR, Europe/Madrid; apps observadas: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO. **Estado de publicación no consolidado:** una lectura de contexto indica Draft, mientras que las issues #520 y #526 documentan el sitio Published. No usar Draft como estado vigente hasta repetir el read-back de Wix Site Context. La issue #526 documenta la desactivación de reservas online en 94/94 servicios; requiere prueba negativa Runtime.
 
 La lectura de contexto no acredita que el SHA de Git esté sincronizado con Wix Editor, ni que Preview/Runtime esté validado. No se han ejecutado escrituras CMS, pagos, reembolsos, emisión fiscal ni despliegue durante esta estabilización.
 
