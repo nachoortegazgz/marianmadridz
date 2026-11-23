@@ -50,7 +50,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - main HEAD y PRs reconciliadas: verificados.
 - Fallo de CI localizado: aserción TPV desactualizada que esperaba cuatro métodos, frente a seis valores en TPV_PAYMENT_METHOD.
 - Corrección completa integrada por PR #543 tras CI pre-merge SUCCESS.
-- CI pre-merge PR #543: SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. CI backend post-merge run 45107058637 en curso; secret scanning post-merge 45107058755 SUCCESS.
+- CI pre-merge PR #543: SUCCESS (364/364 Layer 1, 255/255 Layer 2, 736/736 offline, npm audit 0, SDK contracts y ESLint); Secret scanning SUCCESS. CI backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning SUCCESS (run 45107058755).
 - Secret scanning de main: SUCCESS.
 - Protección de main: pendiente de administración (#210); main continúa sin protección.
 - PR #543 ya integrada en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
