@@ -525,7 +525,8 @@ body {
     container.querySelectorAll("[data-customer-index]").forEach((button) => {
       button.onclick = () => {
         const selected = items[Number(button.dataset.customerIndex)];
-        // identityId is retained in the widget protocol; it contains the Wix Contact _id.\n        if (!selected?.identityId) return;
+        // identityId is retained in the widget protocol; it contains the Wix Contact _id.
+        if (!selected?.identityId) return;
         state.customerIdentityId = selected.identityId;
         state.customerLabel = selected.displayName;
         renderSelectedCustomer();
