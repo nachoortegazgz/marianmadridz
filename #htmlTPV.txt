@@ -1140,30 +1140,80 @@ body {
   };
 
   /* ---------- Handshake y contexto del controlador Wix ---------- */
-  window.addEventListener("message", (event) => {
-    if (event.source !== window.parent) return;
-    const data = event.data || {};
-    if (data.type === "MM_CONTEXT") {
-      const context = data.payload || {};
-      const connected = context.status === "SUCCESS";
-      $("connStatus").className = "dot " + (connected ? "ok" : "error");
-      $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
-    }
-  });
+  const BRIDGE_PROTOCOL_VERSION = 1;
+  const HANDSHAKE_RETRY_MS = 500;
+  const HANDSHAKE_MAX_ATTEMPTS = 50;
+  let handshakeAttempts = 0;
+  let handshakeTimer = null;
+  let widgetInitialized = false;
 
-  /* ---------- Inicialización ---------- */
-  function init() {
-    window.parent.postMessage({
-      type: "MM_READY",
-      version: 1,
-      messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
-    }, "*");
+  function initializeWidgetAfterHandshake() {
+    if (widgetInitialized) return;
+    widgetInitialized = true;
+    if (handshakeTimer) {
+      clearTimeout(handshakeTimer);
+      handshakeTimer = null;
+    }
+
     loadCatalog("SERVICES").catch((e) => error(e.message));
     call("CATALOG_STAFF", {}, "CATALOG_STAFF_RES").then((data) => {
       state.staff = data.items || [];
       renderProfessionals();
     }).catch((e) => error(e.message));
     refreshCashState().catch((e) => error(e.message));
+  }
+
+  function sendHandshake() {
+    if (widgetInitialized) return;
+    if (handshakeAttempts >= HANDSHAKE_MAX_ATTEMPTS) {
+      handshakeTimer = null;
+      $("connStatus").className = "dot error";
+      $("connLabel").textContent = "Sin conexión con Wix";
+      error("No se recibió respuesta del controlador TPV.");
+      return;
+    }
+
+    handshakeAttempts += 1;
+    window.parent.postMessage({
+      type: "MM_READY",
+      version: BRIDGE_PROTOCOL_VERSION,
+      messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
+    }, "*");
+    handshakeTimer = setTimeout(() => {
+      handshakeTimer = null;
+      sendHandshake();
+    }, HANDSHAKE_RETRY_MS);
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const data = event.data || {};
+    if (data.type !== "MM_CONTEXT") return;
+
+    if (handshakeTimer) {
+      clearTimeout(handshakeTimer);
+      handshakeTimer = null;
+    }
+
+    const context = data.payload || {};
+    const connected = context.status === "SUCCESS" &&
+      context.data?.component === "htmlTPV" &&
+      context.data?.protocolVersion === BRIDGE_PROTOCOL_VERSION;
+    $("connStatus").className = "dot " + (connected ? "ok" : "error");
+    $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
+
+    if (connected) {
+      initializeWidgetAfterHandshake();
+    } else {
+      error(context.error?.code || "No se pudo validar el contexto del TPV.");
+    }
+  });
+
+  /* ---------- Inicialización ---------- */
+  function init() {
+    $("connStatus").className = "dot";
+    $("connLabel").textContent = "Conectando…";
+    sendHandshake();
   }
 
   init();
