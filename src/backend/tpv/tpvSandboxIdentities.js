@@ -1,13 +1,13 @@
 import { BUSINESS_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
-import { assertTpvSandboxIdentity } from "backend/validation";
+import { assertTpvIdentity } from "backend/validation";
 
 function isEligibleIdentity(item, identityType) {
-    assertTpvSandboxIdentity(item);
+    assertTpvIdentity(item);
     return item.identityType === identityType;
 }
 
-export async function listTpvSandboxIdentities(identityType) {
+export async function listTpvIdentities(identityType) {
     if (!Object.values(TPV_IDENTITY_TYPES).includes(identityType)) {
         throw new Error("TPV_IDENTITY_TYPE_INVALID");
     }
@@ -33,9 +33,9 @@ export async function listTpvSandboxIdentities(identityType) {
     return items;
 }
 
-export async function getTpvSandboxIdentity(identityId, identityType) {
+export async function getTpvIdentity(identityId, identityType) {
     const cleanId = String(identityId || "").trim();
     if (!cleanId) return null;
-    const identities = await listTpvSandboxIdentities(identityType);
+    const identities = await listTpvIdentities(identityType);
     return identities.find((item) => item.identityId === cleanId) || null;
 }
