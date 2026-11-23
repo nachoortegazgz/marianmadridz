@@ -66,8 +66,13 @@ export const generarControlX = webMethod(
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
             if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
