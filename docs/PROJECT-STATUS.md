@@ -84,3 +84,26 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - `MapaStaff`: 5 registros, 3 `STAFF`; no existe `recordType=CONFIG_SISTEMA`. No se consultaron ni expusieron NIF.
 - `HistoricoCierresZ` y `LibroAsientosContablesDetalle`: 0 registros.
 - Todas las lecturas CMS se ejecutaron con `consistentRead=true`; no hubo mutaciones.
+
+
+## Contrato dual personalizado — precisión arquitectónica (2026-11-23)
+
+Wix Bookings V2 no se utiliza como motor de multiservicio. La composición de dos fases es responsabilidad del backend Marian Madrid: dos bookings individuales e independientes (F1 y F2), vinculados por la identidad de pareja del flujo dual. Entre ambas existe un **gap de exposición** que no constituye una reserva F1/F2. F2 debe comenzar exactamente en `F1.end + exposureDuration`; la disponibilidad de ambas fases debe corresponder al mismo `resourceId` (profesional/recurso).
+
+Evidencia estática: `src/backend/reservas.web.js` declara las correcciones `DUAL-GAP-01` y `DUAL-GAP-02` (búsqueda del slot F2 en el instante local exacto calculado), y `DUAL-PERF-01` (consulta F1/F2 por jornada en paralelo). El módulo `src/backend/booking/bookingSaga.js` declara la orquestación de reserva simple y dual con gap. Esta evidencia no sustituye una ejecución Wix Runtime.
+
+Criterios de aceptación Runtime pendientes: (1) F1 y F2 son bookings nativos independientes; (2) `F2.start = F1.end + exposureDuration` sin redondeo; (3) el intervalo de exposición no constituye un booking F1/F2; (4) F1 y F2 mantienen el mismo resourceId; (5) la ocupación del gap por otros servicios se valida según la política operativa aprobada; (6) cancelación/reprogramación/reintento conserva la pareja e idempotencia; (7) F2 se crea `OFFLINE`, importe cero y sin segundo checkout/cobro. No usar el endpoint de multiservicio de Wix ni interpretar la ausencia de multiservicio nativo como defecto.
+
+
+## Clasificación nativa dual y conciliación económica (2026-11-23)
+
+Consulta Wix de solo lectura, con cuatro páginas de Bookings Reader V2 y contraste de ServiciosCatalogo/Bookings Services V2:
+- 354 bookings nativos: 352 CANCELED, 2 CONFIRMED; 0 tienen multiServiceBookingInfo.
+- 95 filas CMS, 24 servicios padre duales y 24 servicios F2 enlazados; los 48 IDs se encuentran en Bookings Services V2.
+- 132 bookings históricos pertenecen a ese conjunto dual: 87 F1 y 45 F2; los 132 están CANCELED. Los otros 222 bookings pertenecen a servicios fuera del conjunto dual.
+- 130 de los 132 bookings duales no tienen proyección CitasF2. Una heurística de mismo email, recurso y gap exacto encuentra 34 parejas candidatas (no autoritativas, sin pairToken nativo); quedan 53 F1 y 11 F2 sin pareja candidata. No crear proyecciones automáticamente.
+- Las seis filas actuales de CitasF2 se clasifican como dos fases duales y cuatro reservas simples. La pareja dual tiene pairToken y resourceId comunes, y gap de 40 minutos coincidente con el catálogo; sus bookings nativos están cancelados mientras las proyecciones siguen CONFIRMED.
+
+**Bloqueo P0 de conciliación económica:** los pedidos #10032 (92,45 EUR, PAID, método Cash) y #10033 (18,15 EUR, FULLY_REFUNDED) están asociados a dos proyecciones simples Barba Perfecta, ambas con booking nativo CANCELED y CitasF2.paymentStatus=PENDING_LEDGER, totalAmount=0, sin cashMovementId. #10033 tiene transacción REFUNDED y refund registrado. En ControlOperativo hay tres compensaciones PENDING_RECOVERY vinculadas a esos dos pedidos: +92,45 EUR (#10032), +18,15 EUR y -18,15 EUR (#10033). El refund señala ORIGINAL_ORDER_LEDGER_MISSING. MovimientosCaja tiene 5 filas, todas sintéticas y sin orderId/bookingId; no hay movimiento correlacionado. LibroAsientosContablesDetalle permanece vacío. No se ha escrito ni corregido ningún ledger.
+
+La clasificación demuestra que la ausencia de CitasF2 no debe aplicarse indiscriminadamente a todas las reservas: hay 222 reservas de servicios no duales y 130 reservas históricas en servicios duales sin proyección. Las 34 parejas son solo candidatas; su origen y vínculo deben acreditarse antes de reconciliar.

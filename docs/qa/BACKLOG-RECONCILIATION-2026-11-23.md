@@ -66,3 +66,17 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 Consultas de solo lectura con `consistentRead=true`: `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`); `MovimientosCaja` 2 (ambas filas `synthetic=true`, `SIMULATED_SUCCESS`, `RECONCILED`, origen `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`); `CitasF2` 6 (5 CONFIRMED, 1 PENDING; tres `pairToken` vacíos, dos iguales y uno distinto); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA); `HistoricoCierresZ` 0; `LibroAsientosContablesDetalle` 0. No se mutaron colecciones.
 
 Consulta directa Bookings Reader V2 del 2026-11-23 confirma los seis bookingId proyectados: 6/6 nativos CANCELED desde 2026-11-20; dos paymentStatus=PAID y cuatro NOT_PAID/UNDEFINED. CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos paymentStatus PENDING_LEDGER. Véase [auditoría Bookings V2 y catálogo dual](../audits/2026-11-23-bookings-revalidation.md). No cerrar caja ni corregir CitasF2 por inferencia.
+
+
+## Criterio obligatorio de aceptación — reservas duales
+
+El flujo no usa Wix Bookings multiservicio. El backend compone dos bookings individuales (F1 y F2) separados por un gap de exposición. La aceptación exige `F2.start = F1.end + exposureDuration`, gap no convertido en booking de F1/F2, política explícita de ocupación por otros servicios, mismo `resourceId`, asociación de pareja persistida, F2 `OFFLINE` con importe cero y ausencia de segundo cobro. Deben probarse colisiones de disponibilidad, concurrencia, reintentos, cancelación y reprogramación en Runtime. No clasificar las 348 reservas sin CitasF2 como huérfanas del flujo dual sin demostrar que pertenecen a servicios duales.
+
+
+## Reconciliación ampliada Bookings V2 ↔ catálogo dual ↔ caja (2026-11-23)
+
+Lectura de cuatro páginas Bookings Reader V2 y CMS consistente: 354 bookings (352 cancelados, 2 confirmados), 95 servicios CMS, 24 padres duales y 24 servicios F2 enlazados. Se identificaron 132 bookings en servicios padre/hijo duales (87 F1, 45 F2), todos cancelados; 222 pertenecen a otros servicios. Ninguno usa multiServiceBookingInfo. De los 132 duales, 130 no tienen fila CitasF2; 34 parejas solo son candidatas por mismo email/recurso y gap exacto, sin pairToken nativo. No reconciliar automáticamente.
+
+Las seis filas actuales CitasF2 se componen de 2 fases duales y 4 reservas simples. La pareja dual mantiene pairToken/resourceId comunes y gap exacto de 40 minutos, pero ambos bookings nativos están CANCELED mientras CMS indica CONFIRMED.
+
+**Bloqueo financiero P0 relacionado con #416:** pedidos #10032 (92,45 EUR, PAID/Cash) y #10033 (18,15 EUR, FULLY_REFUNDED; refund REFUNDED) tienen bookings nativos cancelados y proyecciones PENDING_LEDGER, importe cero y sin cashMovementId. Existen tres compensaciones PENDING_RECOVERY enlazadas a esos pedidos (+92,45; +18,15; -18,15 EUR). La devolución #10033 falla por ORIGINAL_ORDER_LEDGER_MISSING. No hay movimiento de caja correlacionado; las cinco filas actuales de MovimientosCaja son sintéticas y no enlazan pedidos/bookings; el detalle del libro contable está vacío. No tocar ni reconstruir ledgers hasta demostrar el origen económico y la correlación completa.
