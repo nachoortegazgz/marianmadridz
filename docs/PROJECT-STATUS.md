@@ -249,4 +249,36 @@ Query Automations V2 paginada con cursor y deduplicación:
 - Fiscalidad/Veri*Factu y writers económicos: permanecen bloqueados.
 - Release: **NO-GO**.
 
-Se actualizaron los issues #435 y #520 con esta revalidación. No se realizaron escrituras CMS, cambios en automatizaciones, pagos, reservas, devoluciones, facturas, cierres, ledgers ni publicación.
+Se actualizaron los issues #416, #435, #520 y #523 con esta revalidación. No se realizaron escrituras CMS, cambios en automatizaciones, pagos, reservas, devoluciones, facturas, cierres, ledgers ni publicación.
+
+
+## Conciliación Bookings V2 ↔ eCommerce ↔ CitasF2 — 2026-11-23
+
+Consulta de solo lectura por los seis `bookingId` presentes en `CitasF2`, mediante Bookings Reader V2 con `withEcomOrder=true` y `withEcomTransactions=true`:
+- 6/6 proyecciones CMS encontraron su booking nativo.
+- 6/6 bookings nativos están en estado `CANCELED`.
+- Dos bookings tienen `paymentStatus=PAID` y `selectedPaymentOption=ONLINE`, mientras sus proyecciones CMS permanecen `PENDING_LEDGER`.
+  - Pedido #10032: 92,45 EUR, `APPROVED` / `PAID`, balance 0,00 EUR.
+  - Pedido #10033: 18,15 EUR, `APPROVED` / `FULLY_REFUNDED`, `refundSumAmounts=18.15` EUR.
+- Un booking nativo presenta `paymentStatus=UNDEFINED` mientras CMS refleja `NOT_PAID`.
+- Los otros tres bookings presentan `NOT_PAID` / `OFFLINE` en Wix y `NOT_PAID` en CMS.
+- La pareja dual con `pairToken=6a24393428b6f7d5` conserva el mismo recurso, pero ambos bookings nativos están cancelados. Existe otra fila dual con token distinto.
+
+**Compensaciones en ControlOperativo:** siguen existiendo tres registros `PENDING_RECOVERY`, todos con `attempts=0`: +92,45 EUR para #10032 (composición de pedido no soportada por el recovery automático), +18,15 EUR para #10033 (writer fiscal deshabilitado) y −18,15 EUR del refund #10033 (`ORIGINAL_ORDER_LEDGER_MISSING`). El titular confirmó previamente que los pedidos #10032 y #10033 son sintéticos de QA.
+
+**Ledger y caja:** las tres filas de `LibroAsientosContablesDetalle` corresponden al lote TPV-QA, tienen `projectionStatus=SIMULATED_ONLY` y `estadoEnvioAEAT=NOT_SENT`; no son asientos de los pedidos #10032/#10033. Las cinco filas actuales de `MovimientosCaja` son sintéticas y no contienen referencias a esos orderId/bookingId. El singleton `CajaActual` continúa ABIERTA.
+
+**Interpretación:** los estados de booking, order y proyección CMS no son equivalentes. El booking #10033 sigue indicando `PAID` aunque su pedido nativo está `FULLY_REFUNDED`; no reconstruir el estado económico desde el booking. No se ejecutó recovery, refund, replay de webhook ni writer fiscal. No se modificaron `CitasF2`, `ControlOperativo`, pedidos, caja ni ledgers.
+
+**Criterio pendiente:** mantener #416 y #523 abiertas hasta definir reconciliación append-only, demostrar entrega/replay de eventos y validar el flujo en Runtime aislado. Ninguna de estas lecturas autoriza una corrección destructiva ni una recuperación económica automática.
+
+
+### Detalle de transacciones nativas de #10032 / #10033 — 2026-11-23
+
+Lectura oficial de Order Transactions API (sin mutaciones):
+- **#10032:** un payment `APPROVED` por 92,45 EUR, `paymentMethod=Cash`, `offlinePayment=false`, `gatewayTransactionId` presente y `providerTransactionId` no devuelto; no existe refund record.
+- **#10033:** un payment `REFUNDED` por 18,15 EUR, `paymentMethod=Other Payment Method`, `offlinePayment=false`, `gatewayTransactionId` presente y `providerTransactionId` no devuelto. El refund record por 18,15 EUR tiene `refundStatus=SUCCEEDED`, `externalRefund=false`, `gatewayRefundId` presente y `providerRefundId` no devuelto.
+
+**Discrepancia de contrato:** la combinación `paymentMethod=Cash` / `offlinePayment=false` de #10032 no encaja con la definición oficial de Wix: `offlinePayment` indica si el pago fue realizado offline (por ejemplo, efectivo o marcado como pagado en Business Manager). La respuesta tampoco identifica el proveedor de pago. En #10033 Wix registra un refund `SUCCEEDED` y `externalRefund=false`, pero no devuelve un identificador de refund del proveedor.
+
+**Conclusión limitada:** la API acredita los estados de los registros nativos, no una liquidación bancaria ni la identidad del PSP. Tampoco permite afirmar ausencia de efectos externos solo porque los pedidos fueran clasificados por el titular como sintéticos. Mantener #416 como P0 hasta contrastar modo de prueba / settlement con el proveedor o una evidencia equivalente. No reintentar, cobrar, devolver ni modificar transacciones.
