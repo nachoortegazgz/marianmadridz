@@ -1,8 +1,8 @@
 # Reconciliación del backlog — estado actual 2026-11-23
 
-**main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**main:** 956356db48ee9d0ba363023c14105474316f84dd  
 **PR #541:** integrada en main mediante e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.  
-**PR #540:** integrada; produce el HEAD actual de main.  
+**PR #540:** integrada. **PR #542:** integrada; su merge produce el HEAD actual y CI falló.  
 **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
 **Release:** **NO-GO**.
 
@@ -49,17 +49,17 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 - main HEAD y PRs reconciliadas: verificados.
 - Fallo de CI localizado: aserción TPV desactualizada que esperaba cuatro métodos, frente a seis valores en TPV_PAYMENT_METHOD.
-- Corrección del test y documentación: preparada en chore/phase1-repository-stabilization-20261123.
-- CI de corrección: pendiente de workflow PR.
+- Corrección inicial integrada por PR #542; CI continuó fallando. Corrección completa del test y documentación depurada en PR #543.
+- Último CI conocido de PR #543 antes del ajuste final: FAIL por aserción OTROS; ajuste adicional en el HEAD actual de la rama, nuevo CI pendiente.
 - Secret scanning de main: SUCCESS.
 - Protección de main: pendiente de administración (#210); main continúa sin protección.
-- No se ha modificado main, CMS ni configuración Wix en esta fase.
+- PR #542 se integró en main durante la intervención y dejó CI fallida; PR #543 prepara la corrección completa. No se han realizado escrituras CMS ni cambios de configuración Wix.
 
 ## Evidencia
 
-- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/b20304598f7017ebc283d5821a38b59fe41b90e0)
-- [CI backend fallido en main](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031715)
-- [Secret scanning correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031857)
+- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/956356db48ee9d0ba363023c14105474316f84dd)
+- [CI backend fallido en main](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742)
+- [Secret scanning correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748)
 - [Issue #210](https://github.com/nachoortegazgz/marianmadridz/issues/210)
 - [Plan maestro](../MASTER-EXECUTION-PLAN.md)
 - [Estado del proyecto](../PROJECT-STATUS.md)
