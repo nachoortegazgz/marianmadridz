@@ -207,7 +207,7 @@ async function dispatch(message) {
             });
 
         case "SESSION_SUMMARY":
-            return obtenerResumenCaja({ sessionId: String(payload.sessionId || "") });
+            return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId) || "" });
 
         case "AUDIT_LIST":
             return obtenerMovimientosCaja({
