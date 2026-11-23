@@ -2,7 +2,7 @@
 
 **Corte verificado:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
 **Sitio Wix:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Estado global:** desarrollo/QA; release **NO-GO**.
 
@@ -26,18 +26,18 @@ Mantener el ecosistema funcional, seguro, verificable y alineado con contratos o
 
 ### 2.1 Repositorio e integración
 
-- main HEAD: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
+- main HEAD: ccdac0347e86f430c4f8086765815d9d5d7e00af.
 - PR #541 integrada en main mediante merge commit e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.
-- PR #540 integrada; PR #542 generó el HEAD intermedio 956356db48ee9d0ba363023c14105474316f84dd; PR #543 corrigió las pruebas y se integró en main con merge commit 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
+- PR #540 integrada; PR #542 generó el HEAD intermedio 956356db48ee9d0ba363023c14105474316f84dd; PR #543 corrigió las pruebas y se integró con merge commit 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #544 actualizó documentación y generó el HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af.
 - PR #537 fue preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 - La rama main informa protected=false. No hay evidencia de required status checks ni protección efectiva.
 - PR #210 permanece abierta. La integración disponible no expone una acción autorizada para modificar branch protection/rulesets; requiere permisos de administración del repositorio.
 
 ### 2.2 CI del HEAD actual
 
-- Backend offline quality gates: **FAIL**, run [45105979742](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979742).
-- Secret scanning: **SUCCESS**, run [45105979748](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105979748).
-- PR #543 está integrada en main. Su CI previo al merge pasó: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV, ESLint y secret scanning SUCCESS. CI backend post-merge SUCCESS (run 45107058637): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint; secret scanning post-merge SUCCESS (run 45107058755). No declarar post-merge cerrado hasta que el primer run finalice.
+- Backend offline quality gates del HEAD actual: **SUCCESS**, run [45107377657](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377657): Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0 (0 vulnerabilidades), contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS.
+- Secret scanning full-history: **SUCCESS**, run [45107377700](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377700).
+- La corrección de las aserciones TPV quedó integrada por PR #543; PR #544 solo actualizó documentación. Los runs anteriores fallidos son históricos y no describen el HEAD actual.
 
 ### 2.3 Contrato de pagos TPV
 
@@ -85,7 +85,7 @@ Accesibilidad, SEO, rendimiento, experiencia móvil, limpieza de código y depen
 
 ## 4. Secuencia de ejecución
 
-1. **Fase 1 — estabilización de repositorio:** corregir la prueba contractual desactualizada, obtener CI verde en PR, limpiar documentación obsoleta, revisar diff y resolver protección de main con administrador.
+1. **Fase 1 — estabilización de repositorio:** **código, pruebas y documentación completados e integrados**. Queda como acción de gobierno habilitar protección de main y required checks mediante administrador (#210).
 2. **Fase 2 — integridad transaccional:** CajaActual (#525), compensaciones (#416) y maestro fiscal (#415).
 3. **Fase 3 — contención de efectos:** automatizaciones (#520), permisos y aislamiento de entorno.
 4. **Fase 4 — TPV E2E:** flujo completo de caja y conciliación en Wix Runtime.
@@ -100,7 +100,7 @@ Accesibilidad, SEO, rendimiento, experiencia móvil, limpieza de código y depen
 - CI completa y secret scanning SUCCESS sobre el commit de la PR.
 - Diff limitado a test y documentación; sin cambios de runtime ni CMS.
 - MASTER-EXECUTION-PLAN, PROJECT-STATUS y documentación TPV coherentes con main y PR actual.
-- Protección de main y required checks habilitados por un administrador; hasta entonces Fase 1 queda parcialmente bloqueada por #210.
+- Protección de main y required checks habilitados por un administrador; hasta entonces el gate de gobierno de Fase 1 permanece abierto por #210.
 - PR revisada y mergeada solo después de todos los checks verdes. No hacer push directo ni mergear una rama con CI fallida.
 
 ## 6. Documentos operativos
