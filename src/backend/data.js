@@ -618,16 +618,28 @@ export function RegistrosHorariosStaff_beforeRemove() {
 // =============================================================================
 
 function _normalizeCajaSequenceCounters(item) {
-    if (!item || typeof item !== "object" || typeof item.sequenceCounters !== "string") return item;
-    let parsed;
-    try {
-        parsed = JSON.parse(item.sequenceCounters);
-    } catch {
-        _schemaError("CajaActual.sequenceCounters debe ser un objeto JSON valido");
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return item;
     }
+
+    const value = item.sequenceCounters;
+    if (value === undefined || value === null) {
+        return item;
+    }
+
+    let parsed = value;
+    if (typeof value === "string") {
+        try {
+            parsed = JSON.parse(value);
+        } catch {
+            _schemaError("CajaActual.sequenceCounters debe ser un objeto JSON valido");
+        }
+    }
+
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         _schemaError("CajaActual.sequenceCounters debe ser un objeto JSON valido");
     }
+
     item.sequenceCounters = parsed;
     return item;
 }
