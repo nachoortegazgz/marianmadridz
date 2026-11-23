@@ -32,10 +32,11 @@ No utilizar `isSynthetic`, `realPayment` o `integrationStatus` para inferir si l
 ## Identidad
 
 - `getMyStaffContext()` y `resolveTpvContext()` son la fuente backend de identidad autenticada.
-- La apertura persiste operador/actor en el evento de sesión.
-- La proyección de CajaActual conserva la identidad del opener.
-- La lectura separa identidad del opener de la identidad autenticada del usuario que consulta.
+- La apertura persiste operador/actor, displayName y Bookings resourceId en el evento de sesión.
+- La proyección de CajaActual conserva la identidad del opener y el recurso staff.
+- La lectura separa nombre/identidad del opener de la identidad autenticada del usuario que consulta.
 - Los campos `operatorId` o `actorId` enviados por el navegador no son aceptados como autoridad.
+- El widget muestra nombre de operador y Wix member ID; el Bookings resourceId se conserva como identidad de recurso backend.
 
 ## Aislamiento de sesión
 
