@@ -48,7 +48,8 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - Documentación consolidada por PR #544 y estabilizada por PR #545.
 - PR #545 quedó fusionada en main mediante merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`. El HEAD pre-merge `57013eed25a5f8c755a2e5cd3434c792b3dec78c` pasó backend (run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881)) y Gitleaks (run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897)); el merge commit pasó backend (run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859)) y Gitleaks (run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890)).
 - main sigue sin protección efectiva; #210 es un gate administrativo abierto.
-- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.\n- PR #554, #551 y #556 fusionadas en `main`; sus merge commits y CI se detallan arriba.
+- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
+- PR #554, #551 y #556 fusionadas en `main`; sus merge commits y CI se detallan arriba.
 
 ## Evidencia y navegación
 
