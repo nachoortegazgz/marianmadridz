@@ -359,3 +359,14 @@ ControlOperativo (58 filas): BOOKING_CREATED=12, BOOKING_CONFIRMED=10, BOOKING_R
 En `main` SHA `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`, los checks Layer 1/2, regresión offline, SDK contracts y lint finalizaron SUCCESS (run 45082870340); Gitleaks full-history SUCCESS (run 45082870366). Estos checks son offline/estáticos y no prueban Wix Runtime ni Editor sync.
 
 **Estado global:** release **NO-GO**. No se ejecutaron escrituras CMS, pagos, reembolsos, cambios de automatizaciones, publicación ni despliegue durante esta depuración.
+
+
+## Addendum TPV — aceptación funcional y conciliación Wix (2026-11-23)
+
+La incorporación de checks está propuesta en PR #540 (draft, apilada sobre PR #538). Se incorpora [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs` al gate F2 TPV. La suite protege los adaptadores del controlador del candidato PR #538 para apertura y venta.
+
+Estado verificado estáticamente: autenticación del miembro Wix mediante `members.getCurrentMember()`, resolución de Staff por contactId, guards ADMIN/GESTION, contexto backend independiente del actor del widget, apertura y venta adaptadas a contratos backend, sesión con lock, ledger de pagos sintéticos, movimientos físicos en efectivo e informes X/Z.
+
+Gaps que impiden certificar conciliación completa: no se valida que el `profesionalId` seleccionado coincida con el `operatorResourceId` autenticado; no se crean ni enlazan pedidos/recibos nativos; métodos limitados a EFECTIVO/TARJETA/BIZUM/OTROS; auditoría sin `sessionId` uniforme ni el lector dedicado de auditoría está conectado al controlador; faltan eventos de lectura/exportación/impresión/denegación; falta vínculo explícito X→Z; Veri*Factu/QR no implementado y fiscal/native writes siguen deshabilitados.
+
+La suite automatizada es estática. Las pruebas de roles, mismatch de operador, concurrencia, venta/devolución, X/Z, CMS, Preview y prueba negativa Published quedan pendientes de Runtime. **TPV y release continúan NO-GO.** No se han ejecutado escrituras CMS, pagos, facturas, emisión fiscal, publicación ni despliegue.
