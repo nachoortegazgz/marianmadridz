@@ -317,7 +317,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /sessionId: String\(payload\.sessionId/);
     assert.match(controller, /sessionId: optionalString\(payload\.sessionId\)/);
-    const widget = await readFile(new URL("../../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
+    const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
 test("TPV controller imports the exact canonical WebMethods from their owning modules", async () => {
