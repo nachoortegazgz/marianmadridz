@@ -49,4 +49,4 @@
 
 ## No-go
 
-Cualquier booking parcial sin compensación trazable, ocupación del gap, resourceId distinto, segundo cobro, evento duplicado, efecto externo o escritura no aislada detiene la suite y mantiene el release NO-GO.
+Cualquier booking parcial sin compensación trazable, incumplimiento de la política de ocupación del gap, resourceId distinto, segundo cobro, evento duplicado, efecto externo o escritura no aislada detiene la suite y mantiene el release NO-GO.
