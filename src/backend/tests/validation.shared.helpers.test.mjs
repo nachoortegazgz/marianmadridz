@@ -179,7 +179,7 @@ test("VALIDATION-TPV-IDENTITY-01 validates canonical neutral identities and expl
         environment: "SANDBOX",
         testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
     };
-    assert.throws(() => V.assertTpvIdentity(transitionalLegacy), /unsupported fields/);
+    assert.throws(() => V.assertTpvIdentity(transitionalLegacy), /SCHEMA_VIOLATION/);
     assert.equal(V.assertTpvIdentity(transitionalLegacy, { allowLegacyRead: true }), true);
 
     assert.equal(V.assertTpvIdentity({
