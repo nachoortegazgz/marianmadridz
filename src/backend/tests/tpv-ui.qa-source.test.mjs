@@ -24,13 +24,15 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
     assert.match(script, /payments: state\.payments\.map/);
-    assert.match(script, /differenceReason:/);
+    assert.match(script, /differenceReason(?:\s*:|\s*,)/);
     assert.match(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId\}/);
     assert.doesNotMatch(script, /TICKET_X",\{sessionId:state\.session\?\.sessionId,countedCash/);
     assert.match(script, /impuestosImporte: 0/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
     assert.match(script, /varianteId, selected\.varianteId/);
+    assert.match(script, /call\("CUSTOMERS_SEARCH"/);
+    assert.match(script, /customerIdentityId: state\.customerIdentityId/);
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
     assert.match(controller, /lineas: lineItems\.map/);
     assert.match(controller, /pagos: payments\.map/);
