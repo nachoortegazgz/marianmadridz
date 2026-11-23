@@ -38,7 +38,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 - Corrección de aserciones TPV integrada por PR #543.
 - Documentación consolidada por PR #544 y estabilizada por PR #545.
-- La versión previa de PR #545 HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155)). La consolidación posterior se valida en el HEAD más reciente de la PR; no trasladar resultados entre SHAs.
+- PR #545 quedó fusionada en main mediante merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`. El HEAD pre-merge `57013eed25a5f8c755a2e5cd3434c792b3dec78c` pasó backend (run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881)) y Gitleaks (run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897)); el merge commit pasó backend (run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859)) y Gitleaks (run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890)).
 - main sigue sin protección efectiva; #210 es un gate administrativo abierto.
 - No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
 
