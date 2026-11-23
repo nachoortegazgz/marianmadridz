@@ -363,7 +363,7 @@ En `main` SHA `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`, los checks Layer 1/2, 
 
 ## Addendum TPV — aceptación funcional y conciliación Wix (2026-11-23)
 
-Se incorpora [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs` al gate F2 TPV. La suite protege los adaptadores del controlador del candidato PR #538 para apertura y venta.
+La incorporación de checks está propuesta en PR #540 (draft, apilada sobre PR #538). Se incorpora [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs` al gate F2 TPV. La suite protege los adaptadores del controlador del candidato PR #538 para apertura y venta.
 
 Estado verificado estáticamente: autenticación del miembro Wix mediante `members.getCurrentMember()`, resolución de Staff por contactId, guards ADMIN/GESTION, contexto backend independiente del actor del widget, apertura y venta adaptadas a contratos backend, sesión con lock, ledger de pagos sintéticos, movimientos físicos en efectivo e informes X/Z.
 
