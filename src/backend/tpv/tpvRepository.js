@@ -8,7 +8,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_RUNTIME_POLICY, TPV_SANDBOX_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
 import { logger } from "backend/logger";
 import {
@@ -313,8 +313,8 @@ export async function seedSandboxIdentities() {
         ...Array.from({ length: 3 }, (_, index) => "TPV-STAFF-" + String(index + 1).padStart(2, "0")),
     ];
     const [customers, staff] = await Promise.all([
-        listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.CUSTOMER),
-        listTpvSandboxIdentities(TPV_SANDBOX_IDENTITY_TYPES.STAFF),
+        listTpvSandboxIdentities(TPV_IDENTITY_TYPES.CUSTOMER),
+        listTpvSandboxIdentities(TPV_IDENTITY_TYPES.STAFF),
     ]);
     const existing = new Map([...customers, ...staff].map((item) => [item.identityId, item]));
     const missing = requiredIds.filter((identityId) => !existing.has(identityId));
