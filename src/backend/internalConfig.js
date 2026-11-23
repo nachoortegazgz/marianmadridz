@@ -97,6 +97,12 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   CURRENCY: "EUR",
   SITE_ID: "188bed94-177c-4bc9-a9f0-35080d874f3e",
   LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
+  CAPABILITIES: Object.freeze({
+    realPayments: false,
+    nativeWrites: false,
+    fiscalEmission: false,
+    hardware: false,
+  }),
   ENVIRONMENT: "SANDBOX",
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
