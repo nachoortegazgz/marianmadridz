@@ -7,31 +7,37 @@
 
 ## 1. Resultado ejecutivo
 
-**El TPV personalizado y Wix POS no están conciliados entre sí.** Existen registros sintéticos del TPV personalizado en `MovimientosCaja` y, por separado, pedidos/transacciones nativos Wix POS #10032 y #10033. No hay identificadores nativos de pedido/pago/reembolso enlazados a los eventos del TPV personalizado. Las compensaciones de webhook sí conservan referencias a los pedidos nativos, pero siguen `PENDING_RECOVERY`.
+**El TPV personalizado y Wix POS no están conciliados entre sí.** En la consulta ampliada del 1 al 24-11-2026 aparecen cinco pedidos nativos POS (#10030–#10034). El titular confirmó como sintéticos de QA únicamente #10032 y #10033. Los otros tres (#10030, #10031 y #10034) permanecen sin clasificar y no tienen referencias en los ledgers personalizados ni marcadores asociados en ControlOperativo.
 
-La confirmación del titular del 2026-11-23 clasifica #10032 y #10033 como operaciones sintéticas de QA. Esa declaración se conserva como evidencia de clasificación; no se reintentan compensaciones ni se crean asientos reales. La existencia de registros POS y transacciones nativas no demuestra por sí sola que hubiera movimiento económico externo.
+No hay identificadores nativos de pedido/pago/reembolso enlazados a los eventos del TPV personalizado. Las compensaciones de webhook sí conservan referencias a #10032/#10033, pero siguen `PENDING_RECOVERY`. No se reintentan compensaciones ni se crean asientos reales. La existencia de registros POS y transacciones nativas no demuestra por sí sola que hubiera movimiento económico externo.
 
 ## 2. Lecturas nativas Wix
 
 ### Pedidos POS
 
-| Pedido | Order ID | Estado pedido | Estado pago | Canal | Total |
-|---|---|---|---|---|---:|
-| #10032 | `0749bb38-34b6-4255-988b-34e42138dab7` | APPROVED | PAID | POS | 92,45 € |
-| #10033 | `d3a4ada9-6720-4816-bcef-51b7a0b64403` | APPROVED | FULLY_REFUNDED | POS | 18,15 € |
+Consulta completa del 1 al 24-11-2026: 5 pedidos, todos con `channelInfo.type=POS`; paginación completa (una página). No se limitó la consulta a los dos pedidos previamente confirmados.
 
-- #10032 contiene dos productos de tienda y una línea de servicio Bookings. Es una composición mixta.
-- #10033 contiene una línea de servicio Bookings.
-- Ambos pedidos constan como FULFILLED.
+| Pedido | Order ID | Estado pago | Total | Contenido | Clasificación del titular |
+|---|---|---|---:|---|---|
+| #10030 | `628f0504-e5b4-419d-a194-5e0acb9ffbdb` | PAID | 18,15 € | Servicio Bookings | Pendiente |
+| #10031 | `c9214120-d56a-468b-a6df-dd0d39ebb9a7` | PAID | 27,71 € | Producto tienda | Pendiente |
+| #10032 | `0749bb38-34b6-4255-988b-34e42138dab7` | PAID | 92,45 € | 2 productos + servicio Bookings | Sintético QA confirmado |
+| #10033 | `d3a4ada9-6720-4816-bcef-51b7a0b64403` | FULLY_REFUNDED | 18,15 € | Servicio Bookings | Sintético QA confirmado |
+| #10034 | `7aecf923-1719-4c85-bb13-0da18f879706` | PAID | 18,15 € | Servicio Bookings | Pendiente |
+
+Los tres pedidos sin clasificación (#10030, #10031 y #10034) suman 64,01 €. No se presume que sean reales ni sintéticos hasta confirmación del titular. Todos constan como APPROVED/FULFILLED.
 
 ### Historial nativo de transacciones
 
-Consulta de Wix Payments Transactions API para el intervalo 2026-11-14 a 2026-11-18, incluyendo refunds:
+Consulta de Wix Payments Transactions API para el intervalo 2026-11-01 a 2026-11-24, incluyendo refunds: cinco transacciones, una por pedido POS. El campo `providerTransactionId` es nulo en las cinco.
 
-| Pedido | Transaction ID | Tipo/método | Estado | Importe | Provider transaction ID |
+| Pedido | Transaction ID | Método nativo | Estado | Importe | Refund |
 |---|---|---|---|---:|---|
-| #10032 | `79ff054e-4724-447f-8622-dc65fe58836d` | `posCash` | APPROVED | 92,45 € | vacío |
-| #10033 | `22212d66-d27a-4e71-9c80-1d8ad729b9f6` | `inPerson` | REFUND | 18,15 € | vacío |
+| #10030 | `a71d86e1-193a-4603-8fb4-6a89a6a30115` | `posCash` | APPROVED | 18,15 € | Ninguno |
+| #10031 | `c1221698-df73-4a1f-bea8-e785e9c158bb` | `posCash` | APPROVED | 27,71 € | Ninguno |
+| #10032 | `79ff054e-4724-447f-8622-dc65fe58836d` | `posCash` | APPROVED | 92,45 € | Ninguno |
+| #10033 | `22212d66-d27a-4e71-9c80-1d8ad729b9f6` | `inPerson` | REFUND | 18,15 € | 18,15 € SUCCEEDED |
+| #10034 | `7b91f911-9b5b-44d8-9682-f666aa8370b4` | `posCash` | APPROVED | 18,15 € | Ninguno |
 
 Para #10033, Wix devuelve refund `4b005b4b-1a5b-497f-8f37-91483069bec9`, por 18,15 €, estado `SUCCEEDED`. El registro Order Transactions asocia además el refund `c7a5266c-7a19-4550-aa43-ee6cb913fa06`, también `SUCCEEDED`, con `externalRefund=false`.
 
@@ -79,14 +85,21 @@ Los tres registros proceden de webhooks eCommerce de pago/reembolso. No son los 
 
 ## 4. Discrepancia Bookings ↔ CitasF2
 
-Las dos proyecciones vinculadas a pedidos nativos siguen en CMS:
+La consulta nativa Bookings Reader V2 de cuatro IDs de servicio en pedidos POS devuelve:
 
-| Pedido | Booking ID | CitasF2 bookingStatus | CitasF2 paymentStatus |
-|---|---|---|---|
-| #10032 | `f137c63a-f704-461e-91bc-3295e853c67d` | CONFIRMED | PENDING_LEDGER |
-| #10033 | `b18337da-2326-46fc-89c0-1843b6be0730` | CONFIRMED | PENDING_LEDGER |
+| Pedido | Booking ID | Estado nativo | Pago nativo | Proyección CitasF2 |
+|---|---|---|---|---|
+| #10030 | `359e606d-bdd7-453d-bd5c-b62ba8eb94a2` | CANCELED | PAID | Ausente |
+| #10032 | `f137c63a-f704-461e-91bc-3295e853c67d` | CANCELED | PAID | CONFIRMED / PENDING_LEDGER |
+| #10033 | `b18337da-2326-46fc-89c0-1843b6be0730` | CANCELED | PAID | CONFIRMED / PENDING_LEDGER |
+| #10034 | `bce61665-be70-41de-9420-3bebba437fe4` | CONFIRMED | PAID | Ausente |
 
-La auditoría nativa Bookings Reader V2 del 2026-11-23 ya documentó que ambos bookings nativos estaban `CANCELED` con `paymentStatus=PAID`; el resultado fue 6/6 bookings nativos cancelados frente a seis proyecciones CMS no actualizadas. Esta divergencia sigue abierta en [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523). En esta pasada no se repitió la consulta Extended Bookings, para respetar la desactivación de ese flujo en el contrato TPV/QA vigente.
+- #10030: reserva nativa cancelada el 20-11-2026; pedido sigue PAID y no aparece refund en su historial nativo.
+- #10034: reserva nativa CONFIRMED/PAID del 23-11-2026, sin proyección CitasF2.
+- #10032/#10033: mantienen las dos proyecciones CMS CONFIRMED/PENDING_LEDGER pese a que el booking nativo está CANCELED/PAID.
+- #10031 es una venta de producto sin línea de Bookings.
+
+La auditoría nativa anterior documentó seis bookings proyectados, seis cancelados. Esta consulta adicional amplía el universo: #10030 y #10034 son bookings nativos adicionales que no aparecen en las seis filas de CitasF2. La discrepancia sigue abierta en [#523](https://github.com/nachoortegazgz/marianmadridz/issues/523).
 
 ## 5. Diagnóstico arquitectónico
 
@@ -96,12 +109,21 @@ La auditoría nativa Bookings Reader V2 del 2026-11-23 ya documentó que ambos b
 4. **Singleton ambiguo:** `CajaActual` permanece ABIERTA y no presenta el envelope TPV V2 esperado. No debe asociarse automáticamente al run QA ni cerrarse/reconstruirse por inferencia.
 5. **Proyección de reservas divergente:** dos filas `CitasF2` siguen CONFIRMED/PENDING_LEDGER pese al estado nativo CANCELED/PAID documentado.
 
+## 5. Ausencia de correlación para pedidos POS
+
+Se consultaron `MovimientosCaja` y `LibroAsientosContablesDetalle` mediante filtros por los cinco `orderId`, los cinco IDs de transacción nativos, los cuatro bookingId y los refundId conocidos: 0 coincidencias en ambas colecciones. La consulta de `ControlOperativo` por #10030/#10031/#10034 y los bookings #10030/#10034 también devolvió 0 marcadores.
+
+Por tanto, los tres pedidos sin clasificación no tienen ledger TPV/fiscal correlacionado en las colecciones consultadas. El resultado no demuestra por sí solo que falte una obligación fiscal: antes hay que determinar si esas ventas son reales o QA y revisar el circuito fiscal autorizado correspondiente.
+
 ## 6. Decisiones y acciones
 
 - Mantener `ALLOW_NATIVE_WRITES=false`, `ALLOW_REAL_PAYMENTS=false`, `allowNativePayments=false`, `allowNativeRefunds=false` y escrituras fiscales cerradas.
 - No crear pedidos, cargos, pagos, refunds, asientos, facturas ni movimientos para “hacer coincidir” importes.
-- No reintentar ni cambiar las tres compensaciones PENDING_RECOVERY.
+- No reintentar ni cambiar las tres compensaciones PENDING_RECOVERY de #10032/#10033.
 - No mutar `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ`, `LibroAsientosContablesDetalle` ni `CitasF2`.
+- Solicitar al titular clasificación explícita de #10030, #10031 y #10034 antes de cualquier tratamiento económico/fiscal.
+- #10030 requiere verificar el tratamiento de la cancelación frente al pago; no se ejecuta reembolso ni asiento por inferencia.
+- #10034 requiere reconstruir la proyección CitasF2 de forma trazable solo después de resolver la causa de ausencia y confirmar su naturaleza.
 - Mantener #416 y #523 abiertas; mantener release NO-GO.
 - Para futuras pruebas, separar explícitamente tres estados distintos: conciliación interna del ledger sintético, correlación con un pedido nativo y conciliación de liquidación externa. No reutilizar `RECONCILED` como prueba de las tres.
 - Una integración TPV↔POS de producción requeriría una decisión de negocio/arquitectura y contrato de idempotencia con IDs nativos. No forma parte de la corrección QA actual.
