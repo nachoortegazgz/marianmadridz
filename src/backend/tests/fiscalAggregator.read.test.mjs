@@ -137,6 +137,25 @@ test('TAXID-06 CONFIG_SISTEMA without taxId fails closed', async () => {
   );
 });
 
+test('TAXID-07 rejects CONFIG_SISTEMA taxId with invalid checksum', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
+    {
+      _id: 'CONFIG_SISTEMA_FISCAL',
+      recordType: IC.RECORD_TYPE.CONFIG_SISTEMA,
+      taxId: 'X1234567X',
+      legalName: 'Titular de prueba',
+      thirdPartyType: null,
+      schemaVersion: 1,
+      traceId: 'test-config-invalid-taxid',
+    },
+  ]);
+  await assert.rejects(
+    () => T.getBusinessTaxId('trace-taxid-invalid'),
+    /FISCAL_CONFIG_INVALID_TAX_ID/
+  );
+});
+
 test('TAXID-03 throws FISCAL_CONFIG_MISSING when nothing found (SSOT v20.1: placeholder BXXXXXXXX ERRADICADO)', async () => {
   wixDataMock._reset();
   // Decision documentada (docs/adr/ADR-08-fiscal-taxid-throw.md): sin NIF real

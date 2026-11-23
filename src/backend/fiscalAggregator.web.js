@@ -36,7 +36,7 @@ import {
 } from "backend/dataAccess";
 
 import { readMovementField, readMovementHash } from "backend/data";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
+import { isExplicitSimulationLedgerRecord, isValidNifOrEuVat } from "backend/validation";
 
 import {
   BUSINESS_COLLECTIONS,
@@ -474,6 +474,11 @@ async function _getBusinessTaxId() {
   if (!taxId) {
     throw new Error(
       "FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de taxId verificado"
+    );
+  }
+  if (!isValidNifOrEuVat(taxId)) {
+    throw new Error(
+      "FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido"
     );
   }
   return taxId.toUpperCase();

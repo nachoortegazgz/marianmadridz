@@ -28,7 +28,6 @@ import {
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
-import { stableSerialize } from "backend/tpv/tpvUtils";
 
 import { logger } from "backend/logger";
 
@@ -224,15 +223,6 @@ export function readBreakdown(item) {
 
 const GUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const ALLOWED_Z_UPDATE_FIELDS = new Set([
-    "closingSignature",
-    "closingSignatureStatus",
-    "csvAEAT",
-    "verifiedAt",
-    "approverUser",
-    "_updatedDate",
-]);
 
 const LEDGER_SCHEMA_VERSION_AEAT = "LEDGER_V5_FISCAL";
 
@@ -563,36 +553,11 @@ export function HistoricoCierresZ_beforeInsert(item) {
     return item;
 }
 
-export async function HistoricoCierresZ_beforeUpdate(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-        _schemaError("HistoricoCierresZ beforeUpdate requiere un item valido");
-    }
-    const itemId = _safeTrim(item._id);
-    if (!itemId) {
-        _schemaError("HistoricoCierresZ beforeUpdate requiere _id para recuperar el estado previo");
-    }
-
-    // Wix UpdateHookContext does not guarantee previous/original snapshots.
-    // Compare against the persisted fiscal record using a strong read.
-    const persisted = await getItem(
-        BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
-        itemId,
-        CONSISTENCY.STRONG
-    );
-    if (!persisted || String(persisted._id || "") !== itemId) {
-        _fiscalError("HistoricoCierresZ beforeUpdate no pudo recuperar el estado previo");
-    }
-
-    _normalizeCmsDateTime(item, "verifiedAt");
-    const changes = Object.keys(item)
-        .filter((key) => key !== "_id")
-        .filter((key) => stableSerialize(persisted[key]) !== stableSerialize(item[key]));
-
-    const onlySignatureFields = changes.every((key) => ALLOWED_Z_UPDATE_FIELDS.has(key));
-    if (!onlySignatureFields) {
-        _fiscalError("HistoricoCierresZ es append-only: solo se permite signature/verification desde recovery.");
-    }
-    return item;
+// Wix Data beforeUpdate hook: https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update
+// Fiscal Z-closing records are immutable; signature recovery must be represented
+// by a new traceable append-only event, never by mutating the original close.
+export function HistoricoCierresZ_beforeUpdate() {
+    _fiscalError("Modificacion de HistoricoCierresZ prohibida: ledger fiscal append-only. Registre un nuevo evento rectificativo trazable.");
 }
 
 export function HistoricoCierresZ_beforeRemove() {
