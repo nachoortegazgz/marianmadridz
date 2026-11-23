@@ -1,8 +1,7 @@
 # Auditoría Wix — TPV — corte 2026-11-23
 
-**Repositorio/main:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
-**PR #541, #540, #542 y #543:** integradas en main. Merge commit de #543: 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.
-**PR #540:** integrada en main. **PR #542:** integrada; CI posterior falló.  
+**Repositorio/main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
+**PR #541, #540, #542, #543 y #544:** integradas en main. PR #543 corrigió las aserciones TPV; PR #544 actualizó la documentación.  
 **PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
 **Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
 **Estado de aceptación:** **NO-GO Runtime / producción**.
@@ -13,9 +12,9 @@ La integración de código TPV está en main. La aceptación estática no demues
 
 ## CI de referencia
 
-- Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
-- Secret scanning: SUCCESS, run 45105979748.
-- PR #543 corrigió las aserciones y se integró tras CI pre-merge SUCCESS (736/736 pruebas offline, npm audit 0, SDK contracts, ESLint y secret scanning). Backend post-merge SUCCESS (run 45107058637): 736/736 pruebas offline, npm audit 0, SDK contracts y ESLint; secret scanning post-merge SUCCESS.
+- Backend offline quality gates sobre el HEAD actual: SUCCESS, run 45107377657 (364/364 Layer 1, 255/255 Layer 2, 736/736 suite offline, npm audit 0, contratos SDK y ESLint).
+- Gitleaks full-history: SUCCESS, run 45107377700.
+- La aserción obsoleta que esperaba cuatro métodos se corrigió en PR #543; no es un fallo vigente.
 
 ## Contrato de pagos comprobado estáticamente
 
