@@ -1,7 +1,7 @@
 # TPV — matriz de aceptación funcional y conciliación con Wix nativo
 
 **Fecha:** 2026-11-23  
-**Base vigente:** main `956356db48ee9d0ba363023c14105474316f84dd` (PR #541, #540 y #542 integradas)  
+**Base vigente:** main 0ba7b684d6f4d6465718ae4317d10d8f422de2ff (PR #541, #540, #542 y #543 integradas)
 **Alcance:** `#htmlTPV.txt`, `src/public/tpvPageController.js`, WebMethods TPV, seguridad, persistencia y pruebas de contrato.  
 **Naturaleza:** auditoría estática y definición de pruebas. No equivale a una prueba Wix Runtime ni autoriza pagos, facturación o despliegue.
 
@@ -187,4 +187,4 @@ Estas pruebas son contractuales/estáticas; no demuestran la ejecución de Wix R
 7. Ejecutar las pruebas Runtime de la matriz en Sandbox real; prueba negativa Published sin efectos externos.
 8. Verificar SHA instalado en Wix Editor, diff, CI, rollback y permisos antes de autorizar despliegue.
 
-**Estado de aceptación:** **NO-GO**. El CI post-merge de PR #542 detectó aserciones contractuales obsoletas: primero esperaba cuatro métodos pese a que el enum centralizado contiene seis; después detectó una expectativa antigua sobre el default de paymentMethod en movimientos de caja. PR #543 corrige ambas clases de aserciones. Su HEAD eee6d75e5cf843a38823e7fa4c908783db175208 terminó SUCCESS: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK y ESLint; Secret scanning SUCCESS. La corrección aún no está integrada en main. La suite estática no certifica Wix Runtime ni producción. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
+**Estado de aceptación:** **NO-GO**. PR #543 corrigió las aserciones contractuales y está integrada en main. CI pre-merge SUCCESS: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK, ESLint y secret scanning. El CI backend post-merge está en curso (run 45107058637); secret scanning post-merge SUCCESS (run 45107058755). La suite estática no certifica Wix Runtime ni producción. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
