@@ -43,14 +43,21 @@ jobs:
           const lockDependencies = packageLock.packages?.[""]?.dependencies ?? {};
 
           const packageDependencies = packageJson.dependencies ?? {};
-          const mismatches = Object.keys(packageDependencies).filter(
-            (name) => lockDependencies[name] !== packageDependencies[name]
-          );
+          const packageDevDependencies = packageJson.devDependencies ?? {};
+          const lockDevDependencies = packageLock.packages?.[""]?.devDependencies ?? {};
+          const mismatches = [
+            ...Object.keys(packageDependencies).filter(
+              (name) => lockDependencies[name] !== packageDependencies[name]
+            ).map((name) => ({ name, section: "dependencies", expected: packageDependencies[name], actual: lockDependencies[name] })),
+            ...Object.keys(packageDevDependencies).filter(
+              (name) => lockDevDependencies[name] !== packageDevDependencies[name]
+            ).map((name) => ({ name, section: "devDependencies", expected: packageDevDependencies[name], actual: lockDevDependencies[name] })),
+          ];
 
           if (mismatches.length) {
             console.error("package.json/package-lock.json are out of sync:");
             for (const name of mismatches) {
-              console.error(`- ${name}: package=${packageDependencies[name]}, lock=${lockDependencies[name] ?? "missing"}`);
+              console.error(`- ${name.section}.${name.name}: package=${name.expected}, lock=${name.actual ?? "missing"}`);
             }
             process.exit(1);
           }
@@ -72,7 +79,6 @@ jobs:
 
       - name: Audit dependencies
         id: npm-audit
-        continue-on-error: true
         run: |
           set +e
           npm audit --json > "$RUNNER_TEMP/npm-audit.json"
