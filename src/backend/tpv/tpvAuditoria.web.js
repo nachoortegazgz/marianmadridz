@@ -61,7 +61,16 @@ export const obtenerAuditoriaTPV = webMethod(
 
             return {
                 status: "SUCCESS",
-                data: { items, count: items.length, sessionId: sessionId || null },
+                data: {
+                    items,
+                    count: items.length,
+                    sessionId,
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "NOT_APPLICABLE",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                },
                 error: null,
                 traceId,
             };
