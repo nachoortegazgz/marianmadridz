@@ -110,7 +110,7 @@ export const registrarDevolucion = webMethod(
 
             await appendSandboxAudit({
                 idempotencyKey: key + ":AUDIT",
-                action: "DEVOLUCION_SANDBOX_CONFIRMADA",
+                action: "DEVOLUCION_CONFIRMADA",
                 actorId: operator.operatorId,
                 entityType: "DEVOLUCION",
                 entityId: refundId,
