@@ -38,7 +38,7 @@ test("Sandbox runtime is enabled for synthetic records only; fiscal and external
 });
 
 test("SANDBOX writes require an exact test-run CajaActual marker and never accept a live cash singleton", () => {
-    const sandboxRunId = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
+    const sandboxRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     const liveCaja = {
         singletonKey: "CAJA_PRINCIPAL",
         cashRegisterStatus: "ABIERTA",
@@ -99,7 +99,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         hash: "a".repeat(64),
         sequenceNumber: 0,
         transactionId: "TPV_TEST_ROW",
-        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-TEST",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":SESSION-TEST",
         movementType: "SIMULATED_TPV_PAYMENT",
         recordSource: "TPV_SANDBOX_SYNTHETIC",
         payloadFiscal: {
@@ -107,7 +107,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
             sessionId: "SESSION-TEST",
-            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
