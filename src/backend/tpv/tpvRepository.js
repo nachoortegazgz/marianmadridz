@@ -282,7 +282,7 @@ function _eventAmount(record) {
 }
 
 function _isRecognizedSyntheticLedgerItem(item) {
-    if (!_isRecord(item) || !String(item.movementType || "").startsWith("SIMULATED_TPV_")) return false;
+    if (!item || typeof item !== "object" || Array.isArray(item) || !String(item.movementType || "").startsWith("SIMULATED_TPV_")) return false;
     const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
     const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
     const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
@@ -790,17 +790,29 @@ export async function querySandboxLedgerRecords(options = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
         throw new Error("TPV_LEDGER_INVALID_LIMIT");
     }
-    const result = await queryItems({
-        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-        filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
-        sort: ["recordTimestamp DESC"],
-        limit,
-        consistency: CONSISTENCY.STRONG,
-    });
-    const records = result.items
+    const [current, legacy] = await Promise.all([
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", LEGACY_TPV_LEDGER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
+    ]);
+    const records = [...current.items, ...legacy.items]
         .map(_virtualRecord)
-        .filter(_isRecognizedSyntheticLedgerItem);
-    return { records, hasMore: result.hasNext === true };
+        .filter(_isRecognizedSyntheticLedgerItem)
+        .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
+        .slice(0, limit);
+    return { records, hasMore: current.hasNext === true || legacy.hasNext === true ||
+        current.items.length + legacy.items.length > limit };
 }
 
 export async function appendSandboxAudit({
