@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -73,9 +73,10 @@ export const registrarMovimientoCaja = webMethod(
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
             const paymentMethod = String(input.paymentMethod || TPV_PAYMENT_METHOD.EFECTIVO).trim().toUpperCase();
             if (paymentMethod !== TPV_PAYMENT_METHOD.EFECTIVO) throw new Error("TPV_CASH_MOVEMENT_REQUIRES_CASH");
+            const requestedSessionId = sessionIdFromInput(input);
             const session = await latestOpenTpvSession();
             if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && String(input.sessionId) !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
@@ -120,7 +121,27 @@ export const registrarMovimientoCaja = webMethod(
                 traceId,
                 payload: { sessionId: session.sessionId, operatorId: operator.operatorId, amountMinor, reason },
             });
-            return { status: "SUCCESS", data: { movementId: item._id, movementType, amount: fromMinorUnits(amountMinor), replayed, persisted: true, isSynthetic: true, realPayment: false }, error: null, traceId };
+            return {
+                status: "SUCCESS",
+                data: {
+                    movementId: item._id,
+                    sessionId: session.sessionId,
+                    movementType,
+                    amount: fromMinorUnits(amountMinor),
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    replayed,
+                    persisted: true,
+                    isSynthetic: true,
+                    realPayment: false,
+                },
+                error: null,
+                traceId,
+            };
             });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
@@ -140,7 +161,7 @@ export const obtenerMovimientosCaja = webMethod(
             if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
                 throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
             }
-            const sessionId = String(input.sessionId || "").trim();
+            const sessionId = sessionIdFromInput(input);
             const ledger = await queryTpvLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
@@ -149,7 +170,7 @@ export const obtenerMovimientosCaja = webMethod(
                     if (!visibleTypes.has(sourceType)) return false;
                     if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return false;
                     const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
-                    return !sessionId || recordSessionId === sessionId;
+                    return recordSessionId === sessionId;
                 })
                 .map(mapMovementRecord)
                 .filter(Boolean)
@@ -159,6 +180,11 @@ export const obtenerMovimientosCaja = webMethod(
                 status: "SUCCESS",
                 data: {
                     items,
+                    sessionId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     syntheticOnly: true,
                     truncated: ledger.hasMore,
                 },
