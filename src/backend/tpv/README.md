@@ -61,7 +61,7 @@ La validación obtiene el enum desde internalConfig.js. La conciliación de sesi
 
 ## Aceptación pendiente
 
-La matriz detallada y sus IDs de prueba están en [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23](../../../docs/qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md). Requisitos principales:
+La matriz detallada y sus IDs de prueba están en [TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23](../../../docs/archive/2026-11/qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md). Requisitos principales:
 
 1. Resolver el mapeo entre Staff sintético y resourceId Wix real.
 2. Probar permisos por rol con identidades Wix distintas.
