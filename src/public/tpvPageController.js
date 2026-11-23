@@ -103,8 +103,8 @@ async function dispatch(message) {
         case "SESSION_OPEN":
             return abrirSesionCaja({
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
-                terminalId: String(payload.terminalId || "TPV").slice(0, 80),
-                reason: String(payload.reason || "Apertura desde TPV").slice(0, 200),
+                terminalId: optionalString(payload.terminalId, 80) || "TPV",
+                reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
 
         case "CATALOG_SERVICES":
@@ -183,7 +183,7 @@ async function dispatch(message) {
             return registrarDevolucion({
                 idempotencyKey: key,
                 saleId: optionalString(payload.saleId) || "",
-                reason: String(payload.reason || "").trim(),
+                reason: optionalString(payload.reason, 500) || "",
                 payments: payments.map((payment) => ({
                     paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
                     amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
