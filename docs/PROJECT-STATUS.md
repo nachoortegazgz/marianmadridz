@@ -9,7 +9,7 @@
 | Área | Estado verificado | Límite |
 |---|---|---|
 | Código TPV / contratos | Integrados en main por PR #543 | Aceptación Wix Runtime/E2E pendiente. |
-| CI de estabilización documental | SUCCESS en PR #545 HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` | Backend run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142); Gitleaks run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155). No confundir con CI de otro SHA. |
+| CI de estabilización documental | La versión previa de PR #545 pasó en HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` | Backend run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142); Gitleaks run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155). La consolidación posterior debe validarse en el HEAD más reciente de la PR. |
 | Calidad offline | Layer 1 364/364; Layer 2 255/255; suite 736/736; npm audit 0; contratos SDK Wix/eCommerce/TPV y ESLint SUCCESS | No prueba CMS live, Wix Runtime, E2E, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
@@ -24,7 +24,7 @@
 
 - Corrección de aserciones TPV desactualizadas mediante PR #543.
 - Consolidación documental previa en PR #544.
-- Estabilización y actualización de estado en PR #545; los dos workflows del HEAD indicado finalizaron SUCCESS.
+- Estabilización y actualización de estado en PR #545; una versión previa de la rama superó ambos workflows. Los checks del último commit se consultan en la PR.
 - Read-back Wix Site Context actual que devuelve Draft; la lectura resuelve el estado en el momento consultado, no la sincronización del código.
 
 ## Bloqueos prioritarios
