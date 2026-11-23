@@ -55,6 +55,6 @@ test("EMAIL-QA-05 removed fiscal package storage has no active provider dispatch
   const here = dirname(fileURLToPath(import.meta.url));
   const source = readFileSync(join(here, "..", "fiscalDocuments.web.js"), "utf8");
 
-  assert.doesNotMatch(source, /_dispatchEmailViaResend|_getResendApiKey|wixFetch\\s*\\(\\s*RESEND_ENDPOINT/);
+  assert.doesNotMatch(source, /_dispatchEmailViaResend|_getResendApiKey|wixFetch\s*\(\s*RESEND_ENDPOINT/);
   assert.match(source, /PACKAGE_STORAGE_REMOVED/);
 });
