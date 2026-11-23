@@ -594,8 +594,10 @@ body {
   /* ---------- Bloqueo de operaciones ---------- */
   function setBusy(value) {
     state.busy = value;
-    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
-    $("openCash").disabled = value || isOpen;
+    const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
+    const isOpen = operationalStatus === "ABIERTA";
+    const isClosed = operationalStatus === "CERRADA";
+    $("openCash").disabled = value || isOpen || isClosed;
     ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = value || !isOpen;
@@ -1117,7 +1119,7 @@ body {
         differenceReason: differenceReason,
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
-      renderSession(null);
+      await refreshCashState();
       toast("Cierre Z registrado; sesión cerrada.");
     });
   };
