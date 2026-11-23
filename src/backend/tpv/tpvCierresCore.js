@@ -7,7 +7,7 @@ import {
     queryTpvRecords,
 } from "backend/tpv/tpvRepository";
 
-export async function buildSandboxSessionSummary(session) {
+export async function buildTpvSessionSummary(session) {
     if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
     const [sales, payments, refunds, movements, lines] = await Promise.all([
         getCommittedTpvSales(session.sessionId),
