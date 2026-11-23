@@ -1,4 +1,4 @@
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import {
     getCommittedTpvSales,
     getTpvCashMovements,
@@ -29,6 +29,8 @@ export async function buildSandboxSessionSummary(session) {
         cashMinor: 0,
         cardMinor: 0,
         bizumMinor: 0,
+        bonoMinor: 0,
+        giftCardMinor: 0,
         otherMinor: 0,
         cashInMinor: 0,
         cashOutMinor: 0,
@@ -44,7 +46,9 @@ export async function buildSandboxSessionSummary(session) {
         case "EFECTIVO": totals.cashMinor += amount; break;
         case "TARJETA": totals.cardMinor += amount; break;
         case "BIZUM": totals.bizumMinor += amount; break;
-        case "OTROS": totals.otherMinor += amount; break;
+        case TPV_PAYMENT_METHOD.BONO: totals.bonoMinor += amount; break;
+        case TPV_PAYMENT_METHOD.TARJETA_REGALO: totals.giftCardMinor += amount; break;
+        case TPV_PAYMENT_METHOD.OTROS: totals.otherMinor += amount; break;
         default: throw new Error("TPV_PAYMENT_METHOD_CORRUPTED");
         }
     }
@@ -64,7 +68,7 @@ export async function buildSandboxSessionSummary(session) {
     }
 
     totals.netSalesMinor = totals.grossSalesMinor - totals.totalRefundsMinor;
-    totals.totalCollectedMinor = totals.cashMinor + totals.cardMinor + totals.bizumMinor + totals.otherMinor;
+    totals.totalCollectedMinor = totals.cashMinor + totals.cardMinor + totals.bizumMinor + totals.bonoMinor + totals.giftCardMinor + totals.otherMinor;
     totals.expectedCashMinor = totals.openingCashMinor + totals.cashMinor + totals.cashInMinor - totals.cashOutMinor;
     totals.reconciliationOk = totals.totalCollectedMinor === totals.netSalesMinor;
     totals.isSynthetic = true;
