@@ -1,64 +1,50 @@
-# Reconciliación del backlog — estado actual 2026-11-23
+# Backlog activo — Marian Madrid — corte 2026-11-23
 
-**main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
-**PRs integradas:** #541, #540, #542, #543 y #544. **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
-**Último merge:** PR #544, documentación, merge commit ccdac0347e86f430c4f8086765815d9d5d7e00af.  
+Este documento es la única matriz operativa de issues. El estado ejecutivo está en [PROJECT-STATUS](../PROJECT-STATUS.md); el plan y orden de ejecución, en [MASTER-EXECUTION-PLAN](../MASTER-EXECUTION-PLAN.md).
+
 **Release:** **NO-GO**.
 
-Esta matriz sustituye los estados de backlog anteriores que contradigan la fecha de corte. Las issues siguen siendo el registro de trabajo; su descripción puede contener evidencia histórica y no debe interpretarse como lectura live actual.
+## P0 — integridad, fiscalidad y efectos externos
 
-## Criterios
-
-- **Abierta:** GitHub issue sigue abierta; no significa que toda la implementación esté pendiente.
-- **Parcial/Runtime:** hay código o contención, pero falta evidencia en Wix Runtime/CMS.
-- **Cerrada:** issue cerrada; mantener los controles de no regresión correspondientes.
-- No cerrar issues con criterios Runtime sin ejecutar las pruebas requeridas.
-
-## P0 — integridad transaccional y contención
-
-| Issue | Estado GitHub | Acción vigente | Restricción |
+| Issue | Estado GitHub verificado | Acción pendiente | Restricción |
 |---|---|---|---|
-| [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Abierta | Inventariar todos los escritores; demostrar lock/CAS compartido, idempotencia, reintentos y ausencia de lost updates. | No aceptar el lock de un solo writer como garantía global. No modificar singleton live durante auditoría. |
-| [#416 Compensaciones y caja](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Abierta | Conciliar cada compensación pendiente con su pedido/ledger/transacción original; documentar causa y plan de recuperación. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
-| [#415 Maestro fiscal CMS](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Abierta | Reconciliar MapaStaff y sus consumidores con el esquema físico actual; confirmar configuración fiscal. | No recrear DatosFiscales ni CONFIG_SISTEMA sin evidencia y decisión arquitectónica. |
-| [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Abierta | Inspeccionar la tarea/historial de la automatización APPLICATION y definir contención soportada de siete automatizaciones PREINSTALLED activas. | No sortear disableStatusChange ni desinstalar apps para evitar controles Wix. |
-| [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Abierta | Consolidar todos los gates de release y conservar NO-GO. | Issue paraguas; no duplicar implementación de issues especializadas. |
-| [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Abierta | Completar diseño con asesoría/proveedor y validar requisitos AEAT, firma, huella, XML y remisión. | Writers, firma, QR y remisión siguen bloqueados hasta evidencia y autorización. |
+| [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | Inventariar todos los writers; demostrar lock/CAS global, idempotencia, retry, ausencia de lost updates y recuperación. | No mutar singleton live durante auditoría. |
+| [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · actualizado 2026-11-23 | Conciliar cada compensación con pedido/ledger/transacción fuente y definir recuperación trazable. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
+| [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open | Reconciliar MapaStaff, esquema físico y consumidores; confirmar configuración fiscal. | No recrear DatosFiscales ni CONFIG_SISTEMA sin evidencia/ADR. |
+| [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Auditar las 8 ACTIVE documentadas: 7 PREINSTALLED y 1 APPLICATION; inspeccionar definición e historial de la APPLICATION y contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
+| [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Open | Validación normativa, técnica, proveedor y asesoría; contrato común de huella y pruebas. | Mantener writers, firma, QR, emisión y remisión deshabilitados. |
+| [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Open | Gate paraguas: consolidar evidencia de todos los P0/P1 y conservar NO-GO. | No duplicar implementación de issues especializadas. |
 
-## P1 — gobierno y pruebas funcionales
+## P1 — gobierno y aceptación funcional
 
-| Issue | Estado GitHub | Acción vigente |
+| Issue / área | Estado GitHub | Acción pendiente |
 |---|---|---|
-| [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210) | Abierta | Administrador debe exigir PR, checks obligatorios, bloquear force-push y borrado. API confirma protected=false. |
-| [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Cerrada | Mantener la contención aplicada; prueba negativa Runtime antes de cualquier reactivación. |
-| TPV E2E | Pendiente | Abrir caja, venta, pagos, movimientos, devolución, X, Z y cierre; validar roles, idempotencia, retry, concurrencia y CMS. |
+| [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210) | Open | Administrador: PR obligatoria, checks requeridos, bloqueo force-push y borrado. API ha devuelto `protected=false`. |
+| [#526 Reservas online durante QA](https://github.com/nachoortegazgz/marianmadridz/issues/526) | Closed · 2026-11-23 | No reactivar sin read-back y prueba negativa Runtime. Issue conserva evidencia histórica Published que contradice el read-back actual Draft; no asumir el estado de reservas solo por el cierre. |
+| TPV E2E | Pendiente | Identidad Staff, roles, sesión, ventas sintéticas, movimientos, devoluciones, X/Z, auditoría, retry, concurrencia y CMS en Preview/Runtime. |
 | Bookings/Payments E2E | Pendiente | Checkout, reserva, webhook, cancelación y devolución en Sandbox sin efectos externos reales. |
 
 ## P2 — integraciones
 
-- Capa 3: SharePoint almacena evidencia; Power Automate orquesta transporte documental. No puede modificar ni gobernar Capa 1.
+- Capa 3: SharePoint como repositorio de evidencia; Power Automate como transporte documental, sin gobernar Capa 1.
 - Webhooks/crons: probar idempotencia, replay, concurrencia, autorización y recuperación.
-- Exportaciones: verificar que cada lectura/exportación está autorizada y auditada, sin exponer secretos ni datos no necesarios.
+- Exportaciones: verificar permisos, auditoría, minimización de datos y ausencia de secretos.
 
 ## P3 — calidad evolutiva
 
-Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. Prioridad posterior a integridad y aceptación operativa.
+Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. No desplazar los bloqueos P0/P1.
 
-## Estado de Fase 1 — estabilización del repositorio
+## Estado de estabilización de repositorio
 
-- main HEAD y PRs reconciliadas: verificados.
-- Incidencia histórica: aserciones TPV desactualizadas; corregidas en PR #543. No persiste en el HEAD actual.
-- Corrección completa integrada por PR #543 tras CI pre-merge SUCCESS.
-- CI del HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af: SUCCESS, Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint (run 45107377657). Gitleaks full-history SUCCESS (run 45107377700).
-- Secret scanning de main: SUCCESS.
-- Protección de main: pendiente de administración (#210); API confirma `protected=false` y `required_status_checks.enforcement_level=off`.
-- PR #543 y actualización documental #544 integradas en main. No se realizaron escrituras CMS ni cambios de configuración Wix.
+- Corrección de aserciones TPV integrada por PR #543.
+- Documentación consolidada por PR #544 y estabilizada por PR #545.
+- En PR #545 HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded`: Backend offline quality gates SUCCESS, run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142); Secret scanning SUCCESS, run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155).
+- main sigue sin protección efectiva; #210 es un gate administrativo abierto.
+- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
 
-## Evidencia
+## Evidencia y navegación
 
-- [main commit](https://github.com/nachoortegazgz/marianmadridz/commit/ccdac0347e86f430c4f8086765815d9d5d7e00af)
-- [CI backend correcto en HEAD actual](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377657)
-- [Gitleaks full-history correcto](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45107377700)
-- [Issue #210](https://github.com/nachoortegazgz/marianmadridz/issues/210)
+- [PR #545](https://github.com/nachoortegazgz/marianmadridz/pull/545)
 - [Plan maestro](../MASTER-EXECUTION-PLAN.md)
-- [Estado del proyecto](../PROJECT-STATUS.md)
+- [Estado operativo](../PROJECT-STATUS.md)
+- [Índice documental](../README.md)
