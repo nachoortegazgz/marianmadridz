@@ -2,11 +2,11 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvIdentities";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
-import { makeTpvId, normalizeClientIdempotencyKey } from "backend/tpv/tpvUtils";
+import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function disabledResult(code) {
     return {
@@ -56,6 +56,20 @@ export const registrarVenta = webMethod(
                 totalVenta: input.totalVenta,
             });
             if (sale.importePendiente !== 0 || sale.totalVenta <= 0) throw new Error("TPV_SALE_MUST_BE_FULLY_PAID");
+            if (input.paymentBreakdown !== undefined) {
+                if (!input.paymentBreakdown || typeof input.paymentBreakdown !== "object" || Array.isArray(input.paymentBreakdown)) {
+                    throw new Error("TPV_PAYMENT_BREAKDOWN_INVALID");
+                }
+                const allowedMethods = Object.values(TPV_PAYMENT_METHOD);
+                if (Object.keys(input.paymentBreakdown).some((method) => !allowedMethods.includes(method))) {
+                    throw new Error("TPV_PAYMENT_BREAKDOWN_INVALID");
+                }
+                for (const method of allowedMethods) {
+                    const declaredMinor = toMinorUnits(input.paymentBreakdown[method] ?? 0, "PAYMENT_BREAKDOWN");
+                    const calculatedMinor = toMinorUnits(sale.desgloseMedios[method] ?? 0, "PAYMENT_BREAKDOWN");
+                    if (declaredMinor !== calculatedMinor) throw new Error("TPV_PAYMENT_BREAKDOWN_MISMATCH");
+                }
+            }
 
             const customerIdentityId = String(input.customerIdentityId || "").trim();
             const bookingId = String(input.bookingId || "").trim();
