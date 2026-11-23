@@ -109,7 +109,6 @@ const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
-    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
 ]);
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
@@ -136,13 +135,6 @@ export function assertInsertAllowed(collection, item) {
         if (!_isSyntheticTpvRecord(item)) {
             throw _policyError("CMS_TPV_LEDGER_CONTRACT_INVALID");
         }
-    }
-    if (collection === BUSINESS_COLLECTIONS.TPV_IDENTITIES &&
-        (item.syntheticOnly !== true ||
-         item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
-         item.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
-         Number(item.schemaVersion) !== 2)) {
-        throw _policyError("CMS_TPV_IDENTITY_CONTRACT_INVALID");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
