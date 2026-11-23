@@ -488,8 +488,8 @@ export function MovimientosCaja_beforeInsert(item) {
 
 function _isCurrentSyntheticTpvRow(value) {
     const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":";
-    const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
-    const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":";
+    const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
+    const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
     return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
         String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
         TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
@@ -503,7 +503,7 @@ function _isCurrentSyntheticTpvRow(value) {
             ) ||
             (
                 value?.payloadFiscal?.sourceType == null &&
-                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.SANDBOX_RUN_ID
+                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
         value?.payloadFiscal?.isSynthetic === true &&
