@@ -299,7 +299,7 @@ export async function getQuarterlyTaxSummaryInternal(year, quarter, options = {}
 
   // Sin fallback BXXXXXXXX (prohibido inventar NIF). Si falta el singleton
   // fiscal, el error se propaga al wrapper webMethod (TAX_SUMMARY_FAIL).
-  const nifEmisor = await _getBusinessTaxId(traceId);
+  const nifEmisor = await _getBusinessTaxId();
 
   return {
     status: "SUCCESS",
@@ -439,12 +439,12 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 // SINGLETON FISCAL (ALN-03)
 // =============================================================================
 
-async function _getBusinessTaxId(traceId) {
+async function _getBusinessTaxId() {
   const config = await withTimeout(
     dalQuery(MAPA_STAFF_COL)
       .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
       .limit(2)
-      .find(),
+      .find({ consistencyMode: "strong" }),
     CMS_TIMEOUT_MS,
     "getBusinessTaxId"
   );
