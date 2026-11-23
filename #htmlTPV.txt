@@ -567,7 +567,7 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    $("operatorLabel").textContent = "Operador: " + (state.session?.operatorId || "—");
+    $("operatorLabel").textContent = "Operador: " + (state.session?.operatorId || state.session?.authenticatedOperatorId || "—");
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
@@ -1029,7 +1029,7 @@ body {
           ${items.length ? items.map((item) => {
             const occurredAt = item.occurredAt ? new Date(item.occurredAt) : null;
             const dateLabel = occurredAt && !Number.isNaN(occurredAt.getTime())
-              ? occurredAt.toLocaleString("es-ES")
+              ? new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone: state.session?.timeZone || "Europe/Madrid" }).format(occurredAt)
               : "Fecha no disponible";
             return `
               <div style="padding:8px 0;border-bottom:1px solid var(--line);">
