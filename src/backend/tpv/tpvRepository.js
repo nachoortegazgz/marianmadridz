@@ -281,6 +281,25 @@ function _eventAmount(record) {
     return Number.isSafeInteger(gross) ? gross / 100 : 0;
 }
 
+function _isRecognizedSyntheticLedgerItem(item) {
+    if (!_isRecord(item) || !String(item.movementType || "").startsWith("SIMULATED_TPV_")) return false;
+    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
+    const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
+    const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
+        envelope.isSynthetic === true && envelope.realPayment === false &&
+        envelope.externalSideEffects === false && Boolean(envelope.requestFingerprint) && validHash;
+    const current = item.recordSource === TPV_LEDGER_SOURCE &&
+        envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
+        String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
+    const legacy = item.recordSource === LEGACY_TPV_LEDGER_SOURCE &&
+        envelope.sandboxRunId === SANDBOX_RUN_ID &&
+        String(item.traceId || "").startsWith("TPV:" + SANDBOX_RUN_ID + ":");
+    return validCommon && (current || legacy);
+}
+
 function _virtualRecord(item) {
     const envelope = item?.payloadFiscal && typeof item.payloadFiscal === "object"
         ? item.payloadFiscal
@@ -741,7 +760,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
         consistency: CONSISTENCY.STRONG,
     });
     const records = result.items.map(_virtualRecord).filter((item) =>
-        item.payloadFiscal?.sandboxRunId === SANDBOX_RUN_ID && _matchesFilter(item, filter)
+        _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
     );
     if (options.allowTruncated === true) return records;
     const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
@@ -749,7 +768,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
     while (page.hasNext && records.length < maxRecords) {
         page = await page.next();
         records.push(...page.items.map(_virtualRecord).filter((item) =>
-            item.payloadFiscal?.sandboxRunId === SANDBOX_RUN_ID && _matchesFilter(item, filter)
+            _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
         ));
     }
     if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
@@ -773,7 +792,7 @@ export async function querySandboxLedgerRecords(options = {}) {
     }
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-        filter: wql.eq("recordSource", LEGACY_TPV_LEDGER_SOURCE),
+        filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
         sort: ["recordTimestamp DESC"],
         limit,
         consistency: CONSISTENCY.STRONG,
