@@ -2,9 +2,19 @@ import { createHash } from "node:crypto";
 import { TPV_COLLECTIONS, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
+
+function _getTpvRuntimeState(caja) {
+    const operations = caja?.conceptOperations;
+    const current = operations?.tpvRuntime;
+    if (current && typeof current === "object" && !Array.isArray(current) &&
+        Object.keys(current).length > 0) return current;
+    const legacy = operations?.tpvSandbox;
+    if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) return legacy;
+    return current && typeof current === "object" && !Array.isArray(current) ? current : {};
+}
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
-    const state = caja?.conceptOperations?.tpvSandbox;
+    const state = _getTpvRuntimeState(caja);
     const sessionId = String(state?.sessionId || "").trim();
     const snapshotSource = String(caja?.snapshotSource || "");
     const traceId = String(caja?.traceId || "");
@@ -13,7 +23,9 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(state?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-        state?.externalSideEffects === false;
+        state?.externalSideEffects === false &&
+        (state?.processingMode === undefined || state?.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS);
     const validEventHash = /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
     const validRequestFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
     const validV1Trace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
@@ -22,7 +34,8 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
         state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         (state?.schemaVersion === undefined || state?.schemaVersion === null || Number(state.schemaVersion) === 1) &&
-        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === "NOT_RECONCILED") &&
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
+        (state?.processingMode === undefined || state?.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
         state?.externalSideEffects === false &&
         Boolean(sessionId) &&
         (validRequestFingerprint || validV1Trace);
@@ -165,9 +178,12 @@ export function makeSyntheticPayload(payload = {}) {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        schemaVersion: 2,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         recordSource: TPV_LEDGER_SOURCE,
-        reconciliationStatus: "NOT_RECONCILED",
+        processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+        reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+        allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+        allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,
