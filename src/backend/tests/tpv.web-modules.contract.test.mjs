@@ -279,8 +279,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 test("TPV catalog reader uses native Bookings SDK and does not expose staff contact details", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
     assert.match(catalog, /services\.queryServices/);
-    assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.STAFF\)/);
-    assert.match(catalog, /listTpvSandboxIdentities\(TPV_SANDBOX_IDENTITY_TYPES\.CUSTOMER\)/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_IDENTITY_TYPES\.STAFF\)/);
+    assert.match(catalog, /listTpvSandboxIdentities\(TPV_IDENTITY_TYPES\.CUSTOMER\)/);
     assert.match(catalog, /identityId: item\.identityId/);
     assert.doesNotMatch(catalog, /contactId: item\.identityId/);
     assert.match(await source("tpv/tpvVentas.web.js"), /customerIdentityId/);
