@@ -177,7 +177,7 @@ test("TpvSandboxIdentities accepts only exact-run synthetic Sandbox identities a
         active: true,
         syntheticOnly: true,
         environment: "SANDBOX",
-        testRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+        testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
         metadata: {},
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.TPV_SANDBOX_IDENTITIES, identity));
@@ -200,7 +200,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
         _id: "TPV_TEST_ROW",
         recordSource: "TPV_SYNTHETIC",
         movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPV:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":SESSION-1",
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":SESSION-1",
         sequenceNumber: 0,
         hash: "a".repeat(64),
         payloadFiscal: {
@@ -208,7 +208,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
             sessionId: "SESSION-1",
-            sandboxRunId: TPV_RUNTIME_POLICY.SANDBOX_RUN_ID,
+            sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
@@ -218,7 +218,7 @@ test("MovimientosCaja is append-only even for synthetic TPV records", () => {
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":LEGACY-SESSION",
+        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":LEGACY-SESSION",
     }), "legacy trace IDs remain readable");
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });
