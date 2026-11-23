@@ -288,10 +288,36 @@ Lectura oficial de Order Transactions API (sin mutaciones):
 
 La auditoría del protocolo detectó una desalineación concreta: `#htmlTPV.txt` dejaba de emitir `MM_READY` tras 50 intentos × 500 ms (25 s), mientras `src/public/tpvPageController.js` mantenía un watchdog de 65 s. Si el listener Velo no estaba listo durante la ventana de 25 s, el iframe dejaba de reintentar antes de que venciera el watchdog y podía terminar en `WIDGET_HANDSHAKE_TIMEOUT`.
 
-Corrección propuesta en `fix/tpv-handshake-retry-window-20261123`:
+Corrección integrada en PR #580 (`fix/tpv-handshake-retry-window-20261123`), commit `180c69d9e200266e85f6f0974f1b6a01a7c172a3`:
 - Extiende los reintentos a 120 × 500 ms (60 s), conservando 5 s de margen antes del watchdog.
 - Refuerza `tpv-widget.contract.test.mjs` para calcular y comprobar que la ventana de reintentos es positiva y estrictamente inferior al timeout Velo.
 - No modifica el protocolo, la allowlist, las operaciones de negocio ni las políticas de pagos/ledger.
-- Pendiente: CI de PR y aplicación del HTML actualizado en el componente `#htmlTPV` del Draft; no se afirma validación Wix Preview.
+- Validación pendiente: no aparecen ejecuciones CI asociadas al commit; además falta aplicar el HTML actualizado al componente `#htmlTPV` del Draft y validar Wix Preview. No se afirma validación Runtime.
 
 La corrección reduce la causa temporal conocida del handshake, pero no certifica el runtime ni resuelve la caja singleton incoherente.
+
+
+## Estado de publicación y clasificación de pedidos POS — revalidación 2026-11-23
+
+### Sitio Wix
+
+Query Sites V2 account-level, filtrado por el ID del sitio:
+- `published=false`.
+- `viewUrl` vacío.
+- `domainConnected=true`, `premium=true`, `editorType=EDITOR`.
+- `updatedDate=2026-11-23T17:31:35.124Z`.
+
+GetSiteContext devuelve igualmente `Status: Draft`. El sitio no está publicado ni accesible públicamente actualmente. Cualquier baseline anterior que lo describiera como Published queda obsoleta. No se llamó a Publish/Unpublish ni se cambió el estado. La ausencia de acceso público reduce el riesgo de triggers por visitantes, pero no demuestra que las automatizaciones programadas/internas no puedan ejecutarse.
+
+### Pedidos #10032 y #10033
+
+Get Order V1 devuelve para ambos:
+- `demo=false` (Wix no los clasifica como test orders; indicador inmutable).
+- `imported=false`.
+- `channelInfo.type=POS`.
+- `createdBy` corresponde al usuario propietario del sitio.
+- Fecha de creación: 2026-11-14.
+
+La clasificación del titular como artefactos sintéticos de QA se conserva como declaración, pero no equivale a que Wix los haya creado en Test Mode. La API no acredita modo test/live del proveedor ni liquidación bancaria; sí demuestra que no tienen el indicador nativo de pedido de prueba. Junto con el refund #10033 `SUCCEEDED` / `externalRefund=false` y el payment #10032 `APPROVED`, no se puede dar por probado que no existieran efectos económicos externos.
+
+**Bloqueo:** #416 permanece P0. Obtener evidencia del Dashboard/proveedor de pagos sobre modo test/live, liquidación y devolución, y confirmar la operativa POS que generó estos pedidos. No cambiar su clasificación, no repetir cobros/refunds y no ejecutar compensaciones hasta resolver la contradicción.
