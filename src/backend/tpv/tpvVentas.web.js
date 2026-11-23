@@ -223,6 +223,8 @@ export const registrarVenta = webMethod(
                     operatorId: operator.operatorId,
                     actorId: operator.actorId,
                     integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "SIMULATED_ONLY",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     total: sale.totalVenta,
