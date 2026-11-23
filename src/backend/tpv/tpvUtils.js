@@ -5,25 +5,54 @@ const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"])
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     const state = caja?.conceptOperations?.tpvSandbox;
-    const validNeutralMetadata = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+    const sessionId = String(state?.sessionId || "").trim();
+    const snapshotSource = String(caja?.snapshotSource || "");
+    const traceId = String(caja?.traceId || "");
+
+    const validNeutralMetadataV2 = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(state?.schemaVersion) === 2 &&
         state?.externalSideEffects === false;
     const validEventHash = /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
+    const validRequestFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
+    const validV1Trace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
+        traceId.startsWith("TPV_SESSION:");
+    const validNeutralMetadataV1 = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        (state?.schemaVersion === undefined || state?.schemaVersion === null || Number(state.schemaVersion) === 1) &&
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === "NOT_RECONCILED") &&
+        state?.externalSideEffects === false &&
+        Boolean(sessionId) &&
+        (validRequestFingerprint || validV1Trace);
+
     const bootstrap = allowBootstrap === true &&
         caja?.cashRegisterStatus === "CERRADA" &&
-        validNeutralMetadata &&
-        !String(state?.sessionId || "").trim();
-    const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
-        validNeutralMetadata &&
-        Boolean(String(state?.sessionId || "").trim()) &&
+        snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        validNeutralMetadataV2 &&
+        !sessionId;
+    const legacyBootstrap = allowBootstrap === true &&
+        caja?.cashRegisterStatus === "CERRADA" &&
+        snapshotSource === TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE &&
+        traceId === legacyRunId &&
+        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId) &&
+        !sessionId;
+    const explicitSyntheticV2 = caja?.cashRegisterStatus === "SIMULACION" &&
+        snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        validNeutralMetadataV2 &&
+        Boolean(sessionId) &&
         validEventHash;
-    const legacySynthetic = caja?.snapshotSource === "TPV_SANDBOX_SYNTHETIC" &&
-        caja?.cashRegisterStatus === "SIMULACION" &&
-        caja?.traceId === legacyRunId &&
-        state?.sandboxRunId === legacyRunId;
-    if (!bootstrap && !explicitSynthetic && !legacySynthetic) {
+    const explicitSyntheticV1 = caja?.cashRegisterStatus === "SIMULACION" &&
+        snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        validNeutralMetadataV1;
+    const legacySynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
+        [TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE, TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE].includes(snapshotSource) &&
+        traceId === legacyRunId &&
+        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId) &&
+        Boolean(sessionId);
+
+    if (!bootstrap && !legacyBootstrap && !explicitSyntheticV2 && !explicitSyntheticV1 && !legacySynthetic) {
         throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
     }
     return true;
