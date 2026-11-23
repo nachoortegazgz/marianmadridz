@@ -26,6 +26,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(operatorContext, /getMyStaffContext\(traceId\)/);
     assert.match(operatorContext, /actorId: memberId/);
     assert.match(operatorContext, /operatorId: memberId/);
+    assert.match(operatorContext, /operatorDisplayName: String\(staff\?\.displayName/);
     assert.match(context, /getTpvOperatorContext\(traceId\)/);
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
     assert.match(directory, /profesionalId: resourceId/);
@@ -38,7 +39,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
     const caja = await source("tpv/tpvCaja.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja \} from "backend\/tpv\/tpvCaja\.web"/);
+    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial \} from "backend\/tpv\/tpvCaja\.web"/);
     assert.match(caja, /export const obtenerEstadoCaja = webMethod/);
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
@@ -151,7 +152,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(audit, /export const obtenerAuditoriaTPV = webMethod/);
     assert.match(audit, /TPV_COLLECTIONS\.AUDITORIA/);
     assert.match(audit, /record\.payload\?\.sessionId/);
-    assert.match(audit, /data: \{ items, count: items\.length/);
+    assert.match(audit, /data: \{[\s\S]*items,[\s\S]*count: items\.length/);
     assert.match(audit, /isSynthetic: true,\s*realPayment: false/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.match(controller, /import \{ obtenerAuditoriaTPV \} from "backend\/tpv\/tpvAuditoria\.web"/);
@@ -166,6 +167,63 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.doesNotMatch(sales, /createOrder|createInvoice|verifactuQrUrl/i);
     assert.doesNotMatch(widget, /verifactuQrUrl|Veri\*Factu/i);
     assert.match(summary, /reconciliationOk = totals\.totalCollectedMinor === totals\.netSalesMinor/);
+});
+
+test("TPV operational session contract exposes authenticated identity, Madrid time and distinct lifecycle states", async () => {
+    const [cash, repository, movements, sales, refunds, closures, audit, controller, widget] = await Promise.all([
+        source("tpv/tpvCaja.web.js"),
+        source("tpv/tpvRepository.js"),
+        source("tpv/tpvMovimientos.web.js"),
+        source("tpv/tpvVentas.web.js"),
+        source("tpv/tpvDevoluciones.web.js"),
+        source("tpv/tpvCierres.web.js"),
+        source("tpv/tpvAuditoria.web.js"),
+        readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
+        readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
+    ]);
+
+    assert.match(repository, /export async function latestTpvSession/);
+    assert.match(repository, /status: "CERRADA"/);
+    assert.match(repository, /operatorResourceId: String\(sourceState\?\.operatorResourceId/);
+    assert.match(repository, /operatorDisplayName: String\(sourceState\?\.operatorDisplayName/);
+    assert.match(repository, /export async function latestOpenTpvSession/);
+    assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
+    assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
+    assert.match(cash, /canOpenSession: true/);
+    assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ madridDayKey\(\)/);
+    assert.match(cash, /operatorId: session\.operatorId/);
+    assert.match(cash, /actorId: session\.actorId/);
+    assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
+    assert.match(cash, /operatorDisplayName: session\.operatorDisplayName/);
+    assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
+    assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
+
+    assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(sales, /TPV_SESSION_CLOSED/);
+    assert.match(sales, /realPayment: false/);
+    assert.match(sales, /paymentStatus: "SIMULATED_ONLY"/);
+    assert.match(refunds, /paymentStatus: "SIMULATED_ONLY"/);
+    assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
+    assert.match(closures, /paymentStatus: "NOT_APPLICABLE"/);
+    assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
+    assert.match(movements, /return recordSessionId === sessionId/);
+    assert.match(movements, /integrationStatus: "NO_ENVIADO"/);
+    assert.match(refunds, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(refunds, /withTpvSaleLock\(saleId, traceId, async \(\) =>/);
+    assert.match(closures, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(closures, /operationalStatus: "CERRADA"/);
+    assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
+    assert.match(audit, /recordSessionId === sessionId/);
+    assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
+    assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
+    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
+    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
+    assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
+    assert.match(widget, /operatorLabel/);
+    assert.match(widget, /operationalStatus === "CERRADA"/);
+    assert.match(widget, /canOpenSession = state\.session\?\.canOpenSession/);
+    assert.match(widget, /await refreshCashState\(\)/);
+    assert.doesNotMatch(widget, /SIMULATED_SUCCESS/);
 });
 
 test.todo("Wix Preview: map synthetic TPV staff identity to the real Wix Bookings resourceId and reject a cross-operator mismatch");

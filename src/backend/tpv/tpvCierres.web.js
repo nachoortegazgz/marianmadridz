@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -15,14 +15,26 @@ export const obtenerResumenCaja = webMethod(
         await requireCajero(traceId);
 
         try {
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             const totals = await buildTpvSessionSummary(session);
             return {
                 status: "SUCCESS",
                 data: {
                     ...totals,
+                    sessionId: session.sessionId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "NOT_APPLICABLE",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     grossSales: fromMinorUnits(totals.grossSalesMinor),
                     netSales: fromMinorUnits(totals.netSalesMinor),
                     totalRefunds: fromMinorUnits(totals.totalRefundsMinor),
@@ -56,9 +68,14 @@ export const generarControlX = webMethod(
 
         try {
             const key = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
-            if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
@@ -85,7 +102,28 @@ export const generarControlX = webMethod(
                 traceId,
                 payload: { sessionId: session.sessionId },
             });
-            return { status: "SUCCESS", data: { reportId: item.reportId, totals, replayed, closesSession: false, isSynthetic: true }, error: null, traceId };
+            return {
+                status: "SUCCESS",
+                data: {
+                    reportId: item.reportId,
+                    sessionId: session.sessionId,
+                    totals,
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "NOT_APPLICABLE",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    replayed,
+                    closesSession: false,
+                    isSynthetic: true,
+                    realPayment: false,
+                },
+                error: null,
+                traceId,
+            };
             });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
@@ -103,9 +141,11 @@ export const generarCierreZ = webMethod(
 
         try {
             const clientIdempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session && input.sessionId) {
-                const priorClose = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", String(input.sessionId)));
+            if (!session && requestedSessionId) {
+                const priorClose = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, wql.eq("sessionId", requestedSessionId));
                 if (priorClose.length) {
                     const prior = priorClose[0];
                     const requestedCount = toMinorUnits(input.countedCash, "COUNTED_CASH");
@@ -143,6 +183,14 @@ export const generarCierreZ = webMethod(
                             countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
                             difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
                             closed: prior.closed === true,
+                            operationalStatus: "CERRADA",
+                            operatorId: operator.operatorId,
+                            actorId: operator.actorId,
+                            integrationStatus: "NO_ENVIADO",
+                            simulationStatus: "SYNTHETIC",
+                            paymentStatus: "NOT_APPLICABLE",
+                            now: new Date().toISOString(),
+                            timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                             replayed: true,
                             isSynthetic: true,
                             realPayment: false,
@@ -249,6 +297,14 @@ export const generarCierreZ = webMethod(
                     difference: fromMinorUnits(differenceMinor),
                     replayed,
                     closed: true,
+                    operationalStatus: "CERRADA",
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "NOT_APPLICABLE",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     isSynthetic: true,
                     realPayment: false,
                     fiscalLedgerWritten: false,

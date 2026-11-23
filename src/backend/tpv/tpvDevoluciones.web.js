@@ -2,8 +2,8 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
-import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSaleLock } from "backend/tpv/tpvRepository";
+import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSaleLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
@@ -25,8 +25,14 @@ export const registrarDevolucion = webMethod(
             const saleId = String(input.saleId || "").trim();
             const reason = String(input.reason || "").trim();
             if (!saleId || reason.length < 3 || reason.length > 500) throw new Error("TPV_REFUND_REFERENCE_AND_REASON_REQUIRED");
+            const requestedSessionId = String(input.sessionId || "").trim();
+            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
+            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSaleLock(saleId, traceId, async () => {
             const activeSession = await latestOpenTpvSession();
@@ -126,7 +132,26 @@ export const registrarDevolucion = webMethod(
 
             return {
                 status: "SUCCESS",
-                data: { refundId, saleId, amount: amountMinor / 100, paymentMethod: method, allocations, isSynthetic: true, realPayment: false, gatewayCalled: false, persisted: true },
+                data: {
+                    refundId,
+                    saleId,
+                    sessionId: session.sessionId,
+                    amount: amountMinor / 100,
+                    paymentMethod: method,
+                    allocations,
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "SIMULATED_ONLY",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    isSynthetic: true,
+                    realPayment: false,
+                    gatewayCalled: false,
+                    persisted: true,
+                },
                 error: null,
                 traceId,
             };

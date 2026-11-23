@@ -19,6 +19,7 @@ export async function resolveTpvContext(traceId = null) {
     return Object.freeze({
         actorId: operator.actorId,
         operatorId: operator.operatorId,
+        operatorDisplayName: operator.operatorDisplayName || null,
         operatorResourceId: operator.operatorResourceId || null,
         contactId: operator.contactId || null,
         siteId,

@@ -4,7 +4,7 @@
  * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja.web";
+import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
@@ -23,6 +23,7 @@ const REQUEST_TYPES = Object.freeze([
     "CUSTOMERS_SEARCH",
     "SALE_REGISTER",
     "CASH_MOVEMENT",
+    "PARTIAL_CASH_COUNT",
     "REFUND",
     "TICKET_X",
     "TICKET_Z",
@@ -179,10 +180,19 @@ async function dispatch(message) {
                 profesionalId: optionalString(payload.profesionalId),
             });
 
+        case "PARTIAL_CASH_COUNT":
+            return registrarArqueoParcial({
+                sessionId: optionalString(payload.sessionId) || "",
+                idempotencyKey: key,
+                countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
+                reason: optionalString(payload.reason, 500) || "",
+            });
+
         case "REFUND": {
             const payments = Array.isArray(payload.payments) ? payload.payments : [];
             return registrarDevolucion({
                 idempotencyKey: key,
+                sessionId: optionalString(payload.sessionId) || "",
                 saleId: optionalString(payload.saleId) || "",
                 reason: optionalString(payload.reason, 500) || "",
                 payments: payments.map((payment) => ({
