@@ -483,7 +483,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 next.differenceReason = String(record.totals?.differenceReason || "");
                 next.lastOperationType = "TPV_SESSION_CLOSE";
             } else {
-                next.lastOperationType = "TPV_" + String(collection).replace(/^SANDBOX_LOGICAL_/, "");
+                next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
             }
             sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
             sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
