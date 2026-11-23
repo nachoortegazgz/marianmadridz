@@ -326,7 +326,8 @@ test("TPV controller imports the exact canonical WebMethods from their owning mo
         "tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
         "tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
         "tpvVentas.web.js": ["registrarVenta"],
-        "tpvMovimientos.web.js": ["registrarMovimientoCaja", "obtenerMovimientosCaja"],
+        "tpvMovimientos.web.js": ["registrarMovimientoCaja"],
+        "tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
         "tpvDevoluciones.web.js": ["registrarDevolucion"],
         "tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
     };
@@ -376,7 +377,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(controller, /generarControlX/);
     assert.match(controller, /generarCierreZ/);
     assert.match(controller, /obtenerResumenCaja/);
-    assert.match(controller, /obtenerMovimientosCaja/);
+    assert.match(controller, /obtenerAuditoriaTPV/);
     assert.match(controller, /obtenerConfiguracionTPV/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
