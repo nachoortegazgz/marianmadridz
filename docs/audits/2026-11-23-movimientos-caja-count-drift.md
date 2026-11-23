@@ -50,3 +50,9 @@ La colección es append-only. La desaparición aparente de una fila previamente 
 **No ejecutado:** restauración, limpieza, inserción, modificación, conciliación o cierre de caja.
 
 Mantener P0 abierto en #435/#434.
+
+## 7. Control de auditoría disponible
+
+Consulta consistente de ControlOperativo: 63 filas (5 TPV_FUNCTIONAL_TEST, 13 WEBHOOK_EVENT, 3 COMPENSATION, 31 WEBHOOK_CLAIM, 3 DAYS_CACHE, 3 SLOT_LOCK, 2 IDEMPOTENCY y 3 RATE_LIMIT). No hay ningún controlType, kind, status, operationType ni traceId con términos CLEANUP, RESET, MIGRAT, PURGE, DELETE, TRUNCAT o RESTORE.
+
+La búsqueda del repositorio no encuentra handler dataItemDeleted ni wixData_onDataItemDeleted. La documentación oficial Wix ofrece el webhook REST Data Item Deleted, que se dispara cuando se elimina o trunca un elemento, pero no hay evidencia en esta conexión de que esté suscrito o de que conserve un histórico recuperable. La ausencia de esos marcadores no demuestra que no hubiera limpieza; solo que no aparece en ControlOperativo ni en los handlers del repo.
