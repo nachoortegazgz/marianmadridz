@@ -977,17 +977,23 @@ body {
   $("audit").onclick = async () => {
     try {
       const result = await call("AUDIT_LIST", { sessionId: state.session?.sessionId }, "AUDIT_LIST_RES");
-      const items = result.items || [];
-      openModal("Historial de operaciones", `
+      const items = Array.isArray(result?.items) ? result.items : [];
+      openModal("Auditoría de operaciones", `
         <div style="max-height:400px;overflow-y:auto;">
-          ${items.length ? items.map((i) => `
-            <div style="padding:8px 0;border-bottom:1px solid var(--line);">
-              <strong>${esc(i.operationType || "Operación")}</strong>
-              <span style="float:right;">${money(i.amount || 0)}</span><br>
-              <small>${esc(i.status || "Registrada")}</small>
-              <small>${esc(i.reason || "")}</small>
-            </div>
-          `).join("") : "<p>No hay operaciones.</p>"}
+          ${items.length ? items.map((item) => {
+            const occurredAt = item.occurredAt ? new Date(item.occurredAt) : null;
+            const dateLabel = occurredAt && !Number.isNaN(occurredAt.getTime())
+              ? occurredAt.toLocaleString("es-ES")
+              : "Fecha no disponible";
+            return `
+              <div style="padding:8px 0;border-bottom:1px solid var(--line);">
+                <strong>${esc(item.action || "Operación")}</strong><br>
+                <small>${esc(item.entityType || "TPV")} · ${esc(item.entityId || "")}</small><br>
+                <small>Operador: ${esc(item.actorId || "No identificado")}</small><br>
+                <small>${esc(dateLabel)}</small>
+              </div>
+            `;
+          }).join("") : "<p>No hay eventos de auditoría para esta sesión.</p>"}
         </div>
       `, async () => {});
     } catch (e) { error(e.message); }
