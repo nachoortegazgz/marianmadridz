@@ -3,7 +3,7 @@ import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import { TPV_IDENTITY_TYPES } from "backend/internalConfig";
-import { listTpvSandboxIdentities, getTpvSandboxIdentity } from "backend/tpv/tpvSandboxIdentities";
+import { listTpvIdentities, getTpvIdentity } from "backend/tpv/tpvSandboxIdentities";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
@@ -75,7 +75,7 @@ export const buscarClientesTPV = webMethod(
         try {
             const search = String(input.search || "").trim().slice(0, 100).toLowerCase();
             if (search.length < 2) throw new Error("TPV_CUSTOMER_SEARCH_TOO_SHORT");
-            const customers = await listTpvSandboxIdentities(TPV_IDENTITY_TYPES.CUSTOMER);
+            const customers = await listTpvIdentities(TPV_IDENTITY_TYPES.CUSTOMER);
             const matches = customers.filter((item) =>
                 item.displayName.toLowerCase().includes(search) ||
                 String(item.email || "").toLowerCase().includes(search)
@@ -111,7 +111,7 @@ export const obtenerReservasClienteTPV = webMethod(
         const traceId = makeTraceId("tpv-customer-bookings");
         await requireCajero(traceId);
         const identityId = String(input.identityId || "").trim();
-        const customer = await getTpvSandboxIdentity(identityId, TPV_IDENTITY_TYPES.CUSTOMER);
+        const customer = await getTpvIdentity(identityId, TPV_IDENTITY_TYPES.CUSTOMER);
         if (!customer) {
             return {
                 status: "ERROR",
@@ -174,7 +174,7 @@ export const obtenerStaff = webMethod(
         return {
             status: "SUCCESS",
             data: {
-                items: (await listTpvSandboxIdentities(TPV_IDENTITY_TYPES.STAFF)).map((staff) => ({
+                items: (await listTpvIdentities(TPV_IDENTITY_TYPES.STAFF)).map((staff) => ({
                     profesionalId: staff.identityId,
                     nombre: staff.displayName,
                     resourceId: staff.identityId,
