@@ -1,353 +1,114 @@
-# Plan maestro de ejecución — Marian Madrid Wix
-
-**Fecha de baseline:** 2026-11-23  
-**Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` — https://www.marianmadrid.es/  
-**Repositorio:** `nachoortegazgz/marianmadridz`  
-**HEAD main:** `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`  
-**Estado:** desarrollo/QA; release **NO-GO**.  
-**Auditoría Wix read-only:** [baseline 2026-11-21](audits/2026-11-21-wix-site-readonly-baseline.md).
-
-## 1. Objetivo final
-
-Conseguir que Marian Madrid sea un sitio web y sistema de negocio completo, funcional, seguro, mantenible y verificable, basado en contratos oficiales actuales de Wix y en la normativa vigente en España.
-
-La aceptación no se reduce a que GitHub CI pase. Deben funcionar conjuntamente:
-- Web pública y navegación.
-- Catálogo de servicios, reservas y disponibilidad.
-- Área de clientes y miembros.
-- Tienda, productos, inventario, promociones y tarjetas regalo.
-- Pagos, anticipos, cancelaciones y devoluciones.
-- Operativa interna: TPV, caja, cierres, personal y control laboral.
-- Contabilidad, fiscalidad y trazabilidad.
-- Automatizaciones, webhooks e integraciones externas.
-- Exportación documental Capa 1 → Capa 2 → Capa 3.
-- Seguridad, privacidad, accesibilidad, SEO, rendimiento y recuperación.
-
-Cada función debe tener un contrato, dueño de datos, autorización, consumidores identificados, pruebas y criterio de aceptación. Lo no requerido por negocio o normativa no se construye.
-
-## 2. Autoridad y principios
-
-Precedencia:
-1. Requisitos expresos de Marian Madrid y directrices vigentes del propietario.
-2. Normativa legal aplicable en España.
-3. Documentación oficial Wix y de las integraciones.
-4. SSOT de entorno, decisiones vigentes y dossiers consolidados.
-5. Código, issues e informes históricos como evidencia subordinada.
-
-Principios obligatorios:
-- Wix CMS es la SSOT transaccional.
-- SharePoint almacena evidencia; no gobierna la Capa 1.
-- Lógica, validación y autorización en backend/WebMethods.
-- Frontend presenta y orquesta; nunca decide permisos ni reglas de negocio.
-- Constantes en `internalConfig.js`; validación en `validation.js`.
-- Ledgers fiscales, contables, laborales, de caja y eventos de idempotencia append-only.
-- Correcciones mediante registros rectificativos trazables.
-- Wix Apps se operan exclusivamente mediante APIs oficiales soportadas.
-- Sandbox y Online se prueban por separado; una etiqueta de entorno no prueba el data plane.
-- No ejecutar pagos, comunicaciones, emisión fiscal ni otras acciones externas reales durante QA.
-- No declarar una prueba, sincronización o despliegue que no se haya ejecutado.
-
-## 3. Estado de partida verificado
-
-### 3.1 Repositorio
-- HEAD `main`: `e75aec5d28dcb8560fe75dbd04d5eae95957c3d8`.
-- Backend offline quality gates: SUCCESS, run [44867151597](https://github.com/nachoortegazgz/marianmadridz/actions/runs/44867151597).
-- Secret scanning: SUCCESS, run [44867151605](https://github.com/nachoortegazgz/marianmadridz/actions/runs/44867151605).
-- `main` no está protegida (`protected=false`).
-- PR #495 sigue abierta y no es mergeable; no incorporarla sin análisis de diff. PR #516 es el baseline funcional TPV vigente.
-- No se ha acreditado que el SHA de Git esté instalado en Wix Editor o publicado.
-
-### 3.2 Sitio y CMS
-- Wix Editor Classic, Velo habilitado, estado Wix Published.
-- El propietario clasifica el sitio como QA único, sin actividad real y con registros sintéticos. Published es un metadato, no una reclasificación funcional.
-- 42 colecciones CMS: 13 NATIVE y 29 WIX_APP.
-- Site Data Usage: LIVE 203 elementos / 266.227 bytes; SANDBOX 109 / 206.023 bytes.
-- CajaActual: 1 elemento en cada entorno.
-- MovimientosCaja: 2 en LIVE y 2 en SANDBOX.
-- TpvSandboxIdentities: 0 en ambos.
-- ControlOperativo: 58 LIVE / 0 SANDBOX.
-- CitasF2: 6/6; ServiciosCatalogo: 95/95; MapaStaff: 5/5.
-- El contenido de los elementos Sandbox no se ha inspeccionado mediante el CMS Editor; el Site Data Usage API solo informa de recuentos y bytes.
-
-### 3.3 Riesgos inmediatos
-- CajaActual LIVE ABIERTA con `snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS`, `traceId=0`, cash 320 EUR, expected 320 EUR, counted 0 EUR y difference 0 EUR. No satisface el marcador Sandbox.
-- Dos movimientos LIVE: 25 EUR CARD y 20 EUR CASH, `traceId=0`; no muestran el contrato sintético completo.
-- Tres compensaciones `FISCAL_LEDGER/PENDING_RECOVERY`, `attempts=0`.
-- Ocho automatizaciones ACTIVE; siete preinstaladas bloqueadas y una automatización de aplicación programada que delega en un agente LLM, pendiente de inspección de tarea/efectos.
-- Accessibility scan full-site terminó PARTIALLY_COMPLETED: 121 páginas descubiertas, 0 procesadas, 121 fallidas, todas con ANALYSIS_FAILED / “This page could not be checked”; 0 findings. URLs enumeradas bajo wixsite.com, causa pendiente. Un scan de https://www.marianmadrid.es/ devolvió SCAN_TARGET_NOT_AVAILABLE. Google Search Console Get Site Readiness: READY. Issues #520 (automatizaciones P0) y #521 (accesibilidad P1).
-- El código actual importa `wix-web-module` en 21 archivos; la documentación SDK actual muestra `@wix/web-methods`. La compatibilidad con Editor Classic debe verificarse antes de una migración masiva.
-- Los escritores de CajaActual necesitan una demostración única de serialización/CAS entre módulos; el helper normal de proyección usa lectura + actualización de elemento completo con reintentos.
-
-## 4. Estrategia de ejecución
-
-Se trabaja por dependencias y procesos completos, no por cantidad de commits. La secuencia es:
-
-1. Seguridad de efectos y baseline.
-2. Integridad de datos y contratos de escritura.
-3. Aislamiento Sandbox/Online.
-4. TPV E2E.
-5. Reservas, tienda y pagos.
-6. Fiscalidad, contabilidad y jornada laboral.
-7. Automatizaciones, webhooks y Capa 3.
-8. Web pública, accesibilidad, SEO y experiencia de usuario.
-9. Auditoría final, reset preproducción y release.
-
-Ninguna fase posterior puede compensar un gate anterior fallido.
-
-## 5. Fases, entregables y criterios de salida
-
-### F0 — Gobierno, baseline y contención de efectos
-
-**Objetivo:** saber qué está ejecutándose y evitar que las pruebas disparen acciones no controladas.
+# Plan maestro de ejecución — Marian Madrid
 
-**Bloqueo P0 #526:** el sitio está Published y 70 servicios visibles tienen reservas online habilitadas y ambos métodos de pago permitidos. Confirmar si el negocio quiere reservas públicas durante QA. Si no, aplicar contención reversible antes de probar.
+**Corte verificado:** 2026-11-23  
+**Repositorio:** nachoortegazgz/marianmadridz  
+**main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**Sitio Wix:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
+**Estado global:** desarrollo/QA; release **NO-GO**.
 
-Acciones:
-- Mantener un único SHA de referencia y comprobar CI.
-- Confirmar sincronización Git ↔ Wix Editor y read-back de archivos/widgets.
-- Revisar las ocho automatizaciones activas: siete preinstaladas con restricciones y una de aplicación LLM programada. Obtener definición de tarea, propietario, trigger, acciones y evidencia de ejecución. No ejecutar ni sortear locks.
-- Revisar Wix Bookings notifications, Forms, Members, Payments y automatizaciones que puedan enviar correos o notificaciones.
-- Establecer inventario de crons, webhooks, jobs, apps y credenciales con sus efectos.
-- Configurar protección de `main` y required checks mediante una capacidad administrativa soportada.
+Este documento es el plan operativo vigente. Los snapshots históricos se conservan en sus documentos de auditoría enlazados, pero no deben utilizarse como estado actual si contradicen este corte.
 
-**Salida:** efectos externos identificados y contenidos; baseline de Git y Wix reproducible; ninguna automatización desconocida puede dispararse durante un E2E.
+## 1. Objetivo y reglas de gobierno
 
-### F1 — Integridad CMS y recuperación
+Mantener el ecosistema funcional, seguro, verificable y alineado con contratos oficiales de Wix y normativa española. Mejorar el sistema existente con cambios mínimos y evidencia reproducible.
 
-**Objetivo:** conciliar los datos existentes y asegurar los escritores.
+- Wix CMS es la fuente de verdad transaccional.
+- SharePoint es repositorio de evidencia; no gobierna ni modifica Capa 1.
+- Lógica, validación y autorización residen en backend/WebMethods.
+- El frontend presenta y orquesta; no decide permisos ni reglas de negocio.
+- Constantes canónicas en internalConfig.js; validaciones compartidas en validation.js.
+- Ledgers fiscales, contables, laborales, de caja y eventos de idempotencia son append-only. Corregir mediante nuevos registros trazables, nunca borrando o sobrescribiendo históricos.
+- Sandbox y Online se verifican por separado; los nombres o flags del entorno no prueban aislamiento del data plane.
+- Ningún test offline equivale a Wix Runtime, CMS live, autorización efectiva ni aceptación legal.
+- No ejecutar pagos, reembolsos, facturación, comunicaciones externas ni escrituras económicas reales durante QA.
 
-**Bloqueo P0 #525:** `_updateCajaActual` es read-modify-full-update con reintentos, pero el helper no impone CAS/lock. Existen caminos de proyección preflight y de recuperación de webhook que no acreditan el mismo lock fiscal; TPV usa lock de sesión distinto. Unificar la serialización antes de E2E concurrente.
+## 2. Estado actual verificado
 
-Acciones:
-- Leer en paralelo LIVE y SANDBOX, con evidencia separada.
-- Inspeccionar el singleton CajaActual y los dos movimientos de cada data plane desde el contexto correcto.
-- Conciliar el smoke TPV íntegro y sus importes; no inferir ledger completo a partir de sumas.
-- Investigar las tres compensaciones pendientes, pedidos y reservas asociados; no reintentar hasta identificar la saga original.
-- Inventariar todos los productores de CajaActual, MovimientosCaja y ControlOperativo.
-- Definir el contrato de transición y el mecanismo de concurrencia compartido (CAS/lock) con versión, idempotencia, recuperación de timeout incierto y auditoría.
-- Probar lost update, reintento concurrente, lock expirado, colisión de clave, caída entre insert y proyección, y recuperación.
-- Conservar ledgers append-only; rectificar con nuevos eventos.
+### 2.1 Repositorio e integración
 
-**Salida:** datos conciliados, writers inventariados y pruebas de concurrencia ejecutadas en el entorno correcto. Ningún registro histórico se ha reescrito.
+- main HEAD: b20304598f7017ebc283d5821a38b59fe41b90e0.
+- PR #541 integrada en main mediante merge commit e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a.
+- PR #540 integrada después; merge commit actual b20304598f7017ebc283d5821a38b59fe41b90e0.
+- PR #537 fue preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
+- La rama main informa protected=false. No hay evidencia de required status checks ni protección efectiva.
+- PR #210 permanece abierta. La integración disponible no expone una acción autorizada para modificar branch protection/rulesets; requiere permisos de administración del repositorio.
 
-### F2 — Aislamiento de datos y TPV Sandbox
+### 2.2 CI del HEAD actual
 
-**Objetivo:** demostrar qué data plane usa cada invocación y completar una jornada sintética.
+- Backend offline quality gates: **FAIL**, run [45105031715](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031715).
+- Secret scanning: **SUCCESS**, run [45105031857](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45105031857).
+- El fallo localizado es una aserción obsoleta en src/backend/tests/tpv.native-reconciliation.contract.test.mjs: la prueba esperaba cuatro métodos de pago, pero el contrato centralizado contiene seis. El código obtiene métodos desde Object.values(TPV_PAYMENT_METHOD).
+- La corrección se prepara en la rama chore/phase1-repository-stabilization-20261123. No declarar CI verde hasta que los workflows de esa rama/PR terminen SUCCESS.
 
-Acciones:
-- Confirmar en Wix Editor que el entorno seleccionado es Sandbox.
-- Crear/validar un marcador único solo desde el CMS Sandbox, no mediante WebMethod ambiguo ni Management API.
-- Verificar que Preview puede leer el marcador y que Published/direct WebMethod falla antes de cualquier escritura.
-- Inspeccionar los dos movimientos Sandbox y la caja Sandbox; determinar si los elementos existen y qué contrato tienen.
-- Presembrar las seis identidades sintéticas `SANDBOX-CUSTOMER-01..03` y `SANDBOX-STAFF-01..03` con los campos exactos aprobados, únicamente desde el contexto Sandbox.
-- Ejecutar TPV: handshake, permisos, catálogo, apertura, venta sintética, pagos simulados, movimientos, devolución, control X, arqueo por medio y cierre Z.
-- Probar reintentos idempotentes y concurrencia.
-- Comparar LIVE antes/después y demostrar cero cambios.
-- Probar el cierre de sesión y bloqueo de operaciones posteriores.
+### 2.3 Contrato de pagos TPV
 
-**Salida:** jornada reproducible, ledger completo, importes conciliados, idempotencia/concurrencia validadas y LIVE sin modificaciones.
+El enum centralizado actual contiene EFECTIVO, TARJETA, BIZUM, BONO, TARJETA_REGALO y OTROS. El validador, la conciliación de cierre y las devoluciones utilizan ese enum; el widget ofrece esos seis medios.
 
-### F3 — Reservas y experiencia de cliente
+BONO y TARJETA_REGALO están soportados como medios sintéticos de registro y conciliación. No está acreditado el consumo de saldo, la integración transaccional con Wix Gift Cards, el pasivo contable del bono ni el canje de valor real. No habilitar pagos reales ni presentar esos medios como redención nativa.
 
-**Objetivo:** completar los flujos Bookings y área privada sin atribuir reservas al propietario por error.
+### 2.4 Wix y entorno
 
-**Bloqueo adicional #523:** los seis bookingId de CitasF2 existen en Bookings V2 y los seis están CANCELED nativamente, mientras CitasF2 muestra cinco CONFIRMED y uno PENDING. ControlOperativo contiene 12 BOOKING_CREATED, 10 BOOKING_CONFIRMED, 2 BOOKING_RESCHEDULED y 0 BOOKING_CANCELED; el handler está exportado y tiene pruebas offline, pero su delivery/runtime no está acreditado. Bookings V2 contiene 353 reservas: 352 CANCELED y una CONFIRMED del 18/09/2026 que no aparece en CitasF2. Resolver la proyección, eventos y reserva histórica sin mutar reservas nativas antes de E2E.
+Última lectura documental de Wix del 2026-11-23: Site ID 188bed94-177c-4bc9-a9f0-35080d874f3e, Editor Classic, Velo Enabled, EUR, Europe/Madrid, estado Draft. Apps observadas: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO.
 
-**Estado de catálogo y personal:** 94/94 serviceId del catálogo custom mapean con Bookings V2; 70 precios fijos y monedas, visibilidad y 3 staff/resource IDs coinciden con MapaStaff e internalConfig. Los 94 servicios tienen schedule, form, categoría y staff asignado. **Bloqueo #522:** 16 flags onlinePayment permiten ONLINE cuando Bookings V2 lo deshabilita; 8 flags inPersonPayment son más restrictivos que Wix. Resolver la política por servicio antes de checkout E2E.
+La lectura de contexto no acredita que el SHA de Git esté sincronizado con Wix Editor, ni que Preview/Runtime esté validado. No se han ejecutado escrituras CMS, pagos, reembolsos, emisión fiscal ni despliegue durante esta estabilización.
 
-Acciones:
-- Auditar servicios, horarios, personal, recursos, Time Slots V2, reglas de reserva y políticas de cancelación.
-- Validar visitante anónimo/autenticado y token de visitante; no reutilizar credenciales de propietario en el checkout del cliente.
-- Completar reserva simple y dual, cambios de horario, cancelación, recuperación y reintentos.
-- Confirmar sincronización entre Bookings nativo y CitasF2 sin duplicar la autoridad.
-- Validar login, registro, recuperación de contraseña, perfil y reservas del cliente.
-- Probar notificaciones solo en un entorno/canal neutralizado.
+## 3. Backlog vigente por prioridad
 
-**Salida:** booking lifecycle completo, atribución correcta, capacidad real no duplicada, estado de pago conciliado y cancelación/reprogramación recuperable.
+### P0 — integridad y contención
 
-### F4 — Tienda, catálogo, pagos y tarjetas regalo
+| Issue | Estado | Siguiente acción |
+|---|---|---|
+| [#525](https://github.com/nachoortegazgz/marianmadridz/issues/525) CajaActual | Abierta | Unificar serialización/CAS de todos los escritores; probar concurrencia, retry, idempotencia y recuperación en Sandbox Runtime. |
+| [#416](https://github.com/nachoortegazgz/marianmadridz/issues/416) Compensaciones y caja | Abierta | Conciliar las tres compensaciones pendientes con evidencia fuente; no reintentar ni alterar ledgers o CajaActual por inferencia. |
+| [#415](https://github.com/nachoortegazgz/marianmadridz/issues/415) Maestro fiscal CMS | Abierta | Verificar MapaStaff, esquema y consumidores; no recrear DatosFiscales ni CONFIG_SISTEMA sin evidencia/ADR. |
+| [#520](https://github.com/nachoortegazgz/marianmadridz/issues/520) Automatizaciones Wix | Abierta | Inspeccionar tarea e historial de la automatización APPLICATION y determinar contención soportada de las siete PREINSTALLED activas. No sortear bloqueos Wix. |
+| [#434](https://github.com/nachoortegazgz/marianmadridz/issues/434) Release readiness | Abierta | Mantener NO-GO hasta cerrar todos los gates P0/P1 y aceptación Runtime/legal. |
+| [#209](https://github.com/nachoortegazgz/marianmadridz/issues/209) Veri*Factu/SIF | Abierta según backlog previo; confirmar estado antes de cerrar | Completar diseño con asesoría/proveedor y normativa AEAT; mantener writers y remisión deshabilitados. |
 
-**Objetivo:** usar la autoridad nativa Wix sin inventario o checkout paralelo.
+### P1 — gobierno y aceptación funcional
 
-**Baseline Stores V3:** 24 productos físicos, todos visibles, EUR e IN_STOCK; 22 con una variante, uno con dos y uno con seis; precios 9,95–38,50 EUR. Es una lectura de catálogo, no una prueba de checkout, inventario por variante ni pagos.
+| Issue | Estado | Siguiente acción |
+|---|---|---|
+| [#210](https://github.com/nachoortegazgz/marianmadridz/issues/210) Protección de main | Abierta | Administrador debe exigir PR, checks requeridos, bloquear force-push y borrado. |
+| [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) Reservas online en QA | Cerrada el 2026-11-23 | La issue declara contención aplicada; mantener no reactivación hasta autorización y prueba negativa Runtime. |
+| TPV E2E | Pendiente | Validar identidad y roles, apertura, ventas, seis medios sintéticos, movimientos, devoluciones, X/Z, auditoría, retry y concurrencia en Wix Preview. |
+| Bookings/Payments E2E | Pendiente | Validar checkout, reservas, webhooks, cancelaciones y reembolsos exclusivamente en Sandbox y sin efectos externos reales. |
 
-Acciones:
-- Catalog V3 como autoridad de productos, variantes e inventario.
-- Validar catálogo, precios, stock, categorías, cesta, checkout, pedidos y devoluciones en modo de prueba soportado.
-- Validar Gift Cards mediante sus APIs nativas y permisos; no exponer códigos ni consultar saldos reales durante QA.
-- Revisar pagos y transacciones por estado; no confundir pedido APPROVED con pago liquidado.
-- Validar cancelación y reembolso con el contrato de eCommerce y el proveedor.
-- No crear pedidos reales ni enviar notificaciones.
+### P2 — integraciones y evidencia
 
-**Salida:** ciclo de venta reproducible en entorno de prueba, inventario nativo consistente y ausencia de cobros/efectos reales.
+- Capa 3: validar exportaciones, SharePoint y Power Automate como repositorio/proceso documental, sin gobernar Capa 1.
+- Automatizaciones y webhooks: verificar idempotencia, permisos, destinatarios, historial y efectos.
+- Documentación: mantener este plan y PROJECT-STATUS como resúmenes canónicos; conservar los informes especializados como evidencia.
 
-### F5 — Fiscalidad, contabilidad y jornada laboral
+### P3 — experiencia y optimización
 
-**Objetivo:** cerrar cumplimiento y trazabilidad antes de habilitar writers.
+Accesibilidad, SEO, rendimiento, experiencia móvil, limpieza de código y dependencias. No desplazar trabajo P0/P1 para adelantar estas mejoras.
 
-Acciones:
-- Confirmar esquema maestro fiscal y de personal contra CMS actual; no usar colecciones legacy prohibidas.
-- Revisar SIF/VERI*FACTU, facturas, rectificaciones, anticipos, IVA, hash chain, firma, remisión y conservación.
-- Revisar el libro contable, PGC, asientos, conciliación y reversión mediante asientos rectificativos.
-- Revisar fichajes, correcciones, jornada, pausas y autorización.
-- Mantener los writers fiscales, contables y laborales deshabilitados hasta superar pruebas y revisión legal.
-- Inspeccionar la automatización laboral LLM antes de decidir su activación/desactivación.
+## 4. Secuencia de ejecución
 
-**Salida:** aprobación técnica y jurídica documentada; registros append-only y recuperables; ningún proceso de producción activado por defecto.
+1. **Fase 1 — estabilización de repositorio:** corregir la prueba contractual desactualizada, obtener CI verde en PR, limpiar documentación obsoleta, revisar diff y resolver protección de main con administrador.
+2. **Fase 2 — integridad transaccional:** CajaActual (#525), compensaciones (#416) y maestro fiscal (#415).
+3. **Fase 3 — contención de efectos:** automatizaciones (#520), permisos y aislamiento de entorno.
+4. **Fase 4 — TPV E2E:** flujo completo de caja y conciliación en Wix Runtime.
+5. **Fase 5 — reservas y pagos:** pruebas de extremo a extremo en Sandbox.
+6. **Fase 6 — fiscalidad:** SIF/Veri*Factu, rectificaciones y evidencia profesional; no activar antes de aceptación.
+7. **Fase 7 — Capa 3:** exportación y archivo documental.
+8. **Fase 8 — QA global y release:** regresión, revisión de seguridad, sincronización Git-Wix, rollback y autorización expresa.
 
-### F6 — Automatizaciones, webhooks e integraciones
+## 5. Gates de salida de Fase 1
 
-**Objetivo:** procesos asíncronos idempotentes y Capa 3 fiable.
-
-Acciones:
-- Auditar todos los triggers/actions activos y sus permisos, locks y efectos.
-- Claims atómicos, deduplicación, replay, orden de eventos y recuperación de webhooks.
-- Verificar crons en Runtime y paridad con el código.
-- Conectar SharePoint como repositorio de evidencia y Power Automate como orquestación documental, sin autoridad transaccional.
-- Exportar snapshots con source ID, versión, hash, fecha, resultado y trazabilidad.
-- Reintentos con backoff y DLQ/compensación según contrato.
-- No activar automatizaciones de correo, marketing o mensajería sin aprobación específica.
-
-**Salida:** integraciones reproducibles, sin duplicados, con auditoría y recuperación; SharePoint no modifica Capa 1.
-
-### F7 — Web pública y calidad de experiencia
-
-**Objetivo:** que el sitio público sea usable, coherente y accesible.
-
-Cobertura:
-- Home, navegación, servicios y fichas, reservas, boutique, promociones, gift cards, blog, miembros, contacto y páginas legales.
-- Diseño responsive y comportamiento móvil/tablet/desktop.
-- Formularios, validación, mensajes de error, estados de carga y accesibilidad por teclado/lector.
-- WCAG según resultados de Accessibility Scans API y verificación manual de los casos que la herramienta no cubre.
-- SEO técnico: títulos, descripciones, indexación, sitemap, canonical, redirects, structured data y alt text.
-- Rendimiento: Core Web Vitals, imágenes, fuentes, JS y llamadas de datos.
-- Privacidad, cookies, condiciones de reserva, precios y textos comerciales coherentes.
-- Comprobación de enlaces, páginas rotas y rutas de conversión.
-
-**Salida:** páginas críticas verificadas en desktop y móvil, accesibilidad revisada, SEO técnico correcto y textos comerciales/legalmente coherentes.
-
-### F8 — Release, reset preproducción y operación
-
-**Objetivo:** pasar de QA a uso real de forma reversible.
-
-Acciones:
-- Regresión completa sobre SHA final.
-- Auditoría de seguridad, permisos, secretos, dependencias y exposición de datos.
-- Reset preproducción de datos sintéticos con backup/evidencia, allowlist, aprobación, ejecución y read-back.
-- Restaurar append-only, permisos mínimos y policies finales.
-- Verificar configuración real de pagos, fiscalidad, emails, SMS y automatizaciones.
-- Confirmar DNS, dominio, SEO, cookies, privacidad, condiciones y soporte.
-- Validar backup/restore y rollback.
-- Confirmar el SHA instalado, publicación autorizada y pruebas post-release.
-
-**Salida:** aceptación firmada, reset verificado, sin datos de prueba residuales ni riesgos críticos abiertos. El despliegue se autoriza como decisión separada.
-
-## 6. Matriz de prioridades y seguimiento
-
-| Prioridad | Bloque | Issues de referencia | Gate |
-|---|---|---|---|
-| P0 | Automatizaciones/efectos externos | #520, SSOT QA; auditoría Automations | F0 |
-| P0 | Exposición pública de reservas | #526 | F0 |
-| P0 | Caja, ledger y compensaciones | #416, #525, H-01, #434, #441 | F1 |
-| P0 | Fiscalidad y cumplimiento | #209, #415 | F5 |
-| P1 | TPV Sandbox | #435, #495 (revisar, no integrar ciegamente) | F2 |
-| P1 | Webhooks e idempotencia | #290, #159, #164 | F1/F6 |
-| P1 | Permisos CMS | #261 | F1/F3 |
-| P1 | Bookings y pagos | #211, #162, #188 | F3/F4 |
-| P2 | Automatización documental | #173 | F6 |
-| P2 | Gobierno de Git | #210 | F0 |
-| P3 | Accesibilidad, SEO y rendimiento | Accessibility scan actual | F7 |
-| Release | Aceptación y reset | #434 | F8 |
-
-Los issues son unidades de seguimiento, no una autorización para fusionar ramas ni ejecutar operaciones. Cada issue debe actualizarse con la evidencia del gate correspondiente.
-
-## 7. Reglas de implementación
-
-Antes de modificar un módulo:
-1. Identificar consumidores y contratos.
-2. Revisar esquemas y permisos CMS.
-3. Consultar la documentación oficial vigente.
-4. Definir el comportamiento esperado y pruebas de aceptación.
-5. Implementar el cambio mínimo.
-6. Ejecutar unit, integración y regresión proporcional al riesgo.
-7. Revisar diff y rollback.
-8. Actualizar documentación y CI.
-9. Validar en Wix Local Editor/Preview cuando aplique.
-
-No migrar masivamente `wix-web-module` a `@wix/web-methods` sin una prueba de compatibilidad en Wix Editor Classic. La documentación SDK actual recomienda `@wix/web-methods` para Web Methods en archivos `.web.js`; confirmar la compatibilidad exacta del runtime del sitio antes de cambiar imports y permisos.
-
-## 8. Definición de terminado
-
-Una funcionalidad se cierra solo si:
-- El requisito de negocio está cubierto.
-- Respeta SSOT y autoridad de datos.
-- Autorización backend efectiva.
-- Contrato Wix oficial respetado.
-- Persistencia, idempotencia y concurrencia verificadas cuando aplique.
-- Pruebas ejecutadas y resultado documentado.
-- Sin efectos externos no autorizados.
-- Diff revisado, CI verde y rollback disponible.
-- Documentación actualizada.
-
-Un módulo no se declara terminado por compilar, por pasar mocks o por tener una interfaz operativa.
-
-## 9. Decisión operativa inmediata
-
-El primer objetivo no es añadir funcionalidades al TPV ni rediseñar la web. Es cerrar F0 y F1:
-1. Inspeccionar y contener las ocho automatizaciones activas, en especial la tarea LLM programada.
-2. Inspeccionar en Editor los datos Sandbox actuales.
-3. Conciliar caja, movimientos y compensaciones.
-4. Demostrar serialización compartida de los escritores CajaActual.
-5. Recién entonces habilitar el TPV E2E en Preview.
-
-Hasta completar estas condiciones, no ejecutar pruebas persistentes que puedan disparar automatizaciones ni publicar.
-
-## 10. Documentación oficial de referencia
-
-- [Wix CMS — Sandbox y colecciones Online](https://support.wix.com/es/article/cms-acerca-de-sandbox-y-las-colecciones-online)
-- [Wix Site Data Usage API](https://dev.wix.com/docs/api-reference/business-solutions/cms/operations/site-data-usage/introduction)
-- [Wix Web Methods](https://dev.wix.com/docs/sdk/core-modules/web-methods/introduction)
-- [Wix webMethod()](https://dev.wix.com/docs/sdk/core-modules/web-methods/web-method)
-- [Wix Bookings — visitor booking flow](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/book-an-appointment)
-- [Wix Automations V2](https://dev.wix.com/docs/api-reference/business-management/automations/automations/automations-v2/introduction)
-- [Wix Accessibility Scans API](https://dev.wix.com/docs/api-reference/site/accessibility/introduction)
-
-### Estado de contenciones P0 — 2026-11-22
-- #526: contención nativa de Bookings aplicada y verificada en 94/94 servicios; falta prueba negativa runtime y revisión de rutas custom.
-- #520: automatización LLM programada INACTIVE (revision 5); siete PREINSTALLED siguen ACTIVE por disableStatusChange=true; no se sortean restricciones Wix.
-- #525: código modificado en PR, pendiente de CI/merge y runtime.
-- #416: sin cambios de datos; las tres compensaciones PENDING_RECOVERY y la caja LIVE permanecen intactas hasta reconciliar evidencia de origen.
-- Release sigue NO-GO.
-### #416 — nueva evidencia de conciliación (22/11)
-Pedidos Wix: #10033 FULLY_REFUNDED por 18,15 EUR (refund SUCCEEDED) y #10032 PAID por 92,45 EUR (método Cash). Las tres compensaciones se correlacionan por orderId/refundId/transactionId; sin embargo, las dos filas actuales de MovimientosCaja no contienen esos orderId/refundId y no forman cadena hash fiscal. Mantener P0 abierto; no reintentar ni crear rectificaciones sin evidencia externa y fiscal.
-### Estado de #525 tras merge — 2026-11-22
-PR #528 integrada en main (7461dd5998c87379680128117194b0cb40dc6c79). CI post-merge backend offline y secret scanning SUCCESS. La prueba offline concurrente y los contratos de lock han pasado. El issue permanece abierto hasta verificar el código sincronizado en Wix Editor y concurrencia en Runtime Sandbox.
-### Baseline Git definitivo — 2026-11-22
-main HEAD: 544f3a5a984b79a6cf7c25208722136c7bd99111 (docs-only PR #529). Último commit funcional: 7461dd5998c87379680128117194b0cb40dc6c79 (PR #528). CI post-merge en ambos: backend offline y secret scanning SUCCESS. Runtime Wix sigue pendiente.
-
-### TPV — Bloque A (22/11/2026)
-PR #533 contiene la primera entrega controlada de neutralización del dominio TPV y endurecimiento append-only de `MovimientosCaja`. Fue fusionada en `main` el 2026-11-22 mediante merge commit `e19bf9c30227f5401d54e8187f8af5503a3bea4d`. CI de la revisión previa a merge (commit `73f23c34287031dc90b73b2f077d5ea1abd1b45c`): Layer 1 344/344, Layer 2 270/270, suite 727/727 (77 suites), SDK contracts, ESLint y secret scanning SUCCESS. No se ha acreditado CI post-merge del merge commit.
-
-Neutralización de nuevos IDs implementada en PR #533: IDs TPV neutrales para identidades, ventas/devoluciones, tickets X/Z, ledger, trazas y actor; fixtures y validadores adaptados. Se conserva lectura compatible de IDs/trazas históricos y se mantienen intactos los marcadores de entorno/origen y los valores persistidos de locks. No se renombraron registros CMS. Bloque A sigue abierto por idempotencia frontend/backend, migración/lectura histórica y E2E Preview/Runtime con prueba negativa Published. La fusión en GitHub no supone despliegue ni validación Wix Runtime. No publicar ni activar pagos nativos.
-
-
----
-
-## Addendum vigente — reconciliación del backlog 2026-11-23
-
-La matriz de issues anterior queda supersedida por [Reconciliación del backlog 2026-11-23](qa/BACKLOG-RECONCILIATION-2026-11-23.md). Ese documento es la lista activa de tareas: clasifica las 25 issues abiertas, separa implementación integrada de aceptación runtime, identifica tareas superseded y define el orden de ejecución.
-
-**Baseline:** `main` = `30a0c7a7cfb5629d939391c029d00db57bbe7ee5`. CI post-merge SUCCESS: run 45082870340 (Layer 1/2, regresión offline, contratos SDK y lint) y run 45082870366 (Gitleaks full-history). No acredita Wix Runtime, Editor sync ni E2E.
-
-**Retirado de implementación activa:** migración TPV QA collections (#435), retirada de inventario custom (#237) y reimplementación de código ya integrado en #159, #164, #290, #291, #441 y #525. Sus validaciones runtime residuales permanecen en la matriz. PR #495 excluida por instrucción expresa; no modificarla.
-
-**Bloqueos prioritarios vigentes:** #416 compensaciones/ledger; #520 automatizaciones preinstaladas; #526 prueba negativa de rutas de reservas; #525 concurrencia Runtime; #209/#415 fiscalidad; #434 release gate. Mantener **NO-GO** hasta cerrar los criterios verificables del dossier.
-
-
-### Addendum TPV — conciliación funcional y Wix nativo (2026-11-23)
-
-La aceptación funcional de TPV queda ampliada mediante PR #540 (draft, apilada sobre PR #538) y por [matriz de conciliación TPV/Wix nativo](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs`. La base técnica de esta matriz es el candidato PR #538; las adaptaciones de contrato del controlador (apertura `openingCash` y conversión `lineItems/payments` a `lineas/pagos`) quedan cubiertas por pruebas estáticas.
-
-Hallazgos que bloquean declarar TPV funcional: el widget envía `profesionalId`, pero backend no valida que coincida con `operatorResourceId` del miembro Wix autenticado; las ventas son sintéticas y no generan pedido/recibo/factura nativa; solo se admiten EFECTIVO/TARJETA/BIZUM/OTROS; auditoría sin `sessionId` uniforme ni eventos de lectura/exportación/impresión/denegaciones; falta vínculo explícito X→Z; Veri*Factu permanece deshabilitado y no hay QR oficial. Los movimientos de caja son exclusivamente efectivo.
-
-**NO-GO:** completar gaps de identidad y auditoría, aprobar matriz de roles, y ejecutar toda la matriz en Wix Sandbox/Preview con prueba negativa Published. Esta aceptación no autoriza writes nativos, pagos reales ni emisión fiscal.
+- La prueba TPV comprueba el enum canónico, no una lista histórica duplicada.
+- CI completa y secret scanning SUCCESS sobre el commit de la PR.
+- Diff limitado a test y documentación; sin cambios de runtime ni CMS.
+- MASTER-EXECUTION-PLAN, PROJECT-STATUS y documentación TPV coherentes con main y PR actual.
+- Protección de main y required checks habilitados por un administrador; hasta entonces Fase 1 queda parcialmente bloqueada por #210.
+- PR revisada y mergeada solo después de todos los checks verdes. No hacer push directo ni mergear una rama con CI fallida.
+
+## 6. Documentos operativos
+
+- Estado resumido: PROJECT-STATUS.md.
+- Backlog actual: qa/BACKLOG-RECONCILIATION-2026-11-23.md.
+- Aceptación TPV: qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md.
+- Relevo TPV: qa/2026-11-23-tpv-session-handoff.md.
+- Auditoría Wix TPV: qa/2026-11-23-tpv-wix-audit-validation.md.
+- Contrato e implementación: ../src/backend/tpv/README.md.
