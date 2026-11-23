@@ -29,7 +29,7 @@ import {
     releaseFiscalLedgerLock,
 } from "backend/fiscalLedgerLock";
 
-const ALLOWED_SANDBOX_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
+const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
 async function withCajaActualProjectionLock(traceId, operation) {
@@ -87,7 +87,8 @@ async function withSandboxScopedLock({
             version: 0,
             payload: {
                 [scopeField]: cleanScopeId,
-                environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
                 acquiredAt: new Date(now),
             },
         };
@@ -128,7 +129,8 @@ async function withSandboxScopedLock({
                 action: "SET_FIELD",
                 value: {
                     [scopeField]: cleanScopeId,
-                    environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
+                    sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
                     acquiredAt: new Date(now),
                 },
             },
@@ -163,7 +165,8 @@ async function withSandboxScopedLock({
                 action: "SET_FIELD",
                 value: {
                     [scopeField]: cleanScopeId,
-                    environment: TPV_RUNTIME_POLICY.ENVIRONMENT,
+                    sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
                     releasedAt: new Date(),
                 },
             },
@@ -247,13 +250,13 @@ function stripVolatile(value) {
 
 const LEGACY_TPV_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
 const TPV_CASH_REGISTER_SOURCE = "TPV_SYNTHETIC";
-const SANDBOX_GENESIS_HASH = "0".repeat(64);
+const TPV_GENESIS_HASH = "0".repeat(64);
 
-const SANDBOX_RUN_ID = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
-const MAX_SANDBOX_PROJECTION_EVENTS = 1000;
+const LEGACY_RUN_ID = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+const MAX_TPV_PROJECTION_EVENTS = 1000;
 
 function _assertLogicalCollection(collection) {
-    if (!ALLOWED_SANDBOX_COLLECTIONS.has(collection)) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    if (!ALLOWED_TPV_COLLECTIONS.has(collection)) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
 }
 
 function _fingerprintOf(record) {
@@ -295,8 +298,8 @@ function _isRecognizedSyntheticLedgerItem(item) {
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
     const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
-        envelope.sandboxRunId === SANDBOX_RUN_ID &&
-        String(item.traceId || "").startsWith("TPV:" + SANDBOX_RUN_ID + ":");
+        envelope.sandboxRunId === LEGACY_RUN_ID &&
+        String(item.traceId || "").startsWith("TPV:" + LEGACY_RUN_ID + ":");
     return validCommon && (current || legacy);
 }
 
@@ -380,7 +383,7 @@ function _sessionFromCaja(caja) {
         sandboxState?.externalSideEffects === false &&
         Boolean(sessionId);
     const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
-        caja?.traceId === SANDBOX_RUN_ID && Boolean(sessionId);
+        caja?.traceId === LEGACY_RUN_ID && Boolean(sessionId);
     if (!explicitSynthetic && !legacySynthetic) return null;
     if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
@@ -422,7 +425,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 preflightSandboxState.externalSideEffects === false &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
             const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
-                caja.traceId === SANDBOX_RUN_ID;
+                caja.traceId === LEGACY_RUN_ID;
             if (!explicitSynthetic && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             }
@@ -434,7 +437,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 : {};
             const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
-            if (eventId && appliedIds.length >= MAX_SANDBOX_PROJECTION_EVENTS) {
+            if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
                 throw new Error("TPV_PROJECTION_IDEMPOTENCY_LIMIT");
             }
             const now = new Date();
@@ -640,7 +643,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         sequenceNumber: 0,
         numSerieFactura: "NO-FISCAL-" + transactionId.slice(-20),
         transactionId,
-        previousRecordHash: SANDBOX_GENESIS_HASH,
+        previousRecordHash: TPV_GENESIS_HASH,
         recordTimestamp: timestamp,
         schemaVersion: 2,
         traceId,
