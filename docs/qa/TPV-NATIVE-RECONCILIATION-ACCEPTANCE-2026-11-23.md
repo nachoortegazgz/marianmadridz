@@ -1,7 +1,7 @@
 # TPV — matriz de aceptación funcional y conciliación con Wix nativo
 
 **Fecha:** 2026-11-23  
-**Base de revisión:** candidato PR #538, SHA `4d26a53c3c08a4fbb1425e3d6d4da92040820a61` (no fusionado)  
+**Base vigente:** main `b20304598f7017ebc283d5821a38b59fe41b90e0` (PR #541 y PR #540 integradas)  
 **Alcance:** `#htmlTPV.txt`, `src/public/tpvPageController.js`, WebMethods TPV, seguridad, persistencia y pruebas de contrato.  
 **Naturaleza:** auditoría estática y definición de pruebas. No equivale a una prueba Wix Runtime ni autoriza pagos, facturación o despliegue.
 
@@ -73,7 +73,7 @@
 - Métodos admitidos hoy por backend: `EFECTIVO`, `TARJETA`, `BIZUM`, `OTROS`.
 - El resumen calcula por separado efectivo, tarjeta, Bizum y otros; efectivo esperado = apertura + efectivo neto + entradas - salidas.
 
-**NO IMPLEMENTADO:** `BONO` y `TARJETA_REGALO` no forman parte del enum ni de la conciliación actual. No deben añadirse solo en el HTML: requieren contrato, persistencia, devoluciones, informes, pruebas y tratamiento de responsabilidad/consumo del bono o saldo regalo.
+**VERIFICADO ESTÁTICAMENTE — métodos sintéticos:** `BONO` y `TARJETA_REGALO` forman parte de `TPV_PAYMENT_METHOD`; el validador acepta el enum centralizado, la conciliación separa ambos importes y las devoluciones conservan las asignaciones por medio original. Esto solo acredita su registro como medio de pago sintético. **NO IMPLEMENTADO:** consumo de saldo, integración transaccional con Wix Gift Cards, pasivo contable del bono, autorización/captura de valor real ni conciliación con un proveedor. No interpretar estos medios como canje real.
 
 **Aceptación pendiente:** venta mixta, efectivo con cambio, rechazo de sobrepago, devolución parcial por cada método y conciliación exacta contra el ledger. Un medio no confirmado no debe incrementar el importe cobrado.
 
@@ -95,7 +95,7 @@
 - Se ejecuta bajo lock y no cierra la sesión.
 
 **PARCIAL:**
-- El resumen separa los cuatro métodos actuales y calcula efectivo esperado.
+- El resumen separa los seis métodos sintéticos canónicos (`EFECTIVO`, `TARJETA`, `BIZUM`, `BONO`, `TARJETA_REGALO`, `OTROS`) y calcula efectivo esperado. La enumeración procede de `internalConfig.js`; no debe duplicarse como lista divergente en validadores.
 - No recoge efectivo contado ni diferencia; tampoco incluye una referencia explícita a un arqueo opcional.
 - El documento X no contiene por sí mismo el actor; el actor aparece en la auditoría.
 - No se demuestra vínculo desde Z al ID del último X.
@@ -187,4 +187,4 @@ Estas pruebas son contractuales/estáticas; no demuestran la ejecución de Wix R
 7. Ejecutar las pruebas Runtime de la matriz en Sandbox real; prueba negativa Published sin efectos externos.
 8. Verificar SHA instalado en Wix Editor, diff, CI, rollback y permisos antes de autorizar despliegue.
 
-**Estado de aceptación:** **NO-GO**. La suite estática añadida es un gate adicional, no una certificación funcional. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
+**Estado de aceptación:** **NO-GO**. El CI actual de main detectó una aserción obsoleta: la prueba esperaba cuatro métodos aunque el enum centralizado contiene seis. La prueba se actualiza para comprobar el enum canónico y su conciliación; el resultado debe confirmarse con un nuevo workflow antes de considerar estable el repositorio. La suite estática añadida es un gate adicional, no una certificación funcional. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
