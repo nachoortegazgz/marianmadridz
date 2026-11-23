@@ -496,15 +496,20 @@ body {
     $("cashLabel").textContent = isOpen
       ? "Caja abierta · operación sintética no conciliada"
       : "Caja cerrada";
-    $("openCash").disabled = isOpen;
+    $("openCash").disabled = isOpen || state.busy;
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+      $(id).disabled = !isOpen || state.busy;
+    });
   }
 
   /* ---------- Bloqueo de operaciones ---------- */
   function setBusy(value) {
     state.busy = value;
-    ["openCash", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
+    $("openCash").disabled = value || isOpen;
+    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
       const el = $(id);
-      if (el) el.disabled = value;
+      if (el) el.disabled = value || !isOpen;
     });
   }
 
@@ -883,7 +888,8 @@ body {
         differenceReason,
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
-      toast("Cierre Z registrado.");
+      renderSession(null);
+      toast("Cierre Z registrado; sesión cerrada.");
     });
   };
 
