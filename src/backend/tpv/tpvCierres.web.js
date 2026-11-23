@@ -102,7 +102,28 @@ export const generarControlX = webMethod(
                 traceId,
                 payload: { sessionId: session.sessionId },
             });
-            return { status: "SUCCESS", data: { reportId: item.reportId, totals, replayed, closesSession: false, isSynthetic: true }, error: null, traceId };
+            return {
+                status: "SUCCESS",
+                data: {
+                    reportId: item.reportId,
+                    sessionId: session.sessionId,
+                    totals,
+                    operatorId: operator.operatorId,
+                    actorId: operator.actorId,
+                    operationalStatus: "ABIERTA",
+                    integrationStatus: "NO_ENVIADO",
+                    simulationStatus: "SYNTHETIC",
+                    paymentStatus: "NOT_APPLICABLE",
+                    now: new Date().toISOString(),
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    replayed,
+                    closesSession: false,
+                    isSynthetic: true,
+                    realPayment: false,
+                },
+                error: null,
+                traceId,
+            };
             });
         } catch (error) {
             return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
