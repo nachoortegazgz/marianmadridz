@@ -302,7 +302,7 @@ body {
 
         <div class="totals">
           <div class="row"><span>Subtotal</span><span id="subtotal">0,00 €</span></div>
-          <div class="row"><span>Impuestos (pendientes de configuración)</span><span id="taxes">0,00 €</span></div>
+          <div class="row"><span>Impuestos (reglas Wix pendientes)</span><input id="tax" type="text" value="0,00 €" disabled aria-label="Impuestos (reglas Wix pendientes)" /></div>
           <div class="row total"><span>Total</span><span id="total">0,00 €</span></div>
         </div>
       </section>
@@ -435,11 +435,17 @@ body {
   /* ---------- Envío al controlador (postMessage) ---------- */
   function call(type, payload, responseType) {
     return new Promise((resolve, reject) => {
-      const id = "req-" + Math.random().toString(36).slice(2);
+      const id = "req-" + crypto.randomUUID().replace(/-/g, "");
+      let timer = null;
+      const cleanup = () => {
+        window.removeEventListener("message", handler);
+        if (timer) clearTimeout(timer);
+      };
       const handler = (event) => {
+        if (event.source !== window.parent) return;
         const data = event.data || {};
         if (data.type === responseType && (data.messageId === id || data.requestId === id)) {
-          window.removeEventListener("message", handler);
+          cleanup();
           const response = data.payload || {};
           if (data.error || response.status === "ERROR") {
             reject(new Error(response.error?.code || data.error || "TPV_OPERATION_FAILED"));
@@ -449,11 +455,11 @@ body {
         }
       };
       window.addEventListener("message", handler);
-      window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
-      setTimeout(() => {
-        window.removeEventListener("message", handler);
+      timer = setTimeout(() => {
+        cleanup();
         reject(new Error("TPV_TIMEOUT"));
       }, 15000);
+      window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
     });
   }
 
@@ -653,7 +659,7 @@ body {
     }
     const subtotal = state.items.reduce((s, it) => s + it.price * it.qty, 0);
     $("subtotal").textContent = money(subtotal);
-    $("taxes").textContent = money(0);
+    $("tax").value = money(0);
     $("total").textContent = money(subtotal);
     renderPaymentSummary();
   }
@@ -904,6 +910,7 @@ body {
 
   /* ---------- Handshake y contexto del controlador Wix ---------- */
   window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
     const data = event.data || {};
     if (data.type === "MM_CONTEXT") {
       const context = data.payload || {};
