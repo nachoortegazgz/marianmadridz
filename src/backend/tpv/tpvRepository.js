@@ -13,6 +13,7 @@ import { logger } from "backend/logger";
 import {
 
     assertTpvCajaIntegrity,
+    getTpvRuntimeState,
     normalizeIdempotencyKey,
     stableSerialize,
     makeSyntheticPayload,
@@ -372,7 +373,7 @@ async function _ensureCajaActual() {
     return caja;
 }
 
-function _isCurrentV1Caja(caja, state = caja?.conceptOperations?.tpvSandbox) {
+function _isCurrentV1Caja(caja, state = getTpvRuntimeState(caja)) {
     const traceId = String(caja?.traceId || "");
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
     const validTrace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
@@ -389,7 +390,7 @@ function _isCurrentV1Caja(caja, state = caja?.conceptOperations?.tpvSandbox) {
         (validFingerprint || validTrace);
 }
 
-function _isLegacyCaja(caja, state = caja?.conceptOperations?.tpvSandbox, { requireSession = true } = {}) {
+function _isLegacyCaja(caja, state = getTpvRuntimeState(caja), { requireSession = true } = {}) {
     const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     return [
         TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
@@ -401,7 +402,7 @@ function _isLegacyCaja(caja, state = caja?.conceptOperations?.tpvSandbox, { requ
 }
 
 function _sessionFromCaja(caja) {
-    const sourceState = caja?.conceptOperations?.tpvSandbox;
+    const sourceState = getTpvRuntimeState(caja);
     const sessionId = String(sourceState?.sessionId || "").trim();
     const explicitSyntheticV2 = caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
@@ -410,6 +411,8 @@ function _sessionFromCaja(caja) {
         sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(sourceState?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         sourceState?.externalSideEffects === false &&
+        (sourceState?.processingMode === undefined || sourceState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+        (sourceState?.reconciliationStatus === undefined || sourceState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
         /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
     const currentV1 = _isCurrentV1Caja(caja, sourceState);
@@ -451,26 +454,26 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             const caja = await _getCajaActual();
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             assertTpvCajaIntegrity(caja);
-            const preflightSandboxState = caja.conceptOperations?.tpvSandbox || {};
+            const preflightRuntimeState = getTpvRuntimeState(caja);
             const explicitSyntheticV2 = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
-                preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-                preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-                preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                Number(preflightSandboxState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-                preflightSandboxState.externalSideEffects === false &&
-                /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
-                Boolean(String(preflightSandboxState.sessionId || "").trim());
-            const currentV1 = _isCurrentV1Caja(caja, preflightSandboxState);
-            const legacySynthetic = _isLegacyCaja(caja, preflightSandboxState);
+                preflightRuntimeState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                preflightRuntimeState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                preflightRuntimeState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                Number(preflightRuntimeState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+                preflightRuntimeState.externalSideEffects === false &&
+                (preflightRuntimeState.processingMode === undefined || preflightRuntimeState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+                (preflightRuntimeState.reconciliationStatus === undefined || preflightRuntimeState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
+                /^[a-f0-9]{64}$/i.test(String(preflightRuntimeState.eventHash || "")) &&
+                Boolean(String(preflightRuntimeState.sessionId || "").trim());
+            const currentV1 = _isCurrentV1Caja(caja, preflightRuntimeState);
+            const legacySynthetic = _isLegacyCaja(caja, preflightRuntimeState);
             if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             }
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
                 : {};
-            const sourceState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
-                ? { ...conceptOperations.tpvSandbox }
-                : {};
+            const sourceState = { ...getTpvRuntimeState({ conceptOperations }) };
             const appliedIds = Array.isArray(sourceState.appliedMovementIds) ? sourceState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
             if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
@@ -525,12 +528,15 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
             sourceState.externalSideEffects = false;
             sourceState.schemaVersion = TPV_RUNTIME_POLICY.SCHEMA_VERSION;
-            sourceState.reconciliationStatus = "NOT_RECONCILED";
+            sourceState.processingMode = TPV_RUNTIME_POLICY.PROCESSING_MODE;
+            sourceState.reconciliationStatus = TPV_RUNTIME_POLICY.RECONCILIATION_STATUS;
+            sourceState.allowNativePayments = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments;
+            sourceState.allowNativeRefunds = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds;
             sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
             sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
             sourceState.lastProjectedAt = now;
-            conceptOperations.tpvSandbox = sourceState;
+            conceptOperations.tpvRuntime = sourceState;
             next.conceptOperations = conceptOperations;
             await assertFiscalLedgerLock(lock);
             await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
@@ -580,13 +586,16 @@ function _sessionCajaPatch(caja, record, eventHash) {
         lastOperationStatus: "SIMULATED",
         conceptOperations: {
             ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
-            tpvSandbox: {
+            tpvRuntime: {
                 sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 siteId: TPV_RUNTIME_POLICY.SITE_ID,
                 ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
                 schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
                 externalSideEffects: false,
-                reconciliationStatus: "NOT_RECONCILED",
+                processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+                reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+                allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+                allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
                 eventHash: String(eventHash || ""),
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
@@ -635,7 +644,7 @@ async function findByIdempotencyKey(collection, key) {
 function assertSameRequest(existing, fingerprint) {
     const existingFingerprint = existing?.payloadFiscal?.requestFingerprint ||
         existing?.payload?.requestFingerprint ||
-        existing?.conceptOperations?.tpvSandbox?.requestFingerprint;
+        getTpvRuntimeState(existing).requestFingerprint;
     if (existingFingerprint !== fingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
     return { item: existing, replayed: true };
 }
@@ -655,12 +664,15 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+        processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+        reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+        allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+        allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
         sessionId: sessionId || null,
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
         schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-        reconciliationStatus: "NOT_RECONCILED",
         ledgerRecord: record,
         isSynthetic: true,
         realPayment: false,

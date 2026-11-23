@@ -24,8 +24,8 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 |---|---|---|
 | Servicios | Wix Bookings | Lectura de catálogo; sin escritores de reservas |
 | Productos y variantes | Wix Stores Catalog V3 | Lectura de catálogo; sin cambios de stock ni pedidos |
-| Clientes | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `CUSTOMER`, sin CRM/Members ni datos personales reales |
-| Profesionales | `TpvSandboxIdentities` (CMS propio) | Solo identidades sintéticas `STAFF`; sin IDs ni consultas de Bookings Staff |
+| Clientes | Wix CRM Contacts V5 | Búsqueda/selección por ID nativo de Contact; el campo legado del widget `customerIdentityId` conserva el nombre por compatibilidad, pero su valor es `Contact._id` |
+| Profesionales | Wix Bookings Staff + `MapaStaff` | Resolución/autorización por `resourceId`; el mapeo CMS debe corresponder con el recurso nativo de Bookings |
 | Reservas | Wix Bookings | Consulta y vinculación deshabilitadas en QA |
 | Pagos, pedidos y transacciones | Wix eCommerce / proveedor | Simulación sintética; sin checkout, autorización, captura, pedido ni reembolso real |
 | Tarjetas regalo | Wix Gift Cards | Consulta de saldo real, emisión, canje y reembolso deshabilitados en QA |
@@ -34,17 +34,29 @@ El repositorio `nachoortegazgz/marianmadridz` contiene `wix.config.json` con el 
 
 Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS propio conserva exclusivamente el estado transaccional sintético de TPV. No se copian contactos, miembros, reservas, tarjetas regalo, pedidos ni pagos reales.
 
+### Identidades nativas y compatibilidad de contratos — 2026-11-23
+
+- El directorio de clientes consulta Wix CRM Contacts V5. No se crea ni consulta una colección de identidades TPV propia.
+- El nombre de propiedad `customerIdentityId` se mantiene temporalmente en el puente del widget por compatibilidad; semánticamente contiene el ID nativo de Contact (`Contact._id`). No representa una identidad sintética.
+- Los profesionales se resuelven mediante `MapaStaff` y Wix Bookings Staff usando `resourceId`. La verificación read-only realizada encontró tres asociaciones de tres; `staffMemberId` no es el identificador de unión empleado por el código.
+- No se ha autorizado ni ejecutado ninguna escritura de reconciliación en CMS.
+- Las colecciones retiradas `TpvSandboxIdentities` / `TPV_IDENTITIES` no forman parte del contrato runtime.
+- El metadato nuevo de sesión/proyección se escribe en `CajaActual.conceptOperations.tpvRuntime`. `tpvSandbox` se conserva exclusivamente como fallback de lectura para registros históricos. No se migran registros antiguos automáticamente.
+- Los nuevos envelopes sintéticos usan `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`, `siteId`, `sessionId`, `schemaVersion` y `ledgerVersion`; pagos/reembolsos nativos, escrituras nativas y efectos fiscales siguen deshabilitados.
+- Los identificadores históricos `TPVSANDBOX_*` solo se generan para búsquedas de compatibilidad/idempotencia; no son IDs de nueva inserción. No eliminar ni renombrar sin migración de lectura y pruebas de retry.
+
+
 ## Integración versionada
 
 - `src/pages/TPV.yl5th.js` inicializa `public/tpvPageController.js`.
 - El controlador despacha WebMethods de `src/backend/tpv/*.web.js`.
-- `tpvCatalogo.web.js` consulta servicios Bookings y productos/variantes Stores V3. Clientes y profesionales proceden exclusivamente de `TpvSandboxIdentities`, filtrada por `SANDBOX`, `syntheticOnly` y `testRunId`.
-- `tpvVentas.web.js` valida los IDs contra `TpvSandboxIdentities` y rechaza cualquier `bookingId`; no consulta CRM ni Bookings Reader.
-- `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
-- Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
-- `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS; los eventos sintéticos se persisten en `MovimientosCaja` y `CajaActual` conserva la proyección de caja. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
-- `TpvSandboxIdentities` es una excepción autorizada de colección propia solo para identidades sintéticas; su esquema tiene permisos ADMIN y hooks append-only. Sus filas aún deben cargarse desde Wix Sandbox.
-- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, identidades sintéticas desde `TpvSandboxIdentities` y operaciones persistentes QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
+- `tpvCatalogo.web.js` consulta servicios Bookings, productos/variantes Stores V3, Wix CRM Contacts V5 y profesionales nativos mediante `MapaStaff` + Wix Bookings Staff.
+- `tpvVentas.web.js` valida el cliente contra Contacts V5 y el profesional mediante `resourceId`; no confía en IDs de identidad suministrados por el navegador como prueba de autorización.
+- `tpvGiftCards.web.js` mantiene deshabilitada la integración real de Gift Cards; no debe inferirse una redención real a partir de un movimiento TPV sintético.
+- La autorización del operador se resuelve independientemente de la atribución del profesional seleccionado. El actor autenticado y el profesional atribuido no son intercambiables.
+- `tpvRepository.js` concentra escrituras sintéticas, idempotencia y locks CAS; los eventos se persisten append-only en `MovimientosCaja` y `CajaActual` conserva la proyección de sesión. `TPV_COLLECTIONS` son discriminadores lógicos internos, no colecciones físicas.
+- `TpvSandboxIdentities` / `TPV_IDENTITIES` están retiradas y no forman parte del contrato runtime. No recrear esa colección para satisfacer tests o fixtures antiguos.
+- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, Contacts V5 y personal Bookings enlazado por `resourceId`. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
 
@@ -53,8 +65,10 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 - La interfaz no es una barrera de seguridad: cada WebMethod vuelve a comprobar permisos.
 - No se llama a Payments, checkout, Orders, refunds, Bookings writers, Gift Card writers, hardware, notificaciones ni emisión fiscal.
 - `CajaActual` se actualiza únicamente como proyección backend de la sesión sintética. No se escribe en `HistoricoCierresZ` ni `LibroAsientosContablesDetalle`.
-- Las escrituras de eventos QA se limitan a `MovimientosCaja` con marcadores `TPV_QA_SYNTHETIC` y `SIMULATED_TPV_*`; `CajaActual` recibe exclusivamente la proyección backend. No existen colecciones físicas `TPV_QA_*`.
-- El identificador de auditoría persistido es `QA_ACTOR`, nunca el ID real del miembro.
+- Las nuevas escrituras sintéticas en `MovimientosCaja` usan IDs neutrales `TPV_*` / `TPV-*` y metadatos explícitos de origen, sitio, sesión, versión, fingerprint y hash; no deben introducir nuevos prefijos `SANDBOX`/ `QA` en identificadores.
+- Los registros antiguos con prefijos o marcadores Sandbox se reconocen solo en las rutas de compatibilidad de lectura/idempotencia. No se reutilizan para nuevas inserciones ni se migran mediante sobrescritura.
+- La proyección de `CajaActual` escribe `conceptOperations.tpvRuntime`; el fallback `tpvSandbox` es exclusivamente de lectura histórica.
+- La identidad del miembro autenticado, el operador autorizado y el profesional atribuido son conceptos distintos; cada uno se resuelve/valida en backend conforme a su función.
 
 ## Limpieza legacy
 

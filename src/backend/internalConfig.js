@@ -128,6 +128,8 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
   ALLOW_REAL_PAYMENTS: false,
   ALLOW_NATIVE_WRITES: false,
+  PROCESSING_MODE: "INTERNAL",
+  RECONCILIATION_STATUS: "NOT_RECONCILED",
   CURRENCY: "EUR",
   SITE_ID: "188bed94-177c-4bc9-a9f0-35080d874f3e",
   LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
@@ -135,6 +137,8 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   CAPABILITIES: Object.freeze({
     realPayments: false,
     nativeWrites: false,
+    allowNativePayments: false,
+    allowNativeRefunds: false,
     fiscalEmission: false,
     hardware: false,
   }),
