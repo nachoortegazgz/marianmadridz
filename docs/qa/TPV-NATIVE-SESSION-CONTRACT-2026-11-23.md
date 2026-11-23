@@ -14,10 +14,10 @@ Separar la sesión operativa de caja de la simulación, el estado de pago y el e
 | Estado | Significado | Operaciones |
 |---|---|---|
 | ABIERTA | Existe una sesión abierta y no existe Ticket Z de cierre | Operaciones permitidas solo con el sessionId exacto |
-| CERRADA | Existe Ticket Z cerrado para la sesión | Escrituras rechazadas con TPV_SESSION_CLOSED |
+| CERRADA | Existe Ticket Z cerrado para la sesión | Escrituras rechazadas con TPV_SESSION_CLOSED; nueva apertura permitida al siguiente día de negocio |
 | SIN_SESION | No existe sesión proyectada | Apertura permitida; operaciones rechazadas |
 
-El backend devuelve `operationalStatus`, `sessionId`, `operatorId`, `actorId`, `now` ISO-8601 y `timeZone=Europe/Madrid`. Cuando no existe sesión, el operador autenticado se informa por separado y `operatorId` de sesión permanece null.
+El backend devuelve `operationalStatus`, `canOpenSession`, `sessionId`, `operatorId`, `actorId`, `now` ISO-8601 y `timeZone=Europe/Madrid`. Cuando no existe sesión, el operador autenticado se informa por separado y `operatorId` de sesión permanece null.
 
 ## Estados independientes
 
