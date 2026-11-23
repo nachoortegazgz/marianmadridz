@@ -352,10 +352,10 @@ test("TPV controller imports the exact canonical WebMethods from their owning mo
         source("tpv/tpvCierres.web.js"),
         source("tpv/tpvCierresCore.js"),
     ]);
-    assert.match(cierresCore, /export async function buildTpvSessionSummary\\(/);
-    assert.match(caja, /import \\{ buildTpvSessionSummary \\} from "backend\\/tpv\\/tpvCierresCore"/);
-    assert.match(cierres, /import \\{ buildTpvSessionSummary \\} from "backend\\/tpv\\/tpvCierresCore"/);
-    assert.match(cierres, /buildTpvSessionSummary\\(session\\)/);
+    assert.ok(cierresCore.includes("export async function buildTpvSessionSummary("));
+    assert.ok(caja.includes('import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore"'));
+    assert.ok(cierres.includes('import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore"'));
+    assert.ok(cierres.includes("buildTpvSessionSummary(session)"));
     assert.doesNotMatch([caja, cierres, cierresCore].join("\\n"), /buildSandboxSessionSummary/);
 
 });
