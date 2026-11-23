@@ -2,7 +2,7 @@
 
 **Corte:** 2026-11-23  
 **Repositorio:** nachoortegazgz/marianmadridz  
-**main HEAD:** 0ba7b684d6f4d6465718ae4317d10d8f422de2ff  
+**main HEAD:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
 **Wix Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
 **Clasificación funcional:** entorno QA según declaración del propietario.  
 **Release:** **NO-GO**.
@@ -13,9 +13,9 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 | Área | Estado | Evidencia / límite |
 |---|---|---|
-| Integración Git | Integrada | PR #541 y #540 están merged en main. |
-| CI backend post-merge | Correcto | Run 45107058637: 736/736, npm audit 0, SDK contracts y ESLint. Secret scanning run 45107058755 SUCCESS. |
-| Secret scanning | Correcto | Run 45105979748 sobre el HEAD actual. |
+| Integración Git | Integrada | PR #541, #540, #542, #543 y #544 están merged; #537 preservada en historial de #541. |
+| CI backend en HEAD actual | Correcto | Run 45107377657: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, SDK contracts y ESLint SUCCESS. |
+| Secret scanning | Correcto | Gitleaks full-history SUCCESS, run 45107377700 sobre main HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
 | Wix Editor/Preview | No acreditado | Último contexto leído: Draft, Velo Enabled; SHA Git no sincronizado de forma demostrada. |
@@ -25,9 +25,9 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 ## Repositorio y CI
 
-main está en 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #543 se integró con ese merge commit después de CI pre-merge verde. PR #541, #540 y #542 también están integradas; PR #537 quedó preservada en el historial de #541.
+main está en ccdac0347e86f430c4f8086765815d9d5d7e00af. PR #543 se integró en 0ba7b684d6f4d6465718ae4317d10d8f422de2ff tras CI pre-merge verde. PR #544 integró la actualización documental final en ccdac0347e86f430c4f8086765815d9d5d7e00af. PR #541, #540 y #542 también están integradas; PR #537 quedó preservada en el historial de #541.
 
-La regresión de test introducida por PR #542 se corrigió en PR #543 y ya está integrada en main. CI pre-merge y post-merge pasaron: 736/736 pruebas offline, npm audit 0, contratos SDK, ESLint y secret scanning.
+La regresión de test introducida por PR #542 se corrigió en PR #543 y ya está integrada en main. El workflow del HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af pasa: 364/364 Layer 1, 255/255 Layer 2, 736/736 suite offline, npm audit 0, contratos SDK, ESLint y Gitleaks full-history SUCCESS.
 
 main no tiene protección efectiva. La issue #210 sigue abierta y requiere intervención con permisos de administración para configurar required checks, PR obligatoria y bloqueo de force-push/borrado.
 
