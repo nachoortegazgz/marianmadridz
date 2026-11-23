@@ -41,7 +41,7 @@ test("TPV runtime policy separates synthetic source from disabled external capab
     assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
 });
 
-test("CajaActual integrity uses explicit source, site, schema, session and event hash metadata", () => {
+test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox markers", () => {
     const liveCaja = {
         singletonKey: "CAJA_PRINCIPAL",
         cashRegisterStatus: "ABIERTA",
@@ -80,6 +80,33 @@ test("CajaActual integrity uses explicit source, site, schema, session and event
         } },
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(activeCaja));
+
+    const currentV1Caja = {
+        cashRegisterStatus: "SIMULACION",
+        snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
+        traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":SESSION-V1",
+        conceptOperations: { tpvSandbox: {
+            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+            externalSideEffects: false,
+            sessionId: "SESSION-V1",
+            requestFingerprint: "b".repeat(64),
+        } },
+    };
+    assert.doesNotThrow(() => assertTpvCajaIntegrity(currentV1Caja), "current v1 session remains readable");
+
+    const legacyBootstrap = {
+        cashRegisterStatus: "CERRADA",
+        snapshotSource: TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE,
+        traceId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
+        conceptOperations: { tpvSandbox: { sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID } },
+    };
+    assert.doesNotThrow(
+        () => assertTpvCajaIntegrity(legacyBootstrap, { allowBootstrap: true }),
+        "exact legacy initialization marker remains readable"
+    );
+
     assert.throws(
         () => assertTpvCajaIntegrity({ ...activeCaja, conceptOperations: { tpvSandbox: {
             ...activeCaja.conceptOperations.tpvSandbox,
