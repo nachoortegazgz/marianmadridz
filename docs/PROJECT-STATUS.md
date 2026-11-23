@@ -74,8 +74,9 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 - [README backend TPV](../src/backend/tpv/README.md)
 ## Evidencia CMS solo lectura — 2026-11-23
 
-- `CajaActual`: singleton `ABIERTA`, `openedAt=2026-11-21T08:12:21.994Z`, `closedAt=null`, `snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS`, `conceptOperations={}` y `traceId=0`. No se ejecutaron escrituras ni cierres.
-- `CitasF2`: 6 proyecciones; 5 `CONFIRMED`, 1 `PENDING`; 3 sin `pairToken`, 2 comparten token y 1 tiene token distinto. La reconciliación exige contraste con Bookings.
+- `CajaActual`: singleton `ABIERTA`, `openedAt=2026-11-21T08:12:21.994Z`, `closedAt=null`, `snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS`, `conceptOperations={}` y `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`. No se ejecutaron escrituras ni cierres.
+- `MovimientosCaja`: 2 filas; ambas `synthetic=true`, `status=SIMULATED_SUCCESS` y `reconciliationStatus=RECONCILED`, con orígenes `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`. La presencia de `gatewayResponse` no demuestra llamada real a pasarela.
+- `CitasF2`: 6 proyecciones; 5 `CONFIRMED`, 1 `PENDING`; 3 sin `pairToken`, 2 comparten token y 1 tiene token distinto. La auditoría consolidada previa registró los seis bookings nativos como `CANCELED`; no se repitió aquí esa consulta para respetar la frontera contractual TPV. [Evidencia detallada](qa/../audits/2026-11-23-repository-wix-cms-reconciliation.md#5-conciliación-bookings-v2-y-citasf2).
 - `MapaStaff`: 5 registros, 3 `STAFF`; no existe `recordType=CONFIG_SISTEMA`. No se consultaron ni expusieron NIF.
-- `MovimientosCaja`: 2 registros; `HistoricoCierresZ` y `LibroAsientosContablesDetalle`: 0 registros.
+- `HistoricoCierresZ` y `LibroAsientosContablesDetalle`: 0 registros.
 - Todas las lecturas CMS se ejecutaron con `consistentRead=true`; no hubo mutaciones.
