@@ -168,8 +168,14 @@ test("VALIDATION-TPV-IDENTITY-01 validates canonical neutral identities and expl
         /identity key\/type invalid/
     );
 
+    const {
+        sourceType: _sourceType,
+        siteId: _siteId,
+        schemaVersion: _schemaVersion,
+        ...transitionalIdentity
+    } = base;
     const transitionalLegacy = {
-        ...base,
+        ...transitionalIdentity,
         environment: "SANDBOX",
         testRunId: IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
     };
