@@ -7,7 +7,7 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, obtenerMovimientosCaja } from "backend/tpv/tpvMovimientos.web";
+import { registrarMovimientoCaja, obtenerMovimientosCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
@@ -27,6 +27,8 @@ const REQUEST_TYPES = Object.freeze([
     "TICKET_Z",
     "SESSION_SUMMARY",
     "AUDIT_LIST",
+    "CASH_MOVEMENTS_EXPORT",
+    "AUDIT_EXPORT",
 ]);
 const activeBridges = new WeakMap();
 
@@ -142,13 +144,16 @@ async function dispatch(message) {
                 totalVenta: numeric(payload.total, "TOTAL"),
                 profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
                 customerIdentityId: payload.customerIdentityId || null,
+                paymentBreakdown: payload.paymentBreakdown,
             });
         }
 
         case "CASH_MOVEMENT":
             return registrarMovimientoCaja({
                 idempotencyKey: key,
+                sessionId: String(payload.sessionId || ""),
                 movementType: String(payload.movementType || "").toUpperCase(),
+                paymentMethod: String(payload.paymentMethod || "EFECTIVO").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
                 reason: String(payload.reason || "").trim(),
                 profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
@@ -189,6 +194,18 @@ async function dispatch(message) {
             return obtenerMovimientosCaja({
                 sessionId: payload.sessionId ? String(payload.sessionId) : undefined,
                 limit: numeric(payload.limit ?? 50, "MOVEMENTS_LIMIT", { allowZero: false }),
+            });
+
+        case "CASH_MOVEMENTS_EXPORT":
+            return exportarMovimientosCaja({
+                sessionId: String(payload.sessionId || ""),
+                idempotencyKey: key,
+            });
+
+        case "AUDIT_EXPORT":
+            return exportarAuditoriaTPV({
+                sessionId: String(payload.sessionId || ""),
+                idempotencyKey: key,
             });
 
         default:
