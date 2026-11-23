@@ -1,7 +1,7 @@
 # TPV — matriz de aceptación funcional y conciliación con Wix nativo
 
 **Fecha:** 2026-11-23  
-**Base vigente:** main `b20304598f7017ebc283d5821a38b59fe41b90e0` (PR #541 y PR #540 integradas)  
+**Base vigente:** main `956356db48ee9d0ba363023c14105474316f84dd` (PR #541, #540 y #542 integradas)  
 **Alcance:** `#htmlTPV.txt`, `src/public/tpvPageController.js`, WebMethods TPV, seguridad, persistencia y pruebas de contrato.  
 **Naturaleza:** auditoría estática y definición de pruebas. No equivale a una prueba Wix Runtime ni autoriza pagos, facturación o despliegue.
 
@@ -187,4 +187,4 @@ Estas pruebas son contractuales/estáticas; no demuestran la ejecución de Wix R
 7. Ejecutar las pruebas Runtime de la matriz en Sandbox real; prueba negativa Published sin efectos externos.
 8. Verificar SHA instalado en Wix Editor, diff, CI, rollback y permisos antes de autorizar despliegue.
 
-**Estado de aceptación:** **NO-GO**. El CI actual de main detectó una aserción obsoleta: la prueba esperaba cuatro métodos aunque el enum centralizado contiene seis. La prueba se actualiza para comprobar el enum canónico y su conciliación; el resultado debe confirmarse con un nuevo workflow antes de considerar estable el repositorio. La suite estática añadida es un gate adicional, no una certificación funcional. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
+**Estado de aceptación:** **NO-GO**. El CI post-merge de PR #542 detectó aserciones contractuales obsoletas: primero esperaba cuatro métodos pese a que el enum centralizado contiene seis; después de alinear esa lista, el siguiente run detectó una expectativa antigua sobre paymentMethod de movimientos de caja. PR #543 actualiza las aserciones para comprobar el enum centralizado y el default/guard efectivo. La corrección solo se considera estable cuando el workflow completo de PR #543 termina SUCCESS. La suite estática añadida es un gate adicional, no una certificación funcional. No se han ejecutado escrituras CMS, pagos, devoluciones, facturación, emisión Veri*Factu, publicación ni despliegue.
