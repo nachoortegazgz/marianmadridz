@@ -8,12 +8,20 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 
 | Issue | Estado GitHub verificado | Acción pendiente | Restricción |
 |---|---|---|---|
-| [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | Inventariar todos los writers; demostrar lock/CAS global, idempotencia, retry, ausencia de lost updates y recuperación. | No mutar singleton live durante auditoría. |
+| [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | PR #528 ya integra lock compartido; falta prueba concurrente/recuperación en Wix Runtime. | No mutar singleton live durante auditoría. |
 | [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · actualizado 2026-11-23 | Conciliar cada compensación con pedido/ledger/transacción fuente y definir recuperación trazable. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
-| [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open | Reconciliar MapaStaff, esquema físico y consumidores; confirmar configuración fiscal. | No recrear DatosFiscales ni CONFIG_SISTEMA sin evidencia/ADR. |
+| [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open · código de migración integrado; PR #556 en Draft | MapaStaff/consumidores alineados; PR #556 elimina fallback TERCERO/EMISOR. Falta CONFIG_SISTEMA legal verificado y Runtime. | No recrear DatosFiscales ni CONFIG_SISTEMA sin datos verificados. |
 | [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Auditar las 8 ACTIVE documentadas: 7 PREINSTALLED y 1 APPLICATION; inspeccionar definición e historial de la APPLICATION y contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
 | [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Open | Validación normativa, técnica, proveedor y asesoría; contrato común de huella y pruebas. | Mantener writers, firma, QR, emisión y remisión deshabilitados. |
 | [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Open | Gate paraguas: consolidar evidencia de todos los P0/P1 y conservar NO-GO. | No duplicar implementación de issues especializadas. |
+
+## PR de código abiertas — 2026-11-23
+
+| PR | Estado | Evidencia CI offline | Gate pendiente |
+|---|---|---|---|
+| [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | Draft / no merge | 79 suites / 726 tests PASS; secret scanning PASS | Git–Wix Editor, Preview, permisos, idempotencia y concurrencia Runtime |
+| [#554](https://github.com/nachoortegazgz/marianmadridz/pull/554) | Draft / no merge | 79 suites / 725 tests PASS; secret scanning PASS | Auditoría persistida por sesión en Wix Preview/Runtime |
+| [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | Draft / no merge | 79 suites / 728 tests PASS; secret scanning PASS | CONFIG_SISTEMA legal verificado y lectura Runtime |
 
 ## P1 — gobierno y aceptación funcional
 
