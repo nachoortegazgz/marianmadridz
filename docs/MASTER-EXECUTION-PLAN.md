@@ -342,3 +342,12 @@ La matriz de issues anterior queda supersedida por [Reconciliación del backlog 
 **Retirado de implementación activa:** migración TPV QA collections (#435), retirada de inventario custom (#237) y reimplementación de código ya integrado en #159, #164, #290, #291, #441 y #525. Sus validaciones runtime residuales permanecen en la matriz. PR #495 excluida por instrucción expresa; no modificarla.
 
 **Bloqueos prioritarios vigentes:** #416 compensaciones/ledger; #520 automatizaciones preinstaladas; #526 prueba negativa de rutas de reservas; #525 concurrencia Runtime; #209/#415 fiscalidad; #434 release gate. Mantener **NO-GO** hasta cerrar los criterios verificables del dossier.
+
+
+### Addendum TPV — conciliación funcional y Wix nativo (2026-11-23)
+
+La aceptación funcional de TPV queda ampliada por [matriz de conciliación TPV/Wix nativo](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) y la suite `src/backend/tests/tpv.native-reconciliation.contract.test.mjs`. La matriz distingue implementación estática, gaps de contrato y pruebas Wix Runtime pendientes.
+
+Hallazgos que bloquean declarar TPV funcional: el selector del widget envía `profesionalId`, pero backend atribuye actor/operador al miembro Wix autenticado sin validar el match entre ambos; las ventas actuales son sintéticas y no generan pedido/recibo/factura nativa; solo se admiten EFECTIVO/TARJETA/BIZUM/OTROS; las auditorías de algunas operaciones carecen de `sessionId` y no se auditan consultas/impresión/denegaciones; no hay vínculo explícito X→Z; Veri*Factu permanece deshabilitado y no hay QR oficial. Los movimientos de caja son exclusivamente efectivo y no deben aceptar medios no monetarios.
+
+**NO-GO:** completar gaps de identidad y auditoría, aprobar matriz de roles, y ejecutar toda la matriz en Wix Sandbox/Preview con prueba negativa Published. Esta aceptación no autoriza writes nativos, pagos reales ni emisión fiscal.
