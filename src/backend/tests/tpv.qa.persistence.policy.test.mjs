@@ -468,20 +468,18 @@ function getWebMethodSource(source, methodName) {
 }
 
 
-test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", async () => {
+test("TPV bootstrap no longer depends on the deleted identity collection", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
+    const caja = await readFile(new URL("../tpv/tpvCaja.web.js", import.meta.url), "utf8");
+    assert.doesNotMatch(repository, /seedTpvIdentities|listTpvIdentities|TPV_IDENTITIES_NOT_PRESEEDED/);
+    assert.doesNotMatch(caja, /seedTpvIdentities|identitiesCreated|identitiesTotal/);
     const initializeStart = repository.indexOf("export async function initializeTpvCaja(");
-    const identitiesStart = repository.indexOf("export async function seedTpvIdentities(");
     const getCajaStart = repository.indexOf("async function _getCajaActual", initializeStart);
     assert.notEqual(initializeStart, -1);
-    assert.notEqual(identitiesStart, -1);
     assert.notEqual(getCajaStart, -1);
     const initializeBlock = repository.slice(initializeStart, getCajaStart);
-    const identitiesBlock = repository.slice(identitiesStart, initializeStart);
     assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_CASH_REGISTER_NOT_PRESEEDED"\)/);
     assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
-    assert.match(identitiesBlock, /TPV_IDENTITIES_NOT_PRESEEDED/);
-    assert.doesNotMatch(identitiesBlock, /insertItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertTpvEvent(");
     const insertEnd = repository.indexOf("export async function queryTpvRecords", insertStart);
