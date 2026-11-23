@@ -288,10 +288,11 @@ Lectura oficial de Order Transactions API (sin mutaciones):
 
 La auditoría del protocolo detectó una desalineación concreta: `#htmlTPV.txt` dejaba de emitir `MM_READY` tras 50 intentos × 500 ms (25 s), mientras `src/public/tpvPageController.js` mantenía un watchdog de 65 s. Si el listener Velo no estaba listo durante la ventana de 25 s, el iframe dejaba de reintentar antes de que venciera el watchdog y podía terminar en `WIDGET_HANDSHAKE_TIMEOUT`.
 
-Corrección propuesta en `fix/tpv-handshake-retry-window-20261123`:
-- Extiende los reintentos a 120 × 500 ms (60 s), conservando 5 s de margen antes del watchdog.
-- Refuerza `tpv-widget.contract.test.mjs` para calcular y comprobar que la ventana de reintentos es positiva y estrictamente inferior al timeout Velo.
-- No modifica el protocolo, la allowlist, las operaciones de negocio ni las políticas de pagos/ledger.
-- Pendiente: CI de PR y aplicación del HTML actualizado en el componente `#htmlTPV` del Draft; no se afirma validación Wix Preview.
+Corrección integrada mediante [PR #580](https://github.com/nachoortegazgz/marianmadridz/pull/580), merge commit `180c69d9e200266e85f6f0974f1b6a01a7c172a3`:
+- Extiende los reintentos a 120 × 500 ms (60 s), conservando 5 s de margen antes del watchdog de 65 s.
+- `tpv-widget.contract.test.mjs` calcula y comprueba que la ventana de reintentos es positiva y estrictamente inferior al timeout Velo.
+- CI de PR SUCCESS: Layer 1 30 suites / 369 pruebas; Layer 2 17 suites / 245 pruebas; suite offline completa 79 suites / 740 pruebas; SDK Cart V2, Order Transactions, TPV SDK, ESLint y Secret scanning SUCCESS.
+- El cambio no modifica el protocolo, la allowlist, las operaciones de negocio ni las políticas de pagos/ledger.
+- Pendiente: aplicar el HTML actualizado al componente `#htmlTPV` del Draft y validar Wix Preview; el merge no acredita sincronización del Editor.
 
-La corrección reduce la causa temporal conocida del handshake, pero no certifica el runtime ni resuelve la caja singleton incoherente.
+La corrección elimina la desalineación temporal conocida en el código versionado, pero no certifica el runtime ni resuelve la caja singleton incoherente.
