@@ -241,8 +241,8 @@ body {
   <div class="bar session-bar">
     <span>Sesión: <strong id="sessionLabel">—</strong></span>
 
-    <label for="operatorSelect" class="status">Operador:</label>
-    <select id="operatorSelect" class="field">
+    <label for="professionalSelect" class="status">Profesional:</label>
+    <select id="professionalSelect" class="field">
       <option value="">Sin asignar</option>
     </select>
 
@@ -275,7 +275,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución</button>
+          <button id="refund" class="btn danger">Devolución sintética</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
           <button id="printLast" class="btn">Imprimir último ticket</button>
@@ -392,7 +392,7 @@ body {
   /* ---------- Estado local ---------- */
   const state = {
     session: null,
-    operatorId: null,
+    profesionalId: null,
     staff: [],
     items: [],
     payments: [],
@@ -438,14 +438,18 @@ body {
       const id = "req-" + Math.random().toString(36).slice(2);
       const handler = (event) => {
         const data = event.data || {};
-        if (data.type === responseType && data.requestId === id) {
+        if (data.type === responseType && (data.messageId === id || data.requestId === id)) {
           window.removeEventListener("message", handler);
-          if (data.error) reject(new Error(data.error));
-          else resolve(data.payload);
+          const response = data.payload || {};
+          if (data.error || response.status === "ERROR") {
+            reject(new Error(response.error?.code || data.error || "TPV_OPERATION_FAILED"));
+          } else {
+            resolve(response.data !== undefined ? response.data : response);
+          }
         }
       };
       window.addEventListener("message", handler);
-      window.parent.postMessage({ type, payload, requestId: id }, "*");
+      window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
       setTimeout(() => {
         window.removeEventListener("message", handler);
         reject(new Error("TPV_TIMEOUT"));
@@ -458,7 +462,7 @@ body {
     const storageKey = "tpv_key_" + keyPrefix;
     let key = sessionStorage.getItem(storageKey);
     if (!key) {
-      key = keyPrefix + ":" + crypto.randomUUID();
+      key = keyPrefix + "_" + crypto.randomUUID().replace(/-/g, "");
       sessionStorage.setItem(storageKey, key);
     }
     const fullPayload = Object.assign({}, payload, { idempotencyKey: key });
@@ -468,33 +472,37 @@ body {
     });
   }
 
-  /* ---------- Operador ---------- */
-  function requireOperator() {
-    if (!state.operatorId) {
-      toast("Selecciona el operador antes de continuar.");
-      throw new Error("TPV_OPERATOR_REQUIRED");
-    }
-  }
-
-  function renderOperators() {
-    const select = $("operatorSelect");
+  /* ---------- Profesional seleccionado; el operador real procede del backend ---------- */
+  function renderProfessionals() {
+    const select = $("professionalSelect");
     select.innerHTML = '<option value="">Sin asignar</option>' +
-      state.staff.map((p) =>
-        `<option value="${esc(p.profesionalId)}">${esc(p.nombre)}</option>`
+      state.staff.map((person) =>
+        `<option value="${esc(person.profesionalId)}">${esc(person.nombre)}</option>`
       ).join("");
-    if (state.operatorId) select.value = state.operatorId;
+    if (state.profesionalId) select.value = state.profesionalId;
   }
 
-  $("operatorSelect").onchange = (e) => {
-    const person = state.staff.find((p) => p.profesionalId === e.target.value);
-    state.operatorId = person ? person.profesionalId : null;
-    toast(person ? "Operador: " + person.nombre : "Operador sin asignar");
+  $("professionalSelect").onchange = (event) => {
+    const person = state.staff.find((item) => item.profesionalId === event.target.value);
+    state.profesionalId = person ? person.profesionalId : null;
+    toast(person ? "Profesional: " + person.nombre : "Profesional sin asignar");
   };
+
+  function renderSession(session) {
+    state.session = session || null;
+    $("sessionLabel").textContent = state.session?.sessionId || "—";
+    const isOpen = Boolean(state.session && state.session.status === "ABIERTA");
+    $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
+    $("cashLabel").textContent = isOpen
+      ? "Caja abierta · operación sintética no conciliada"
+      : "Caja cerrada";
+    $("openCash").disabled = isOpen;
+  }
 
   /* ---------- Bloqueo de operaciones ---------- */
   function setBusy(value) {
     state.busy = value;
-    ["saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
+    ["openCash", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ"].forEach((id) => {
       const el = $(id);
       if (el) el.disabled = value;
     });
@@ -510,29 +518,104 @@ body {
     }
   }
 
-  /* ---------- Catálogo (ejemplo mínimo; el controlador lo carga) ---------- */
-  function renderCatalog(items) {
-    const list = $("catalogList");
-    if (!items || !items.length) {
-      list.innerHTML = "<p>No hay elementos.</p>";
+  /* ---------- Catálogo nativo: Bookings y Stores Catalog V3 ---------- */
+  function addCatalogLine(item, priceMinor, varianteId = null, variantLabel = "") {
+    if (!Number.isSafeInteger(priceMinor) || priceMinor < 0) {
+      toast("El artículo no tiene un precio válido.");
       return;
     }
-    list.innerHTML = items.map((it) => `
-      <div class="catalog-item" data-id="${esc(it.id)}" data-name="${esc(it.nombre)}" data-price="${num(it.precio)}">
-        <span>${esc(it.nombre)}</span>
-        <span class="price">${money(it.precio)}</span>
-      </div>
-    `).join("");
-    list.querySelectorAll(".catalog-item").forEach((el) => {
-      el.onclick = () => {
-        const id = el.dataset.id;
-        const name = el.dataset.name;
-        const price = num(el.dataset.price);
-        state.items.push({ id, name, price, qty: 1 });
-        renderTicket();
+    state.items.push({
+      id: item.itemId,
+      tipoLinea: item.tipoLinea || "PERSONALIZADA",
+      name: [item.concepto, variantLabel].filter(Boolean).join(" · "),
+      price: priceMinor / 100,
+      qty: 1,
+      varianteId,
+      stockAfectado: false,
+    });
+    renderTicket();
+  }
+
+  async function selectCatalogItem(item) {
+    if (item.tipoLinea === "PRODUCTO" && item.requiereSeleccionVariante === true) {
+      const result = await call("CATALOG_VARIANTS", { productId: item.itemId }, "CATALOG_VARIANTS_RES");
+      const variants = (result?.variantes || []).filter((variant) =>
+        variant.disponible === true && Number.isSafeInteger(variant.precioMinor)
+      );
+      if (!variants.length) {
+        toast("No hay variantes disponibles con precio válido.");
+        return;
+      }
+      openModal("Seleccionar variante", `
+        <select id="variantChoice" class="field">
+          ${variants.map((variant) => `<option value="${esc(variant.varianteId)}">${esc(variant.concepto)} · ${money(variant.precioMinor / 100)}</option>`).join("")}
+        </select>
+      `, async () => {
+        const selected = variants.find((variant) => variant.varianteId === $("variantChoice").value);
+        if (!selected) throw new Error("TPV_VARIANT_REQUIRED");
+        addCatalogLine(item, selected.precioMinor, selected.varianteId, selected.concepto);
+      });
+      return;
+    }
+    if (!Number.isSafeInteger(item.precioMinor)) {
+      toast("El artículo no tiene un precio fijo configurado.");
+      return;
+    }
+    addCatalogLine(item, item.precioMinor);
+  }
+
+  function renderCatalog(items) {
+    const list = $("catalogList");
+    if (!Array.isArray(items) || !items.length) {
+      list.innerHTML = "<p>No hay elementos disponibles.</p>";
+      return;
+    }
+    list.innerHTML = items.map((item, index) => {
+      const priceMinor = Number.isSafeInteger(item.precioMinor)
+        ? item.precioMinor
+        : (item.precioFijo !== null && item.precioFijo !== undefined
+          ? Math.round(Number(item.precioFijo) * 100)
+          : null);
+      const priceLabel = item.requiereSeleccionVariante === true
+        ? "Seleccionar variante"
+        : (Number.isSafeInteger(priceMinor) ? money(priceMinor / 100) : "Precio no configurado");
+      return `
+        <div class="catalog-item" data-index="${index}">
+          <span>${esc(item.concepto || "Artículo")}</span>
+          <span class="price">${esc(priceLabel)}</span>
+        </div>
+      `;
+    }).join("");
+    list.querySelectorAll(".catalog-item").forEach((element) => {
+      element.onclick = () => {
+        const item = items[Number(element.dataset.index)];
+        selectCatalogItem(item).catch((error) => error.message === "TPV_TIMEOUT"
+          ? toast("Tiempo de espera agotado.")
+          : error(error.message));
       };
     });
   }
+
+  async function loadCatalog(kind) {
+    const type = kind === "PRODUCTS" ? "CATALOG_PRODUCTS" : "CATALOG_SERVICES";
+    const responseType = type + "_RES";
+    const result = await call(type, { limit: 100 }, responseType);
+    renderCatalog(result?.items || []);
+  }
+
+  $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
+  $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e.message));
+  $("tabPersonalizada").onclick = () => openModal("Tarifa personalizada", `
+    <input id="customConcept" class="field" maxlength="160" placeholder="Concepto">
+    <input id="customPrice" class="field" type="number" min="0.01" step="0.01" placeholder="Precio">
+  `, async () => {
+    const concept = $("customConcept").value.trim();
+    const price = num($("customPrice").value);
+    if (concept.length < 2 || price <= 0) throw new Error("Indica concepto e importe válidos.");
+    state.items.push({ id: null, tipoLinea: "PERSONALIZADA", name: concept, price, qty: 1, varianteId: null, stockAfectado: false });
+    renderTicket();
+  });
+  $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
 
   /* ---------- Ticket ---------- */
   function renderTicket() {
@@ -623,7 +706,7 @@ body {
 
   /* ---------- Guardar venta ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
-    requireOperator();
+    
     if (!state.items.length) {
       toast("El ticket está vacío.");
       return;
@@ -637,7 +720,7 @@ body {
     try {
       const result = await keyedAction("SALE", "SALE_REGISTER", {
         sessionId: state.session?.sessionId,
-        operatorId: state.operatorId,
+        profesionalId: state.profesionalId,
         lines: state.items.map((it) => ({
           itemId: it.id,
           name: it.name,
@@ -659,9 +742,25 @@ body {
     }
   });
 
+  /* ---------- Apertura de caja ---------- */
+  $("openCash").onclick = () => openModal("Abrir caja", `
+    <input id="openingCash" class="field" type="number" min="0" step="0.01" placeholder="Fondo inicial">
+    <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
+  `, async () => {
+    const openingCash = num($("openingCash").value);
+    if (openingCash < 0) throw new Error("El fondo inicial no puede ser negativo.");
+    const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
+      openingCash,
+      reason: $("openingReason").value.trim(),
+      terminalId: "TPV",
+    }, "SESSION_OPEN_RES");
+    renderSession(session);
+    toast("Sesión sintética abierta.");
+  });
+
   /* ---------- Entrada / Salida de efectivo ---------- */
   function openCashMovement(type) {
-    requireOperator();
+    
     openModal(
       type === "ENTRADA" ? "Entrada de efectivo" : "Salida de efectivo",
       `
@@ -678,7 +777,7 @@ body {
           movementType: type,
           amount,
           reason,
-          operatorId: state.operatorId,
+          profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
         toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
       }
@@ -689,8 +788,8 @@ body {
 
   /* ---------- Devolución ---------- */
   $("refund").onclick = () => {
-    requireOperator();
-    openModal("Devolución", `
+    
+    openModal("Devolución sintética", `
       <input id="refundSaleId" class="field" placeholder="ID de venta">
       <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
       <select id="refundMethod" class="field">
@@ -711,7 +810,7 @@ body {
       await keyedAction("REFUND", "REFUND", {
         saleId,
         reason,
-        operatorId: state.operatorId,
+        profesionalId: state.profesionalId,
         payments: [{ paymentMethod, amount }],
       }, "REFUND_RES");
       toast("Devolución registrada.");
@@ -759,7 +858,7 @@ body {
 
   /* ---------- Cierre Z ---------- */
   $("ticketZ").onclick = () => {
-    requireOperator();
+    
     openModal("Cierre Z diario", `
       <p>El cierre bloqueará la sesión actual.</p>
       <input id="countedCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
@@ -771,7 +870,7 @@ body {
         sessionId: state.session?.sessionId,
         countedCash,
         differenceReason,
-        operatorId: state.operatorId,
+        profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       toast("Cierre Z registrado.");
     });
@@ -786,47 +885,30 @@ body {
     window.print();
   };
 
-  /* ---------- Escucha de mensajes del controlador ---------- */
+  /* ---------- Handshake y contexto del controlador Wix ---------- */
   window.addEventListener("message", (event) => {
     const data = event.data || {};
-    if (data.type === "CATALOG_LOADED") {
-      renderCatalog(data.payload.items || []);
-    }
-    if (data.type === "STAFF_LOADED") {
-      state.staff = data.payload.items || [];
-      renderOperators();
-    }
-    if (data.type === "SESSION_STATE") {
-      state.session = data.payload.session || null;
-      $("sessionLabel").textContent = state.session?.sessionId || "—";
-      const isOpen = !!state.session;
-      $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
-      $("cashLabel").textContent = isOpen ? "Caja abierta" : "Caja cerrada";
-      $("openCash").disabled = isOpen;
-    }
-    if (data.type === "CONNECTION_STATE") {
-      const ok = !!data.payload.connected;
-      $("connStatus").className = "dot " + (ok ? "ok" : "error");
-      $("connLabel").textContent = ok ? "Conectado" : "Desconectado";
+    if (data.type === "MM_CONTEXT") {
+      const context = data.payload || {};
+      const connected = context.status === "SUCCESS";
+      $("connStatus").className = "dot " + (connected ? "ok" : "error");
+      $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
     }
   });
 
-  /* ---------- Inicialización: solicitar datos al controlador ---------- */
+  /* ---------- Inicialización ---------- */
   function init() {
-    window.parent.postMessage({ type: "TPV_READY" }, "*");
-    call("CATALOG_LIST", {}, "CATALOG_LOADED").then((r) => {
-      renderCatalog(r.items || []);
-    }).catch(() => {});
-    call("STAFF_LIST", {}, "STAFF_LOADED").then((r) => {
-      state.staff = r.items || [];
-      renderOperators();
-    }).catch(() => {});
-    call("SESSION_GET", {}, "SESSION_STATE").then((r) => {
-      state.session = r.session || null;
-      $("sessionLabel").textContent = state.session?.sessionId || "—";
-      $("cashStatus").className = "dot " + (state.session ? "ok" : "error");
-      $("cashLabel").textContent = state.session ? "Caja abierta" : "Caja cerrada";
-    }).catch(() => {});
+    window.parent.postMessage({
+      type: "MM_READY",
+      version: 1,
+      messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
+    }, "*");
+    loadCatalog("SERVICES").catch((e) => error(e.message));
+    call("CATALOG_STAFF", {}, "CATALOG_STAFF_RES").then((data) => {
+      state.staff = data.items || [];
+      renderProfessionals();
+    }).catch((e) => error(e.message));
+    call("CASHIER_STATE", {}, "CASHIER_STATE_RES").then(renderSession).catch((e) => error(e.message));
   }
 
   init();
