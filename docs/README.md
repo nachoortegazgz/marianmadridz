@@ -18,6 +18,7 @@ Este índice evita que informes históricos, handoffs y resúmenes duplicados se
 | 7 | [QA Environment SSOT](qa/QA-ENVIRONMENT-SSOT.md) | Clasificación funcional y reglas del entorno QA; no demuestra aislamiento Runtime. |
 | 8 | [DOSSIER TÉCNICO CONSOLIDADO](../DOSSIER%20T%C3%89CNICO%20CONSOLIDADO.md) | Arquitectura, decisiones y contexto consolidado según sus cortes y addenda; no es fuente de estado live. |
 | 9 | [DECISION-LOG](DECISION-LOG.md), [estándares](engineering/DEVELOPMENT-STANDARDS.md), [referencias CMS](reference/DICCIONARIO_DATOS_CMS.md) y [flujos](reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Decisiones, normas técnicas, esquemas y flujos. Consultar con sus límites de fecha/entorno. |
+| 10 | [Verificación Wix CMS 2026-11-23](reference/WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md) | Lectura real del esquema físico: revisiones, tipos, obligatoriedad, referencias y diferencias respecto al inventario previo. |
 
 La precedencia entre requisitos del propietario, normativa y documentación oficial Wix se define en `PROJECT-OWNER-DIRECTIVE-2026-11-20.md`. La tabla anterior organiza la navegación documental; no cambia esa precedencia.
 
