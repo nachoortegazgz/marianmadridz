@@ -347,6 +347,17 @@ test("TPV controller imports the exact canonical WebMethods from their owning mo
         const moduleName = fileName.replace(/\.web\.js$/, ".web");
         assert.ok(controller.includes('from "backend/tpv/' + moduleName + '"'), "controller must import " + moduleName);
     }
+    const [caja, cierres, cierresCore] = await Promise.all([
+        source("tpv/tpvCaja.web.js"),
+        source("tpv/tpvCierres.web.js"),
+        source("tpv/tpvCierresCore.js"),
+    ]);
+    assert.match(cierresCore, /export async function buildTpvSessionSummary\\(/);
+    assert.match(caja, /import \\{ buildTpvSessionSummary \\} from "backend\\/tpv\\/tpvCierresCore"/);
+    assert.match(cierres, /import \\{ buildTpvSessionSummary \\} from "backend\\/tpv\\/tpvCierresCore"/);
+    assert.match(cierres, /buildTpvSessionSummary\\(session\\)/);
+    assert.doesNotMatch([caja, cierres, cierresCore].join("\\n"), /buildSandboxSessionSummary/);
+
 });
 
 test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
