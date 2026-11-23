@@ -118,7 +118,7 @@ function runSyntheticBusinessDay() {
             totals[method] += amount;
         }
         return totals;
-    }, { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 });
+    }, { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, BONO: 0, TARJETA_REGALO: 0, OTROS: 0 });
 
     const openingFloatMinor = 15000;
     const cashAppliedMinor = paymentTotals.EFECTIVO;
@@ -154,7 +154,7 @@ test("TPV business-day simulation validates three realistic synthetic sales", ()
     assert.deepEqual([...day.processed.values()].map((item) => item.amountMinor), [7623, 3933, 3013]);
     assert.equal(day.totals.totalSalesMinor, 14569);
     assert.equal(day.totals.netSalesMinor, 11556);
-    assert.deepEqual(day.totals.paymentTotals, { EFECTIVO: 7623, TARJETA: 3013, BIZUM: 3933, OTROS: 0 });
+    assert.deepEqual(day.totals.paymentTotals, { EFECTIVO: 7623, TARJETA: 3013, BIZUM: 3933, BONO: 0, TARJETA_REGALO: 0, OTROS: 0 });
 });
 
 test("cash drawer reconciles opening float, cash tender, movements and cash refund", () => {
