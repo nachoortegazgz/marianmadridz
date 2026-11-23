@@ -397,6 +397,7 @@ body {
   /* ---------- Estado local ---------- */
   const state = {
     session: null,
+    // profesionalId is the native Bookings resourceId exposed by MapaStaff.
     profesionalId: null,
     staff: [],
     items: [],
@@ -404,6 +405,7 @@ body {
     paymentMethod: "EFECTIVO",
     busy: false,
     lastSale: null,
+    // Compatibility transport key: this value is a native Wix Contacts _id.
     customerIdentityId: null,
     customerLabel: null,
   };
@@ -523,7 +525,7 @@ body {
     container.querySelectorAll("[data-customer-index]").forEach((button) => {
       button.onclick = () => {
         const selected = items[Number(button.dataset.customerIndex)];
-        if (!selected?.identityId) return;
+        // identityId is retained in the widget protocol; it contains the Wix Contact _id.\n        if (!selected?.identityId) return;
         state.customerIdentityId = selected.identityId;
         state.customerLabel = selected.displayName;
         renderSelectedCustomer();
