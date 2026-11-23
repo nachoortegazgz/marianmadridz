@@ -57,4 +57,4 @@ test("EMAIL-QA-05 removed fiscal package storage has no active provider dispatch
 
   assert.doesNotMatch(source, /_dispatchEmailViaResend|_getResendApiKey|wixFetch\\s*\\(\\s*RESEND_ENDPOINT/);
   assert.match(source, /PACKAGE_STORAGE_REMOVED/);
-});;
+});
