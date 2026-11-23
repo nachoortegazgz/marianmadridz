@@ -250,6 +250,7 @@ export function initializeTpvPage(widget) {
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
         allowOpaqueOrigin: true,
+        handshakeTimeoutMs: 65000,
         onContextReady: async () => {
             const config = envelope(await obtenerConfiguracionTPV());
             return {
