@@ -133,7 +133,7 @@ export const registrarMovimientoCaja = webMethod(
                     amount: fromMinorUnits(amountMinor),
                     operatorId: operator.operatorId,
                     actorId: operator.actorId,
-                    operationalStatus: "ABIERTA",
+                    operationalStatus,
                     integrationStatus: "NO_ENVIADO",
                     simulationStatus: "SYNTHETIC",
                     paymentStatus: "NOT_APPLICABLE",
@@ -167,6 +167,12 @@ export const obtenerMovimientosCaja = webMethod(
                 throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
             }
             const sessionId = sessionIdFromInput(input);
+            const latestSession = await latestTpvSession();
+            const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
+            const operationalStatus = latestSession?.sessionId === sessionId
+                ? latestSession.status
+                : (closures.some((item) => item.sessionId === sessionId && item.closed === true) ? "CERRADA" : null);
+            if (!operationalStatus) throw new Error("TPV_SESSION_NOT_FOUND");
             const ledger = await queryTpvLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
