@@ -115,3 +115,6 @@ Correlación de autoría: los siete registros TPV-QA comparten un único CMS own
 ## Discrepancia de recuento MovimientosCaja
 
 Snapshot auditado 2026-11-12: 10 filas (4 SMOKE_TEST, 1 INTERNAL/VENTA_ONLINE no sintética, 5 SIMULATED_PAYMENT secuencia 1–5). Lectura consistente actual 2026-11-23: 5 filas, todas sintéticas, totalCount=5 y hasNext=false. Diferencia de -5; la fila no sintética del snapshot no está presente. No se registraron IDs en el snapshot anterior y no hay historial CMS disponible en la consulta actual; causa desconocida. No limpiar ni reconstruir. Revisar backup/Activity Logs y confirmar si hubo reset autorizado. Mantener P0 de integridad abierto.
+
+
+Seguimiento PR #566: el clasificador fiscal ahora reconoce esos marcadores legacy para excluirlos de lectores. No los convierte en registros válidos: los hooks de inserción y el lector TPV canónico siguen rechazando los payloads incompletos.
