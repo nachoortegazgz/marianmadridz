@@ -26,7 +26,8 @@ test("TPV controller imports all twelve canonical backend WebMethod names", asyn
         "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
         "src/backend/tpv/tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
         "src/backend/tpv/tpvVentas.web.js": ["registrarVenta"],
-        "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja", "obtenerMovimientosCaja"],
+        "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja"],
+        "src/backend/tpv/tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
         "src/backend/tpv/tpvDevoluciones.web.js": ["registrarDevolucion"],
         "src/backend/tpv/tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
     };

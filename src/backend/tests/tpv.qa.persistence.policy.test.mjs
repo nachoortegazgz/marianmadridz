@@ -316,7 +316,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
         ["tpvPagos.web.js", ["validarDesglosePagos"]],
         ["tpvUtils.web.js", ["obtenerConfiguracionTPV"]],
         ["tpvPermisos.web.js", ["obtenerPermisosTPV"]],
-        ["tpvAuditoria.web.js", ["obtenerMovimientosCaja"]],
+        ["tpvAuditoria.web.js", ["obtenerAuditoriaTPV"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
     const repositoryAccess = /(?:latestOpenTpvSession|insertTpvEvent|appendTpvAudit|queryTpvRecords|queryTpvLedgerRecords|withTpvSessionLock|withTpvSaleLock|listTpvIdentities|getTpvIdentity|wql\.)/;
@@ -371,7 +371,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["obtenerPermisosTPV"],
         },
         "tpvAuditoria.web.js": {
-            guarded: ["obtenerMovimientosCaja"],
+            guarded: ["obtenerAuditoriaTPV"],
         },
         "tpvGiftCards.web.js": {
             guarded: ["consultarTarjetaRegalo"],
