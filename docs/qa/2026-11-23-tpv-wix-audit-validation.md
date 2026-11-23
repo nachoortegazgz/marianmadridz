@@ -1,89 +1,43 @@
-## Consolidación de ramas — 2026-11-23 (estado posterior)
+# Auditoría Wix — TPV — corte 2026-11-23
 
-- PR #537 se integró y cerró como merged en PR #541 mediante merge commit `1bd1e2d02a741cc4ebad883524f3652ed6aa905b`.
-- El merge commit conserva ambos padres: HEAD anterior de #541 `fad42e421e9698dd79b4e051b1f6784c37bf2d95` y HEAD de #537 `37325b4db8114631f220d5348a15902896a3d854`. Por tanto, los 28 commits exclusivos de #537 quedan en el historial, no solo sus cambios de archivos.
-- El árbol del merge (`4c66c5b835b87c7260b729e2fe10033af25e90d9`) es idéntico al árbol del HEAD #541 anterior al merge. La reconciliación no descartó código de #541 ni introdujo una combinación textual riesgosa: el diff de PR #537 estaba funcionalmente representado/superado por la versión más completa de #541 en las 16 rutas compartidas.
-- PR #541 permanece abierta contra `main`. `main` no se ha modificado. El merge de #537 se hizo exclusivamente dentro de la rama de integración.
-- CI offline aprobado en el árbol idéntico `1d7e99d66fcc14165bf2482885e583176c2b06ef` sigue siendo evidencia de ese contenido. Debe confirmarse la ejecución de CI asociada al nuevo merge commit antes de solicitar merge de PR #541.
-- Wix Preview/Runtime E2E continúa pendiente. **NO-GO para producción y publicación.**
+**Repositorio/main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**PR #541:** integrada en main.  
+**PR #540:** integrada en main.  
+**PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
+**Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
+**Estado de aceptación:** **NO-GO Runtime / producción**.
 
-> ## Addendum de consolidación — 2026-11-23
->
-> Esta nota se redactó originalmente para la rama `feat/tpv-neutral-contract-block1-v2-20261123` / PR #537. PR #537 sigue abierta. La rama consolidada que se está validando ahora es `feat/tpv-payment-exports-after-p0-20261123` / PR #541, también abierta y basada en el mismo `main` (`995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d`).
->
-> **Solapamiento PR:** #537 cambia 16 archivos; los 16 también aparecen en #541. #541 añade otros 24 archivos. El grafo de commits está divergido (comparación #537…#541: 113 commits ahead y 28 behind). No fusionar ambas PR automáticamente ni cerrar #537 sin revisar sus commits exclusivos.
->
-> **Revisión funcional del contenido exclusivo de #537:** la rama #541 conserva las atribuciones opcionales de profesional en venta, movimiento y devolución; los contratos de hash/eventHash y envelope versionado; la lectura de registros legacy mediante constantes centralizadas; y los estados neutros de Ticket X/Z. En #541 se amplía además la compatibilidad de CajaActual para formatos V1/V2 y legacy, y se centralizan los marcadores legacy en `TPV_RUNTIME_POLICY`. Esta revisión de código no sustituye la comparación commit a commit antes de integrar.
->
-> **Estado vigente de CI:** el HEAD de código validado de PR #541 es `1d7e99d66fcc14165bf2482885e583176c2b06ef`: Backend offline quality gates SUCCESS (run 45100967570), Layer 1 364/364, Layer 2 255/255, offline completo 732/732; npm audit 0 vulnerabilidades; Wix SDK/eCommerce/TPV contracts y ESLint SUCCESS. Secret scanning SUCCESS (run 45100967567). Los commits posteriores de la rama son únicamente documentación.
->
-> **CI posterior al merge:** CI posterior a la reconciliación: Backend offline quality gates SUCCESS (run `45102063911`): Layer 1 364/364, Layer 2 255/255, suite offline 732/732, npm audit 0 vulnerabilidades, contratos Wix SDK/eCommerce/TPV y ESLint SUCCESS. Secret scanning SUCCESS (run `45102063815`).  
-> **Wix:** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, estado Draft, Velo Enabled. No se ha probado sincronización del SHA con Wix Editor ni flujo E2E en Preview. **NO-GO para producción.**
->
-> Los apartados originales de esta nota describen el snapshot de PR #537 y sus límites en ese momento. Las referencias a “sin CI” y al último commit `de532108...` son históricas, no el estado actual de PR #541.
+## Conclusión vigente
 
----
+La integración de código TPV está en main. La aceptación estática no demuestra ejecución en Wix Preview, sincronización Git-Editor, esquema CMS real, permisos efectivos ni conciliación operacional. No hay autorización para publicar ni para habilitar pagos o writers fiscales.
 
-# Validación de auditoría Wix — TPV (23-11-2026)
+## CI de referencia
 
-## Alcance y referencia
+- Backend offline quality gates sobre main: FAIL, run 45105031715. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
+- Secret scanning: SUCCESS, run 45105031857.
+- La corrección se prepara en la rama chore/phase1-repository-stabilization-20261123; CI de esa rama pendiente.
 
-Repositorio: `nachoortegazgz/marianmadridz`  
-Rama: `feat/tpv-neutral-contract-block1-v2-20261123`  
-PR: #537 (abierta; no fusionada)  
-Alcance: inspección estática de los contratos de venta, apertura de caja, cierre Z, persistencia lógica y nomenclatura de estados.
+## Contrato de pagos comprobado estáticamente
 
-Esta validación no equivale a una ejecución Wix Runtime ni a una prueba E2E en Preview.
+TPV_PAYMENT_METHOD contiene EFECTIVO, TARJETA, BIZUM, BONO, TARJETA_REGALO y OTROS. El validador obtiene los métodos desde el enum centralizado. El resumen separa seis categorías y las devoluciones conservan la asignación por medio.
 
-## Resultado por hallazgo
+BONO y TARJETA_REGALO son medios sintéticos de registro; no equivalen a canje real ni a integración de saldo con Wix Gift Cards. Esta distinción se mantiene en la matriz de aceptación.
 
-| Hallazgo de la auditoría | Resultado | Evidencia / decisión |
-|---|---|---|
-| 1. `SALE_REGISTER`: `lines/payments` frente a `lineas/pagos` | No reproducido en la rama revisada | El widget envía `lineItems/payments`; `tpvPageController.js` transforma cada línea a `lineas` con `tipoLinea`, `itemId`, `varianteId`, `concepto`, `cantidad`, `precioUnitario`, `descuentoImporte`, `impuestosImporte`, `profesionalId` y `stockAfectado`. Los pagos se convierten a `pagos` con `medioPago`, `importe` e `importeCambio`. `tpvVentas.web.js` pasa esos campos a `validateSaleDraft`; el validador exige exactamente `lineas/pagos`. |
-| 2. Apertura `abrirCaja` frente a `abrirSesionCaja` | No reproducido | El controlador importa `abrirSesionCaja` desde `tpvCaja.web`, lo llama en `SESSION_OPEN`; el módulo exporta `abrirSesionCaja`. |
-| 3. Unidad de `countedCash` en Z | Verificado correcto | El controlador transmite euros como `countedCash`. `generarCierreZ` convierte con `toMinorUnits(input.countedCash, "COUNTED_CASH")` y persiste `countedCashMinor`. |
-| 4. Colecciones lógicas con prefijo SANDBOX | Corregido previamente | `TPV_COLLECTIONS` utiliza `TPV_LOGICAL_*`; `TPV_LEGACY_COLLECTIONS` conserva los discriminadores anteriores para compatibilidad. Son discriminadores lógicos, no IDs de colecciones CMS. |
-| 5. `_ensureCajaActualForSandbox` | Ya neutralizado | El helper activo es `_ensureCajaActual`. No se requiere renombrado adicional. |
-| 5. `LEGACY_TPV_LEDGER_SOURCE` | Mantener temporalmente | Se usa para reconocer registros históricos. También existe una ruta de continuidad/proyección de una sesión histórica; retirarla sin migrar/cerrar sesiones podría bloquear el TPV. No eliminar hasta disponer de migración compatible y pruebas de transición. |
-| 6. Estados `GENERADO_SINTETICO` y `CERRADO_SINTETICO` | Corregido en esta intervención | Ticket X usa `status: GENERADO`; Ticket Z usa `status: CERRADO`; ambos incluyen `sourceType: SYNTHETIC` como campo separado. Los estados de venta/pago conservan su contrato existente y no se renombraron sin revisar todos sus consumidores. |
+## Pendientes de aceptación
 
-## Cambios aplicados
+- Identidad del operador Wix y recurso Staff real.
+- Matriz de roles y permisos efectivos.
+- Sesión, lock y concurrencia de CajaActual.
+- Ventas mixtas, movimientos, devoluciones parciales y conciliación física de efectivo.
+- Ticket X, cierre Z, replay, vínculo X/Z y auditoría.
+- Exportaciones, lecturas, impresión y denegaciones.
+- Aislamiento Sandbox/Online y prueba negativa Published.
+- Sincronización exacta de Git con Wix Editor y validación Preview.
 
-- `src/backend/tpv/tpvCierres.web.js`: neutralizados los estados de los eventos Ticket X y Ticket Z; se incorpora `sourceType` explícito en cada registro.
-- `src/backend/internalConfig.js`: comentario de política actualizado para describir los controles explícitos source/site/version/session/hash y el carácter histórico del marcador legacy.
-- `src/backend/tests/tpv.qa.persistence.policy.test.mjs`: fixtures de integridad y locks actualizados para metadata neutral, conservando una prueba explícita de compatibilidad histórica.
-- `src/backend/tests/tpv.web-modules.contract.test.mjs`: aserciones actualizadas y prueba estática para estados neutrales X/Z y conversión de importe de Z.
+## Límites de esta auditoría
 
-## Riesgos y límites
+Es una revisión de repositorio/GitHub y documentación. No se han ejecutado escrituras CMS, pagos, reembolsos, facturación, emisión Veri*Factu, automatizaciones externas, publicación ni despliegue. La última lectura de contexto Wix disponible indicaba Draft y Velo Enabled; no se interpreta como prueba de sincronización del código.
 
-1. La persistencia de Ticket X/Z sigue siendo sintética; `sourceType: SYNTHETIC` no significa conciliación nativa ni escritura en Wix Payments, Wix Invoices o un proveedor.
-2. La compatibilidad de sesiones históricas no debe retirarse hasta definir y probar la transición de `CajaActual`.
-3. El cambio de estados de Ticket X/Z puede afectar consumidores externos no presentes en el repositorio; se requiere validación en Preview y revisión de integraciones antes de publicar.
-4. La auditoría estática no acredita permisos Wix efectivos, comportamiento del CMS, locks distribuidos en runtime ni ausencia de carreras.
+## Historial
 
-## Validación ejecutada
-
-- Inspección de los archivos y contratos citados en la tabla.
-- Comprobación de que la apertura importa una exportación existente.
-- Comprobación del mapeo DTO completo entre widget, controlador y validador.
-- Comprobación de la conversión euros → céntimos en Ticket Z.
-- Comprobación de los discriminadores lógicos neutrales y del helper neutral.
-- No se ejecutaron tests locales ni CI en esta intervención: la integración no devolvió ejecuciones ni checks asociados al último commit consultado.
-- No se ejecutaron escrituras CMS, pagos, devoluciones, cambios en LIVE ni publicación.
-
-## Estado
-
-**Parcial — no apto para declarar E2E validado.** La lista concreta de la auditoría queda atendida en sus correcciones válidas de código y tests estáticos, pero el gate de aceptación sigue pendiente de CI verificable y pruebas Wix Preview apertura → venta → Ticket X/Z, incluyendo reintento y conciliación.
-
-
-## Seguimiento de rama y release gate
-
-Último commit de esta actualización: `de5321083be16d2a4bfd9d501bcf1b212050da6a`.
-
-- PR #537 continúa abierta y sin merge.
-- Comparación contra `main`: 26 commits por delante y 4 por detrás; GitHub reporta `diverged` y `mergeable=false`.
-- La consulta de checks y ejecuciones asociadas al último commit no devolvió ejecuciones ni estados.
-- El entorno de trabajo no permitió clonar el repositorio para ejecutar Vitest/Node localmente.
-- Por tanto, los tests actualizados son cambios de código, no pruebas ejecutadas. No se declara CI ni suite local en verde.
-
-**Gate mantenido: NO-GO para merge/despliegue** hasta resolver divergencia, ejecutar CI, revisar el diff completo y validar el flujo en Wix Preview.
+La comparación detallada de ramas, los hashes de merge y las notas del candidato PR #537/#541 quedan en el historial Git y en los commits correspondientes. Este documento sustituye las afirmaciones antiguas de «PR abierta», «main intacta» o «sin CI» que ya no describen el estado actual.
