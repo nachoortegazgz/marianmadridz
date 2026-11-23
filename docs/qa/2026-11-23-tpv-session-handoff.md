@@ -2,9 +2,7 @@
 
 **Repositorio:** nachoortegazgz/marianmadridz  
 **main:** ccdac0347e86f430c4f8086765815d9d5d7e00af  
-**PR #541:** integrada en main. **PR #540 y #542:** integradas. **PR #543:** integrada en main mediante 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. **PR #537:** preservada en el historial de #541.
-**PR #540:** integrada. **PR #542:** integrada y generó el HEAD actual 0ba7b684d6f4d6465718ae4317d10d8f422de2ff.  
-**PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.  
+**PR #541, #540, #542 y #543:** integradas en main. **PR #544:** actualización documental integrada y produce el HEAD actual ccdac0347e86f430c4f8086765815d9d5d7e00af. **PR #537:** preservada en el historial de #541 mediante merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 **Release:** **NO-GO**.
 
 ## Estado técnico
