@@ -8,7 +8,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY, TPV_IDENTITY_TYPES, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { listTpvSandboxIdentities } from "backend/tpv/tpvSandboxIdentities";
 import { logger } from "backend/logger";
 import {
@@ -20,6 +20,7 @@ import {
     makeSandboxRefundLockId,
     makeSandboxSessionLockId,
     makeSandboxTransactionId,
+    makePreviousSandboxTransactionId,
     makeLegacySandboxTransactionId,
 } from "backend/tpv/tpvUtils";
 import {
@@ -200,7 +201,7 @@ export async function withSandboxSaleLock(saleId, traceId, operation, sessionId 
     const executeSaleLock = () => withSandboxScopedLock({
         lockId,
         controlType: CONTROL_TYPE.TPV_REFUND_LOCK,
-        dedupePrefix: "TPV_SANDBOX_REFUND:",
+        dedupePrefix: "TPV_REFUND:",
         scopeField: "saleId",
         scopeId: saleId,
         traceId,
@@ -219,7 +220,7 @@ export async function withSandboxSessionLock(sessionId, traceId, operation) {
     return withSandboxScopedLock({
         lockId,
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
-        dedupePrefix: "TPV_SANDBOX_SESSION:",
+        dedupePrefix: "TPV_SESSION:",
         scopeField: "sessionId",
         scopeId: sessionId,
         traceId,
@@ -244,7 +245,7 @@ function stripVolatile(value) {
     return result;
 }
 
-const SANDBOX_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
+const LEGACY_TPV_LEDGER_SOURCE = "TPV_SANDBOX_SYNTHETIC";
 const TPV_CASH_REGISTER_SOURCE = "TPV_SYNTHETIC";
 const SANDBOX_GENESIS_HASH = "0".repeat(64);
 
@@ -353,13 +354,12 @@ async function _ensureCajaActualForSandbox() {
 function _sessionFromCaja(caja) {
     const sandboxState = caja?.conceptOperations?.tpvSandbox;
     const sessionId = String(sandboxState?.sessionId || "").trim();
-    const explicitSynthetic = caja?.snapshotSource === TPV_CASH_REGISTER_SOURCE &&
-        caja?.cashRegisterStatus === "SIMULACION" &&
+    const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
         sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Boolean(sessionId);
-    const legacySynthetic = caja?.snapshotSource === SANDBOX_LEDGER_SOURCE &&
+    const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
         caja?.traceId === SANDBOX_RUN_ID && Boolean(sessionId);
     if (!explicitSynthetic && !legacySynthetic) return null;
     if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
@@ -372,14 +372,14 @@ function _sessionFromCaja(caja) {
         openedAt,
         closedAt,
         openingCashMinor: Math.round(Number(caja.openingCashAmount || 0) * 100),
-        cashierMemberId: caja.openedBy || TPV_RUNTIME_POLICY.ACTOR_ID,
+        cashierMemberId: caja.openedBy || null,
         conceptOperations: caja.conceptOperations,
         payloadFiscal: { requestFingerprint: caja.conceptOperations?.tpvSandbox?.requestFingerprint },
         payload: makeSyntheticPayload({
             sessionId,
             traceId: caja.traceId || "",
             dayKey: openedAt.toISOString().slice(0, 10).replace(/-/g, ""),
-            source: explicitSynthetic ? TPV_CASH_REGISTER_SOURCE : SANDBOX_LEDGER_SOURCE,
+            source: explicitSynthetic ? TPV_CASH_REGISTER_SOURCE : LEGACY_TPV_LEDGER_SOURCE,
         }),
         _createdDate: caja._createdDate,
         _updatedDate: caja._updatedDate,
@@ -396,12 +396,11 @@ async function _writeCajaProjection(collection, record, eventId) {
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             assertSandboxCajaWritable(caja);
             const preflightSandboxState = caja.conceptOperations?.tpvSandbox || {};
-            const explicitSynthetic = caja.snapshotSource === TPV_CASH_REGISTER_SOURCE &&
-                preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+            const explicitSynthetic = preflightSandboxState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightSandboxState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
-            const legacySynthetic = caja.snapshotSource === SANDBOX_LEDGER_SOURCE &&
+            const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
                 caja.traceId === SANDBOX_RUN_ID;
             if (!explicitSynthetic && !legacySynthetic) {
                 throw new Error("TPV_CASH_REGISTER_NOT_IN_TEST_MODE");
@@ -452,14 +451,14 @@ async function _writeCajaProjection(collection, record, eventId) {
             }
             if (collection === TPV_COLLECTIONS.TICKET_Z) {
                 next.closedAt = record.generatedAt || now;
-                next.closedBy = TPV_RUNTIME_POLICY.ACTOR_ID;
+                next.closedBy = record.operatorId || record.actorId || null;
                 next.countedCash = Number(record.totals?.countedCashMinor || 0) / 100;
                 next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
                 next.difference = Number(record.totals?.differenceMinor || 0) / 100;
                 next.differenceReason = String(record.totals?.differenceReason || "");
-                next.lastOperationType = "TPV_SANDBOX_SESSION_CLOSE";
+                next.lastOperationType = "TPV_SESSION_CLOSE";
             } else {
-                next.lastOperationType = "TPV_SANDBOX_" + String(collection).replace(/^SANDBOX_/, "");
+                next.lastOperationType = "TPV_" + String(collection).replace(/^SANDBOX_LOGICAL_/, "");
             }
             sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
             sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
@@ -492,7 +491,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         cashRegisterStatus: "SIMULACION",
         openedAt,
         closedAt: null,
-        openedBy: TPV_RUNTIME_POLICY.ACTOR_ID,
+        openedBy: record.operatorId || record.cashierMemberId || null,
         closedBy: "",
         openingCashAmount: openingCash,
         openingCardAmount: 0,
@@ -510,7 +509,7 @@ function _sessionCajaPatch(caja, record, fingerprint) {
         snapshotSource: TPV_CASH_REGISTER_SOURCE,
         traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
         lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
-        lastOperationType: "TPV_SANDBOX_SESSION_OPEN",
+        lastOperationType: "TPV_SESSION_OPEN",
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
         lastOperationAt: openedAt,
@@ -545,6 +544,7 @@ async function findByIdempotencyKey(collection, key) {
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const transactionIds = [
         _testTransactionId(collection, key),
+        makePreviousSandboxTransactionId(collection, key),
         makeLegacySandboxTransactionId(key),
     ];
     const uniqueTransactionIds = [...new Set(transactionIds)];
@@ -552,7 +552,6 @@ async function findByIdempotencyKey(collection, key) {
         const result = await queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
             filter: wql.and(
-                wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
                 wql.eq("movementType", movementType),
                 wql.eq("transactionId", transactionId)
             ),
@@ -560,7 +559,7 @@ async function findByIdempotencyKey(collection, key) {
             consistency: CONSISTENCY.STRONG,
         });
         if (result.items.length > 1) throw new Error("TPV_IDEMPOTENCY_INDEX_VIOLATION");
-        if (result.items[0]) return _virtualRecord(result.items[0]);
+        if (result.items[0] && _isRecognizedSyntheticLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
     }
     return null;
 }
@@ -583,13 +582,12 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
     const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
     const sessionId = String(record.sessionId || record.payload?.sessionId || "").trim();
-    const traceId = "TPV:" + SANDBOX_RUN_ID + ":" + String(sessionId || "GLOBAL");
+    const traceId = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + String(sessionId || "GLOBAL");
     const envelope = {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
         sessionId: sessionId || null,
-        sandboxRunId: SANDBOX_RUN_ID,
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
@@ -603,7 +601,6 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
         sessionId: sessionId || null,
-        sandboxRunId: SANDBOX_RUN_ID,
         logicalCollection: collection,
         transactionId,
         traceId,
@@ -618,7 +615,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash: SANDBOX_GENESIS_HASH,
         recordTimestamp: timestamp,
-        schemaVersion: "TPV_SANDBOX_SYNTHETIC_V1",
+        schemaVersion: 2,
         traceId,
         movementType,
         totalAmount: amount,
@@ -627,15 +624,15 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         taxAmount: 0,
         paymentMethod: String(record.paymentMethod || "OTROS").toUpperCase(),
         channelType: "PRESENCIAL",
-        operationDescription: "SIMULATED TPV SANDBOX " + collection,
-        staffResourceId: TPV_RUNTIME_POLICY.ACTOR_ID,
+        operationDescription: "TPV SYNTHETIC " + collection,
+        staffResourceId: record.operatorResourceId || null,
         tipoFactura: "F2",
         fechaExpedicionFactura: dateYmd,
         tipoImpositivo: 0,
         fiscalPeriod: dateYmd.slice(0, 7),
-        recordSource: SANDBOX_LEDGER_SOURCE,
+        recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: envelope,
-        desgloseDetallado: { accountCode: "SIMULATED", sandboxRunId: SANDBOX_RUN_ID },
+        desgloseDetallado: { accountCode: "SIMULATED" },
         lineItems: { sandboxRecord: record.lineItems || [] },
     };
 }
@@ -671,13 +668,13 @@ export async function insertSandboxEvent(collection, idempotencyKey, data) {
 
     if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
         return withCajaActualProjectionLock(
-            "TPV_SANDBOX_SESSION:" + key,
+            "TPV_SESSION:" + key,
             async (lock) => {
                 const caja = await _ensureCajaActualForSandbox();
                 assertSandboxCajaWritable(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
-                if (caja.snapshotSource === SANDBOX_LEDGER_SOURCE && !caja.closedAt) {
+                if (caja.closedAt == null && _sessionFromCaja(caja)) {
                     throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 }
                 const updated = _sessionCajaPatch(caja, record, fingerprint);
@@ -738,10 +735,7 @@ export async function querySandboxRecords(collection, filter, options = {}) {
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-        filter: wql.and(
-            wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
-            wql.eq("movementType", movementType)
-        ),
+        filter: wql.eq("movementType", movementType),
         sort: ["recordTimestamp ASC"],
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
@@ -779,14 +773,14 @@ export async function querySandboxLedgerRecords(options = {}) {
     }
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-        filter: wql.eq("recordSource", SANDBOX_LEDGER_SOURCE),
+        filter: wql.eq("recordSource", LEGACY_TPV_LEDGER_SOURCE),
         sort: ["recordTimestamp DESC"],
         limit,
         consistency: CONSISTENCY.STRONG,
     });
     const records = result.items
         .map(_virtualRecord)
-        .filter((item) => item.payloadFiscal?.sandboxRunId === SANDBOX_RUN_ID);
+        .filter(_isRecognizedSyntheticLedgerItem);
     return { records, hasMore: result.hasNext === true };
 }
 
@@ -808,7 +802,7 @@ export async function appendSandboxAudit({
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
             occurredAt: new Date(),
-            source: "TPV_SANDBOX_WEB_METHOD",
+            source: "TPV_WEB_METHOD",
             payload: { ...payload, traceId: String(traceId || "") },
         }
     );
