@@ -90,7 +90,7 @@ export const registrarDevolucion = webMethod(
                     changeMinor: 0,
                     status: "REEMBOLSO_SINTETICO",
                     provider: "SIMULATED",
-                    gatewayReference: "NO-GATEWAY",
+                    gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY",
                     createdAt: new Date(),
                     payload: { sessionId: session.sessionId, refundId, traceId },
                 });
