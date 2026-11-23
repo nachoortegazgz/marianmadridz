@@ -10,7 +10,7 @@ Recuperar coherencia entre código, contratos de test y documentación; validar 
 - PR #541, #540, #542 y #543 están integradas; PR #544 actualizó documentación y produjo el HEAD actual. PR #537 quedó preservada en el historial de #541.
 - Backend offline quality gates SUCCESS en el HEAD actual, run 45107377657: Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos Wix SDK/eCommerce/TPV y ESLint.
 - Gitleaks full-history SUCCESS en run 45107377700.
-- Los runs 45105979742/45105979748 son históricos; el fallo de aserciones se corrigió en PR #543.
+- Los runs 45105979742/45105979748 y 45106697984/45106698016 son históricos; el fallo de aserciones se corrigió en PR #543. Los workflows actuales están referenciados arriba.
 - El fallo se localiza en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago, pero internalConfig.js define seis valores en TPV_PAYMENT_METHOD y tpvValidation.js obtiene Object.values(TPV_PAYMENT_METHOD).
 - tpvCierresCore.js clasifica BONO y TARJETA_REGALO; tpvDevoluciones.web.js inicializa asignaciones con el enum completo. El fallo es una expectativa de test obsoleta, no evidencia de que deba reducirse el enum.
 - La documentación TPV contenía una declaración contraria: decía que BONO y TARJETA_REGALO no estaban implementados. Se ha corregido distinguiendo el registro sintético de una redención/captura de valor real.
@@ -54,6 +54,7 @@ PR #543 integró la corrección de test y documentación técnica; PR #544 conso
 - Los cambios se integraron mediante PR #543 y #544; no se realizaron pushes directos a main durante la estabilización.
 - No se modifica CMS, Wix Editor, automatizaciones, reservas, pagos, fiscalidad ni datos.
 - main continúa sin protección efectiva hasta que un administrador resuelva #210.
+- Existe una discrepancia de estado de publicación Wix: un contexto de sitio indica Draft, mientras que las issues #520/#526 documentan Published. No considerar resuelta sin nueva lectura de Wix Site Context.
 
 ## Criterio de cierre de Fase 1
 
