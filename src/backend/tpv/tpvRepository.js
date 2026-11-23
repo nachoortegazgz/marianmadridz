@@ -67,7 +67,7 @@ async function withTpvScopedLock({
     errorPrefix,
 }) {
 
-    await _ensureCajaActualForSandbox();
+    await _ensureCajaActual();
     const cleanScopeId = String(scopeId || "").trim();
     if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -217,7 +217,7 @@ export async function withTpvSaleLock(saleId, traceId, operation, sessionId = nu
 }
 
 export async function withTpvSessionLock(sessionId, traceId, operation) {
-    const caja = await _ensureCajaActualForSandbox();
+    const caja = await _ensureCajaActual();
     assertTpvCajaIntegrity(caja, { allowBootstrap: true });
     const lockId = makeTpvSessionLockId(sessionId);
     return withTpvScopedLock({
@@ -295,10 +295,12 @@ function _isRecognizedSyntheticLedgerItem(item) {
         envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(envelope.schemaVersion) === 2 &&
+        envelope.reconciliationStatus === "NOT_RECONCILED" &&
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
     const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
-        envelope.sandboxRunId === LEGACY_RUN_ID &&
+        envelope.legacyRunId === LEGACY_RUN_ID &&
         String(item.traceId || "").startsWith("TPV:" + LEGACY_RUN_ID + ":");
     return validCommon && (current || legacy);
 }
@@ -307,8 +309,8 @@ function _virtualRecord(item) {
     const envelope = item?.payloadFiscal && typeof item.payloadFiscal === "object"
         ? item.payloadFiscal
         : {};
-    const record = envelope.sandboxRecord && typeof envelope.sandboxRecord === "object"
-        ? envelope.sandboxRecord
+    const record = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object"
+        ? envelope.ledgerRecord
         : {};
     return {
         ...record,
@@ -366,7 +368,7 @@ async function _getCajaActual() {
     return result.items[0] || null;
 }
 
-async function _ensureCajaActualForSandbox() {
+async function _ensureCajaActual() {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_SEEDED");
     assertTpvCajaIntegrity(caja, { allowBootstrap: true });
@@ -374,13 +376,15 @@ async function _ensureCajaActualForSandbox() {
 }
 
 function _sessionFromCaja(caja) {
-    const sandboxState = caja?.conceptOperations?.tpvSandbox;
-    const sessionId = String(sandboxState?.sessionId || "").trim();
+    const sourceState = caja?.conceptOperations?.tpvSandbox;
+    const sessionId = String(sourceState?.sessionId || "").trim();
     const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
-        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        sandboxState?.externalSideEffects === false &&
+        sourceState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        sourceState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(sourceState?.schemaVersion) === 2 &&
+        sourceState?.externalSideEffects === false &&
+        /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
     const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
         caja?.traceId === LEGACY_RUN_ID && Boolean(sessionId);
@@ -411,7 +415,7 @@ function _sessionFromCaja(caja) {
     };
 }
 
-async function _writeCajaProjection(collection, record, eventId) {
+async function _writeCajaProjection(collection, record, eventId, eventHash) {
     return withCajaActualProjectionLock(
         String(record?.traceId || eventId || "TPV_CAJA_PROJECTION"),
         async (lock) => {
@@ -424,6 +428,7 @@ async function _writeCajaProjection(collection, record, eventId) {
                 preflightSandboxState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
                 preflightSandboxState.schemaVersion === 2 &&
                 preflightSandboxState.externalSideEffects === false &&
+                /^[a-f0-9]{64}$/i.test(String(preflightSandboxState.eventHash || "")) &&
                 Boolean(String(preflightSandboxState.sessionId || "").trim());
             const legacySynthetic = caja.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
                 caja.traceId === LEGACY_RUN_ID;
@@ -433,10 +438,10 @@ async function _writeCajaProjection(collection, record, eventId) {
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
                 : {};
-            const sandboxState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
+            const sourceState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
                 ? { ...conceptOperations.tpvSandbox }
                 : {};
-            const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
+            const appliedIds = Array.isArray(sourceState.appliedMovementIds) ? sourceState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
             if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
                 throw new Error("TPV_PROJECTION_IDEMPOTENCY_LIMIT");
@@ -485,16 +490,17 @@ async function _writeCajaProjection(collection, record, eventId) {
             } else {
                 next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
             }
-            sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
-            sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
-            sandboxState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
-            sandboxState.externalSideEffects = false;
-            sandboxState.schemaVersion = 2;
-            sandboxState.reconciliationStatus = "NOT_RECONCILED";
-            sandboxState.sessionId = String(sandboxState.sessionId || record.sessionId || record.payload?.sessionId || "");
-            sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
-            sandboxState.lastProjectedAt = now;
-            conceptOperations.tpvSandbox = sandboxState;
+            sourceState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
+            sourceState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
+            sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
+            sourceState.externalSideEffects = false;
+            sourceState.schemaVersion = 2;
+            sourceState.reconciliationStatus = "NOT_RECONCILED";
+            sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
+            sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
+            sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
+            sourceState.lastProjectedAt = now;
+            conceptOperations.tpvSandbox = sourceState;
             next.conceptOperations = conceptOperations;
             await assertFiscalLedgerLock(lock);
             await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
@@ -511,7 +517,7 @@ function _shouldProject(collection, record) {
         record?.status === "CONFIRMADA_SINTETICA";
 }
 
-function _sessionCajaPatch(caja, record, fingerprint) {
+function _sessionCajaPatch(caja, record, eventHash) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
     return {
@@ -551,11 +557,12 @@ function _sessionCajaPatch(caja, record, fingerprint) {
                 schemaVersion: 2,
                 externalSideEffects: false,
                 reconciliationStatus: "NOT_RECONCILED",
+                eventHash: String(eventHash || ""),
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorId: String(record.operatorId || record.cashierMemberId || "").trim() || null,
                 operatorResourceId: String(record.operatorResourceId || "").trim() || null,
-                requestFingerprint: fingerprint,
+                requestFingerprint: record.requestFingerprint || null,
                 openedAt,
                 appliedMovementIds: [],
             },
@@ -622,7 +629,9 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
-        sandboxRecord: record,
+        schemaVersion: 2,
+        reconciliationStatus: "NOT_RECONCILED",
+        ledgerRecord: record,
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,
@@ -664,7 +673,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: envelope,
         desgloseDetallado: { accountCode: "SIMULATED" },
-        lineItems: { sandboxRecord: record.lineItems || [] },
+        lineItems: { ledgerRecord: record.lineItems || [] },
     };
 }
 
@@ -701,7 +710,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         return withCajaActualProjectionLock(
             "TPV_SESSION:" + key,
             async (lock) => {
-                const caja = await _ensureCajaActualForSandbox();
+                const caja = await _ensureCajaActual();
                 assertTpvCajaIntegrity(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
@@ -722,7 +731,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
         if (_shouldProject(collection, existing)) {
-            await _writeCajaProjection(collection, existing, existing._id);
+            await _writeCajaProjection(collection, existing, existing._id, existing.hash);
         }
         return replay;
     }
@@ -736,7 +745,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         if (!winner) throw error;
         const replay = assertSameRequest(winner, fingerprint);
         if (_shouldProject(collection, winner)) {
-            await _writeCajaProjection(collection, winner, winner._id);
+            await _writeCajaProjection(collection, winner, winner._id, winner.hash);
         }
         return replay;
     }
@@ -748,7 +757,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         _updatedDate: saved?._updatedDate || new Date(),
     });
     if (_shouldProject(collection, record)) {
-        await _writeCajaProjection(collection, record, item._id);
+        await _writeCajaProjection(collection, record, item._id, item.hash);
     }
     return { item, replayed: false };
 }
@@ -771,17 +780,19 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
     });
-    const records = result.items.map(_virtualRecord).filter((item) =>
-        _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
-    );
+    const records = result.items
+        .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
+        .filter((item) => _matchesFilter(item, filter));
     if (options.allowTruncated === true) return records;
     const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
     let page = result;
     while (page.hasNext && records.length < maxRecords) {
         page = await page.next();
-        records.push(...page.items.map(_virtualRecord).filter((item) =>
-            _isRecognizedSyntheticLedgerItem(item) && _matchesFilter(item, filter)
-        ));
+        records.push(...page.items
+            .filter(_isRecognizedSyntheticLedgerItem)
+            .map(_virtualRecord)
+            .filter((item) => _matchesFilter(item, filter)));
     }
     if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     if (Array.isArray(options.sort) && options.sort.length) {
@@ -802,7 +813,7 @@ export async function queryTpvLedgerRecords(options = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
         throw new Error("TPV_LEDGER_INVALID_LIMIT");
     }
-    const [current, legacy] = await Promise.all([
+    const [current, legacy, previous] = await Promise.all([
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
             filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
@@ -817,14 +828,21 @@ export async function queryTpvLedgerRecords(options = {}) {
             limit,
             consistency: CONSISTENCY.STRONG,
         }),
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", "TPV_SYNTHETIC"),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
     ]);
-    const records = [...current.items, ...legacy.items]
-        .map(_virtualRecord)
+    const records = [...current.items, ...legacy.items, ...previous.items]
         .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
         .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
         .slice(0, limit);
-    return { records, hasMore: current.hasNext === true || legacy.hasNext === true ||
-        current.items.length + legacy.items.length > limit };
+    return { records, hasMore: current.hasNext === true || legacy.hasNext === true || previous.hasNext === true ||
+        current.items.length + legacy.items.length + previous.items.length > limit };
 }
 
 export async function appendTpvAudit({
