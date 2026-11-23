@@ -9,7 +9,7 @@
 - **Release:** NO-GO. El sitio no está autorizado para operación comercial ni para activar pagos/writers fiscales.
 - **Entorno:** QA/desarrollo único; el propietario declara que no ha tenido actividad real y que los datos de prueba son sintéticos.
 - **Wix Site Context (read-back 2026-11-23):** Draft; Velo habilitado; plan Premium; dominio personalizado; EUR / Europe-Madrid.
-- **Repositorio:** la estabilización documental quedó integrada en main mediante [PR #545](https://github.com/nachoortegazgz/marianmadridz/pull/545), merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`. CI pre-merge y post-merge finalizaron SUCCESS en sus respectivos SHA.
+- **Documentación canónica:** [índice](docs/INDEX.md), [estado vigente](docs/STATE-NOW.md) y [manifiesto histórico](docs/ARCHIVE-MANIFEST.md).
 - **Límite:** CI offline no acredita sincronización Git-Wix, Preview/Runtime, integridad CMS live, aceptación fiscal ni pruebas E2E.
 
 ## Navegación canónica

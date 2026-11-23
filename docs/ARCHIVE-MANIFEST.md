@@ -17,6 +17,7 @@
 | docs/architecture/TPV-HTML-WIDGET-BRIDGE.md | sin fecha nominal verificable | Contrato bridge actualizado preservado | STATE-NOW.md: 120 reintentos / 60 s / watchdog 65 s |
 | docs/qa/TPV-NATIVE-SESSION-CONTRACT-2026-11-23.md | 2026-11-23 | Contrato TPV neutral preservado | STATE-NOW.md: sourceType/processingMode/reconciliationStatus |
 | docs/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md | 2026-11-23 | Conciliación POS/TPV preservada | STATE-NOW.md: pedidos #10030–#10034 |
+| docs/qa/2026-11-23-tpv-session-handoff.md | 2026-11-23 | Relevo técnico con bloqueos TPV preservado | STATE-NOW.md: #525 y #435 |
 | docs/qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md | 2026-11-23 | Matriz de aceptación preservada | Archivo íntegro en archive/2026-11/qa/ |
 | docs/qa/QA-ENVIRONMENT-SSOT.md | sin fecha nominal verificable | Addenda de entorno preservados; no son estado Runtime | STATE-NOW.md: Draft y límites de validación |
 | docs/reference/DICCIONARIO_DATOS_CMS.md | sin fecha nominal verificable | Referencia extensa; snapshots sujetos a read-back | Archivo íntegro en archive/2026-11/reference/ |
