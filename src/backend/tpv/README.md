@@ -1,12 +1,12 @@
 # TPV — backend, contratos y validación
 
-**Estado de integración (2026-11-23):** código TPV y corrección de contrato integrados en main 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #541, #540, #542 y #543 están merged. PR #537 se preservó en el historial de #541. **Release NO-GO:** falta Wix Preview/Runtime E2E.
+**Estado de integración (2026-11-23):** código TPV y corrección de contrato integrados en main ccdac0347e86f430c4f8086765815d9d5d7e00af. PR #541, #540, #542, #543 y #544 están merged. PR #537 se preservó en el historial de #541. **Release NO-GO:** falta Wix Preview/Runtime E2E.
 
 ## Estado CI vigente
 
-- Backend offline quality gates post-merge: SUCCESS, run 45107058637 (736/736 pruebas offline, npm audit 0, SDK contracts y ESLint). Pre-merge PR #543 pasó 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint.
-- Secret scanning post-merge: SUCCESS, run 45107058755.
-- El único fallo localizado corresponde a una aserción de test obsoleta que esperaba cuatro medios de pago; el enum TPV_PAYMENT_METHOD define seis.
+- Backend offline quality gates del HEAD actual: SUCCESS, run 45107377657 (364/364 Layer 1, 255/255 Layer 2, 736/736 suite offline, npm audit 0, contratos SDK Wix/eCommerce/TPV y ESLint).
+- Gitleaks full-history: SUCCESS, run 45107377700.
+- Las aserciones de test obsoletas sobre cuatro medios de pago y el default de movimientos fueron corregidas en PR #543; no se conoce fallo vigente de CI TPV.
 
 ## Contrato TPV vigente
 
