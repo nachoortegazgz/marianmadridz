@@ -63,7 +63,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 ## Evidencia Wix CMS — 2026-11-23
 
-Consultas de solo lectura con `consistentRead=true`: `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; `lastOperationType=RECONCILIATION_CORRECTION`); `MovimientosCaja` 2 (ambas filas `synthetic=true`, `SIMULATED_SUCCESS`, `RECONCILED`, origen `TPV_SIMULATED_GATEWAY` y `TPV_FUNCTIONAL_TEST`); `CitasF2` 6 (5 CONFIRMED, 1 PENDING; tres `pairToken` vacíos, dos iguales y uno distinto); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA); `HistoricoCierresZ` 0; `LibroAsientosContablesDetalle` 0. No se mutaron colecciones.
+Consultas de solo lectura con `consistentRead=true` (última relectura 2026-11-23): `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`; `traceId=0`; apertura 300 EUR / esperado 320 EUR); `MovimientosCaja` 5 (todas sintéticas; 3 nuevas con origen TPV_QA_DEVELOPMENT); `CitasF2` 6 (5 CONFIRMED, 1 PENDING); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA_FISCAL); `HistoricoCierresZ` 1 SIMULATED; `LibroAsientosContablesDetalle` 3 SIMULATED_ONLY. Los siete registros TPV-QA nuevos no cumplen el contrato de hooks actual y carecen de testRunId/siteId/sourceType/sessionId. No se mutaron colecciones.
 
 Consulta directa Bookings Reader V2 del 2026-11-23 confirma los seis bookingId proyectados: 6/6 nativos CANCELED desde 2026-11-20; dos paymentStatus=PAID y cuatro NOT_PAID/UNDEFINED. CitasF2 mantiene 5 CONFIRMED y 1 PENDING; dos paymentStatus PENDING_LEDGER. Véase [auditoría Bookings V2 y catálogo dual](../audits/2026-11-23-bookings-revalidation.md). No cerrar caja ni corregir CitasF2 por inferencia.
 
