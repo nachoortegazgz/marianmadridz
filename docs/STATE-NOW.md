@@ -35,7 +35,7 @@
 - «Wix CMS continúa siendo la única fuente de verdad transaccional.» fuente: docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md.
 - «SharePoint es repositorio de evidencia, no autoridad de corrección.» «Capa 3 no modifica ni gobierna Capa 1.» fuente: docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md.
 - «Wix Bookings V2 no se utiliza como motor de multiservicio.» «La composición de dos fases es responsabilidad del backend Marian Madrid: dos bookings individuales e independientes (F1 y F2), vinculados por la identidad de pareja del flujo dual. Entre ambas existe un gap de exposición que no constituye una reserva F1/F2. F2 debe comenzar exactamente en F1.end + exposureDuration; la disponibilidad de ambas fases debe corresponder al mismo resourceId (profesional/recurso).» fuente: docs/PROJECT-STATUS.md.
-- «F2 se crea con selectedPaymentOption=OFFLINE, totalAmount=0, noFee=true, sin segundo checkout/cobro.» fuente: docs/audits/2026-11-23-bookings-revalidation.md.
+- F2: selectedPaymentOption=OFFLINE; totalAmount=0; noFee=true; sin segundo checkout/cobro. fuente: docs/audits/2026-11-23-bookings-revalidation.md.
 - «Frontend sin lógica de negocio ni autoridad de permisos; validación y autorización en backend/WebMethods.» fuente: README.md.
 - «No declarar Wix Runtime, Preview, E2E ni producción a partir de pruebas offline.» fuente: README.md.
 
