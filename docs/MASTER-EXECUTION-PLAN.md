@@ -21,9 +21,9 @@ Este es el plan de ejecución. El estado real y las evidencias se mantienen en [
 
 | Prioridad | Trabajo | Criterio de avance |
 |---|---|---|
-| P0 | CajaActual / concurrencia (#525) | Inventariar todos los writers y demostrar exclusión mutua/CAS real, idempotencia, retry, ausencia de lost updates y recuperación en Sandbox Runtime. |
+| P0 | CajaActual / concurrencia (#525) | Lock compartido integrado por PR #528; ejecutar exclusión mutua, idempotencia, timeout y recuperación en Wix Sandbox Runtime. |
 | P0 | Compensaciones y caja (#416) | Conciliar cada compensación con su origen y ledger; recuperación trazable sin mutar históricos. |
-| P0 | Maestro fiscal (#415) | Alinear MapaStaff, esquema físico y consumidores; no recrear colecciones por inferencia. |
+| P0 | Maestro fiscal (#415) | MapaStaff/consumidores alineados en main; PR #556 elimina fallback TERCERO/EMISOR. Falta CONFIG_SISTEMA legal verificado; no recrear colecciones por inferencia. |
 | P0 | Automatizaciones Wix (#520) | Auditar las ocho automatizaciones ACTIVE y definir contención soportada, sin sortear restricciones Wix. |
 | P0 | SIF/Veri*Factu (#209) | Validación normativa, técnica, proveedor y asesoría; writers, firma, QR y remisión deshabilitados hasta aceptación. |
 | P1 | Protección de main (#210) | Ruleset/protección, PR obligatoria, checks requeridos, bloqueo force-push/borrado mediante administrador. |
@@ -32,6 +32,16 @@ Este es el plan de ejecución. El estado real y las evidencias se mantienen en [
 | P2 | Capa 3 e integraciones | Exportaciones, SharePoint y Power Automate como evidencia/transporte documental, sin gobernar Capa 1. |
 | P3 | Calidad evolutiva | Accesibilidad, SEO, rendimiento, UX móvil y limpieza de código, después de P0/P1. |
 | P4 | Release | Regresión completa, seguridad, sync Git-Wix, rollback, aceptación legal/operativa y autorización expresa. |
+
+## 2.1. Trabajo de código ejecutado — 2026-11-23
+
+| PR | Alcance | CI offline | Estado |
+|---|---|---|---|
+| #551 | Metadatos TPV neutrales y compatibilidad histórica | 79 suites / 726 tests PASS | Draft; Runtime pendiente |
+| #554 | `AUDIT_LIST` conectado a eventos append-only de auditoría | 79 suites / 725 tests PASS | Draft; Preview/Runtime pendiente |
+| #556 | Emisor fiscal solo desde singleton CONFIG_SISTEMA único | 79 suites / 728 tests PASS | Draft; configuración legal y Runtime pendientes |
+
+Estas PR no están fusionadas ni desplegadas. Sus pruebas offline no acreditan instalación Wix, permisos efectivos, CMS Runtime ni ausencia de efectos externos.
 
 ## 3. Orden de ejecución obligatorio
 

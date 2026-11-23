@@ -9,17 +9,28 @@
 
 | Área | Estado verificado | Límite |
 |---|---|---|
-| Código TPV / contratos | Integrados en main por PR #543 | Aceptación Wix Runtime/E2E pendiente. |
+| Código TPV / contratos | PR #543 integrada; PR #551 (metadatos) y #554 (auditoría) abiertas en Draft, CI offline SUCCESS | Wix Runtime/E2E, sincronización Git–Editor y aislamiento de efectos externos pendientes. |
 | CI de estabilización documental | **SUCCESS pre-merge y post-merge** | PR #545: backend [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881), Gitleaks [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897). Post-merge PR #545: backend [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859), Gitleaks [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890). PR #546: backend [45112483802](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483802), Gitleaks [45112483786](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112483786); post-merge PR #546: backend [45112587480](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587480), Gitleaks [45112587474](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112587474). |
 | Calidad offline | Layer 1 364/364; Layer 2 255/255; suite 736/736; npm audit 0; contratos SDK Wix/eCommerce/TPV y ESLint SUCCESS | No prueba CMS live, Wix Runtime, E2E, fiscalidad ni hardware. |
 | Protección de main | No configurada; issue #210 abierta | API devolvió `protected=false`; requiere administrador. |
 | Wix Site Context | **Draft**, read-back directo 2026-11-23 | Wix Editor, Velo habilitado, Premium, dominio personalizado, EUR, Europe/Madrid. No demuestra SHA sincronizado ni Runtime. |
 | Apps Wix observadas | Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO | Instalación observada; no equivale a aceptación funcional de cada app. |
-| TPV | Código y pruebas estáticas integrados | Roles, Staff resource mapping, concurrencia, CMS y flujos E2E pendientes. |
+| TPV | Código base integrado; PR #551 y #554 Draft con CI offline SUCCESS, sin merge | Contratos revisados estáticamente; roles, Staff resource mapping, concurrencia y pruebas Wix Preview/Runtime pendientes. |
 | CMS / ledgers | No aceptado para operación | CajaActual y compensaciones siguen siendo bloqueos P0. |
-| Automatizaciones | Ocho ACTIVE según auditoría de issue #520 | Una APPLICATION y siete PREINSTALLED; falta inspección de historial/tarea y contención soportada. |
-| Fiscalidad / Veri*Factu | Bloqueado | No activar writers, firma, QR, emisión ni remisión. |
+| Automatizaciones | **Siete ACTIVE** según última actualización de issue #520 | Siete PREINSTALLED permanecen ACTIVE y protegidas; la automatización APPLICATION «Configuración de control laboral» está INACTIVE (revisión 5). Falta inspección de historial/efectos de las preinstaladas y contención soportada para E2E. |
+| Fiscalidad / Veri*Factu | Bloqueado; PR #556 en Draft con CI offline SUCCESS | No existe CONFIG_SISTEMA verificado; no activar writers, firma, QR, emisión ni remisión. |
 | Capa 3 | Pendiente | SharePoint solo evidencia; no gobierna Capa 1. |
+
+## Revalidación de ejecución — 2026-11-23
+
+- Wix `GetSiteContext`: Draft; Wix Editor clásico; Velo habilitado; Wix Stores Catalog V3 e Invoices V1. No acredita SHA instalado ni ejecución Runtime.
+- PR #551 — neutralización metadatos TPV: Draft; CI offline SUCCESS en SHA `60f3d439ce0ad109985d5b95b97e644e26b0672f` (79 suites / 726 tests, 0 fallos); Preview/Runtime pendiente.
+- PR #554 — lector de auditoría TPV: Draft; CI offline SUCCESS en HEAD `03da5baaf154c104669d13067d2104cb80547c90` (79 suites / 725 tests, 0 fallos); revisión estática del contrato HTML → controlador → WebMethod correcta; Preview/Runtime pendiente.
+- PR #556 — identidad fiscal fail-closed: Draft; CI offline SUCCESS en SHA `e607b0fd565671adc478165b20aedd7e7c49d750` (79 suites / 728 tests, 0 fallos); no crea CONFIG_SISTEMA y Runtime sigue pendiente.
+- Las ramas #551, #554 y #556 comparten base `24f843d249bfb9636409ebc688dd5e13ff336892` y están un commit por detrás de `main` (`84dbfecbba1ff5ea918d6199dbcde4b5ac4569eb`); actualizar antes de revisión final/merge.
+- #525: el lock común ya está integrado por PR #528; solo queda demostrar concurrencia/recuperación en Wix Runtime.
+- #415: no recrear `DatosFiscales`; MapaStaff es el maestro canónico. La configuración CONFIG_SISTEMA no existe y no se inventará.
+- La fuente detallada `NECESIDADES WEB MARIAN.txt` citada por la directriz no está disponible en el repositorio ni en la búsqueda de Library del proyecto. No se han inferido requisitos ausentes; debe restaurarse para certificar la aceptación funcional completa.
 
 ## Qué está completado
 
@@ -30,9 +41,9 @@
 
 ## Bloqueos prioritarios
 
-1. [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525): serialización/CAS compartido para todos los writers.
+1. [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525): lock compartido integrado por PR #528; falta prueba de concurrencia real en Wix Runtime.
 2. [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416): reconciliar registros pendientes con evidencia original.
-3. [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415): alinear MapaStaff, esquema físico y consumidores.
+3. [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415): migración MapaStaff/consumidores ya integrada; PR #556 elimina fallback TERCERO/EMISOR; falta CONFIG_SISTEMA legal verificado, ligado a #209.
 4. [#520 Automatizaciones](https://github.com/nachoortegazgz/marianmadridz/issues/520): inspeccionar y contener ocho automatizaciones ACTIVE por vías soportadas.
 5. [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209): validación legal/técnica con AEAT, asesoría y proveedor.
 6. [#210 Protección de main](https://github.com/nachoortegazgz/marianmadridz/issues/210): ruleset y checks requeridos mediante administrador.
