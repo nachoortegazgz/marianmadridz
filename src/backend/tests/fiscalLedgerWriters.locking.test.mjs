@@ -139,6 +139,27 @@ test("FISCAL-CHAIN-09 CajaActual projections and TPV Sandbox share the fiscal lo
   assert.match(tpv, /releaseFiscalLedgerLock\(lock\)/);
 });
 
+test("FISCAL-CHAIN-10 shared fiscal lock uses atomic owner/version CAS for reclaim and release", async () => {
+  const [lock, config] = await Promise.all([
+    source("fiscalLedgerLock.js"),
+    source("internalConfig.js"),
+  ]);
+
+  assert.match(lock, /bulkPatchItems\(CONTROL_COL, \[LOCK_ID\], \[modifications\]/);
+  assert.doesNotMatch(lock, /dalRemove/);
+  assert.match(lock, /ownerToken: ownerId/);
+  assert.match(lock, /version: 0/);
+  assert.match(lock, /condition\.version = \{ \$eq: currentVersion \}/);
+  assert.match(lock, /ownerToken: \{ \$eq: lock\.ownerId \}/);
+  assert.match(lock, /Number\(current\.version\) !== expectedVersion/);
+  assert.match(lock, /fieldPath: "version", action: "INCREMENT_FIELD"/);
+
+  assert.match(config, /allowedConditionFields: Object\.freeze\(\["controlType", "version", "expiresAt", "ownerToken"\]\)/);
+  assert.match(config, /ownerToken: Object\.freeze\(\["SET_FIELD"\]\)/);
+  assert.match(config, /status: Object\.freeze\(\["SET_FIELD"\]\)/);
+  assert.match(config, /traceId: Object\.freeze\(\["SET_FIELD"\]\)/);
+});
+
 test("FISCAL-CHAIN-08 no active backend path creates the obsolete CAJA_SEQ singleton", async () => {
   const [cajas, eventLog, config, data, lock] = await Promise.all([
     source("cajas.web.js"),
