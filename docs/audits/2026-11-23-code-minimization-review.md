@@ -138,6 +138,12 @@ tpvRepository.js confirma el comportamiento:
 
 Por tanto, el objetivo técnico de la issue #435 parece estar implementado parcialmente o en gran parte en el código actual de main. La issue sigue abierta y debe reconciliarse con el código actual, los dos movimientos sintéticos live, la colección de identidades vacía y la aceptación Runtime. No crear colecciones TPV_QA_* ni confundir los discriminadores lógicos con IDs CMS.
 
+## 5.2 Directriz TPV neutral incorporada
+
+El propietario ha establecido que la adaptación del TPV debe integrarse en `internalConfig.js`, `tpvUtils.js` y `tpvRepository.js`, sin crear `tpvRuntimePolicy.js` ni un segundo repositorio. La política propuesta, los aliases de colecciones, la firma compatible de `makeTpvId`, el envelope central, la normalización de estados/trazas y el checklist completo quedan documentados en [Baseline de adaptación neutral del TPV](2026-11-23-tpv-neutral-adaptation-baseline.md).
+
+Este baseline es un requisito de diseño pendiente de reconciliación con el HEAD, no un patch aprobado. En particular, no se deben copiar los valores de `TPV_COLLECTIONS` ni sustituir estados/IDs hasta comprobar imports, exports, consumidores, esquema CMS y registros históricos. La compatibilidad `node:crypto` debe probarse en Wix Runtime. Los locks, CAS, idempotencia, append-only y separación de pagos nativos permanecen como garantías obligatorias.
+
 ## 5. Orden de simplificación recomendado
 
 1. Resolver divergencias nativas Bookings/CitasF2 y opciones de pago.
