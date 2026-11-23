@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -75,7 +75,10 @@ export const registrarMovimientoCaja = webMethod(
             if (paymentMethod !== TPV_PAYMENT_METHOD.EFECTIVO) throw new Error("TPV_CASH_MOVEMENT_REQUIRES_CASH");
             const requestedSessionId = sessionIdFromInput(input);
             const session = await latestOpenTpvSession();
-            if (!session) throw new Error("TPV_SESSION_NOT_OPEN");
+            if (!session) {
+                const latest = await latestTpvSession();
+                throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
             if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
