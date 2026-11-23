@@ -12,7 +12,7 @@ export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const validNeutralMetadataV2 = state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Number(state?.schemaVersion) === 2 &&
+        Number(state?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
         state?.externalSideEffects === false;
     const validEventHash = /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
     const validRequestFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
