@@ -2,37 +2,47 @@
 
 **Repositorio:** `nachoortegazgz/marianmadridz`  
 **main:** `995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d` (PR #536)  
-**PR de trabajo:** [#541](https://github.com/nachoortegazgz/marianmadridz/pull/541)  
+**PR de trabajo:** [#541](https://github.com/nachoortegazgz/marianmadridz/pull/541) — abierta, no integrada  
 **Rama:** `feat/tpv-payment-exports-after-p0-20261123`  
-**HEAD de esta nota:** `f799e5e56ad0bf9d10cdb5958a964641f8576118`
+**HEAD validado:** `651faa2775d8733d465cea5f33ab9d4a41f80f69`
 
 ## Objetivo
 Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompatibilidades entre widget, WebMethods, validadores y contratos de persistencia, y mantener el release bloqueado hasta obtener evidencia Wix Runtime.
 
-## Cambios implementados en la rama
+## Cambios implementados
 
-1. **Selección de cliente en #htmlTPV:** el botón Cliente abre búsqueda de identidades sintéticas con `CUSTOMERS_SEARCH`; los resultados se renderizan escapados, se conserva `customerIdentityId` y se envía en `SALE_REGISTER`. El backend valida de nuevo la identidad.
-2. **Identidades canónicas:** `assertTpvIdentity` exige `sourceType=SYNTHETIC`, `siteId` y `schemaVersion=2`, además de tipo/ID, email de prueba, estado activo y `syntheticOnly=true`. La política de inserción ya exigía esos campos; el validador se ha alineado.
-3. **Compatibilidad histórica:** la validación legacy solo se activa con `allowLegacyRead: true`, admite los IDs históricos `SANDBOX-*` y el formato transicional `TPV-*` con `environment/testRunId`, y no autoriza escrituras. El fixture existente se ha reclasificado como fixture de lectura legacy, no como plantilla de altas.
-4. **Idempotencia:** la búsqueda de eventos contempla ID canónico, ID legacy por colección y el formato legacy compartido, evitando perder descubribilidad de reintentos históricos.
-5. **WebMethods/exportaciones:** la clasificación de seguridad contempla los métodos de exportación que escriben una entrada de auditoría; se mantienen protegidos por autorización backend.
-6. **Contratos de UI:** pruebas ajustadas para verificar el protocolo real (respuestas dinámicas `type + "_RES"`, helper compartido de movimientos, variantes y DTO de cierre) sin exigir formatos de espacios irrelevantes.
-7. **Documentación:** actualizado el baseline del backlog y el README TPV para separar escritura neutral de lectura legacy.
+1. **Selección de cliente en #htmlTPV:** el botón Cliente abre búsqueda de identidades sintéticas con `CUSTOMERS_SEARCH`; los resultados se renderizan escapados, se conserva `customerIdentityId` y se envía en `SALE_REGISTER`. El backend vuelve a validar la identidad.
+2. **Identidades canónicas:** `assertTpvIdentity` exige `sourceType=SYNTHETIC`, `siteId` y `schemaVersion=2`, además de tipo/ID, email de prueba, estado activo y `syntheticOnly=true`. La política de inserción ya exigía esos campos; el validador está alineado.
+3. **Compatibilidad histórica:** la validación legacy solo se activa con `allowLegacyRead: true`, admite los IDs históricos `SANDBOX-*` y el formato transicional `TPV-*` con `environment/testRunId`, y no autoriza nuevas escrituras. El fixture histórico se valida exclusivamente por esa ruta.
+4. **Idempotencia:** la búsqueda de eventos contempla ID canónico, ID legacy por colección y el formato legacy compartido.
+5. **WebMethods/exportaciones:** la clasificación de seguridad contempla exportaciones que escriben una entrada de auditoría; mantienen autorización backend antes de la persistencia.
+6. **Widget/contratos:** selección de variantes, DTO de venta, búsqueda de cliente, Control X read-only, cierre Z idempotente y operaciones de caja comparten las aserciones contractuales correspondientes.
+7. **Concurrencia CajaActual:** el test FLOW-CAJA-05C ahora verifica que el lock CAS queda en estado RELEASED y expirado. El registro no se elimina: la implementación lo conserva para compare-and-swap; la expectativa antigua de borrar la fila no correspondía al contrato actual.
+8. **Fixtures y validación:** el ledger de test incorpora schemaVersion/reconciliationStatus; el simulador diario inicializa todos los métodos canónicos (incluidos BONO y TARJETA_REGALO); las pruebas de identidad distinguen escritura neutral y lectura legacy.
+9. **Documentación:** backlog, README TPV y este relevo reflejan el baseline real de main, PR, Wix y CI.
 
-## Evidencia CI
+## Evidencia CI — HEAD validado
 
-- HEAD anterior `3b1fb058f8580c7b185154e7d2b0c46488fc80a5`: Layer 1 falló 356/364; había incompatibilidades de widget, tests y contrato de identidades.
-- HEAD `d4f234efc36cb1f03262eb7c0ed021f26ebc7ba6`: 362/364; quedaron dos aserciones estáticas desactualizadas.
-- HEAD `72013651be10bed2af3085431fb58309e94f07a0`: 363/364; quedó una aserción estática de REFUND.
-- HEAD actual `f799e5e56ad0bf9d10cdb5958a964641f8576118`: secret scanning SUCCESS (run 45099716725); Backend offline quality gates en ejecución (run 45099716665) al redactar esta nota. No declarar CI aprobado hasta consultar el resultado final.
+<badge color="success">SUCCESS</badge> **Backend offline quality gates — run 45100503963**  
+- Layer 1: 30 suites, 364/364 pruebas, 0 fallos.
+- Layer 2: 17 suites, 255/255 pruebas, 0 fallos.
+- Suite offline completa: 77 suites, 732/732 pruebas, 0 fallos.
+- npm audit: 0 vulnerabilidades reportadas.
+- Contratos Wix SDK, Wix eCommerce Order Transactions y Wix TPV Catalog: SUCCESS.
+- ESLint: SUCCESS.
+
+<badge color="success">SUCCESS</badge> **Secret scanning — run 45100503949**.
+
+## Estado Wix verificado
+
+Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Marian Madrid Peluquería y Estética. Estado **Draft**, editor clásico, Velo Enabled, EUR, Europe/Madrid. Apps: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO. Esta lectura no prueba que el HEAD de Git esté sincronizado con Wix Editor ni acredita Preview/Runtime.
 
 ## Pendiente / release gate
 
-- Confirmar SUCCESS de Layer 1, Layer 2, suite offline completa, SDK contracts y ESLint sobre el mismo HEAD final.
-- Revisar diff completo de PR #541 y confirmar que no queden imports, símbolos o WebMethods duplicados/huérfanos. En particular, revisar el endpoint histórico duplicado `obtenerMovimientosCaja` en `tpvAuditoria.web.js` frente al lector de ledger en `tpvMovimientos.web.js`; no eliminar ni renombrar sin completar búsqueda de consumidores y compatibilidad.
-- Ejecutar pruebas de aceptación en Wix Preview con CMS Sandbox real: abrir sesión, leer catálogo, seleccionar cliente y profesional, venta sintética, pago mixto, entrada/salida, devolución sintética, X, Z, exportaciones e idempotencia/replay.
-- Ejecutar pruebas negativas en Published sin realizar escrituras: llamadas no autorizadas, datos legacy en ruta de escritura, identidad de otro site, hash/version inválidos y capabilities externas deshabilitadas.
-- Reconciliar #416 (compensaciones fiscales), #520 (automatizaciones), #526 (reservas online), #525 (lock CajaActual) y demás gates del backlog antes de release.
-- Confirmar sincronización del SHA en Wix Editor; no hay evidencia actual de que el branch esté instalado.
+- Confirmar read-back del SHA `651faa2775d8733d465cea5f33ab9d4a41f80f69` en Wix Git Integration/Editor; no se ha demostrado sincronización.
+- Ejecutar aceptación en Wix Preview con CMS Sandbox: abrir sesión, catálogo, seleccionar cliente/profesional, venta sintética, pago mixto, entrada/salida, devolución sintética, X, Z, exportaciones e idempotencia/replay.
+- Ejecutar pruebas negativas en Published sin escrituras: llamadas no autorizadas, datos legacy en ruta de escritura, siteId ajeno, hash/version inválidos y capacidades externas deshabilitadas.
+- Aclarar semántica de `AUDIT_LIST`: el controlador lo conecta al lector de movimientos de `tpvMovimientos.web.js`, mientras `tpvAuditoria.web.js` conserva un método homónimo no referenciado por consumidores del repositorio. No renombrar ni eliminar sin resolver compatibilidad externa.
+- Reconciliar #416 (compensaciones fiscales), #520 (automatizaciones), #526 (reservas online), #525 (lock CajaActual) y demás gates del backlog antes del release.
 
-**Estado:** PR #541 abierta; integración y runtime no validados; **NO-GO para producción**. No se han ejecutado escrituras CMS, pagos, reembolsos, cambios de configuración Wix ni despliegues.
+**Estado:** PR #541 abierta; CI offline completo aprobado en su HEAD actual; Wix Runtime pendiente; **NO-GO para producción**. No se han ejecutado escrituras CMS, pagos, reembolsos, cambios de configuración Wix ni despliegues durante esta revisión.
