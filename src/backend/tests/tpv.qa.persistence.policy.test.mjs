@@ -58,14 +58,18 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        schemaVersion: 2,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+        processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+        reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+        allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+        allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
         externalSideEffects: false,
     };
     const bootstrap = {
         cashRegisterStatus: "CERRADA",
         snapshotSource: "TPV_SYNTHETIC",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":BOOTSTRAP",
-        conceptOperations: { tpvSandbox: { ...neutralMetadata } },
+        conceptOperations: { tpvRuntime: { ...neutralMetadata } },
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(bootstrap, { allowBootstrap: true }));
 
@@ -73,7 +77,7 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
         cashRegisterStatus: "SIMULACION",
         snapshotSource: "TPV_SYNTHETIC",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":SESSION-EXPLICIT",
-        conceptOperations: { tpvSandbox: {
+        conceptOperations: { tpvRuntime: {
             ...neutralMetadata,
             sessionId: "SESSION-EXPLICIT",
             eventHash: "a".repeat(64),
@@ -108,8 +112,8 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
     );
 
     assert.throws(
-        () => assertTpvCajaIntegrity({ ...activeCaja, conceptOperations: { tpvSandbox: {
-            ...activeCaja.conceptOperations.tpvSandbox,
+        () => assertTpvCajaIntegrity({ ...activeCaja, conceptOperations: { tpvRuntime: {
+            ...activeCaja.conceptOperations.tpvRuntime,
             siteId: "00000000-0000-4000-8000-000000000000",
         } } }),
         /TPV_CASH_REGISTER_INTEGRITY_FAILED/
@@ -123,6 +127,22 @@ test("CajaActual integrity accepts v2, current v1 and exact legacy Sandbox marke
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(legacyCaja), "historical markers remain accepted for compatibility");
 });
+
+
+test("CajaActual writes neutral tpvRuntime metadata and reads historical tpvSandbox metadata", async () => {
+    const [repository, utilities] = await Promise.all([
+        readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8"),
+        readFile(new URL("../tpv/tpvUtils.js", import.meta.url), "utf8"),
+    ]);
+    assert.match(repository, /conceptOperations\.tpvRuntime = sourceState/);
+    assert.match(repository, /tpvRuntime: \{/);
+    assert.match(repository, /const legacy = operations\?\.tpvSandbox/);
+    assert.doesNotMatch(repository, /conceptOperations\.tpvSandbox\s*=/);
+    assert.match(utilities, /const current = operations\?\.tpvRuntime/);
+    assert.match(utilities, /const legacy = operations\?\.tpvSandbox/);
+    assert.doesNotMatch(utilities, /schemaVersion:\s*2/);
+});
+
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
@@ -140,11 +160,11 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-            schemaVersion: 2,
+            schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
             reconciliationStatus: "NOT_RECONCILED",
             sessionId: "SESSION-TEST",
             logicalCollection: TPV_COLLECTIONS.PAGOS,
-            idempotencyKey: "TPVSANDBOX-TEST-IDEMPOTENCY",
+            idempotencyKey: "TPV-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
             isSynthetic: true,
             realPayment: false,
@@ -284,6 +304,10 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, false);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, false);
+    assert.equal(TPV_RUNTIME_POLICY.PROCESSING_MODE, "INTERNAL");
+    assert.equal(TPV_RUNTIME_POLICY.RECONCILIATION_STATUS, "NOT_RECONCILED");
+    assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments, false);
+    assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds, false);
     assert.equal(TPV_RUNTIME_POLICY.CURRENCY, "EUR");
     assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
     assert.match(TPV_RUNTIME_POLICY.SITE_ID, /^[0-9a-f-]{36}$/i);
@@ -303,6 +327,11 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(payload.isSynthetic, true);
     assert.equal(payload.realPayment, false);
     assert.equal(payload.externalSideEffects, false);
+    assert.equal(payload.schemaVersion, TPV_RUNTIME_POLICY.SCHEMA_VERSION);
+    assert.equal(payload.processingMode, "INTERNAL");
+    assert.equal(payload.reconciliationStatus, "NOT_RECONCILED");
+    assert.equal(payload.allowNativePayments, false);
+    assert.equal(payload.allowNativeRefunds, false);
 });
 
 
