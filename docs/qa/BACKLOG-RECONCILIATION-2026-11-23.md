@@ -121,3 +121,6 @@ Seguimiento PR #566: el clasificador fiscal ahora reconoce esos marcadores legac
 
 
 Actualización de gobierno 2026-11-23: PR #566 integrada en main con CI completo SUCCESS; el clasificador reconoce marcadores legacy de simulación, sin legitimar los registros ni habilitar writers. PR #568 documenta la discrepancia histórica 10→5 de MovimientosCaja; CI pendiente. Último main base de esta rama: a5e611da1d98b743e14ea6dc6f4bfee8b26e00a6.
+
+
+ControlOperativo (63 registros) no contiene eventos CLEANUP/RESET/MIGRAT/PURGE/DELETE/TRUNCAT/RESTORE; src/ no tiene handler dataItemDeleted. Wix dispone de webhook REST Data Item Deleted, pero la suscripción no está verificada. No atribuir el delta a una limpieza sin Activity Logs/backup.
