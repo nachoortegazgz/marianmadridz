@@ -57,9 +57,9 @@ Rama: chore/phase1-repository-stabilization-20261123.
 ## Criterio de cierre de Fase 1
 
 La fase quedará cerrada cuando:
-1. CI backend y secret scanning terminen SUCCESS sobre la PR.
-2. El diff se limite a los ocho archivos declarados y pase revisión.
-3. La PR se integre sin bypass de checks.
-4. Un administrador habilite protección de main y required checks, o documente una excepción temporal aprobada.
+1. CI backend y secret scanning terminan SUCCESS sobre la PR. **Cumplido** en HEAD eee6d75e5cf843a38823e7fa4c908783db175208.
+2. El diff se limita a test y documentación; sin cambios de runtime ni CMS. **Cumplido**: nueve archivos.
+3. La PR se integre sin bypass de checks. **Pendiente**: PR #543 sigue abierta.
+4. Un administrador habilite protección de main y required checks, o documente una excepción temporal aprobada. **Pendiente**: issue #210 abierta; main protected=false.
 
-Hasta entonces, el estado es **PARCIAL — estabilización preparada, gates automatizados y protección pendientes**. El release global sigue **NO-GO**.
+Hasta entonces, el estado es **PARCIAL — código y documentación estabilizados en PR con CI verde; falta integrar sin bypass y proteger main**.
