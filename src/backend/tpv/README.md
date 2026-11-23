@@ -1,13 +1,12 @@
 # TPV — backend, contratos y validación
 
-**Estado de integración (2026-11-23):** código TPV integrado en main 956356db48ee9d0ba363023c14105474316f84dd. PR #541, PR #540 y PR #542 están merged. PR #537 se preservó en el historial de #541. **Release NO-GO:** falta Wix Preview/Runtime E2E y CI backend de main tiene un fallo contractual pendiente de corregir.
+**Estado de integración (2026-11-23):** código TPV y corrección de contrato integrados en main 0ba7b684d6f4d6465718ae4317d10d8f422de2ff. PR #541, #540, #542 y #543 están merged. PR #537 se preservó en el historial de #541. **Release NO-GO:** falta Wix Preview/Runtime E2E.
 
 ## Estado CI vigente
 
-- Backend offline quality gates: FAIL, run 45105979742.
-- Secret scanning: SUCCESS, run 45105979748.
+- Backend offline quality gates post-merge: run 45107058637 en curso. Pre-merge PR #543 pasó 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint.
+- Secret scanning post-merge: SUCCESS, run 45107058755.
 - El único fallo localizado corresponde a una aserción de test obsoleta que esperaba cuatro medios de pago; el enum TPV_PAYMENT_METHOD define seis.
-- PR #542 integró una primera corrección incompleta; PR #543 contiene la corrección completa. CI de PR #543 pasa en HEAD eee6d75e5cf843a38823e7fa4c908783db175208: 736/736 pruebas offline, npm audit 0, contratos SDK y ESLint SUCCESS; secret scanning SUCCESS. main conserva el fallo hasta integrar PR #543.
 
 ## Contrato TPV vigente
 
