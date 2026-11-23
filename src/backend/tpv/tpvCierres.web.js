@@ -64,7 +64,7 @@ export const generarControlX = webMethod(
                 if (!activeSession || activeSession.sessionId !== session.sessionId) {
                     throw new Error("TPV_SESSION_CLOSED");
                 }
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             const reportId = "TPV-X-" + session.sessionId + "-" + key.slice(0, 20);
             const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
                 sessionId: session.sessionId,
@@ -165,7 +165,7 @@ export const generarCierreZ = webMethod(
             const pendingRefunds = await getPendingTpvRefunds(session.sessionId);
             if (pendingRefunds.length > 0) throw new Error("TPV_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
-            const totals = await buildSandboxSessionSummary(session);
+            const totals = await buildTpvSessionSummary(session);
             if (totals.reconciliationOk !== true) {
                 throw new Error("TPV_RECONCILIATION_FAILED");
             }
