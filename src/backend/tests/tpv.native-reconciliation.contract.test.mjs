@@ -170,6 +170,6 @@ test.todo("Wix Preview: open one session, verify authenticated member/operator/r
 test.todo("Wix Preview: complete split-payment sales and reconcile Wix-native order/receipt IDs when native integration is authorized");
 test.todo("Wix Preview: verify payment-method totals, cash drawer balance, cash-only movements and partial refunds against CMS ledger");
 test.todo("Wix Preview: generate X without closing, then Z once; verify lock, replay conflict, counted cash, difference, X/Z linkage and closed session");
-test.todo("Wix Preview: wire and verify the dedicated audit-event reader; distinguish it from ledger movement history");
+test.todo("Wix Preview: verify the wired dedicated audit-event reader against persisted session events and distinguish it from ledger movement history");
 test.todo("Wix Preview: verify audit coverage for writes, reads, exports, printing and denied permission attempts, including sessionId");
 test.todo("Published negative test: native payments, fiscal writes and VeriFactu QR remain unavailable until their release gates are approved");
