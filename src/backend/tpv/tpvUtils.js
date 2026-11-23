@@ -3,7 +3,7 @@ import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
 export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {}) {
-    const sandboxRunId = TPV_RUNTIME_POLICY.SANDBOX_RUN_ID;
+    const sandboxRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     const sandboxState = caja?.conceptOperations?.tpvSandbox;
     const bootstrap = allowBootstrap === true &&
         caja?.snapshotSource === "TPV_SANDBOX_INITIALIZED" &&
@@ -43,7 +43,7 @@ export function makePreviousSandboxTransactionId(collection, idempotencyKey) {
     }
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
-        .update(TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + collection + ":" + key, "utf8")
+        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + collection + ":" + key, "utf8")
         .digest("hex");
     return "TPV_" + digest;
 }
@@ -51,7 +51,7 @@ export function makePreviousSandboxTransactionId(collection, idempotencyKey) {
 export function makeLegacySandboxTransactionId(idempotencyKey) {
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
-        .update(TPV_RUNTIME_POLICY.SANDBOX_RUN_ID + ":" + key, "utf8")
+        .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + key, "utf8")
         .digest("hex");
     return "TPVSANDBOX_" + digest;
 }
