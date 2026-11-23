@@ -248,7 +248,7 @@ export function initializeTpvPage(widget) {
     if (previous) previous.destroy();
 
     const bridge = createWidgetBridge(widget, {
-        allowedTypes: [MESSAGE_TYPES.READY, ...REQUEST_TYPES],
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
         allowOpaqueOrigin: true,
         onContextReady: async () => {
             const config = envelope(await obtenerConfiguracionTPV());
@@ -273,7 +273,7 @@ export function initializeTpvPage(widget) {
             }
         },
         onError: (error) => {
-            console.error("[TPV] Widget bridge error", error?.code || error?.message || error);
+            console.error("[TPV] Widget bridge error", error?.code || error?.message || error, error?.detail || null);
         },
     });
 
