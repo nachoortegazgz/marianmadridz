@@ -38,7 +38,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 
 - Corrección de aserciones TPV integrada por PR #543.
 - Documentación consolidada por PR #544 y estabilizada por PR #545.
-- La versión previa de PR #545 HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155). La consolidación posterior se valida en el HEAD más reciente de la PR; no trasladar resultados entre SHAs.
+- La versión previa de PR #545 HEAD `c1e2cc086c5954b39b91ba7072d0fb5ab1b75ded` pasó Backend offline quality gates (run [45111242142](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242142)) y Secret scanning (run [45111242155](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45111242155)). La consolidación posterior se valida en el HEAD más reciente de la PR; no trasladar resultados entre SHAs.
 - main sigue sin protección efectiva; #210 es un gate administrativo abierto.
 - No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
 
