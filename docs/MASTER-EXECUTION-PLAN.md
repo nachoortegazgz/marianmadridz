@@ -78,3 +78,9 @@ Estas PR no están fusionadas ni desplegadas. Sus pruebas offline no acreditan i
 - [Matriz de aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
 - [Gobierno documental](README.md)
 - [Estándares de desarrollo](engineering/DEVELOPMENT-STANDARDS.md)
+
+## Contrato de reservas duales — F1 + gap + F2
+
+Wix Bookings V2 gestiona bookings individuales. La composición dual es lógica propia del backend y no utiliza multiservicio nativo. F1 y F2 son bookings independientes vinculados por el contrato de pareja. El intervalo de exposición entre fases debe permanecer libre y F2 debe comenzar en el instante exacto `F1.end + exposureDuration`, para el mismo `resourceId`.
+
+La aceptación no se limita a comprobar que existen dos bookings: debe probar el límite temporal exacto, la ocupación del gap, el mismo profesional/recurso, los conflictos concurrentes, el rollback/compensación, cancelación, reprogramación, replay idempotente y F2 `OFFLINE`/importe cero/sin segundo checkout. No se debe migrar a multiservicio nativo ni modificar servicios por discrepancias de flags sin demostrar primero el impacto sobre el Writer dual.
