@@ -39,7 +39,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
     const caja = await source("tpv/tpvCaja.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja \} from "backend\/tpv\/tpvCaja\.web"/);
+    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial \} from "backend\/tpv\/tpvCaja\.web"/);
     assert.match(caja, /export const obtenerEstadoCaja = webMethod/);
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
