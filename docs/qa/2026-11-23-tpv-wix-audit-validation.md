@@ -1,3 +1,19 @@
+> ## Addendum de consolidación — 2026-11-23
+>
+> Esta nota se redactó originalmente para la rama `feat/tpv-neutral-contract-block1-v2-20261123` / PR #537. PR #537 sigue abierta. La rama consolidada que se está validando ahora es `feat/tpv-payment-exports-after-p0-20261123` / PR #541, también abierta y basada en el mismo `main` (`995c085aa2ef45fea6d57f95f86d4c75c7cf7f7d`).
+>
+> **Solapamiento PR:** #537 cambia 16 archivos; los 16 también aparecen en #541. #541 añade otros 24 archivos. El grafo de commits está divergido (comparación #537…#541: 113 commits ahead y 28 behind). No fusionar ambas PR automáticamente ni cerrar #537 sin revisar sus commits exclusivos.
+>
+> **Revisión funcional del contenido exclusivo de #537:** la rama #541 conserva las atribuciones opcionales de profesional en venta, movimiento y devolución; los contratos de hash/eventHash y envelope versionado; la lectura de registros legacy mediante constantes centralizadas; y los estados neutros de Ticket X/Z. En #541 se amplía además la compatibilidad de CajaActual para formatos V1/V2 y legacy, y se centralizan los marcadores legacy en `TPV_RUNTIME_POLICY`. Esta revisión de código no sustituye la comparación commit a commit antes de integrar.
+>
+> **Estado vigente de CI:** el HEAD de código validado de PR #541 es `1d7e99d66fcc14165bf2482885e583176c2b06ef`: Backend offline quality gates SUCCESS (run 45100967570), Layer 1 364/364, Layer 2 255/255, offline completo 732/732; npm audit 0 vulnerabilidades; Wix SDK/eCommerce/TPV contracts y ESLint SUCCESS. Secret scanning SUCCESS (run 45100967567). Los commits posteriores de la rama son únicamente documentación.
+>
+> **Wix:** Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, estado Draft, Velo Enabled. No se ha probado sincronización del SHA con Wix Editor ni flujo E2E en Preview. **NO-GO para producción.**
+>
+> Los apartados originales de esta nota describen el snapshot de PR #537 y sus límites en ese momento. Las referencias a “sin CI” y al último commit `de532108...` son históricas, no el estado actual de PR #541.
+
+---
+
 # Validación de auditoría Wix — TPV (23-11-2026)
 
 ## Alcance y referencia
