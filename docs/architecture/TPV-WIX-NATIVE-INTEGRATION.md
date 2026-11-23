@@ -50,13 +50,13 @@ Wix Bookings y Stores permanecen como SSOT de los catálogos que se leen. El CMS
 
 - `src/pages/TPV.yl5th.js` inicializa `public/tpvPageController.js`.
 - El controlador despacha WebMethods de `src/backend/tpv/*.web.js`.
-- `tpvCatalogo.web.js` consulta servicios Bookings y productos/variantes Stores V3. Clientes y profesionales proceden exclusivamente de `TpvSandboxIdentities`, filtrada por `SANDBOX`, `syntheticOnly` y `testRunId`.
-- `tpvVentas.web.js` valida los IDs contra `TpvSandboxIdentities` y rechaza cualquier `bookingId`; no consulta CRM ni Bookings Reader.
-- `tpvGiftCards.web.js` responde `TPV_GIFT_CARDS_DISABLED_IN_QA`; no consulta `giftVouchers.getGiftCard` ni recibe códigos de tarjeta.
-- Los eventos de auditoría usan el actor sintético `QA_ACTOR`; la identidad real se utiliza únicamente en la comprobación de autorización backend y no se persiste en los registros TPV.
-- `tpvQaRepository.js` concentra escrituras QA, idempotencia y locks CAS; los eventos sintéticos se persisten en `MovimientosCaja` y `CajaActual` conserva la proyección de caja. `TPV_QA_COLLECTIONS` son claves lógicas internas, no colecciones físicas.
-- `TpvSandboxIdentities` es una excepción autorizada de colección propia solo para identidades sintéticas; su esquema tiene permisos ADMIN y hooks append-only. Sus filas aún deben cargarse desde Wix Sandbox.
-- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, identidades sintéticas desde `TpvSandboxIdentities` y operaciones persistentes QA a través de `tpvPageController.js`. Los cobros reales, facturación, Gift Cards reales, reservas, hardware y escrituras operativas permanecen deshabilitados. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
+- `tpvCatalogo.web.js` consulta servicios Bookings, productos/variantes Stores V3, Wix CRM Contacts V5 y profesionales nativos mediante `MapaStaff` + Wix Bookings Staff.
+- `tpvVentas.web.js` valida el cliente contra Contacts V5 y el profesional mediante `resourceId`; no confía en IDs de identidad suministrados por el navegador como prueba de autorización.
+- `tpvGiftCards.web.js` mantiene deshabilitada la integración real de Gift Cards; no debe inferirse una redención real a partir de un movimiento TPV sintético.
+- La autorización del operador se resuelve independientemente de la atribución del profesional seleccionado. El actor autenticado y el profesional atribuido no son intercambiables.
+- `tpvRepository.js` concentra escrituras sintéticas, idempotencia y locks CAS; los eventos se persisten append-only en `MovimientosCaja` y `CajaActual` conserva la proyección de sesión. `TPV_COLLECTIONS` son discriminadores lógicos internos, no colecciones físicas.
+- `TpvSandboxIdentities` / `TPV_IDENTITIES` están retiradas y no forman parte del contrato runtime. No recrear esa colección para satisfacer tests o fixtures antiguos.
+- `#htmlTPV.txt` implementa el protocolo `MM_READY/MM_CONTEXT`, `postMessage`, catálogo Bookings/Stores V3, Contacts V5 y personal Bookings enlazado por `resourceId`. El HTML está versionado; su instalación en el HTML Component Wix y runtime siguen pendientes de verificación.
 
 ## Política de seguridad
 
