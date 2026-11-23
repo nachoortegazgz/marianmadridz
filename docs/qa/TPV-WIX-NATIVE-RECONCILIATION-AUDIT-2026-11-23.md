@@ -15,7 +15,7 @@ No hay identificadores nativos de pedido/pago/reembolso enlazados a los eventos 
 
 ### Pedidos POS
 
-Consulta completa del 1 al 24-11-2026: 5 pedidos, todos con `channelInfo.type=POS`; paginación completa (una página). No se limitó la consulta a los dos pedidos previamente confirmados.
+Consulta paginada del 1 al 24-11-2026, filtrando estados APPROVED, CANCELED, PENDING y REJECTED: 5 pedidos, todos con `channelInfo.type=POS`; paginación completa (una página). La API Search Orders no devuelve pedidos INITIALIZED, por lo que este resultado cubre los pedidos recuperables en esos estados, no borradores/órdenes inicializadas.
 
 | Pedido | Order ID | Estado pago | Total | Contenido | Clasificación del titular |
 |---|---|---|---:|---|---|
