@@ -28,7 +28,6 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
-    TPV_RUNTIME_POLICY,
     TPV_LEDGER_SOURCE,
 } from "backend/internalConfig";
 
@@ -325,10 +324,6 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
     return assertMapaStaffFiscalRecord(item, { partial });
 }
 
-/**
- * TpvSandboxIdentities stores synthetic-only customer and staff projections.
- * It must never contain Wix CRM, Bookings or personal identity references.
- */
 export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
