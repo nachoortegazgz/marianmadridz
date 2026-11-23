@@ -1,8 +1,8 @@
 # Auditoría Wix — TPV — corte 2026-11-23
 
-**Repositorio/main:** b20304598f7017ebc283d5821a38b59fe41b90e0  
+**Repositorio/main:** 956356db48ee9d0ba363023c14105474316f84dd  
 **PR #541:** integrada en main.  
-**PR #540:** integrada en main.  
+**PR #540:** integrada en main. **PR #542:** integrada; CI posterior falló.  
 **PR #537:** sus commits exclusivos quedan preservados en el historial de #541.  
 **Sitio:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
 **Estado de aceptación:** **NO-GO Runtime / producción**.
@@ -13,9 +13,9 @@ La integración de código TPV está en main. La aceptación estática no demues
 
 ## CI de referencia
 
-- Backend offline quality gates sobre main: FAIL, run 45105031715. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
-- Secret scanning: SUCCESS, run 45105031857.
-- La corrección se prepara en la rama chore/phase1-repository-stabilization-20261123; CI de esa rama pendiente.
+- Backend offline quality gates sobre main: FAIL, run 45105979742. Una aserción contractual esperaba cuatro medios de pago y contradice el enum centralizado de seis.
+- Secret scanning: SUCCESS, run 45105979748.
+- PR #542 integró una primera corrección que aún fallaba. PR #543 contiene la corrección final de las aserciones; CI de su HEAD más reciente pendiente.
 
 ## Contrato de pagos comprobado estáticamente
 
