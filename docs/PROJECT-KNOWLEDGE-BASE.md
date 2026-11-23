@@ -191,6 +191,8 @@ No asumir que esos campos/colecciones siguen vigentes ni que son la autoridad ac
 
 No crear colecciones por conveniencia o por nombres propuestos. El modelo físico observado en main usa discriminadores lógicos TPV persistidos en colecciones de negocio compartidas; el diccionario CMS y el read-back live mandan sobre snapshots de diseño.
 
+**Read-back CMS 2026-11-23:** se ha verificado directamente en Wix el esquema físico de once colecciones (42 colecciones totales en el sitio; las once objetivo son NATIVE). El inventario, revisiones, recuentos, tipos, flags required y diferencias frente a keyfields anteriores están en [WIX-CMS-SCHEMA-VERIFICATION-2026-11-23](reference/WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md). Hallazgos confirmados: `MapaStaff.contactId` no existe; `ControlOperativo.ownerToken` y `eventType` sí existen; `CitasF2.cashMovementId` sí existe; `ServiciosCatalogo.name` es una referencia multi a `ComplementosCatalogo`, no un campo TEXT. No se modificó CMS ni código runtime.
+
 ---
 
 ## 8. TPV: arquitectura y estado de aceptación
