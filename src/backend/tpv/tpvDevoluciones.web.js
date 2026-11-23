@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_IDENTITY_TYPES, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, queryTpvRecords, withTpvSaleLock } from "backend/tpv/tpvRepository";
 import { makeTpvId, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -43,7 +43,7 @@ export const registrarDevolucion = webMethod(
 
             const refundId = makeTpvId("REFUND", key);
             const originalPayments = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
-            const remainingByMethod = { EFECTIVO: 0, TARJETA: 0, BIZUM: 0, OTROS: 0 };
+            const remainingByMethod = Object.fromEntries(Object.values(TPV_PAYMENT_METHOD).map((method) => [method, 0]));
             for (const payment of originalPayments) {
                 if (payment.status !== "CONFIRMADO_SINTETICO") continue;
                 if (Object.prototype.hasOwnProperty.call(remainingByMethod, payment.paymentMethod)) {
@@ -124,7 +124,7 @@ export const registrarDevolucion = webMethod(
                 entityType: "DEVOLUCION",
                 entityId: refundId,
                 traceId,
-                payload: { saleId, amountMinor, allocations, reason },
+                payload: { sessionId: session.sessionId, saleId, amountMinor, allocations, reason },
             });
 
             return {
