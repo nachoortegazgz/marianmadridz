@@ -14,7 +14,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 | Área | Estado | Evidencia / límite |
 |---|---|---|
 | Integración Git | Integrada | PR #541 y #540 están merged en main. |
-| CI backend en main | Fallida | Run 45105979742; una aserción de test TPV desactualizada. |
+| CI backend en main | Fallida | Run 45105979742; main conserva el test defectuoso. PR #543 lo corrige y pasa CI. |
 | Secret scanning | Correcto | Run 45105979748 sobre el HEAD actual. |
 | Protección de main | No configurada | API devuelve protected=false; issue #210 abierta. |
 | TPV código | Integrado, no aceptado en Runtime | Contratos y persistencia sintética implementados; Wix E2E pendiente. |
@@ -27,7 +27,7 @@ Este documento es el resumen operativo actual. Los inventarios de CMS, snapshots
 
 main está en 956356db48ee9d0ba363023c14105474316f84dd. PR #541 se integró en e7a4827c4bf2ec683df72b83ba5f4908c1f36e9a, PR #540 después y PR #542 generó el HEAD actual 956356db48ee9d0ba363023c14105474316f84dd. PR #537 quedó preservada en el historial de #541 mediante el merge commit 1bd1e2d02a741cc4ebad883524f3652ed6aa905b.
 
-El fallo actual de CI se localizó en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. La aserción esperaba cuatro medios de pago; internalConfig.js define seis y tpvValidation.js obtiene los métodos con Object.values(TPV_PAYMENT_METHOD). La primera corrección de test se integró mediante PR #542, pero CI continuó fallando. PR #543 contiene la corrección de las aserciones restantes y la documentación depurada; CI nuevo pendiente.
+El fallo actual de main se localizó en src/backend/tests/tpv.native-reconciliation.contract.test.mjs. PR #542 integró una primera corrección incompleta. PR #543 corrige las aserciones restantes y depura la documentación. Su HEAD eee6d75e5cf843a38823e7fa4c908783db175208 pasa Backend offline quality gates (Layer 1 364/364, Layer 2 255/255, suite offline 736/736, npm audit 0, contratos SDK y ESLint SUCCESS; run 45106697984) y Secret scanning SUCCESS (run 45106698016). PR #543 sigue abierta; main no ha recibido todavía esta corrección.
 
 main no tiene protección efectiva. La issue #210 sigue abierta y requiere intervención con permisos de administración para configurar required checks, PR obligatoria y bloqueo de force-push/borrado.
 
