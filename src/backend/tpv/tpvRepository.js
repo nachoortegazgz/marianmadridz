@@ -300,7 +300,7 @@ function _isRecognizedSyntheticLedgerItem(item) {
         (envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
     const legacy = [LEGACY_TPV_LEDGER_SOURCE, "TPV_SYNTHETIC"].includes(item.recordSource) &&
-        envelope.sandboxRunId === LEGACY_RUN_ID &&
+        envelope.legacyRunId === LEGACY_RUN_ID &&
         String(item.traceId || "").startsWith("TPV:" + LEGACY_RUN_ID + ":");
     return validCommon && (current || legacy);
 }
@@ -309,8 +309,8 @@ function _virtualRecord(item) {
     const envelope = item?.payloadFiscal && typeof item.payloadFiscal === "object"
         ? item.payloadFiscal
         : {};
-    const record = envelope.sandboxRecord && typeof envelope.sandboxRecord === "object"
-        ? envelope.sandboxRecord
+    const record = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object"
+        ? envelope.ledgerRecord
         : {};
     return {
         ...record,
@@ -376,15 +376,15 @@ async function _ensureCajaActual() {
 }
 
 function _sessionFromCaja(caja) {
-    const sandboxState = caja?.conceptOperations?.tpvSandbox;
-    const sessionId = String(sandboxState?.sessionId || "").trim();
+    const sourceState = caja?.conceptOperations?.tpvSandbox;
+    const sessionId = String(sourceState?.sessionId || "").trim();
     const explicitSynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
-        sandboxState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        sandboxState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-        sandboxState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Number(sandboxState?.schemaVersion) === 2 &&
-        sandboxState?.externalSideEffects === false &&
-        /^[a-f0-9]{64}$/i.test(String(sandboxState?.eventHash || "")) &&
+        sourceState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        sourceState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(sourceState?.schemaVersion) === 2 &&
+        sourceState?.externalSideEffects === false &&
+        /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
         Boolean(sessionId);
     const legacySynthetic = caja?.snapshotSource === LEGACY_TPV_LEDGER_SOURCE &&
         caja?.traceId === LEGACY_RUN_ID && Boolean(sessionId);
@@ -438,10 +438,10 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
                 : {};
-            const sandboxState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
+            const sourceState = conceptOperations.tpvSandbox && typeof conceptOperations.tpvSandbox === "object"
                 ? { ...conceptOperations.tpvSandbox }
                 : {};
-            const appliedIds = Array.isArray(sandboxState.appliedMovementIds) ? sandboxState.appliedMovementIds : [];
+            const appliedIds = Array.isArray(sourceState.appliedMovementIds) ? sourceState.appliedMovementIds : [];
             if (eventId && appliedIds.includes(eventId)) return caja;
             if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
                 throw new Error("TPV_PROJECTION_IDEMPOTENCY_LIMIT");
@@ -490,17 +490,17 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             } else {
                 next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
             }
-            sandboxState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
-            sandboxState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
-            sandboxState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
-            sandboxState.externalSideEffects = false;
-            sandboxState.schemaVersion = 2;
-            sandboxState.reconciliationStatus = "NOT_RECONCILED";
-            sandboxState.eventHash = String(eventHash || sandboxState.eventHash || "");
-            sandboxState.sessionId = String(sandboxState.sessionId || record.sessionId || record.payload?.sessionId || "");
-            sandboxState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
-            sandboxState.lastProjectedAt = now;
-            conceptOperations.tpvSandbox = sandboxState;
+            sourceState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
+            sourceState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
+            sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
+            sourceState.externalSideEffects = false;
+            sourceState.schemaVersion = 2;
+            sourceState.reconciliationStatus = "NOT_RECONCILED";
+            sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
+            sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
+            sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
+            sourceState.lastProjectedAt = now;
+            conceptOperations.tpvSandbox = sourceState;
             next.conceptOperations = conceptOperations;
             await assertFiscalLedgerLock(lock);
             await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
@@ -631,7 +631,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         requestFingerprint: fingerprint,
         schemaVersion: 2,
         reconciliationStatus: "NOT_RECONCILED",
-        sandboxRecord: record,
+        ledgerRecord: record,
         isSynthetic: true,
         realPayment: false,
         externalSideEffects: false,
@@ -673,7 +673,7 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: envelope,
         desgloseDetallado: { accountCode: "SIMULATED" },
-        lineItems: { sandboxRecord: record.lineItems || [] },
+        lineItems: { ledgerRecord: record.lineItems || [] },
     };
 }
 
