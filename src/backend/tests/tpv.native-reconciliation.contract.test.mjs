@@ -168,6 +168,47 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(summary, /reconciliationOk = totals\.totalCollectedMinor === totals\.netSalesMinor/);
 });
 
+test("TPV operational session contract exposes authenticated identity, Madrid time and distinct lifecycle states", async () => {
+    const [cash, repository, movements, sales, refunds, closures, controller, widget] = await Promise.all([
+        source("tpv/tpvCaja.web.js"),
+        source("tpv/tpvRepository.js"),
+        source("tpv/tpvMovimientos.web.js"),
+        source("tpv/tpvVentas.web.js"),
+        source("tpv/tpvDevoluciones.web.js"),
+        source("tpv/tpvCierres.web.js"),
+        readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"),
+        readFile(new URL("%23htmlTPV.txt", repoRoot), "utf8"),
+    ]);
+
+    assert.match(repository, /export async function latestTpvSession/);
+    assert.match(repository, /status: "CERRADA"/);
+    assert.match(repository, /export async function latestOpenTpvSession/);
+    assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
+    assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
+    assert.match(cash, /operatorId: session\.operatorId/);
+    assert.match(cash, /actorId: session\.actorId/);
+    assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
+    assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
+
+    assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(sales, /TPV_SESSION_CLOSED/);
+    assert.match(sales, /realPayment: false/);
+    assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
+    assert.match(movements, /return recordSessionId === sessionId/);
+    assert.match(movements, /integrationStatus: "NO_ENVIADO"/);
+    assert.match(refunds, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(refunds, /withTpvSaleLock\(saleId, traceId, async \(\) =>/);
+    assert.match(closures, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
+    assert.match(closures, /operationalStatus: "CERRADA"/);
+    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
+    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
+    assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
+    assert.match(widget, /operatorLabel/);
+    assert.match(widget, /operationalStatus === "CERRADA"/);
+    assert.match(widget, /await refreshCashState\(\)/);
+    assert.doesNotMatch(widget, /SIMULATED_SUCCESS/);
+});
+
 test.todo("Wix Preview: map synthetic TPV staff identity to the real Wix Bookings resourceId and reject a cross-operator mismatch");
 test.todo("Wix Preview: open one session, verify authenticated member/operator/resource IDs, terminal, timestamps and opening balance in CMS");
 test.todo("Wix Preview: complete split-payment sales and reconcile Wix-native order/receipt IDs when native integration is authorized");
