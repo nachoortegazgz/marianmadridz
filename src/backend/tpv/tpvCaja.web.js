@@ -218,7 +218,10 @@ export const registrarArqueoParcial = webMethod(
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) return errorResult("TPV_SESSION_NOT_OPEN");
+            if (!session) {
+                const latest = await latestTpvSession();
+                return errorResult(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
+            }
             if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
 
             return await withTpvSessionLock(session.sessionId, traceId, async () => {
