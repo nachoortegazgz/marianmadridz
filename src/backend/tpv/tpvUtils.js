@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(["EFECTIVO", "TARJETA", "BIZUM", "OTROS"]);
-export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {}) {
+export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
     const sandboxRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
     const sandboxState = caja?.conceptOperations?.tpvSandbox;
     const bootstrap = allowBootstrap === true &&
@@ -26,7 +26,7 @@ export function assertSandboxCajaWritable(caja, { allowBootstrap = false } = {})
     return true;
 }
 
-export function makeSandboxTransactionId(collection, idempotencyKey) {
+export function makeTpvTransactionId(collection, idempotencyKey) {
     if (!Object.values(TPV_COLLECTIONS).includes(collection)) {
         throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     }
@@ -48,7 +48,7 @@ export function makePreviousSandboxTransactionId(collection, idempotencyKey) {
     return "TPV_" + digest;
 }
 
-export function makeLegacySandboxTransactionId(idempotencyKey) {
+export function makeLegacyTpvTransactionId(idempotencyKey) {
     const key = normalizeIdempotencyKey(idempotencyKey);
     const digest = createHash("sha256")
         .update(TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":" + key, "utf8")
@@ -109,19 +109,19 @@ export function stableSerialize(value) {
     return JSON.stringify(value);
 }
 
-export function makeSandboxId(prefix, idempotencyKey) {
+export function makeTpvId(prefix, idempotencyKey) {
     const safe = normalizeIdempotencyKey(idempotencyKey).replace(/[^A-Za-z0-9_-]/g, "-");
     return "TPV-" + String(prefix || "EVENT").toUpperCase() + "-" + safe;
 }
 
-export function makeSandboxRefundLockId(saleId) {
+export function makeTpvRefundLockId(saleId) {
     const value = String(saleId || "").trim();
     if (!value) throw new Error("TPV_REFUND_LOCK_INVALID");
     const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
     return "TPVQ" + digest;
 }
 
-export function makeSandboxSessionLockId(sessionId) {
+export function makeTpvSessionLockId(sessionId) {
     const value = String(sessionId || "").trim();
     if (!value) throw new Error("TPV_SESSION_LOCK_INVALID");
     const digest = createHash("sha256").update(value, "utf8").digest("hex").slice(0, 32);
