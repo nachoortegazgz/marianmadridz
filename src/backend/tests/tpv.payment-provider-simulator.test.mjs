@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { assertTpvSandboxIdentity } from "../validation.js";
+import { assertTpvIdentity } from "../validation.js";
 import { simulateGatewayPayment, simulateGatewayRefund } from "../tpv/tpvPaymentSimulator.js";
 
 test("approved payment returns deterministic captured synthetic transaction", () => {
@@ -77,5 +77,5 @@ test("synthetic identity fixture contains six records accepted by the canonical 
     assert.equal(identities.length, 6);
     assert.equal(identities.filter((item) => item.identityType === "CUSTOMER").length, 3);
     assert.equal(identities.filter((item) => item.identityType === "STAFF").length, 3);
-    for (const identity of identities) assert.equal(assertTpvSandboxIdentity(identity), true);
+    for (const identity of identities) assert.equal(assertTpvIdentity(identity), true);
 });
