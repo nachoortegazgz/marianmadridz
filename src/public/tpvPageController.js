@@ -31,6 +31,23 @@ const REQUEST_TYPES = Object.freeze([
     "AUDIT_EXPORT",
 ]);
 const activeBridges = new WeakMap();
+const MAX_KEY_LEN = 120;
+
+function optionalString(value, maxLength = MAX_KEY_LEN) {
+    if (value === null || value === undefined || value === "") return null;
+    const result = String(value).trim();
+    if (!result) return null;
+    if (result.length > maxLength) throw new Error("TPV_VALUE_TOO_LONG");
+    return result;
+}
+
+function boundedInteger(value, field, min, max) {
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < min || number > max) {
+        throw new Error("TPV_INVALID_" + field);
+    }
+    return number;
+}
 
 function envelope(result) {
     if (result && (result.status === "SUCCESS" || result.status === "ERROR")) return result;
@@ -95,12 +112,14 @@ async function dispatch(message) {
 
         case "CATALOG_PRODUCTS":
             return obtenerProductos({
-                limit: numeric(payload.limit ?? 100, "CATALOG_LIMIT", { allowZero: false }),
-                cursor: payload.cursor ? String(payload.cursor).slice(0, 16000) : null,
+                limit: boundedInteger(payload.limit ?? 100, "CATALOG_LIMIT", 1, 100),
+                cursor: optionalString(payload.cursor, 16000),
             });
 
         case "CATALOG_VARIANTS":
-            return obtenerVariantesProducto({ productId: String(payload.productId || "") });
+            const productId = optionalString(payload.productId);
+            if (!productId) throw new Error("TPV_PRODUCT_ID_REQUIRED");
+            return obtenerVariantesProducto({ productId });
 
         case "CATALOG_STAFF":
             return obtenerStaff();
@@ -142,8 +161,8 @@ async function dispatch(message) {
                 subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
                 impuestosTotal: numeric(payload.tax, "TAX"),
                 totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
-                customerIdentityId: payload.customerIdentityId || null,
+                profesionalId: optionalString(payload.profesionalId),
+                customerIdentityId: optionalString(payload.customerIdentityId),
                 paymentBreakdown: payload.paymentBreakdown,
             });
         }
@@ -156,7 +175,7 @@ async function dispatch(message) {
                 paymentMethod: String(payload.paymentMethod || "EFECTIVO").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
                 reason: String(payload.reason || "").trim(),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
+                profesionalId: optionalString(payload.profesionalId),
             });
 
         case "REFUND": {
@@ -169,7 +188,7 @@ async function dispatch(message) {
                     paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
                     amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
                 })),
-                profesionalId: optionalString(payload.profesionalId, MAX_KEY_LEN),
+                profesionalId: optionalString(payload.profesionalId),
             });
         }
 
@@ -193,7 +212,7 @@ async function dispatch(message) {
         case "AUDIT_LIST":
             return obtenerMovimientosCaja({
                 sessionId: payload.sessionId ? String(payload.sessionId) : undefined,
-                limit: numeric(payload.limit ?? 50, "MOVEMENTS_LIMIT", { allowZero: false }),
+                limit: boundedInteger(payload.limit ?? 50, "MOVEMENTS_LIMIT", 1, 100),
             });
 
         case "CASH_MOVEMENTS_EXPORT":
