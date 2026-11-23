@@ -189,6 +189,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
+    assert.match(cash, /canOpenSession: true/);
+    assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ madridDayKey\(\)/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
     assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
@@ -219,6 +221,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
     assert.match(widget, /operatorLabel/);
     assert.match(widget, /operationalStatus === "CERRADA"/);
+    assert.match(widget, /canOpenSession = state\.session\?\.canOpenSession/);
     assert.match(widget, /await refreshCashState\(\)/);
     assert.doesNotMatch(widget, /SIMULATED_SUCCESS/);
 });
