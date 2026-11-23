@@ -39,6 +39,10 @@ Continuar la auditoría de TPV sobre el estado real de GitHub, corregir incompat
 
 Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Marian Madrid Peluquería y Estética. Estado **Draft**, editor clásico, Velo Enabled, EUR, Europe/Madrid. Apps: Bookings, Forms & Payments, Gift Cards, Payments, Stores Catalog V3, Invoices V1, Members Area, Blog y Promote SEO. Esta lectura no prueba que el HEAD de Git esté sincronizado con Wix Editor ni acredita Preview/Runtime.
 
+## Divergencia con PR #537
+
+PR #537 sigue abierta y comparte los 16 archivos modificados con PR #541. La comparación de grafos indica divergencia (113 commits ahead / 28 behind); #541 tiene 24 rutas adicionales. Se verificaron en #541 las funciones de atribución profesional, eventHash/envelope, lectura legacy y estados X/Z, pero no se ha realizado una reconciliación commit a commit de los 28 commits exclusivos de #537. No fusionar ambas PR ni cerrar #537 sin esa revisión.
+
 ## Pendiente / release gate
 
 - Confirmar read-back del SHA `651faa2775d8733d465cea5f33ab9d4a41f80f69` en Wix Git Integration/Editor; no se ha demostrado sincronización.
