@@ -10,18 +10,18 @@ Este documento es la única matriz operativa de issues. El estado ejecutivo est�
 |---|---|---|---|
 | [#525 CajaActual](https://github.com/nachoortegazgz/marianmadridz/issues/525) | Open · actualizado 2026-11-23 | PR #528 ya integra lock compartido; falta prueba concurrente/recuperación en Wix Runtime. | No mutar singleton live durante auditoría. |
 | [#416 Compensaciones](https://github.com/nachoortegazgz/marianmadridz/issues/416) | Open · actualizado 2026-11-23 | Conciliar cada compensación con pedido/ledger/transacción fuente y definir recuperación trazable. | No reintentar, borrar, sobrescribir ni crear asientos por inferencia. |
-| [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open · código de migración integrado; PR #556 en Draft | MapaStaff/consumidores alineados; PR #556 elimina fallback TERCERO/EMISOR. Falta CONFIG_SISTEMA legal verificado y Runtime. | No recrear DatosFiscales ni CONFIG_SISTEMA sin datos verificados. |
+| [#415 Maestro fiscal](https://github.com/nachoortegazgz/marianmadridz/issues/415) | Open · PR #556 integrada | MapaStaff/consumidores alineados; no existe CONFIG_SISTEMA canónico. Falta configuración legal verificada y Runtime. | No recrear DatosFiscales ni CONFIG_SISTEMA sin datos verificados. |
 | [#520 Automatizaciones Wix](https://github.com/nachoortegazgz/marianmadridz/issues/520) | Open · actualizado 2026-11-23 | Última actualización: 7 PREINSTALLED ACTIVE; la APPLICATION «Configuración de control laboral» está INACTIVE, revisión 5. Inspeccionar efectos/historial de las siete preinstaladas y definir contención soportada. | No sortear disableStatusChange ni desinstalar apps para neutralizar triggers. |
 | [#209 SIF/Veri*Factu](https://github.com/nachoortegazgz/marianmadridz/issues/209) | Open | Validación normativa, técnica, proveedor y asesoría; contrato común de huella y pruebas. | Mantener writers, firma, QR, emisión y remisión deshabilitados. |
 | [#434 Release readiness](https://github.com/nachoortegazgz/marianmadridz/issues/434) | Open | Gate paraguas: consolidar evidencia de todos los P0/P1 y conservar NO-GO. | No duplicar implementación de issues especializadas. |
 
-## PR de código abiertas — 2026-11-23
+## PR de código integradas — 2026-11-23
 
-| PR | Estado | Evidencia CI offline | Gate pendiente |
+| PR | Merge commit | CI offline | Gate pendiente |
 |---|---|---|---|
-| [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | Draft / no merge | 79 suites / 726 tests PASS; secret scanning PASS | Actualizar rama (1 commit behind main); Git–Wix Editor, Preview, permisos, idempotencia y concurrencia Runtime |
-| [#554](https://github.com/nachoortegazgz/marianmadridz/pull/554) | Draft / no merge | 79 suites / 725 tests PASS; secret scanning PASS; contrato de respuesta HTML/controlador/WebMethod revisado estáticamente | Actualizar rama (1 commit behind main); auditoría persistida por sesión en Wix Preview/Runtime |
-| [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | Draft / no merge | 79 suites / 728 tests PASS; secret scanning PASS | Actualizar rama (1 commit behind main); CONFIG_SISTEMA legal verificado y lectura Runtime |
+| [#554](https://github.com/nachoortegazgz/marianmadridz/pull/554) | `1a55a4d23163b04e76d8953815bca7f38bb4d6e1` | Backend `45154872022` y secret scanning `45154871994`: SUCCESS | Wix Preview/Runtime, auditoría persistida por sesión y sincronización Git–Editor |
+| [#551](https://github.com/nachoortegazgz/marianmadridz/pull/551) | `03a019eafed46fc39bcc53d80cc09c335951d15e` | Backend `45170143336` y secret scanning `45170143367`: SUCCESS tras rebase | Wix Preview/Runtime, permisos, idempotencia y concurrencia |
+| [#556](https://github.com/nachoortegazgz/marianmadridz/pull/556) | `3f02e5bb125fbb20d10d40e614c7c3eb3202b106` | Backend `45170094804` y secret scanning `45170094802`: SUCCESS tras rebase | Configuración fiscal legal verificada y lectura Runtime; mantener fail-closed |
 
 ## P1 — gobierno y aceptación funcional
 
@@ -48,7 +48,7 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - Documentación consolidada por PR #544 y estabilizada por PR #545.
 - PR #545 quedó fusionada en main mediante merge commit `9dbeacfc505bdfb58e8e1cdf9d566c8662cda739`. El HEAD pre-merge `57013eed25a5f8c755a2e5cd3434c792b3dec78c` pasó backend (run [45112082881](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082881)) y Gitleaks (run [45112082897](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112082897)); el merge commit pasó backend (run [45112229859](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229859)) y Gitleaks (run [45112229890](https://github.com/nachoortegazgz/marianmadridz/actions/runs/45112229890)).
 - main sigue sin protección efectiva; #210 es un gate administrativo abierto.
-- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.
+- No se hicieron escrituras CMS, pagos, cambios de automatización ni publicación durante esta estabilización.\n- PR #554, #551 y #556 fusionadas en `main`; sus merge commits y CI se detallan arriba.
 
 ## Evidencia y navegación
 
@@ -57,6 +57,8 @@ Accesibilidad, SEO, rendimiento, UX móvil, dependencias y limpieza de código. 
 - [Estado operativo](../PROJECT-STATUS.md)
 - [Índice documental](../README.md)
 
-## Revalidación de ramas — 2026-11-23
+## Evidencia Wix CMS — 2026-11-23
 
-`main` está en `84dbfecbba1ff5ea918d6199dbcde4b5ac4569eb`. Las ramas de PR #551, #554 y #556 comparten como merge-base `24f843d249bfb9636409ebc688dd5e13ff336892` y cada una está un commit por detrás de `main` (la actualización documental #557). No se detecta conflicto de merge en el metadato de GitHub, pero la actualización y repetición de CI sobre el candidato actualizado son gates previos a integrar. La revisión estática de #554 confirma que el controlador encapsula la respuesta WebMethod y el HTML recibe `data.items`; la discrepancia aparente de forma de respuesta queda descartada.
+Consultas de solo lectura con `consistentRead=true`: `CajaActual` 1 (ABIERTA desde 2026-11-21T08:12:21.994Z; `closedAt=null`; `conceptOperations={}`); `MovimientosCaja` 2; `CitasF2` 6 (5 CONFIRMED, 1 PENDING; tres `pairToken` vacíos, dos iguales y uno distinto); `MapaStaff` 5 (3 STAFF, sin CONFIG_SISTEMA); `HistoricoCierresZ` 0; `LibroAsientosContablesDetalle` 0. No se mutaron colecciones.
+
+La caja abierta y las seis proyecciones requieren investigación/reconciliación. No cerrar la caja ni corregir CitasF2 por inferencia. No se consultaron reservas nativas porque la integración `extendedBookings` permanece expresamente fuera del contrato TPV QA; se necesita resolver esa frontera de arquitectura o aportar evidencia nativa por vía autorizada.
