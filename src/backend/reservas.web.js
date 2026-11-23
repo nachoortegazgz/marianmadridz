@@ -855,8 +855,27 @@ export async function _getStaffDisplayNamePublic(resourceId) {
 /* =============================================================================
  * REVALIDACIÓN EXACTA DE SLOT
  * ==========================================================================*/
+/**
+ * F2 is an internal, hidden phase. Wix can return its valid staff/time slot
+ * with bookable=false solely because online booking is disabled for that
+ * internal service. Accept that state only when the other booking-policy
+ * violations are explicitly false; customer-facing F1 remains strict.
+ */
+function _isUsableAvailabilitySlotForContext(slot, internalPhase = false) {
+    if (!slot || typeof slot !== "object") return false;
+    if (slot.bookable === true) return true;
+    if (!internalPhase || slot.bookable !== false) return false;
+    const violations = slot.bookingPolicyViolations || {};
+    return (
+        violations.bookOnlineDisabled === true &&
+        violations.tooEarlyToBook === false &&
+        violations.tooLateToBook === false
+    );
+}
+
 export async function revalidateExactAvailabilitySlot({
     serviceId, localStartDate, localEndDate, resourceId, nativeAddonIds = [], traceId,
+    internalPhase = false,
 }) {
     const activeTraceId = traceId || makeTraceId("exact-slot");
     const resolvedServiceId = await _resolveServiceIdInternal(serviceId);
@@ -881,22 +900,29 @@ export async function revalidateExactAvailabilitySlot({
             (Array.isArray(nativeAddonIds) ? nativeAddonIds : []).map((id) => _safeTrim(id)).filter((id) => _looksLikeGuid(id))
         )).sort();
         let rawSlot = null;
-        if (normalizedNativeAddonIds.length > 0) {
+        if (normalizedNativeAddonIds.length > 0 || internalPhase === true) {
             const listPayload = {
                 serviceId: String(resolvedServiceId),
                 fromLocalDate: start,
                 toLocalDate: end,
                 timeZone: SDK_CONFIG.TZ,
-                bookable: true,
                 locations: [location],
                 includeResourceTypeIds: [STAFF_RESOURCE_TYPE_ID],
-                customerChoices: { addOnIds: normalizedNativeAddonIds },
-                bookingPolicyViolations: {
-                    bookOnlineDisabled: false,
-                    tooEarlyToBook: false,
-                    tooLateToBook: false,
-                },
+                bookingPolicyViolations: internalPhase === true
+                    ? {
+                        tooEarlyToBook: false,
+                        tooLateToBook: false,
+                    }
+                    : {
+                        bookOnlineDisabled: false,
+                        tooEarlyToBook: false,
+                        tooLateToBook: false,
+                    },
             };
+            if (internalPhase !== true) listPayload.bookable = true;
+            if (normalizedNativeAddonIds.length > 0) {
+                listPayload.customerChoices = { addOnIds: normalizedNativeAddonIds };
+            }
             if (requiredResourceId) {
                 listPayload.resourceTypes = [{ resourceTypeId: STAFF_RESOURCE_TYPE_ID, resourceIds: [requiredResourceId] }];
             }
@@ -907,7 +933,7 @@ export async function revalidateExactAvailabilitySlot({
             rawSlot = (Array.isArray(listed?.timeSlots) ? listed.timeSlots : []).find((slot) =>
                 _normalizeLocalIsoStr(slot?.localStartDate || slot?.startDate) === start &&
                 _normalizeLocalIsoStr(slot?.localEndDate || slot?.endDate) === end &&
-                slot?.bookable === true
+                _isUsableAvailabilitySlotForContext(slot, internalPhase)
             ) || null;
         } else {
             const getOptions = {
@@ -935,7 +961,7 @@ export async function revalidateExactAvailabilitySlot({
         }
         const normalized = _attachServiceId(rawSlot, resolvedServiceId, activeTraceId, "revalidateExactAvailabilitySlot");
         const availableResourceIds = _getResourceIdsFromSlot(normalized);
-        if (!normalized || normalized.bookable !== true) {
+        if (!normalized || !_isUsableAvailabilitySlotForContext(normalized, internalPhase)) {
             return { status: "ERROR", data: null, error: { code: "SLOT_UNAVAILABLE", message: "Selected slot is no longer available." } };
         }
         if (requiredResourceId && !availableResourceIds.includes(requiredResourceId)) {
@@ -965,6 +991,7 @@ export async function revalidateExactAvailabilitySlot({
             traceId: activeTraceId, wixErrorCode, httpStatus,
             message: error?.message || String(error),
             serviceId: String(resolvedServiceId), localStartDate: start, localEndDate: end,
+            internalPhase: internalPhase === true,
         });
         return { status: "ERROR", data: null, error: { code: "SLOT_UNAVAILABLE", message: "Selected slot could not be revalidated.", traceId: activeTraceId } };
     }
@@ -974,7 +1001,7 @@ export async function revalidateExactAvailabilitySlot({
  * LISTADO DE SLOTS
  * ==========================================================================*/
 async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourceIds, nativeAddonIds = [] }, options = {}) {
-    const { timeSlotsPerDay } = options;
+    const { timeSlotsPerDay, internalPhase = false } = options;
     const traceId = makeTraceId("slots");
     const fromKey = _normalizeLocalIsoStr(fromLocalDate);
     const toKey = _normalizeLocalIsoStr(toLocalDate);
@@ -1021,15 +1048,20 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
                 fromLocalDate: String(fromKey),
                 toLocalDate: String(toKey),
                 timeZone: SDK_CONFIG.TZ,
-                bookable: true,
                 locations: [location],
                 includeResourceTypeIds: [STAFF_RESOURCE_TYPE_ID],
-                bookingPolicyViolations: {
-                    bookOnlineDisabled: false,
-                    tooEarlyToBook: false,
-                    tooLateToBook: false,
-                },
+                bookingPolicyViolations: internalPhase === true
+                    ? {
+                        tooEarlyToBook: false,
+                        tooLateToBook: false,
+                    }
+                    : {
+                        bookOnlineDisabled: false,
+                        tooEarlyToBook: false,
+                        tooLateToBook: false,
+                    },
             };
+            if (internalPhase !== true) payload.bookable = true;
             if (resourceTypes.length) payload.resourceTypes = resourceTypes;
             if (normalizedNativeAddonIds.length > 0) payload.customerChoices = { addOnIds: normalizedNativeAddonIds };
             if (Number.isFinite(timeSlotsPerDay) && Number(timeSlotsPerDay) > 0) payload.timeSlotsPerDay = Number(timeSlotsPerDay);
@@ -1051,7 +1083,7 @@ async function _listTimeSlotsV2({ serviceId, fromLocalDate, toLocalDate, resourc
             );
             const rawSlots = Array.isArray(data?.timeSlots) ? data.timeSlots : [];
             const slots = rawSlots.map((s) => {
-                if (!s || s.bookable !== true) return null;
+                if (!_isUsableAvailabilitySlotForContext(s, internalPhase)) return null;
                 const start = s.localStartDate || s.startDate || "";
                 const end = s.localEndDate || s.endDate || "";
                 const fixed = _attachServiceId(s, resolvedServiceId, traceId, "_listTimeSlotsV2");
@@ -1475,7 +1507,7 @@ export async function _resolveStaffForSlotInternal(params) {
                     resourceIds: requestedResourceId ? [requestedResourceId] : [],
                     nativeAddonIds: [],
                 },
-                {}
+                { internalPhase: true }
             );
             const slotF2Raw = (slotsF2 || []).find((s) => {
                 if (_normalizeLocalIsoStr(s.localStartDate) !== f2Start) return false;
@@ -1696,7 +1728,7 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
                 resourceIds: resourceIdsFilter,
                 nativeAddonIds: [],
             },
-            {}
+            { internalPhase: true }
         )
         : Promise.resolve([]);
 
@@ -1709,6 +1741,11 @@ export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, date
         isDual,
         slotsF1: slotsF1.length,
         slotsF2: slotsF2.length,
+        f2AvailabilityMode: isDual ? "INTERNAL_PHASE" : null,
+        f2SlotsBookable: (slotsF2 || []).filter((slot) => slot?.bookable === true).length,
+        f2SlotsOnlineDisabled: (slotsF2 || []).filter((slot) =>
+            slot?.bookingPolicyViolations?.bookOnlineDisabled === true
+        ).length,
         elapsedMs: Date.now() - availabilityStartedAt,
     });
 
