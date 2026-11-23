@@ -582,7 +582,7 @@ body {
     $("cashLabel").textContent = isOpen
       ? "ABIERTA · Integración: " + integrationStatus + " · Simulación: " + simulationStatus
       : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
-    const canOpenSession = state.session?.canOpenSession ?? operationalStatus === "SIN_SESION";
+    const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy;
     ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
       $(id).disabled = !isOpen || state.busy;
