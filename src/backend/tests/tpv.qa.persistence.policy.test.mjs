@@ -92,7 +92,7 @@ test("SANDBOX writes require an exact test-run CajaActual marker and never accep
 test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
-    assert.ok(logicalTypes.every((value) => value.startsWith("SANDBOX_LOGICAL_")));
+    assert.ok(logicalTypes.every((value) => value.startsWith("TPV_LOGICAL_")));
 
     const item = {
         _id: "TPV_TEST_ROW",
