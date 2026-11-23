@@ -238,7 +238,7 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
 });
 
 test("legacy transaction IDs remain discoverable for same-collection idempotent retries", async () => {
-    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
     assert.match(repository, /const transactionIds = \[\s*_testTransactionId\(collection, key\),\s*makeLegacySandboxTransactionId\(key\),\s*\]/);
     assert.match(repository, /for \(const transactionId of uniqueTransactionIds\)/);
 });
@@ -396,7 +396,7 @@ function getWebMethodSource(source, methodName) {
 
 
 test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", async () => {
-    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
     const initializeStart = repository.indexOf("export async function initializeSandboxCaja(");
     const identitiesStart = repository.indexOf("export async function seedSandboxIdentities(");
     const getCajaStart = repository.indexOf("async function _getCajaActual", initializeStart);
@@ -421,7 +421,7 @@ test("Sandbox bootstrap is read-only and requires pre-seeded Sandbox records", a
 
 
 test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing ControlOperativo", async () => {
-    const repository = await readFile(new URL("../tpv/tpvSandboxRepository.js", import.meta.url), "utf8");
+    const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
     const helperStart = repository.indexOf("async function _ensureCajaActualForSandbox(");
     const helperEnd = repository.indexOf("\n}\n", helperStart) + 2;
     const lockStart = repository.indexOf("async function withSandboxScopedLock(");
