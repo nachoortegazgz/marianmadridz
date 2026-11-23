@@ -117,7 +117,7 @@ test("EVENTLOG-FISCAL-CONFIG-02 only complete explicit SIF configuration is acce
     tipoUsoPosibleSoloVerifactu: false,
     tipoUsoPosibleMultiOT: true,
     indicadorMultiplesOT: true,
-    taxId: "X1234567X",
+    taxId: "B12345674",
     legalName: "Titular de prueba",
     fechaInicioVerifactu: "2027-07-01",
   });
