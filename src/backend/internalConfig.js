@@ -152,11 +152,6 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC",
 });
 
-export const TPV_IDENTITY_TYPES = Object.freeze({
-  CUSTOMER: "CUSTOMER",
-  STAFF: "STAFF",
-});
-
 export const CATALOG_ENTRY_TYPE = Object.freeze({
   SERVICE: "SERVICE",
   PRICING_PLAN: "PRICING_PLAN",
@@ -168,13 +163,11 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   COMPLEMENTOS_CATALOGO: "ComplementosCatalogo",
   CONTROL_OPERATIVO: "ControlOperativo",
   HISTORICO_CIERRES_Z: "HistoricoCierresZ",
-  PAQUETES_GESTORIA: "PaquetesGestoria",
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
-  TPV_IDENTITIES: "TpvSandboxIdentities",
 });
 
 // Operational lock and idempotency state is centralized in ControlOperativo.
@@ -647,8 +640,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
-    BUSINESS_COLLECTIONS.TPV_IDENTITIES,
-    BUSINESS_COLLECTIONS.PAQUETES_GESTORIA,
   ]),
   updateCollections: Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
