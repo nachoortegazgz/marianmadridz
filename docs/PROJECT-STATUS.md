@@ -88,7 +88,7 @@ La issue [#526](https://github.com/nachoortegazgz/marianmadridz/issues/526) est�
 
 ## Contrato dual personalizado — precisión arquitectónica (2026-11-23)
 
-Wix Bookings V2 no se utiliza como motor de multiservicio. La composición de dos fases es responsabilidad del backend Marian Madrid: dos bookings individuales e independientes (F1 y F2), vinculados por la identidad de pareja del flujo dual. Entre ambas existe un **gap de exposición** que debe permanecer libre. F2 debe comenzar exactamente en `F1.end + exposureDuration`; la disponibilidad de ambas fases debe corresponder al mismo `resourceId` (profesional/recurso).
+Wix Bookings V2 no se utiliza como motor de multiservicio. La composición de dos fases es responsabilidad del backend Marian Madrid: dos bookings individuales e independientes (F1 y F2), vinculados por la identidad de pareja del flujo dual. Entre ambas existe un **gap de exposición** que no constituye una reserva F1/F2. F2 debe comenzar exactamente en `F1.end + exposureDuration`; la disponibilidad de ambas fases debe corresponder al mismo `resourceId` (profesional/recurso).
 
 Evidencia estática: `src/backend/reservas.web.js` declara las correcciones `DUAL-GAP-01` y `DUAL-GAP-02` (búsqueda del slot F2 en el instante local exacto calculado), y `DUAL-PERF-01` (consulta F1/F2 por jornada en paralelo). El módulo `src/backend/booking/bookingSaga.js` declara la orquestación de reserva simple y dual con gap. Esta evidencia no sustituye una ejecución Wix Runtime.
 
