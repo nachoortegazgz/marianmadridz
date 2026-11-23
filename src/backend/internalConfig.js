@@ -137,8 +137,8 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   CAPABILITIES: Object.freeze({
     realPayments: false,
     nativeWrites: false,
-    nativePayments: false,
-    nativeRefunds: false,
+    allowNativePayments: false,
+    allowNativeRefunds: false,
     fiscalEmission: false,
     hardware: false,
   }),
