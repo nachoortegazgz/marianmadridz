@@ -28,6 +28,8 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
+    TPV_LEDGER_SOURCE,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -736,7 +738,18 @@ export function isExplicitSimulationLedgerRecord(item) {
     const legacyTpvDevelopmentRecord = item.synthetic === true &&
         recordSource === "TPV_QA_DEVELOPMENT" &&
         source === "TPV_FUNCTIONAL_TEST";
-    const tpvLedgerSource = [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(recordSource);
+    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object"
+        ? item.payloadFiscal
+        : {};
+    const historicalTpvLedgerRecord = recordSource === TPV_LEDGER_SOURCE &&
+        envelope.sourceType === TPV_HISTORICAL_POLICY.SOURCE_TYPE &&
+        envelope.ledgerVersion === TPV_HISTORICAL_POLICY.LEDGER_VERSION &&
+        [1, TPV_HISTORICAL_POLICY.SCHEMA_VERSION].includes(Number(envelope.schemaVersion)) &&
+        Number(item.sequenceNumber) === 0 &&
+        envelope.externalSideEffects === false &&
+        (envelope.isSynthetic === true || envelope.realPayment === false);
+    const tpvLedgerSource = historicalTpvLedgerRecord ||
+        [TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE, TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE].includes(recordSource);
     return tpvLedgerSource ||
         recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
