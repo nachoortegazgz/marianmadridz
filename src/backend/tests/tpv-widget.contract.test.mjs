@@ -71,6 +71,8 @@ test("TPV widget keeps all writes synthetic and does not implement a second paym
     assert.match(config, /TPV_LEDGER_SOURCE = "TPV_LEDGER"/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
+    assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
+    assert.match(html, /paymentStatus === "NOT_PROCESSED"|gatewayCalled === false/);
     assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);
     assert.match(html, /data\.type !== "MM_CONTEXT"/);
