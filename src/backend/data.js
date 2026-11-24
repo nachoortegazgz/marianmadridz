@@ -1,12 +1,12 @@
 /*
 P4 OFFICIAL REFERENCE: dev.wix.com — Velo Wix Data beforeInsert API.
-The hook is a CMS and Data API write boundary: reject invalid TPV runtime
-metadata before persistence and normalize canonical enum tokens.
+The hook is a CMS and Data API write boundary: reject TPV operational writes
+until the canonical ledger contract exists and normalize fiscal enum tokens.
 */
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5017-SYNTHETIC-TPV-EDIT
+VERSION: v5018-TPV-OPERATIONAL-WRITES-RETIRED
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
                 estricta de esquemas CMS.
@@ -412,8 +412,8 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
     if (item.recordSource === TPV_LEDGER_SOURCE ||
-        String(item.movementType || "").startsWith("TPV_") ||
-        String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
+        String(item.recordSource || "").startsWith("TPV_") ||
+        String(item.movementType || "").startsWith("TPV_")) {
         _schemaError("CMS_TPV_LEDGER_WRITES_DISABLED: el ledger operativo TPV aún no tiene contrato canónico aprobado.");
     }
 
