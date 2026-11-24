@@ -35,6 +35,7 @@ const LOCK_DEDUPE_KEY = FISCAL_LEDGER_LOCK_CONFIG.DEDUPE_KEY;
 const LOCK_TTL_MS = FISCAL_LEDGER_LOCK_CONFIG.TTL_MS;
 const DEFAULT_WAIT_MS = FISCAL_LEDGER_LOCK_CONFIG.WAIT_MS;
 const POLL_MS = FISCAL_LEDGER_LOCK_CONFIG.POLL_MS;
+const LOCK_RETRY_BACKOFF_MS = Object.freeze([200, 500, 1500]);
 const LOCK_SERVICE_ID = FISCAL_LEDGER_LOCK_CONFIG.SERVICE_ID;
 const LOCK_RESOURCE_ID = FISCAL_LEDGER_LOCK_CONFIG.RESOURCE_ID;
 
@@ -329,7 +330,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                 continue;
             }
 
-            if (Date.now() >= deadline) {
+            if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
                 throw createActionableError({
                     code: "FISCAL_LEDGER_LOCK_BUSY",
                     userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
@@ -339,7 +340,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     retryable: true,
                 });
             }
-            const delayMs = Math.min(POLL_MS, Math.max(1, deadline - Date.now()));
+            const delayMs = Math.min(LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length], Math.max(1, deadline - Date.now()));
             resolutionAttempts.push({ strategy: "LOCK_WAIT", delayMs, outcome: "WAITED" });
             await _sleep(delayMs);
             continue;
@@ -368,7 +369,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
             return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null, resolutionAttempts);
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
-            if (Date.now() >= deadline) {
+            if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
                 throw createActionableError({
                     code: "FISCAL_LEDGER_LOCK_BUSY",
                     userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
@@ -378,8 +379,9 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     retryable: true,
                 });
             }
-            resolutionAttempts.push({ strategy: "DUPLICATE_KEY_RECHECK", delayMs: POLL_MS, outcome: "WAITED" });
-            await _sleep(POLL_MS);
+            const delayMs = LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length];
+            resolutionAttempts.push({ strategy: "DUPLICATE_KEY_RECHECK", delayMs, outcome: "WAITED" });
+            await _sleep(delayMs);
         }
     }
 }
