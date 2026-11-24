@@ -14,7 +14,6 @@ function disabledResult(code) {
         data: null,
         error: { code, message: "La escritura en el circuito operativo/fiscal permanece bloqueada." },
         persisted: false,
-
     };
 }
 
