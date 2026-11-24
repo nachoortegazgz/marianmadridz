@@ -5,11 +5,7 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_RUNTIME_POLICY,
     TPV_LEDGER_SOURCE,
-    TPV_COLLECTIONS,
-    TPV_EVENT_MOVEMENT_TYPES,
-    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -74,40 +70,6 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function _isSyntheticTpvRecord(item) {
-    return _isRecord(item) &&
-        [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
-        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType)) &&
-        [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[item.payloadFiscal?.logicalCollection] === item.movementType) &&
-        (
-            (
-                item.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-                item.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-                item.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                Number(item.payloadFiscal?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-                item.payloadFiscal?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS &&
-                (item.payloadFiscal?.processingMode === undefined || item.payloadFiscal.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
-                (item.payloadFiscal?.allowNativePayments === undefined || item.payloadFiscal.allowNativePayments === false) &&
-                (item.payloadFiscal?.allowNativeRefunds === undefined || item.payloadFiscal.allowNativeRefunds === false) &&
-                (item.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
-                    Boolean(String(item.payloadFiscal?.sessionId || "").trim()))
-            ) ||
-            (
-                item.payloadFiscal?.sourceType == null &&
-                item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
-            )
-        ) &&
-        (item.payloadFiscal?.isSynthetic === undefined || item.payloadFiscal.isSynthetic === true) &&
-        (item.payloadFiscal?.realPayment === undefined || item.payloadFiscal.realPayment === false) &&
-        item.payloadFiscal?.externalSideEffects === false &&
-        Boolean(item.payloadFiscal?.requestFingerprint) &&
-        /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
-        Number(item.sequenceNumber) === 0 &&
-        (String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
-            String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":") ||
-            String(item.traceId || "").startsWith("TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":"));
-}
-
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
@@ -135,10 +97,10 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) || (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType)))) {
-        if (!_isSyntheticTpvRecord(item)) {
-            throw _policyError("CMS_TPV_LEDGER_CONTRACT_INVALID");
-        }
+        (item.recordSource === TPV_LEDGER_SOURCE ||
+            String(item.movementType || "").startsWith("TPV_") ||
+            String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
+        throw _policyError("CMS_TPV_LEDGER_WRITES_DISABLED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
