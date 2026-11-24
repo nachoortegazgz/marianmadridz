@@ -62,3 +62,6 @@
 
 Código delegable: 0 pendiente. Consolidación F1+F2: B.
 Bloqueos: contratos A/B/C (pagos, inventario, fiscal) y evidencia Runtime; runAllRuntimeChecks no localizado.
+
+Debt sweep ciclo 1: 0 eliminaciones. Arnés creado.
+Ejecución Preview pendiente humana.
