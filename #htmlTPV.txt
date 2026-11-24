@@ -734,13 +734,19 @@ body {
   }
 
   async function selectCatalogItem(item) {
-    if (item.tipoLinea === "PRODUCTO" && item.requiereSeleccionVariante === true) {
+    if (item.tipoLinea === "PRODUCTO") {
       const result = await call("CATALOG_VARIANTS", { productId: item.itemId }, "CATALOG_VARIANTS_RES");
       const variants = (result?.variantes || []).filter((variant) =>
-        variant.disponible === true && Number.isSafeInteger(variant.precioMinor)
+        variant.disponible === true && Number.isSafeInteger(variant.precioMinor) &&
+        typeof variant.varianteId === "string" && variant.varianteId.length > 0
       );
       if (!variants.length) {
         toast("No hay variantes disponibles con precio válido.");
+        return;
+      }
+      if (variants.length === 1) {
+        const selected = variants[0];
+        addCatalogLine(item, selected.precioMinor, selected.varianteId, selected.concepto);
         return;
       }
       openModal("Seleccionar variante", `
