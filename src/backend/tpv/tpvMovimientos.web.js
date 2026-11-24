@@ -169,9 +169,9 @@ export const obtenerMovimientosCaja = webMethod(
             const latestSession = await latestTpvSession();
             const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
             const operationalStatus = resolveCashSessionOperationalStatus(latestSession, closures, sessionId);
-            const ledger = await queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, undefined, { limit: 1000, maxRecords: 10000 });
+            const ledger = await queryTpvOperationalLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
-            const items = ledger
+            const items = ledger.records
                 .filter((record) => {
                     const sourceType = String(record.cmsMovementType || "");
                     if (!visibleTypes.has(sourceType)) return false;
@@ -193,7 +193,7 @@ export const obtenerMovimientosCaja = webMethod(
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    truncated: ledger.length >= 10000,
+                    truncated: ledger.hasMore,
                 },
                 error: null,
                 traceId,
