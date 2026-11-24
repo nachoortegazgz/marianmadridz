@@ -1074,8 +1074,9 @@ body {
     <input id="partialCountCash" class="field" type="text" inputmode="decimal" placeholder="Efectivo contado (ej. 150,00)">
     <input id="partialCountReason" class="field" maxlength="500" placeholder="Motivo si existe diferencia">
   `, async () => {
-    const countedCash = num($("partialCountCash").value);
-    if (!Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
+    const countedCashInput = $("partialCountCash").value;
+    const countedCash = num(countedCashInput);
+    if (!String(countedCashInput ?? "").trim() || !Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
     const reason = $("partialCountReason").value.trim();
     await keyedAction("PARTIAL_COUNT", "PARTIAL_CASH_COUNT", {
       sessionId: state.session?.sessionId,
@@ -1190,8 +1191,9 @@ body {
       <input id="countedCash" class="field" type="text" inputmode="decimal" placeholder="Efectivo contado (ej. 150,00)">
       <input id="differenceReason" class="field" maxlength="200" placeholder="Motivo si existe diferencia">
     `, async () => {
-      const countedCash = num($("countedCash").value);
-      if (!Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
+      const countedCashInput = $("countedCash").value;
+      const countedCash = num(countedCashInput);
+      if (!String(countedCashInput ?? "").trim() || !Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
       const differenceReason = $("differenceReason").value.trim();
       await keyedAction("TICKET_Z", "TICKET_Z", {
         sessionId: state.session?.sessionId,
