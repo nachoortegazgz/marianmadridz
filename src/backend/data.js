@@ -415,7 +415,7 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
     if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
-        String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
+        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV no cumple el contrato neutral de origen, sitio y versión.");
         }
