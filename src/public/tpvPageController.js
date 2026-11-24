@@ -143,7 +143,7 @@ function numeric(value, field, { allowZero = true } = {}) {
         throw new Error("TPV_INVALID_" + field);
     }
     const minor = Math.round((amount + Number.EPSILON) * 100);
-    if (!Number.isFinite(amount) || amount < 0 ||
+    if (!Number.isFinite(amount) || !Number.isSafeInteger(minor) || amount < 0 ||
         Math.abs(amount * 100 - minor) > 1e-7 ||
         (!allowZero && minor === 0)) {
         throw new Error("TPV_INVALID_" + field);
