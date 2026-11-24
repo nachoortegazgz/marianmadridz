@@ -134,7 +134,7 @@ export function assertUpdateAllowed(collection, item) {
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw createActionableError({
             code: "LEDGER_APPEND_ONLY",
-            userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.",
+            userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.",
             technicalDetail: "CMS mutation denied for append-only collection: " + collection,
             remediation: ["No intentar update/remove sobre MovimientosCaja, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como movimiento nuevo de tipo AJUSTE o ANULACION, referenciando el _id original y conforme al contrato aprobado.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
             contextSnapshot: { collection, operation: "MUTATION" },
@@ -184,7 +184,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
     } else if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw createActionableError({
             code: "LEDGER_APPEND_ONLY",
-            userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.",
+            userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.",
             technicalDetail: "CMS mutation denied for append-only collection: " + collection,
             remediation: ["No intentar update/remove sobre MovimientosCaja, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como movimiento nuevo de tipo AJUSTE o ANULACION, referenciando el _id original y conforme al contrato aprobado.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
             contextSnapshot: { collection, operation: "MUTATION" },
