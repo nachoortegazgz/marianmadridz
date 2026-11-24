@@ -412,7 +412,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["obtenerResumenCaja", "generarControlX", "generarCierreZ"],
         },
         "tpvPagos.web.js": {
-            guarded: ["validarDesglosePagos", "simularPasarelaPago", "simularReembolsoPasarela"],
+            guarded: ["validarDesglosePagos"],
         },
         "tpvUtils.web.js": {
             guarded: ["obtenerConfiguracionTPV"],
