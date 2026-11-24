@@ -167,7 +167,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         sequenceNumber: 0,
         transactionId: "TPV_TEST_ROW",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":SESSION-TEST",
-        movementType: "SIMULATED_TPV_PAYMENT",
+        movementType: "TPV_PAYMENT",
         recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: {
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
