@@ -28,7 +28,6 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     TIPO_FACTURA,
-    TPV_LEDGER_SOURCE,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -268,12 +267,13 @@ export function assertMovimientosCajaRequiredFields(item) {
         !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires SHA-256 hash chain fields");
     }
-    if (![TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource)) {
-        assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
-        assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
-        assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
-        assertValidEnum(item.tipoFactura, TIPO_FACTURA, "tipoFactura");
+    if (!Number.isSafeInteger(item.sequenceNumber) || item.sequenceNumber <= 0) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja.sequenceNumber must be a positive integer");
     }
+    assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
+    assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
+    assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
+    assertValidEnum(item.tipoFactura, TIPO_FACTURA, "tipoFactura");
     return true;
 }
 
