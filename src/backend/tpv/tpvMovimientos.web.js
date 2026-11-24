@@ -107,7 +107,7 @@ export const registrarMovimientoCaja = webMethod(
                 paymentMethod,
                 profesionalId: profesionalId || null,
                 reason,
-                status: "CONFIRMADO_SINTETICO",
+                status: "CONFIRMADO",
                 createdAt: new Date(),
                 payload: {
                     sessionId: session.sessionId,
