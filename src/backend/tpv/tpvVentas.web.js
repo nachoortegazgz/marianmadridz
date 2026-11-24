@@ -125,7 +125,7 @@ export const registrarVenta = webMethod(
 
             await insertTpvEvent(TPV_COLLECTIONS.VENTAS, key + ":PREPARED", {
                 saleId,
-                status: "PREPARADA_SINTETICA",
+                status: "PREPARADA",
                 currency: "EUR",
                 subtotalMinor: Math.round(sale.subtotalNeto * 100),
                 discountMinor: sale.lineas.reduce((sum, line) => sum + Math.round(line.descuentoImporte * 100), 0),
@@ -172,7 +172,7 @@ export const registrarVenta = webMethod(
                     amountMinor: Math.round(payment.importeAplicado * 100),
                     receivedMinor: Math.round(payment.importe * 100),
                     changeMinor: Math.round(payment.importeCambio * 100),
-                    status: "CONFIRMADO_SINTETICO",
+                    status: "CONFIRMADO",
                     provider: "SIMULATED",
                     gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY",
                     createdAt,
@@ -182,7 +182,7 @@ export const registrarVenta = webMethod(
 
             const { item: committed, replayed } = await insertTpvEvent(TPV_COLLECTIONS.VENTAS, key + ":COMMITTED", {
                 saleId,
-                status: "CONFIRMADA_SINTETICA",
+                status: "CONFIRMADA",
                 currency: "EUR",
                 subtotalMinor: Math.round(sale.subtotalNeto * 100),
                 discountMinor: sale.lineas.reduce((sum, line) => sum + Math.round(line.descuentoImporte * 100), 0),
@@ -224,7 +224,7 @@ export const registrarVenta = webMethod(
                     actorId: operator.actorId,
                     integrationStatus: "NO_ENVIADO",
                     simulationStatus: "SYNTHETIC",
-                    paymentStatus: "SIMULATED_ONLY",
+                    paymentStatus: "NOT_PROCESSED",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     total: sale.totalVenta,
