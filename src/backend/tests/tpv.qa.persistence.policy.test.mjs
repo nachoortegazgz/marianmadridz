@@ -279,6 +279,8 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
     assert.equal(toMinorUnits(" 12,5 € "), 1250);
     assert.equal(fromMinorUnits(1234), 12.34);
     assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
+    assert.throws(() => toMinorUnits(Number.MAX_VALUE), /TPV_MINOR_UNITS_OUT_OF_RANGE/);
+    assert.throws(() => toMinorUnits("90071992547410.00"), /TPV_MINOR_UNITS_OUT_OF_RANGE/);
     assert.throws(() => toMinorUnits("1.234"), /TPV_INVALID_FORMAT/);
     assert.throws(() => toMinorUnits("12,345"), /TPV_INVALID_FORMAT/);
     const payload = makeTpvPayload({ concept: "Servicio [SINTÉTICO]" });
