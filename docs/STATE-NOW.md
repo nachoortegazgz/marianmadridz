@@ -1,4 +1,4 @@
-# Estado actual — 2026-11-23
+# Estado actual — 2026-11-24
 
 **Repositorio:** nachoortegazgz/marianmadridz  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Draft** · `published=false`  
@@ -59,4 +59,21 @@
 | sourceType | Clasificación de origen del registro |
 | processingMode | Modo de procesamiento |
 | reconciliationStatus | Estado de conciliación del registro |
+
+
+
+## Correcciones operativas en revisión — 2026-11-24
+
+Se han preparado dos PR independientes contra `main`; ambas siguen abiertas, no fusionadas y sin despliegue:
+
+1. **PR #595 — Entradas TPV y errores accionables** ([revisión](https://github.com/nachoortegazgz/marianmadridz/pull/595)). Normaliza importes monetarios inequívocos en formato ES/EN, rechaza formatos ambiguos y mejora los mensajes públicos de TPV y reservas. CI observada en el HEAD `aa073f9b69e3b3ab8fd739b214324e4cd8842b0c`: workflows «Backend offline quality gates» y «Secret scanning» completados con conclusión `success`.
+2. **PR #597 — Filtros de historial de jornada** ([revisión](https://github.com/nachoortegazgz/marianmadridz/pull/597)). Acota límites de consulta y valida `monthKey` en `getHistorialFichajes()` y `getResumenHoras()`. CI observada en el HEAD `e9711219a59368169fb1e149dbb9567af6a3ea07`: workflows «Backend offline quality gates» y «Secret scanning» completados con conclusión `success`.
+
+### Alcance y límites de validación
+
+- Las dos ramas parten del HEAD actual de `main` (`53829477b3e367c6e28edcf9c51282ab05481fc3`) y no presentan commits por detrás de `main` en la comparación consultada.
+- La evidencia de CI corresponde a pruebas offline y análisis de secretos. No acredita Wix Preview/Runtime, datos CMS reales, permisos/configuración del sitio, automatizaciones externas ni funcionamiento publicado.
+- La auditoría global fue una revisión estática sistemática del árbol y de rutas representativas; no equivale a una revisión semántica línea por línea de los 190 archivos de `src/`.
+- Mantener las PR abiertas para revisión. No fusionar ni publicar hasta revisar el diff y completar las pruebas Wix aisladas aplicables.
+- El estado de release continúa **NO-GO** por los P0/P1 y gates Runtime ya enumerados en este documento. Esta actualización documental no los resuelve ni modifica.
 
