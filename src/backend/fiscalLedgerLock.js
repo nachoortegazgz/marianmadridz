@@ -23,6 +23,7 @@ import {
     SDK_CONFIG,
 } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
+import { createActionableError } from "backend/errors/actionableError";
 
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
 const CASH_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
@@ -316,9 +317,14 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
             }
 
             if (Date.now() >= deadline) {
-                const error = new Error("FISCAL_LEDGER_LOCK_BUSY");
-                error.code = "FISCAL_LEDGER_LOCK_BUSY";
-                throw error;
+                throw createActionableError({
+                    code: "FISCAL_LEDGER_LOCK_BUSY",
+                    userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                    technicalDetail: "Se agotó la ventana de espera del lock fiscal; el lock activo no se modifica ni se fuerza.",
+                    remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si sigue activo después de expirar, solicitar revisión al administrador técnico; no eliminarlo manualmente."],
+                    contextSnapshot: { lockId: LOCK_ID, waitMs, traceId: lockTraceId },
+                    retryable: true,
+                });
             }
             await _sleep(Math.min(POLL_MS, Math.max(1, deadline - Date.now())));
             continue;
@@ -348,9 +354,14 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
             if (Date.now() >= deadline) {
-                const busy = new Error("FISCAL_LEDGER_LOCK_BUSY");
-                busy.code = "FISCAL_LEDGER_LOCK_BUSY";
-                throw busy;
+                throw createActionableError({
+                    code: "FISCAL_LEDGER_LOCK_BUSY",
+                    userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                    technicalDetail: "Se agotó la ventana de espera del lock fiscal; el lock activo no se modifica ni se fuerza.",
+                    remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si sigue activo después de expirar, solicitar revisión al administrador técnico; no eliminarlo manualmente."],
+                    contextSnapshot: { lockId: LOCK_ID, waitMs, traceId: lockTraceId },
+                    retryable: true,
+                });
             }
             await _sleep(POLL_MS);
         }
