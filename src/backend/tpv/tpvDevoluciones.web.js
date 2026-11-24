@@ -40,7 +40,7 @@ export const registrarDevolucion = webMethod(
                 throw new Error("TPV_SESSION_CLOSED");
             }
             const sales = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("saleId", saleId));
-            const original = sales.find((sale) => sale.status === "CONFIRMADA_SINTETICA");
+            const original = sales.find((sale) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(sale.status));
             if (!original) throw new Error("TPV_ORIGINAL_SALE_NOT_FOUND");
             if (original.payload?.sessionId !== session.sessionId) throw new Error("TPV_REFUND_SESSION_MISMATCH");
 
@@ -48,14 +48,14 @@ export const registrarDevolucion = webMethod(
             const originalPayments = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = Object.fromEntries(Object.values(TPV_PAYMENT_METHOD).map((method) => [method, 0]));
             for (const payment of originalPayments) {
-                if (payment.status !== "CONFIRMADO_SINTETICO") continue;
+                if (!["CONFIRMADO", "CONFIRMADO"].includes(payment.status)) continue;
                 if (Object.prototype.hasOwnProperty.call(remainingByMethod, payment.paymentMethod)) {
                     remainingByMethod[payment.paymentMethod] += Number(payment.amountMinor || 0);
                 }
             }
             const priorRefunds = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
             for (const refund of priorRefunds) {
-                if (refund.refundId === refundId || refund.status !== "CONFIRMADO_SINTETICO" || refund.payload?.sessionId !== session.sessionId) continue;
+                if (refund.refundId === refundId || !["CONFIRMADO", "CONFIRMADO"].includes(refund.status) || refund.payload?.sessionId !== session.sessionId) continue;
                 const allocations = refund.payload?.allocations || [];
                 for (const allocation of allocations) {
                     if (Object.prototype.hasOwnProperty.call(remainingByMethod, allocation.paymentMethod)) {
@@ -86,7 +86,7 @@ export const registrarDevolucion = webMethod(
                 paymentMethod: method,
                 profesionalId: profesionalId || null,
                 reason,
-                status: "CONFIRMADO_SINTETICO",
+                status: "CONFIRMADO",
                 createdAt: new Date(),
                 payload: { sessionId: session.sessionId, allocations, actorId: operator.actorId, operatorId: operator.operatorId, profesionalId: profesionalId || null, traceId },
             });
@@ -113,7 +113,7 @@ export const registrarDevolucion = webMethod(
                         amountMinor: allocation.amountMinor,
                         paymentMethod: "EFECTIVO",
                         reason,
-                        status: "CONFIRMADO_SINTETICO",
+                        status: "CONFIRMADO",
                         createdAt: new Date(),
                         payload: { saleId, refundId, traceId, affectsPhysicalCash: true },
                     });
@@ -144,7 +144,7 @@ export const registrarDevolucion = webMethod(
                     operationalStatus: "ABIERTA",
                     integrationStatus: "NO_ENVIADO",
                     simulationStatus: "SYNTHETIC",
-                    paymentStatus: "SIMULATED_ONLY",
+                    paymentStatus: "NOT_PROCESSED",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     gatewayCalled: false,
