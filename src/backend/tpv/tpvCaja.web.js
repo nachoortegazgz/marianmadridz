@@ -169,7 +169,7 @@ export const abrirSesionCaja = webMethod(
                         operatorId: operator.operatorId,
                         operatorDisplayName: operator.operatorDisplayName,
                         operatorResourceId: operator.operatorResourceId,
-                        payload: makeSyntheticPayload({
+                        payload: makeTpvPayload({
                             dayKey,
                             openingReason: String(input.reason || "Apertura de TPV").slice(0, 200),
                             traceId,
