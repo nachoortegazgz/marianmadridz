@@ -192,6 +192,27 @@ export function makeTpvSessionLockId(sessionId) {
 }
 
 export function makeTpvPayload(payload = {}) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new Error("TPV_INVALID_PAYLOAD");
+    }
+
+    const forbiddenFields = [
+        "isSynthetic",
+        "realPayment",
+        "realPayments",
+        "processingMode",
+        "reconciliationStatus",
+        "sandboxRunId",
+        "legacyRunId",
+        "sourceType",
+        "ledgerVersion",
+        "schemaVersion",
+        "recordSource",
+    ];
+    if (forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(payload, field))) {
+        throw new Error("TPV_OPERATIONAL_METADATA_FORBIDDEN");
+    }
+
     return {
         ...payload,
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
