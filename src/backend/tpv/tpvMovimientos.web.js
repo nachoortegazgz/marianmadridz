@@ -14,12 +14,6 @@ const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_REFUND: "DEVOLUCION",
     TPV_TICKET_X: "CONTROL_X",
     TPV_TICKET_Z: "CIERRE_Z",
-    // Read-only compatibility for previously persisted movement discriminators.
-    SIMULATED_TPV_SALE: "VENTA",
-    SIMULATED_TPV_CASH_MOVEMENT: null,
-    SIMULATED_TPV_REFUND: "DEVOLUCION",
-    SIMULATED_TPV_TICKET_X: "CONTROL_X",
-    SIMULATED_TPV_TICKET_Z: "CIERRE_Z",
 });
 
 function sessionOf(record) {
