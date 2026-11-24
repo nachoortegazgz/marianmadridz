@@ -39,6 +39,10 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(controller, /medioPago:/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
+    assert.match(script, /function parseLocalizedAmount/);
+    assert.match(script, /function publicErrorMessage/);
+    assert.match(script, /TPV_INVALID_FORMAT_/);
+    assert.match(script, /No repitas la acción/);
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
     assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);
