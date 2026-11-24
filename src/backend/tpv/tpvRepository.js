@@ -479,10 +479,10 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             const next = { ...caja, _updatedDate: now };
             next.lastOperationId = eventId || caja.lastOperationId;
             next.lastOperationAt = now;
-            next.lastOperationStatus = "SIMULATED";
+            next.lastOperationStatus = "REGISTRADO";
             next.traceId = String(record.traceId || caja.traceId || "");
             next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
-            next.cashRegisterStatus = "SIMULACION";
+            next.cashRegisterStatus = collection === TPV_COLLECTIONS.TICKET_Z ? "CERRADA" : "ABIERTA";
 
             if (collection === TPV_COLLECTIONS.VENTAS && ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) {
                 next.salesCount = Number(caja.salesCount || 0) + 1;
@@ -522,12 +522,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             sourceState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
             sourceState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
             sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
-            sourceState.externalSideEffects = false;
             sourceState.schemaVersion = TPV_RUNTIME_POLICY.SCHEMA_VERSION;
-            sourceState.processingMode = TPV_RUNTIME_POLICY.PROCESSING_MODE;
-            sourceState.reconciliationStatus = TPV_RUNTIME_POLICY.RECONCILIATION_STATUS;
-            sourceState.allowNativePayments = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments;
-            sourceState.allowNativeRefunds = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds;
             sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
             sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
             sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
@@ -546,7 +541,7 @@ function _shouldProject(collection, record) {
         collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA ||
         collection === TPV_COLLECTIONS.TICKET_Z) return true;
     return collection === TPV_COLLECTIONS.VENTAS &&
-        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record?.status);
+        record?.status === "CONFIRMADA";
 }
 
 async function _projectPersistedTpvEvent(collection, record, recordId, hash, idempotencyKey, replayed) {
@@ -567,7 +562,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
     const openingCash = Number(record.openingCashMinor || 0) / 100;
     return {
         ...caja,
-        cashRegisterStatus: "SIMULACION",
+        cashRegisterStatus: "ABIERTA",
         openedAt,
         closedAt: null,
         openedBy: record.operatorId || record.cashierMemberId || null,
@@ -592,7 +587,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
         lastOperationAmount: openingCash,
         lastOperationPaymentMethod: "EFECTIVO",
         lastOperationAt: openedAt,
-        lastOperationStatus: "SIMULATED",
+        lastOperationStatus: "REGISTRADO",
         conceptOperations: {
             ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
             tpvRuntime: {
@@ -600,11 +595,6 @@ function _sessionCajaPatch(caja, record, eventHash) {
                 siteId: TPV_RUNTIME_POLICY.SITE_ID,
                 ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
                 schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-                externalSideEffects: false,
-                processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
-                reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
-                allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
-                allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
                 eventHash: String(eventHash || ""),
                 sessionId: record.sessionId,
                 actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
