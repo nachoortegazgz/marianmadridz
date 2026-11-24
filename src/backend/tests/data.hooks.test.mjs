@@ -273,6 +273,23 @@ test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract ex
   assert.throws(() => H.MovimientosCaja_beforeInsert(item), /CMS_TPV_LEDGER_WRITES_DISABLED/);
 });
 
+test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
+  for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
+      ...cajaBase(),
+      recordSource: "SYNTHETIC",
+      movementType,
+    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, movementType);
+  }
+  for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
+      ...cajaBase(),
+      recordSource,
+      movementType: "COBRO",
+    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, recordSource);
+  }
+});
+
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
   const item = {
     ...cajaBase(),
