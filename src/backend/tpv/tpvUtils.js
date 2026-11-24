@@ -4,12 +4,7 @@ import { TPV_COLLECTIONS, TPV_HISTORICAL_POLICY, TPV_LEGACY_COLLECTIONS, TPV_LED
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 
 export function getTpvRuntimeState(caja) {
-    const operations = caja?.conceptOperations;
-    const current = operations?.tpvRuntime;
-    if (current && typeof current === "object" && !Array.isArray(current) &&
-        Object.keys(current).length > 0) return current;
-    const legacy = operations?.tpvSandbox;
-    if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) return legacy;
+    const current = caja?.conceptOperations?.tpvRuntime;
     return current && typeof current === "object" && !Array.isArray(current) ? current : {};
 }
 export function assertTpvCajaIntegrity(caja, { allowBootstrap = false } = {}) {
