@@ -155,7 +155,7 @@ test("CajaActual writes neutral tpvRuntime metadata and reads historical tpvSand
     }
 });
 
-test("logical TPV entities persist only as marked synthetic rows in canonical CMS", () => {
+test("logical TPV entities cannot be newly persisted until the canonical ledger is implemented", () => {
     const logicalTypes = Object.values(TPV_COLLECTIONS);
     assert.equal(new Set(logicalTypes).size, logicalTypes.length);
     assert.ok(logicalTypes.every((value) => value.startsWith("TPV_LOGICAL_")));
@@ -184,14 +184,14 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         },
     };
 
-    const neutralItem = structuredClone(item);
-    delete neutralItem.payloadFiscal.isSynthetic;
-    delete neutralItem.payloadFiscal.realPayment;
-    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", neutralItem));
+    assert.throws(() => assertInsertAllowed("MovimientosCaja", item), {
+        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
+    });
     const legacyItem = structuredClone(item);
     legacyItem.movementType = "SIMULATED_TPV_PAYMENT";
-    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", legacyItem));
-    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
+    assert.throws(() => assertInsertAllowed("MovimientosCaja", legacyItem), {
+        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
+    });
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
