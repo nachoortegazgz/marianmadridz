@@ -56,8 +56,6 @@ export const obtenerAuditoriaTPV = webMethod(
                     occurredAt: record.occurredAt || record.createdAt || null,
                     source: record.source || null,
                     traceId: record.payload?.traceId || null,
-                    isSynthetic: true,
-                    realPayment: false,
                 }));
 
             return {
