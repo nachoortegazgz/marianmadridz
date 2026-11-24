@@ -60,3 +60,5 @@
 | processingMode | Modo de procesamiento |
 | reconciliationStatus | Estado de conciliación del registro |
 
+Código delegable: 0 pendiente. Consolidación F1+F2: B.
+Bloqueos: contratos A/B/C (pagos, inventario, fiscal) y evidencia Runtime; runAllRuntimeChecks no localizado.
