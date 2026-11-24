@@ -451,21 +451,14 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
             assertTpvCajaIntegrity(caja);
             const preflightRuntimeState = getTpvRuntimeState(caja);
-            const explicitSyntheticV2 = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+            const canonicalRuntime = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
                 preflightRuntimeState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
                 preflightRuntimeState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
                 preflightRuntimeState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
                 Number(preflightRuntimeState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-                preflightRuntimeState.externalSideEffects === false &&
-                (preflightRuntimeState.processingMode === undefined || preflightRuntimeState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
-                (preflightRuntimeState.reconciliationStatus === undefined || preflightRuntimeState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
                 /^[a-f0-9]{64}$/i.test(String(preflightRuntimeState.eventHash || "")) &&
                 Boolean(String(preflightRuntimeState.sessionId || "").trim());
-            const currentV1 = _isCurrentV1Caja(caja, preflightRuntimeState);
-            const legacySynthetic = _isLegacyCaja(caja, preflightRuntimeState);
-            if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) {
-                throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
-            }
+            if (!canonicalRuntime) throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
             const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
                 ? { ...caja.conceptOperations }
                 : {};
@@ -484,7 +477,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
             next.cashRegisterStatus = collection === TPV_COLLECTIONS.TICKET_Z ? "CERRADA" : "ABIERTA";
 
-            if (collection === TPV_COLLECTIONS.VENTAS && ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) {
+            if (collection === TPV_COLLECTIONS.VENTAS && record.status === "CONFIRMADA") {
                 next.salesCount = Number(caja.salesCount || 0) + 1;
             }
             if (collection === TPV_COLLECTIONS.PAGOS) {
@@ -947,7 +940,7 @@ export async function latestOpenTpvSession() {
 export async function getCommittedTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     return records.filter((item) =>
-        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status) &&
+        item.status === "CONFIRMADA" &&
         item.payload?.sessionId === sessionId
     );
 }
@@ -958,7 +951,7 @@ export async function getPendingTpvSales(sessionId) {
         .filter((item) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status))
         .map((item) => item.saleId));
     return records.filter((item) =>
-        ["PREPARADA", "PREPARADA_SINTETICA"].includes(item.status) &&
+        item.status === "PREPARADA" &&
         item.payload?.sessionId === sessionId &&
         !committedIds.has(item.saleId)
     );
@@ -995,11 +988,11 @@ export async function getPendingTpvRefunds(sessionId) {
         }
 
         const refundPayments = payments.filter((payment) =>
-            payment.status === "REEMBOLSO_SINTETICO" &&
+            payment.status === "REEMBOLSO_CONFIRMADO" &&
             payment.payload?.refundId === refund.refundId
         );
         const refundCashMovements = movements.filter((movement) =>
-            ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status) &&
+            movement.status === "CONFIRMADO" &&
             movement.movementType === "DEVOLUCION_EFECTIVO" &&
             movement.payload?.refundId === refund.refundId
         );
@@ -1040,7 +1033,7 @@ export async function getPendingTpvRefunds(sessionId) {
 export async function getTpvRefunds(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
-        ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(item.status) &&
+        item.status === "CONFIRMADO" &&
         item.payload?.sessionId === sessionId
     );
 }
