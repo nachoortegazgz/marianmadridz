@@ -24,7 +24,7 @@ import {
     getTpvRuntimeState,
     normalizeIdempotencyKey,
     stableSerialize,
-    makeSyntheticPayload,
+    makeTpvPayload,
     makeTpvRefundLockId,
     makeTpvSessionLockId,
     makeTpvTransactionId,
