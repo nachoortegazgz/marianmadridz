@@ -255,8 +255,10 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
     assert.match(policy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /TPV_RUNTIME_POLICY/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
@@ -467,7 +469,8 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
     assert.match(hooks, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
-    assert.match(validation, /sequenceNumber invalido \(debe ser un entero > 0\)/);
+    assert.match(repository, /TPV_LEDGER_SEQUENCE_OR_PREVIOUS_HASH_REQUIRED/);
+    assert.match(validation, /historicalTpvLedgerRecord/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
     assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
