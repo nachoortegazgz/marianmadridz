@@ -6,6 +6,8 @@ import {
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
     TPV_LEDGER_SOURCE,
+    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -96,10 +98,22 @@ export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
+    const recordSource = String(item.recordSource || "").trim().toUpperCase();
+    const movementType = String(item.movementType || "").trim().toUpperCase();
+    const isHistoricalTpvMarker =
+        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SIMULATED_TPV_") ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource === TPV_HISTORICAL_POLICY.SOURCE_TYPE ||
+        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
         (item.recordSource === TPV_LEDGER_SOURCE ||
-            String(item.recordSource || "").startsWith("TPV_") ||
-            String(item.movementType || "").startsWith("TPV_"))) {
+            recordSource.startsWith("TPV_") ||
+            movementType.startsWith("TPV_") ||
+            isHistoricalTpvMarker)) {
         throw _policyError("CMS_TPV_LEDGER_WRITES_DISABLED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
