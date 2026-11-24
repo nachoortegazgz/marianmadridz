@@ -1,18 +1,7 @@
 import { TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { toMinorUnits } from "backend/tpv/tpvUtils";
 
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
-
-function toMinorUnits(value, field) {
-    const amount = Number(value);
-    if (!Number.isFinite(amount) || amount < 0) {
-        throw new Error("TPV_INVALID_" + field);
-    }
-    const minor = Math.round((amount + Number.EPSILON) * 100);
-    if (Math.abs((amount * 100) - minor) > 1e-7) {
-        throw new Error("TPV_INVALID_PRECISION_" + field);
-    }
-    return minor;
-}
 
 function normalizeQuantity(value) {
     const quantity = Number(value);
