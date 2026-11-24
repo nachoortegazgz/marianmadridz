@@ -252,7 +252,7 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-CAJA-TPV-01 accepts canonical TPV ledger metadata without synthetic boolean flags', () => {
+test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract exists', () => {
   const item = {
     ...cajaBase(),
     movementType: 'TPV_PAYMENT',
@@ -274,9 +274,7 @@ test('HOOK-CAJA-TPV-01 accepts canonical TPV ledger metadata without synthetic b
       externalSideEffects: false,
     },
   };
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(item));
-  assert.equal(item.payloadFiscal.isSynthetic, undefined);
-  assert.equal(item.payloadFiscal.realPayment, undefined);
+  assert.throws(() => H.MovimientosCaja_beforeInsert(item), /CMS_TPV_LEDGER_WRITES_DISABLED/);
 });
 
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
@@ -708,7 +706,7 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
-test('HOOK-CAJA-04 keeps MovimientosCaja append-only for synthetic TPV rows', async () => {
+test('HOOK-CAJA-04 preserves historical TPV rows as append-only records', async () => {
   const runId = IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
