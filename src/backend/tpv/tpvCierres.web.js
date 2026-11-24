@@ -118,15 +118,13 @@ export const generarControlX = webMethod(
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     replayed,
                     closesSession: false,
-                    isSynthetic: true,
-                    realPayment: false,
                 },
                 error: null,
                 traceId,
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, persisted, recoverable: persisted, traceId };
         }
     }
 );
@@ -192,8 +190,6 @@ export const generarCierreZ = webMethod(
                             now: new Date().toISOString(),
                             timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                             replayed: true,
-                            isSynthetic: true,
-                            realPayment: false,
                             fiscalLedgerWritten: false,
                         },
                         error: null,
@@ -247,8 +243,6 @@ export const generarCierreZ = webMethod(
                         difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
                         replayed: true,
                         closed: true,
-                        isSynthetic: true,
-                        realPayment: false,
                         fiscalLedgerWritten: false,
                     },
                     error: null,
@@ -305,8 +299,6 @@ export const generarCierreZ = webMethod(
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    isSynthetic: true,
-                    realPayment: false,
                     fiscalLedgerWritten: false,
                 },
                 error: null,
@@ -314,7 +306,7 @@ export const generarCierreZ = webMethod(
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_Z_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_Z_FAILED") }, persisted, recoverable: persisted, traceId };
         }
     }
 );
