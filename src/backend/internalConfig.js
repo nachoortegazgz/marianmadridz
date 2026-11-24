@@ -90,7 +90,6 @@ export const TPV_LEGACY_COLLECTIONS = Object.freeze({
 });
 
 export const TPV_SYNTHETIC_SOURCE = "SYNTHETIC";
-export const TPV_NATIVE_SOURCE = "NATIVE";
 export const TPV_PAYMENT_METHOD = Object.freeze({
   EFECTIVO: "EFECTIVO",
   TARJETA: "TARJETA",
@@ -145,7 +144,6 @@ export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
 export const TPV_RUNTIME_POLICY = Object.freeze({
   // Synthetic execution is isolated by explicit source/site/version/session/hash metadata.
   // Legacy run markers remain compatibility-only; fiscal/payment side effects stay disabled.
-  ENABLED: true,
   SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
   ALLOW_REAL_PAYMENTS: false,
   ALLOW_NATIVE_WRITES: false,
@@ -166,9 +164,6 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
-  SYNTHETIC_ONLY: true,
-  REAL_PAYMENTS_ENABLED: false,
-  FISCAL_WRITES_ENABLED: false,
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
   LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
