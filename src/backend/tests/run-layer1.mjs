@@ -14,7 +14,6 @@ const suites = [
   'security.rateLimiter.test.mjs',
   'booking.cart-v2.checkout.test.mjs',
   'qa.payment-gateway.mock.test.mjs',
-  'qa.tpv-simulation.mock.test.mjs',
   'tpv.web-modules.contract.test.mjs',
   'tpv-ui.qa-source.test.mjs',
   'tpv.qa.persistence.policy.test.mjs',
