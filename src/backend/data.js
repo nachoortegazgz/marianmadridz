@@ -506,8 +506,8 @@ function _isCurrentSyntheticTpvRow(value) {
                 value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
-        value?.payloadFiscal?.isSynthetic === true &&
-        value?.payloadFiscal?.realPayment === false &&
+        (value?.payloadFiscal?.isSynthetic === undefined || value?.payloadFiscal.isSynthetic === true) &&
+        (value?.payloadFiscal?.realPayment === undefined || value?.payloadFiscal.realPayment === false) &&
         value?.payloadFiscal?.externalSideEffects === false &&
         Boolean(value?.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
