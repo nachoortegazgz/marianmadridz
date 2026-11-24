@@ -70,7 +70,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(permissions, /openSession: isAdmin/);
     assert.match(permissions, /closeSession: isAdmin/);
 
-    for (const writer of [cash, sales, movements, refunds, closures]) {
+    for (const writer of [cash, sales, movements, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
         assert.match(writer, /requireAdmin\(traceId\)/);
         assert.match(writer, /resolveTpvContext\(traceId\)/);
@@ -86,8 +86,8 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
         assert.match(writer, /latestOpenTpvSession\(\)/);
         assert.match(writer, /withTpvSessionLock\(/);
     }
-    assert.match(refunds, /latestOpenTpvSession\(\)/);
-    assert.match(refunds, /withTpvSaleLock\([\s\S]*?session\.sessionId\)/);
+    assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(refunds, /latestOpenTpvSession|withTpvSaleLock|insertTpvEvent/);
     assert.match(closures, /closedByMemberId: operator\.operatorId/);
     assert.match(closures, /closed: true/);
 });
@@ -198,8 +198,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
-    assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
-    assert.match(sales, /TPV_SESSION_CLOSED/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /latestOpenTpvSession|withTpvSessionLock|insertTpvEvent/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
@@ -208,8 +208,6 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
     assert.match(movements, /return recordSessionId === sessionId/);
     assert.match(movements, /integrationStatus: "NO_ENVIADO"/);
-    assert.match(refunds, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
-    assert.match(refunds, /withTpvSaleLock\(saleId, traceId, async \(\) =>/);
     assert.match(closures, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(closures, /operationalStatus: "CERRADA"/);
     assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
