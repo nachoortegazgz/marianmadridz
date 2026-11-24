@@ -72,6 +72,7 @@ test("TPV widget stays read-only until the canonical operational ledger is confi
     assert.match(permissions, /createSale: false/);
     assert.match(permissions, /openSession: false/);
     assert.match(permissions, /registerPartialCount: false/);
+    assert.match(html, /!state\.operationalWritesAvailable/);
     assert.match(html, /partialCount: "registerPartialCount"/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
