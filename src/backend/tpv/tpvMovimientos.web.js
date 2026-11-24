@@ -6,6 +6,7 @@ import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     SIMULATED_TPV_SALE: "VENTA",
@@ -126,30 +127,21 @@ export const registrarMovimientoCaja = webMethod(
             });
             return {
                 status: "SUCCESS",
-                data: {
-                    movementId: item._id,
-                    sessionId: session.sessionId,
+                data: buildCashMovementSuccessData({
+                    item,
+                    session: activeSession,
                     movementType,
-                    amount: fromMinorUnits(amountMinor),
-                    operatorId: operator.operatorId,
-                    actorId: operator.actorId,
-                    operationalStatus,
-                    integrationStatus: "NO_ENVIADO",
-                    simulationStatus: "SYNTHETIC",
-                    paymentStatus: "NOT_APPLICABLE",
-                    now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    amountMinor,
+                    operator,
                     replayed,
-                    persisted: true,
-                    isSynthetic: true,
-                    realPayment: false,
-                },
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                }),
                 error: null,
                 traceId,
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return buildCashMovementFailure(error, persisted, traceId);
         }
     }
 );
@@ -169,10 +161,7 @@ export const obtenerMovimientosCaja = webMethod(
             const sessionId = sessionIdFromInput(input);
             const latestSession = await latestTpvSession();
             const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
-            const operationalStatus = latestSession?.sessionId === sessionId
-                ? latestSession.status
-                : (closures.some((item) => item.sessionId === sessionId && item.closed === true) ? "CERRADA" : null);
-            if (!operationalStatus) throw new Error("TPV_SESSION_NOT_FOUND");
+            const operationalStatus = resolveCashSessionOperationalStatus(latestSession, closures, sessionId);
             const ledger = await queryTpvLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
@@ -192,7 +181,7 @@ export const obtenerMovimientosCaja = webMethod(
                 data: {
                     items,
                     sessionId,
-                    operationalStatus: "ABIERTA",
+                    operationalStatus,
                     integrationStatus: "NO_ENVIADO",
                     simulationStatus: "SYNTHETIC",
                     paymentStatus: "NOT_APPLICABLE",
