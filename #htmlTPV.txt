@@ -326,7 +326,7 @@ body {
         </div>
 
         <div class="payment-input">
-          <input id="paymentAmount" class="field" type="number" min="0" step="0.01" placeholder="Importe recibido">
+          <input id="paymentAmount" class="field" type="text" inputmode="decimal" placeholder="Importe recibido (ej. 12,50)">
           <button id="addPayment" class="btn">Añadir pago</button>
         </div>
 
@@ -898,7 +898,7 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    const amount = Number($("paymentAmount").value);
+    const amount = num($("paymentAmount").value);
     if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
       toast("Introduce un importe válido con un máximo de dos decimales.");
       return;
@@ -988,7 +988,7 @@ body {
 
   /* ---------- Apertura de caja ---------- */
   $("openCash").onclick = () => openModal("Abrir caja", `
-    <input id="openingCash" class="field" type="number" min="0" step="0.01" placeholder="Fondo inicial">
+    <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
     <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
   `, async () => {
     const openingCash = num($("openingCash").value);
@@ -1009,7 +1009,7 @@ body {
     openModal(
       type === "ENTRADA" ? "Entrada de efectivo" : "Salida de efectivo",
       `
-        <input id="movementAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
+        <input id="movementAmount" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 25,50)">
         <input id="movementConcept" class="field" maxlength="500" placeholder="Concepto obligatorio">
       `,
       async () => {
@@ -1040,7 +1040,7 @@ body {
     openModal("Devolución interna", `
       <p>Registro interno sintético. No ejecuta un reembolso de Wix Payments ni confirma una devolución nativa.</p>
       <input id="refundSaleId" class="field" placeholder="ID de venta">
-      <input id="refundAmount" class="field" type="number" min="0.01" step="0.01" placeholder="Importe">
+      <input id="refundAmount" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 25,50)">
       <select id="refundMethod" class="field">
         <option value="EFECTIVO">Efectivo</option>
         <option value="TARJETA">Tarjeta</option>
@@ -1070,7 +1070,7 @@ body {
 
   /* ---------- Arqueo parcial de caja ---------- */
   $("partialCount").onclick = () => openModal("Arqueo parcial", `
-    <input id="partialCountCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
+    <input id="partialCountCash" class="field" type="text" inputmode="decimal" placeholder="Efectivo contado (ej. 150,00)">
     <input id="partialCountReason" class="field" maxlength="500" placeholder="Motivo si existe diferencia">
   `, async () => {
     const countedCash = num($("partialCountCash").value);
@@ -1185,7 +1185,7 @@ body {
     
     openModal("Cierre Z diario", `
       <p>El cierre bloqueará la sesión actual.</p>
-      <input id="countedCash" class="field" type="number" min="0" step="0.01" placeholder="Efectivo contado">
+      <input id="countedCash" class="field" type="text" inputmode="decimal" placeholder="Efectivo contado (ej. 150,00)">
       <input id="differenceReason" class="field" maxlength="200" placeholder="Motivo si existe diferencia">
     `, async () => {
       const countedCash = num($("countedCash").value);
