@@ -39,6 +39,14 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(controller, /medioPago:/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
+    assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
+    assert.match(script, /inputmode="decimal"/);
+    assert.match(script, /function parseLocalizedAmount/);
+    assert.match(script, /function publicErrorMessage/);
+    assert.match(script, /TPV_INVALID_FORMAT_/);
+    assert.match(script, /No repitas la acción/);
+    assert.match(script, /const countedCashInput = \$\("partialCountCash"\)\.value;\s*const countedCash = num\(countedCashInput\);\s*if \(!String\(countedCashInput \?\? ""\)\.trim\(\) \|\| !Number\.isFinite\(countedCash\) \|\| countedCash < 0\) throw new Error\("TPV_INVALID_AMOUNT"\);/);
+    assert.match(script, /const countedCashInput = \$\("countedCash"\)\.value;\s*const countedCash = num\(countedCashInput\);\s*if \(!String\(countedCashInput \?\? ""\)\.trim\(\) \|\| !Number\.isFinite\(countedCash\) \|\| countedCash < 0\) throw new Error\("TPV_INVALID_AMOUNT"\);/);
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
     assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);

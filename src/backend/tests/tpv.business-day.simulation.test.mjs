@@ -166,6 +166,16 @@ test("cash drawer reconciles opening float, cash tender, movements and cash refu
     assert.equal(totals.expectedDrawerMinor, 20410);
 });
 
+test("sale validation normalizes localized price and tender strings to exact cents", () => {
+    const sale = validateSaleDraft({
+        lineas: [{ tipoLinea: "SERVICIO", concepto: "Servicio", cantidad: 1, precioUnitario: "12,50", impuestosImporte: "0,00" }],
+        pagos: [{ medioPago: " efectivo ", importe: "12,50", importeCambio: "0,00" }],
+    });
+    assert.equal(sale.totalVenta, 12.5);
+    assert.equal(sale.totalCobrado, 12.5);
+    assert.equal(sale.estadoVenta, "COBRADA");
+});
+
 test("cash change is separated from applied tender and drawer proceeds", () => {
     const sale = validateSaleDraft(saleFixtures[0]);
     assert.equal(sale.efectivoRecibido, 100);

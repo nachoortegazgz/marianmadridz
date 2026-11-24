@@ -125,6 +125,36 @@ function getPublicErrorMessage(code) {
     if (normalized === "AUTH_REQUIRED") {
         return "Para reservar necesitas iniciar sesión o crear una cuenta en Área Personal. Inicia sesión y vuelve a intentarlo.";
     }
+    if (normalized === "INVALID_PARAMS" || normalized === "INVALID_DATES") {
+        return "La fecha o los datos del horario no tienen el formato esperado. Vuelve a elegir el día en el calendario; el formato interno requerido es AAAA-MM-DD (por ejemplo, 2026-11-24).";
+    }
+    if (normalized === "SERVICE_NOT_FOUND") {
+        return "No se encuentra el servicio solicitado. Vuelve a la página de servicios y selecciona el servicio desde el catálogo actualizado.";
+    }
+    if (normalized === "SLOT_UNAVAILABLE") {
+        return "Ese horario acaba de dejar de estar disponible. Actualiza los horarios y selecciona otra hora libre.";
+    }
+    if (normalized === "STAFF_UNAVAILABLE" || normalized === "STAFF_UNAVAILABLE_DUAL") {
+        return "El profesional seleccionado no está disponible para todo el servicio. Elige otro profesional o un horario que tenga disponibilidad en ambas fases.";
+    }
+    if (normalized === "F2_SLOT_REQUIRED") {
+        return "Este servicio requiere seleccionar el horario completo de sus dos fases. Vuelve a elegir una de las opciones de horario certificadas que muestra el calendario.";
+    }
+    if (normalized === "DUAL_NOT_ALLOWED") {
+        return "Este servicio no admite la combinación de fases solicitada. Vuelve al catálogo y selecciona una modalidad disponible.";
+    }
+    if (normalized === "LOCATION_MISMATCH") {
+        return "El horario seleccionado pertenece a otra ubicación. Actualiza el calendario y elige un horario de la ubicación del servicio.";
+    }
+    if (normalized === "RATE_LIMITED") {
+        return "Se han realizado demasiadas consultas seguidas. Espera unos segundos y vuelve a actualizar los horarios.";
+    }
+    if (normalized === "CHECKOUT_FAILED") {
+        return "No se ha podido preparar el pago. No se ha confirmado la reserva; vuelve a consultar su estado antes de iniciar otro intento.";
+    }
+    if (normalized === "BOOKING_CREATION_FAILED") {
+        return "Wix no ha confirmado la creación de la reserva. Actualiza el estado y contacta con el salón si no aparece como cancelada; no repitas la operación a ciegas.";
+    }
     if (normalized === "EXISTING_BOOKING_REQUIRES_RECONCILIATION") {
         return "Ya existe una reserva para este horario. No vuelvas a intentarlo; contacta con el salón para revisar las reservas existentes.";
     }
