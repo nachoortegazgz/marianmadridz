@@ -252,6 +252,33 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
+test('HOOK-CAJA-TPV-01 accepts canonical TPV ledger metadata without synthetic boolean flags', () => {
+  const item = {
+    ...cajaBase(),
+    movementType: 'TPV_PAYMENT',
+    recordSource: 'TPV_LEDGER',
+    sequenceNumber: 0,
+    traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
+    payloadFiscal: {
+      sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
+      siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
+      ledgerVersion: IC.TPV_RUNTIME_POLICY.LEDGER_VERSION,
+      schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+      reconciliationStatus: IC.TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+      processingMode: IC.TPV_RUNTIME_POLICY.PROCESSING_MODE,
+      allowNativePayments: false,
+      allowNativeRefunds: false,
+      sessionId: 'SESSION-TEST',
+      logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
+      requestFingerprint: 'f'.repeat(64),
+      externalSideEffects: false,
+    },
+  };
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(item));
+  assert.equal(item.payloadFiscal.isSynthetic, undefined);
+  assert.equal(item.payloadFiscal.realPayment, undefined);
+});
+
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
   const item = {
     ...cajaBase(),
