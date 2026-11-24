@@ -308,7 +308,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
         ["tpvAuditoria.web.js", ["obtenerAuditoriaTPV"]],
         ["tpvGiftCards.web.js", ["consultarTarjetaRegalo"]],
     ];
-    const repositoryAccess = /(?:latestOpenTpvSession|insertTpvEvent|appendTpvAudit|queryTpvRecords|queryTpvLedgerRecords|withTpvSessionLock|withTpvSaleLock|listTpvIdentities|getTpvIdentity|wql\.)/;
+    const repositoryAccess = /(?:latestOpenTpvSession|insertTpvEvent|appendTpvAudit|queryTpvRecords|queryTpvLedgerRecords|queryTpvOperationalLedgerRecords|queryHistoricalTpvLedgerRecords|withTpvSessionLock|withTpvSaleLock|listTpvIdentities|getTpvIdentity|wql\.)/;
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
