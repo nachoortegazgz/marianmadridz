@@ -98,8 +98,8 @@ export function assertInsertAllowed(collection, item) {
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
         (item.recordSource === TPV_LEDGER_SOURCE ||
-            String(item.movementType || "").startsWith("TPV_") ||
-            String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
+            String(item.recordSource || "").startsWith("TPV_") ||
+            String(item.movementType || "").startsWith("TPV_"))) {
         throw _policyError("CMS_TPV_LEDGER_WRITES_DISABLED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
