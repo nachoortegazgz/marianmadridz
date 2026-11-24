@@ -257,17 +257,13 @@ test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract ex
     ...cajaBase(),
     movementType: 'TPV_PAYMENT',
     recordSource: 'TPV_LEDGER',
-    sequenceNumber: 0,
+    sequenceNumber: 1,
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
     payloadFiscal: {
       sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
       siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
       ledgerVersion: IC.TPV_RUNTIME_POLICY.LEDGER_VERSION,
       schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-      reconciliationStatus: IC.TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
-      processingMode: IC.TPV_RUNTIME_POLICY.PROCESSING_MODE,
-      allowNativePayments: false,
-      allowNativeRefunds: false,
       sessionId: 'SESSION-TEST',
       logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
       requestFingerprint: 'f'.repeat(64),
@@ -707,7 +703,7 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
 });
 
 test('HOOK-CAJA-04 preserves historical TPV rows as append-only records', async () => {
-  const runId = IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+  const runId = IC.TPV_HISTORICAL_POLICY.LEGACY_RUN_ID;
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),
