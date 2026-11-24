@@ -132,8 +132,9 @@ export const generarCierreZ = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-ticket-z");
+        const traceId = makeTraceId("tpv-ticket-z");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
