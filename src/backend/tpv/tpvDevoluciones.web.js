@@ -48,14 +48,14 @@ export const registrarDevolucion = webMethod(
             const originalPayments = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, wql.eq("saleId", saleId));
             const remainingByMethod = Object.fromEntries(Object.values(TPV_PAYMENT_METHOD).map((method) => [method, 0]));
             for (const payment of originalPayments) {
-                if (!["CONFIRMADO", "CONFIRMADO"].includes(payment.status)) continue;
+                if (!["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(payment.status)) continue;
                 if (Object.prototype.hasOwnProperty.call(remainingByMethod, payment.paymentMethod)) {
                     remainingByMethod[payment.paymentMethod] += Number(payment.amountMinor || 0);
                 }
             }
             const priorRefunds = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, wql.eq("saleId", saleId));
             for (const refund of priorRefunds) {
-                if (refund.refundId === refundId || !["CONFIRMADO", "CONFIRMADO"].includes(refund.status) || refund.payload?.sessionId !== session.sessionId) continue;
+                if (refund.refundId === refundId || !["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(refund.status) || refund.payload?.sessionId !== session.sessionId) continue;
                 const allocations = refund.payload?.allocations || [];
                 for (const allocation of allocations) {
                     if (Object.prototype.hasOwnProperty.call(remainingByMethod, allocation.paymentMethod)) {
