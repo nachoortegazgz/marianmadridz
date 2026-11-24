@@ -456,6 +456,7 @@ body {
   }
   function publicErrorMessage(code) {
     const key = String(code || "").trim().toUpperCase();
+    if (key.startsWith("TPV_") && key.endsWith("_PAYMENT_TOTAL_MISMATCH")) return "El desglose de pagos no coincide con el total. Ajusta los importes hasta cubrir exactamente el total pendiente.";
     if (/^TPV_INVALID_FORMAT_/.test(key)) return "El importe no tiene un formato reconocible. Usa 12,50 o 12.50; para miles, 1.234,56. No uses formatos ambiguos como 1.234.";
     if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
     const messages = {
@@ -466,7 +467,7 @@ body {
       TPV_INVALID_CHANGE_AMOUNT: "El cambio debe ser un importe válido, por ejemplo 2,50.",
       TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago seleccionado no está admitido. Elige Efectivo, Tarjeta, Bizum, Bono, Tarjeta regalo u Otros.",
       TPV_INVALID_PAYMENT_METHOD: "El medio de pago no es válido. Selecciona una de las opciones disponibles.",
-      TPV_SANDBOX_PAYMENT_TOTAL_MISMATCH: "El desglose de pagos no coincide con el total. Ajusta los importes hasta cubrir exactamente el total pendiente.",
+
       TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
       TPV_LINES_REQUIRED: "El ticket está vacío. Añade al menos un servicio o producto antes de cobrar.",
       TPV_SESSION_REQUIRED: "No hay una sesión de caja seleccionada. Actualiza el estado de caja y abre una sesión antes de operar.",
