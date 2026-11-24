@@ -96,8 +96,8 @@ function _isSyntheticTpvRecord(item) {
                 item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
-        item.payloadFiscal?.isSynthetic === true &&
-        item.payloadFiscal?.realPayment === false &&
+        (item.payloadFiscal?.isSynthetic === undefined || item.payloadFiscal.isSynthetic === true) &&
+        (item.payloadFiscal?.realPayment === undefined || item.payloadFiscal.realPayment === false) &&
         item.payloadFiscal?.externalSideEffects === false &&
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
