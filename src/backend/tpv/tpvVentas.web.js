@@ -14,7 +14,7 @@ function disabledResult(code) {
         data: null,
         error: { code, message: "La escritura en el circuito operativo/fiscal permanece bloqueada." },
         persisted: false,
-        realPayment: false,
+
     };
 }
 
@@ -234,8 +234,7 @@ export const registrarVenta = webMethod(
                     bookingId: commonPayload.bookingId,
                     replayed,
                     persisted: true,
-                    isSynthetic: true,
-                    realPayment: false,
+
                     gatewayCalled: false,
                     fiscalLedgerWritten: false,
                 },
@@ -250,8 +249,7 @@ export const registrarVenta = webMethod(
                 error: { code: String(error?.message || "TPV_SALE_FAILED") },
                 persisted,
                 recoverable: persisted,
-                isSynthetic: true,
-                realPayment: false,
+
                 traceId,
             };
         }
