@@ -221,6 +221,7 @@ export const registrarArqueoParcial = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-partial-count");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
