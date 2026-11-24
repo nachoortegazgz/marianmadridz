@@ -45,6 +45,7 @@ function mapMovementRecord(record) {
         reason: record.reason || record.totals?.differenceReason || "",
         reference: record.saleId || record.refundId || record.reportId || record._id,
         status: record.status || null,
+        concept: String(record.operationDescription || record.reason || "Operación TPV histórica").replace(/\s*\[SINTÉTICO\]$/i, "") + " [SINTÉTICO]",
         createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
         totals: record.totals || null,
         currency: record.currency || "EUR",
@@ -70,7 +71,7 @@ export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-cash-movement");
+        const traceId = makeTraceId("tpv-cash-movement");
         await requireAdmin(traceId);
         const operator = await resolveTpvContext(traceId);
 
@@ -155,7 +156,7 @@ export const registrarMovimientoCaja = webMethod(
 export const obtenerMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-sandbox-cash-movements-read");
+        const traceId = makeTraceId("tpv-cash-movements-read");
         await requireCajero(traceId);
 
         try {
@@ -191,7 +192,6 @@ export const obtenerMovimientosCaja = webMethod(
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    syntheticOnly: true,
                     truncated: ledger.hasMore,
                 },
                 error: null,
@@ -212,7 +212,7 @@ export const obtenerMovimientosCaja = webMethod(
 export const exportarMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-synthetic-movements-export");
+        const traceId = makeTraceId("tpv-movements-export");
         await requireCajero(traceId);
         const operator = await resolveTpvContext(traceId);
         try {
@@ -254,7 +254,6 @@ export const exportarMovimientosCaja = webMethod(
                 count: items.length,
                 sessionId,
                 format: "CSV",
-                syntheticOnly: true,
                 truncated: false,
             }, traceId);
         } catch (error) {
@@ -266,7 +265,7 @@ export const exportarMovimientosCaja = webMethod(
 export const exportarAuditoriaTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-synthetic-audit-export");
+        const traceId = makeTraceId("tpv-audit-export");
         await requireCajero(traceId);
         const operator = await resolveTpvContext(traceId);
         try {
