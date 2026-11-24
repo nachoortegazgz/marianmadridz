@@ -294,6 +294,28 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
     assert.equal(payload.reconciliationStatus, undefined);
     assert.equal(payload.allowNativePayments, undefined);
     assert.equal(payload.allowNativeRefunds, undefined);
+
+    for (const field of [
+        "isSynthetic",
+        "realPayment",
+        "realPayments",
+        "processingMode",
+        "reconciliationStatus",
+        "sandboxRunId",
+        "legacyRunId",
+        "sourceType",
+        "ledgerVersion",
+        "schemaVersion",
+        "recordSource",
+    ]) {
+        assert.throws(
+            () => makeTpvPayload({ [field]: "legacy-value" }),
+            /TPV_OPERATIONAL_METADATA_FORBIDDEN/,
+            "operational payload must reject legacy metadata field: " + field
+        );
+    }
+    assert.throws(() => makeTpvPayload(null), /TPV_INVALID_PAYLOAD/);
+    assert.throws(() => makeTpvPayload([]), /TPV_INVALID_PAYLOAD/);
 });
 
 
