@@ -94,7 +94,7 @@ test("CajaActual operational projections use neutral metadata; legacy projection
         readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8"),
         readFile(new URL("../tpv/tpvUtils.js", import.meta.url), "utf8"),
     ]);
-    assert.match(repository, /conceptOperations\\.tpvRuntime = sourceState/);
+    assert.match(repository, /conceptOperations\.tpvRuntime = sourceState/);
     assert.match(repository, /tpvRuntime: \\{/);
     assert.match(repository, /TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
     assert.doesNotMatch(repository, /processingMode:|reconciliationStatus:|allowNativePayments:|allowNativeRefunds:/);
