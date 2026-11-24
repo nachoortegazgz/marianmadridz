@@ -78,7 +78,7 @@ test("EVENTLOG-FISCAL-CONFIG-01 missing SIF configuration fails closed", () => {
     () => eventLogTest.buildFiscalSystemConfig({
       _id: "CONFIG_SISTEMA_FISCAL",
       recordType: "CONFIG_SISTEMA",
-      taxId: "X1234567B",
+      taxId: "B12345674",
       legalName: "Titular de prueba",
       verifactuVersion: "1.0",
     }),
@@ -117,7 +117,7 @@ test("EVENTLOG-FISCAL-CONFIG-02 only complete explicit SIF configuration is acce
     tipoUsoPosibleSoloVerifactu: false,
     tipoUsoPosibleMultiOT: true,
     indicadorMultiplesOT: true,
-    taxId: "X1234567X",
+    taxId: "B12345674",
     legalName: "Titular de prueba",
     fechaInicioVerifactu: "2027-07-01",
   });
@@ -129,7 +129,7 @@ test("EVENTLOG-FISCAL-CONFIG-02 only complete explicit SIF configuration is acce
     tipoUsoPosibleSoloVerifactu: "N",
     tipoUsoPosibleMultiOT: "S",
     indicadorMultiplesOT: "S",
-    nifProductor: "X1234567X",
+    nifProductor: "B12345674",
     nombreRazonProductor: "Titular de prueba",
     fechaInicioVerifactu: "2027-07-01",
   });

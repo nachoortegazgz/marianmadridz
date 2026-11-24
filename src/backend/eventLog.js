@@ -193,6 +193,9 @@ function _buildFiscalSystemConfig(config) {
             `FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de campos verificados: ${missing.join(", ")}`
         );
     }
+    if (!isValidNifOrEuVat(resolved.nifProductor)) {
+        throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
+    }
     return Object.freeze(resolved);
 }
 
