@@ -6,7 +6,7 @@
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
-import { registrarVenta } from "backend/tpv/tpvVentas.web";
+import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
@@ -22,6 +22,7 @@ const REQUEST_TYPES = Object.freeze([
     "CATALOG_VARIANTS",
     "CATALOG_STAFF",
     "CUSTOMERS_SEARCH",
+    "SALE_VALIDATE",
     "SALE_REGISTER",
     "CASH_MOVEMENT",
     "PARTIAL_CASH_COUNT",
@@ -53,17 +54,44 @@ function boundedInteger(value, field, min, max) {
 }
 
 function envelope(result) {
-    if (result && (result.status === "SUCCESS" || result.status === "ERROR")) return result;
+    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status) &&
+        Object.prototype.hasOwnProperty.call(result, "data") &&
+        Object.prototype.hasOwnProperty.call(result, "error")) return result;
     return { status: "SUCCESS", data: result ?? null, error: null };
 }
 
-function errorEnvelope(error) {
+const ERROR_CATALOG = Object.freeze({
+    TPV_INVALID_MESSAGE: ["La solicitud no es válida.", "Actualiza la TPV y vuelve a intentarlo.", true, true],
+    TPV_INVALID_PAYLOAD: ["Faltan datos de la operación.", "Revisa los datos introducidos.", true, false],
+    TPV_SESSION_REQUIRED: ["No hay una sesión de caja abierta.", "Abre la caja antes de continuar.", true, false],
+    TPV_PAYMENT_PENDING: ["El pago está pendiente de confirmación.", "Consulta el estado antes de repetir la operación.", false, true],
+    TPV_PAYMENT_FAILED: ["El pago no se ha confirmado.", "Comprueba el medio de pago antes de volver a intentarlo.", true, true],
+    TPV_RECONCILIATION_REQUIRED: ["La operación necesita comprobación.", "No la repitas; solicita una conciliación.", false, false, true],
+    TPV_IDEMPOTENCY_CONFLICT: ["La clave de operación ya se utilizó con otros datos.", "Consulta la operación original; no la repitas.", false, false],
+    TPV_ORDER_CREATION_FAILED: ["No se pudo crear el pedido.", "Consulta su estado antes de repetir la venta.", false, true, true],
+    TPV_PAYMENT_PROVIDER_NOT_CONFIGURED: ["El proveedor de pago no está configurado.", "No se ha registrado ni confirmado la venta.", false, false],
+    TPV_REFUND_PROVIDER_NOT_CONFIGURED: ["El proveedor de devoluciones no está configurado.", "No se ha registrado ni confirmado la devolución.", false, false],
+});
+
+function errorEnvelope(error, field = null) {
+    const code = String(error?.code || error?.message || "TPV_OPERATION_FAILED");
+    const definition = ERROR_CATALOG[code] || [
+        "No se pudo completar la operación.",
+        "Consulta el estado antes de repetirla.",
+        false,
+        true,
+    ];
     return {
         status: "ERROR",
         data: null,
         error: {
-            code: String(error?.code || error?.message || "TPV_ERROR"),
-            message: "No se pudo completar la operación.",
+            code,
+            message: definition[0],
+            solution: definition[1],
+            field,
+            recoverable: definition[2] === true,
+            retryable: definition[3] === true,
+            requiresReconciliation: definition[4] === true,
         },
     };
 }
@@ -73,11 +101,54 @@ function numeric(value, field, { allowZero = true } = {}) {
         if (allowZero) return 0;
         throw new Error("TPV_INVALID_" + field);
     }
-    const number = Number(value);
-    if (!Number.isFinite(number) || number < 0 || (!allowZero && number === 0)) {
+    let amount;
+    if (typeof value === "number") {
+        amount = value;
+    } else if (typeof value === "string") {
+        let raw = value.trim().replace(/\\s+/g, "").replace(/€$/i, "");
+        if (!raw || !/^\\d+(?:[.,]\\d+)*$/.test(raw)) {
+            throw new Error("TPV_INVALID_" + field);
+        }
+        const comma = raw.lastIndexOf(",");
+        const dot = raw.lastIndexOf(".");
+        let integerPart = raw;
+        let fractionPart = "";
+        if (comma >= 0 && dot >= 0) {
+            const decimal = comma > dot ? "," : ".";
+            const grouping = decimal === "," ? "." : ",";
+            const parts = raw.split(decimal);
+            const groups = parts[0].split(grouping);
+            if (parts.length !== 2 || !/^\\d{1,2}$/.test(parts[1]) ||
+                !/^\\d{1,3}$/.test(groups[0]) ||
+                !groups.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+                throw new Error("TPV_INVALID_" + field);
+            }
+            integerPart = groups.join("");
+            fractionPart = parts[1];
+        } else if (comma >= 0 || dot >= 0) {
+            const separator = comma >= 0 ? "," : ".";
+            const parts = raw.split(separator);
+            if (parts.length === 2 && parts[1].length >= 1 && parts[1].length <= 2) {
+                integerPart = parts[0];
+                fractionPart = parts[1];
+            } else if (parts.length > 2 && /^\\d{1,3}$/.test(parts[0]) &&
+                parts.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+                integerPart = parts.join("");
+            } else {
+                throw new Error("TPV_INVALID_" + field);
+            }
+        }
+        amount = Number(integerPart + (fractionPart ? "." + fractionPart : ""));
+    } else {
         throw new Error("TPV_INVALID_" + field);
     }
-    return number;
+    const minor = Math.round((amount + Number.EPSILON) * 100);
+    if (!Number.isFinite(amount) || amount < 0 ||
+        Math.abs(amount * 100 - minor) > 1e-7 ||
+        (!allowZero && minor === 0)) {
+        throw new Error("TPV_INVALID_" + field);
+    }
+    return minor / 100;
 }
 
 function idempotencyKey(message, payload = {}) {
@@ -130,50 +201,76 @@ async function dispatch(message) {
         case "CUSTOMERS_SEARCH":
             return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
 
+        case "SALE_VALIDATE":
         case "SALE_REGISTER": {
-            const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems : [];
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            const lineTaxMinor = lineItems.reduce((sum, line) => {
-                const amount = numeric(line?.impuestosImporte ?? 0, "LINE_TAX");
-                return sum + Math.round(amount * 100);
-            }, 0);
-            const declaredTaxMinor = Math.round(numeric(payload.tax, "TAX") * 100);
-            if (lineTaxMinor !== declaredTaxMinor) {
-                throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
+            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) {
+                throw new Error("TPV_LINES_REQUIRED");
             }
-            return registrarVenta({
-                sessionId: optionalString(payload.sessionId) || "",
-                idempotencyKey: key,
-                lineas: lineItems.map((line) => ({
-                    tipoLinea: String(line.tipoLinea || "").toUpperCase(),
-                    itemId: line.itemId || null,
-                    varianteId: line.varianteId || null,
-                    concepto: String(line.concepto || ""),
+            if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
+            if (message.type === "SALE_REGISTER" &&
+                (!Array.isArray(payload.payments) || payload.payments.length === 0)) {
+                throw new Error("TPV_PAYMENTS_REQUIRED");
+            }
+            if (Array.isArray(payload.payments) && payload.payments.length > 100) {
+                throw new Error("TPV_ARRAY_TOO_LARGE");
+            }
+            const lineas = payload.lineItems.map((line) => {
+                if (!line || typeof line !== "object" || Array.isArray(line)) {
+                    throw new Error("TPV_INVALID_LINE");
+                }
+                return {
+                    tipoLinea: String(line.tipoLinea || "").trim().toUpperCase(),
+                    itemId: optionalString(line.itemId, 160),
+                    varianteId: optionalString(line.varianteId, 160),
+                    concepto: optionalString(line.concepto, 400) || "",
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
                     precioUnitario: numeric(line.precioUnitario, "UNIT_PRICE"),
                     descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
                     impuestosImporte: numeric(line.impuestosImporte ?? 0, "LINE_TAX"),
-                    profesionalId: line.profesionalId || null,
+                    profesionalId: optionalString(line.profesionalId, 160),
                     stockAfectado: line.stockAfectado === true,
-                })),
-                pagos: payments.map((payment) => ({
-                    medioPago: String(payment.method || payment.medioPago || "").toUpperCase(),
+                };
+            });
+            const pagos = (payload.payments || []).map((payment) => {
+                if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
+                    throw new Error("TPV_INVALID_PAYMENT");
+                }
+                return {
+                    medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
                     importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
-                })),
+                };
+            });
+            const impuestosTotal = numeric(payload.tax, "TAX");
+            const lineTaxMinor = lineas.reduce((sum, line) => sum + Math.round(line.impuestosImporte * 100), 0);
+            if (lineTaxMinor !== Math.round(impuestosTotal * 100)) {
+                throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
+            }
+            const salePayload = {
+                lineas,
+                pagos,
                 subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
-                impuestosTotal: numeric(payload.tax, "TAX"),
+                impuestosTotal,
                 totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: optionalString(payload.profesionalId),
-                customerIdentityId: optionalString(payload.customerIdentityId),
-                paymentBreakdown: payload.paymentBreakdown,
+                profesionalId: optionalString(payload.profesionalId, 160),
+                customerIdentityId: optionalString(payload.customerIdentityId, 160),
+            };
+            if (message.type === "SALE_VALIDATE") {
+                return validarVentaBorrador(salePayload);
+            }
+            const sessionId = optionalString(payload.sessionId, 160);
+            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+            return registrarVenta({
+                ...salePayload,
+                sessionId,
+                idempotencyKey: key,
             });
         }
 
         case "CASH_MOVEMENT":
             return registrarMovimientoCaja({
                 idempotencyKey: key,
-                sessionId: optionalString(payload.sessionId) || "",
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 movementType: (optionalString(payload.movementType, 40) || "").toUpperCase(),
                 paymentMethod: (optionalString(payload.paymentMethod, 40) || "EFECTIVO").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
