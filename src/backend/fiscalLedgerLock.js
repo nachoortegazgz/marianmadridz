@@ -24,7 +24,9 @@ import {
 } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 import { createActionableError } from "backend/errors/actionableError";
+import { logger } from "backend/logger";
 
+const log = logger;
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
 const CASH_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
 const LOCK_ID = FISCAL_LEDGER_LOCK_CONFIG.ID;
@@ -246,8 +248,18 @@ function _lockPayload(ownerId, acquiredAt, previousPayload = {}, traceId = "") {
     };
 }
 
-function _lockResult(ownerId, version, expiresAt, traceId, revision = null) {
-    return { id: LOCK_ID, ownerId, version, revision, expiresAt, traceId };
+function _lockResult(ownerId, version, expiresAt, traceId, revision = null, resolutionAttempts = []) {
+    const autoResolved = resolutionAttempts.length > 0;
+    if (autoResolved) {
+        log.info("AUTO_RESOLVED", {
+            event: "AUTO_RESOLVED",
+            domain: "FISCAL_LEDGER_LOCK",
+            strategy: "BOUNDED_LOCK_WAIT",
+            attemptCount: resolutionAttempts.length,
+            traceId,
+        });
+    }
+    return { id: LOCK_ID, ownerId, version, revision, expiresAt, traceId, autoResolved, resolutionAttempts };
 }
 
 export async function acquireFiscalLedgerLock(traceId, options = {}) {
@@ -255,6 +267,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
     const lockTraceId = String(traceId || makeTraceId("fiscal-lock"));
     const waitMs = Math.max(0, Number(options.waitMs ?? DEFAULT_WAIT_MS));
     const deadline = Date.now() + waitMs;
+    const resolutionAttempts = [];
 
     while (true) {
         const now = new Date();
@@ -309,7 +322,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                 }
 
                 if (_lockPatchSucceeded(patched)) {
-                    return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId);
+                    return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId, null, resolutionAttempts);
                 }
 
                 // Another worker won the compare-and-swap. Re-read the row.
@@ -326,7 +339,9 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     retryable: true,
                 });
             }
-            await _sleep(Math.min(POLL_MS, Math.max(1, deadline - Date.now())));
+            const delayMs = Math.min(POLL_MS, Math.max(1, deadline - Date.now()));
+            resolutionAttempts.push({ strategy: "LOCK_WAIT", delayMs, outcome: "WAITED" });
+            await _sleep(delayMs);
             continue;
         }
 
@@ -350,7 +365,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
 
         try {
             const saved = await dalInsert(CONTROL_COL, lock);
-            return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null);
+            return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null, resolutionAttempts);
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
             if (Date.now() >= deadline) {
@@ -363,6 +378,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     retryable: true,
                 });
             }
+            resolutionAttempts.push({ strategy: "DUPLICATE_KEY_RECHECK", delayMs: POLL_MS, outcome: "WAITED" });
             await _sleep(POLL_MS);
         }
     }
