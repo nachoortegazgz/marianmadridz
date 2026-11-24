@@ -23,8 +23,7 @@ function baseEnvelope(operation, requestFingerprint) {
         testRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
         requestFingerprint,
         providerCalled: false,
-        realPayment: false,
-        isSynthetic: true,
+
         persisted: false,
         externalSideEffects: false,
     };
