@@ -65,3 +65,19 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     assert.match(controller, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(controller, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
 });
+
+
+test("TPV controller parses localized amounts without guessing ambiguous separators", async () => {
+    const controller = await read("src/public/tpvPageController.js");
+    const numericSource = controller.match(/function numeric\\([\\s\\S]*?\\n}\\n/)?.[0];
+    assert.ok(numericSource, "controller numeric normalizer must exist");
+    const context = {};
+    new Script(numericSource + "\\nglobalThis.numeric = numeric;").runInNewContext(context);
+    assert.equal(context.numeric("12,50", "AMOUNT"), 12.5);
+    assert.equal(context.numeric("12.50", "AMOUNT"), 12.5);
+    assert.equal(context.numeric("1.234,56", "AMOUNT"), 1234.56);
+    assert.equal(context.numeric("1,234.56", "AMOUNT"), 1234.56);
+    assert.throws(() => context.numeric("1.234", "AMOUNT"), /TPV_INVALID_AMOUNT/);
+    assert.throws(() => context.numeric("12,345", "AMOUNT"), /TPV_INVALID_AMOUNT/);
+    assert.throws(() => context.numeric(12.345, "AMOUNT"), /TPV_INVALID_AMOUNT/);
+});
