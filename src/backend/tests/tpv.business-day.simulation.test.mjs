@@ -54,7 +54,7 @@ function validateFixture(fixture) {
     const key = normalizeClientIdempotencyKey(fixture.idempotencyKey);
     const sale = validateSaleDraft(fixture);
     assert.equal(sale.importePendiente, 0);
-    assert.equal(sale.estadoVenta, "COBRADA_SINTETICA");
+    assert.equal(sale.estadoVenta, "COBRADA");
     assert.equal(sale.realPayment, undefined);
     return { key, sale };
 }
@@ -196,7 +196,7 @@ test("invalid amount, overpayment and partial tender are handled explicitly", ()
         lineas: [{ tipoLinea: "SERVICIO", concepto: "Servicio parcialmente cobrado", cantidad: 1, precioUnitario: 20, impuestosImporte: 0 }],
         pagos: [{ medioPago: "EFECTIVO", importe: 5 }],
     });
-    assert.equal(partial.estadoVenta, "PARCIAL_SINTETICA");
+    assert.equal(partial.estadoVenta, "PARCIAL");
     assert.equal(partial.importePendiente, 15);
 });
 
