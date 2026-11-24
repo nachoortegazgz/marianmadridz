@@ -1,16 +1,28 @@
-# Estado actual — 2026-11-23
+# Estado actual — 2026-11-25
 
 **Repositorio:** nachoortegazgz/marianmadridz  
 **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Draft** · `published=false`  
 **Release:** **NO-GO**. No autorizado publicar, operar comercialmente ni activar pagos/writers fiscales.  
 **Evidencia:** lectura Wix/CMS de solo lectura; no equivale a validación Runtime.
-**TPV:** PR #601 MERGED (lista). Bloqueos operativos: contratos A, B y C especificados en `docs/RELEASE-READINESS.md`. Sin acción de código posible hasta resolución humana.
+**TPV:** PR #601 MERGED. Contrato A redefinido según el flujo declarado: lector bancario externo + registro manual TARJETA/EFECTIVO + justificante para cierre Z + EPSON/cajón mediante controlador local. No se requiere API bancaria para ese flujo manual. Implementación de venta y hardware aún no validada; escrituras continúan bloqueadas. Contratos B y C siguen pendientes según `docs/RELEASE-READINESS.md`.
+
+
+## Actualización TPV presencial — 2026-11-25
+
+- **Declarado por el propietario:** PC con Internet, impresora térmica EPSON, cajón monedero conectado a la impresora mediante controlador local; el controlador debe abrir el cajón cada vez que se imprime un ticket.
+- **Declarado por el propietario:** cobros con lector bancario físico. El empleado verifica el resultado en el lector y selecciona TARJETA en el TPV personalizado; se conserva el justificante del lector para el cierre Z. El efectivo se registra separadamente como EFECTIVO.
+- **Regla contable/operativa:** TARJETA no incrementa el efectivo físico esperado. La apertura del cajón y la impresión son efectos hardware, no movimientos económicos. La reimpresión no puede duplicar venta, cobro ni asiento.
+- **Distinción de producto:** lector bancario externo ≠ Wix POS Register ≠ «Página de pagos con POS» del Dashboard. No se presume que el lector se integre con Wix ni se necesita API bancaria para el procedimiento manual descrito.
+- **Verificado en código:** `tpvPagos.web.js` calcula `physicalCash` desde EFECTIVO; `tpvVentas.web.js` bloquea el registro operativo (`TPV_PAYMENT_PROVIDER_NOT_CONFIGURED`, `persisted=false`); `TPV_RUNTIME_POLICY.HARDWARE_ENABLED=false`.
+- **Hallazgo estático:** `TPV_PAYMENT_METHOD` incluye `BONO` y `TARJETA_REGALO`, pero `validarDesglosePagos()` no inicializa esos acumuladores. Revisar contra los medios realmente habilitados en PAYMENTS antes de abrir escrituras.
+- **Pendiente de verificación:** integración local EPSON/cajón, semántica del driver, configuración PAYMENTS, correspondencia entre medios del Dashboard y backend, persistencia de venta/pago, asociación del justificante bancario y conciliación de Z. No se ha ejecutado Wix Runtime ni una prueba física.
+- **No se autoriza:** activar `HARDWARE_ENABLED`, writers TPV/fiscales ni publicación por esta actualización documental.
 
 ## P0 abiertos
 
-1. **#416 — Caja, compensaciones y pedidos POS.** PR #587 + #601 (merged); evidencia runtime pendiente. Bloqueo externo: contrato A. `CajaActual`: singleton `ABIERTA`, apertura 300 EUR, esperado 320 EUR, contado 0, `traceId=0`, sin envelope TPV V2 canónico. Tres compensaciones `PENDING_RECOVERY`: +92,45 EUR (#10032), +18,15 EUR y −18,15 EUR (#10033). Hay cinco pedidos POS (#10030–#10034): #10032/#10033 fueron declarados QA por el titular, pero Wix devuelve `demo=false`; #10030, #10031 y #10034 siguen sin clasificación. No reintentar, completar manualmente ni modificar caja, pedidos o ledgers. fuente: docs/archive/2026-11/PROJECT-STATUS.md; docs/archive/2026-11/audits/2026-11-23-fiscal-recovery-root-cause.md; docs/archive/2026-11/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md.
+1. **#416 — Caja, compensaciones y pedidos POS.** PR #587 + #601 (merged); evidencia runtime pendiente. Bloqueo: escrituras TPV cerradas y conciliación/runtime pendientes; el contrato A describe ahora el cobro manual con lector bancario. `CajaActual`: singleton `ABIERTA`, apertura 300 EUR, esperado 320 EUR, contado 0, `traceId=0`, sin envelope TPV V2 canónico. Tres compensaciones `PENDING_RECOVERY`: +92,45 EUR (#10032), +18,15 EUR y −18,15 EUR (#10033). Hay cinco pedidos POS (#10030–#10034): #10032/#10033 fueron declarados QA por el titular, pero Wix devuelve `demo=false`; #10030, #10031 y #10034 siguen sin clasificación. No reintentar, completar manualmente ni modificar caja, pedidos o ledgers. fuente: docs/archive/2026-11/PROJECT-STATUS.md; docs/archive/2026-11/audits/2026-11-23-fiscal-recovery-root-cause.md; docs/archive/2026-11/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md.
 2. **#415 / #209 — Maestro fiscal y SIF/VERI*FACTU.** No existe `CONFIG_SISTEMA_FISCAL`/`CONFIG_SISTEMA` canónico verificado; `LEDGER_WRITES_ENABLED=false` y `ACCOUNTING_LEDGER_WRITES_ENABLED=false`. PR #589 listo con corrección F5 de append-only; la configuración fiscal legal real sigue ausente. No crear valores ficticios ni activar writers/remisión. fuente: docs/archive/2026-11/audits/2026-11-23-fiscal-recovery-root-cause.md; docs/archive/2026-11/DECISION-LOG.md.
-3. **#525 — Concurrencia de CajaActual.** PR #587 + #601 (merged); evidencia runtime pendiente. Bloqueo externo: contrato A. No declarar segura la concurrencia Runtime. fuente: docs/archive/2026-11/qa/2026-11-23-tpv-session-handoff.md; docs/archive/2026-11/PROJECT-STATUS.md.
+3. **#525 — Concurrencia de CajaActual.** PR #587 + #601 (merged); evidencia runtime pendiente. No declarar segura la concurrencia Runtime. fuente: docs/archive/2026-11/qa/2026-11-23-tpv-session-handoff.md; docs/archive/2026-11/PROJECT-STATUS.md.
 4. **#434 — Integridad MovimientosCaja.** Discrepancia P0 entre snapshots; la colección es append-only y la desaparición aparente de una fila previamente clasificada como no sintética sigue sin causa acreditada. No hacer update/remove ni reconstruir saldos. fuente: docs/archive/2026-11/audits/2026-11-23-movimientos-caja-count-drift.md.
 5. **#520 — Automatizaciones Wix.** Siete automatizaciones `PREINSTALLED` permanecen `ACTIVE`; la APPLICATION «Configuración de control laboral» está `INACTIVE`. No presumir ausencia de efectos externos. fuente: docs/archive/2026-11/audits/2026-11-23-repository-wix-cms-reconciliation.md.
 
