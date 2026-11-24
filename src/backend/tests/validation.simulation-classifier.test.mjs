@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isExplicitSimulationLedgerRecord } from "../validation.js";\nimport { TPV_HISTORICAL_POLICY } from "../internalConfig.js";
+import { isExplicitSimulationLedgerRecord } from "../validation.js";
+import { TPV_HISTORICAL_POLICY } from "../internalConfig.js";
 
 test("SIMULATION-01 recognizes movementType simulation markers without recordSource", () => {
   for (const movementType of [
