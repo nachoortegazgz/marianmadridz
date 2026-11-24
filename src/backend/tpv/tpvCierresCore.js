@@ -61,7 +61,7 @@ export async function buildTpvSessionSummary(session) {
     }
 
     for (const movement of movements) {
-        if (movement.status !== "CONFIRMADO_SINTETICO") continue;
+        if (!["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status)) continue;
         const amount = Number(movement.amountMinor || 0);
         if (movement.movementType === "ENTRADA") totals.cashInMinor += amount;
         if (movement.movementType === "SALIDA" || movement.movementType === "RETIRADA") totals.cashOutMinor += amount;
