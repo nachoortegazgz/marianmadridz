@@ -736,7 +736,9 @@ export function isExplicitSimulationLedgerRecord(item) {
     const legacyTpvDevelopmentRecord = item.synthetic === true &&
         recordSource === "TPV_QA_DEVELOPMENT" &&
         source === "TPV_FUNCTIONAL_TEST";
-    return recordSource === "SMOKE_TEST" ||
+    const tpvLedgerSource = [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(recordSource);
+    return tpvLedgerSource ||
+        recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
         eventType.endsWith("_SIMULATED") ||
         simulatedMovementType ||
