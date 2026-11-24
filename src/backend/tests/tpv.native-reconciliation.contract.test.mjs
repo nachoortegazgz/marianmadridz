@@ -126,8 +126,9 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.match(movements, /input\.paymentMethod \|\| TPV_PAYMENT_METHOD\.EFECTIVO/);
     assert.match(movements, /affectsPhysicalCash: true/);
     assert.match(movements, /normalizeClientIdempotencyKey\(input\.idempotencyKey\)/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
 });
 
 test("TPV X/Z reports, immutable audit records and native/fiscal side-effect boundaries are explicit", async () => {
@@ -167,7 +168,8 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /item\.actorId/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(config, /fiscalEmission: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.doesNotMatch(config, /ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.doesNotMatch(sales, /createOrder|createInvoice|verifactuQrUrl/i);
     assert.doesNotMatch(widget, /verifactuQrUrl|Veri\*Factu/i);
     assert.match(summary, /reconciliationOk = totals\.totalCollectedMinor === totals\.netSalesMinor/);
@@ -188,8 +190,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
 
     assert.match(repository, /export async function latestTpvSession/);
     assert.match(repository, /status: "CERRADA"/);
-    assert.match(repository, /operatorResourceId: String\(sourceState\?\.operatorResourceId/);
-    assert.match(repository, /operatorDisplayName: String\(sourceState\?\.operatorDisplayName/);
+    assert.match(repository, /operatorResourceId: String\(state\.operatorResourceId/);
+    assert.match(repository, /operatorDisplayName: String\(state\.operatorDisplayName/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
