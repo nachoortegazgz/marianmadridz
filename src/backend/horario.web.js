@@ -130,6 +130,26 @@ async function _sealTimeclockRecord(record) {
     return record;
 }
 
+/**
+ * Normalize bounded history query input before passing it to Wix Data.
+ * Invalid, empty, zero or negative limits use the operation's safe default;
+ * positive values are floored and capped to the documented endpoint maximum.
+ */
+export function _normalizeTimeclockHistoryLimit(value, defaultValue, maximum) {
+    const raw = value === null || value === undefined || String(value).trim() === ""
+        ? Number.NaN
+        : Number(value);
+    const fallback = Math.min(maximum, Math.max(1, Math.floor(Number(defaultValue) || 1)));
+    if (!Number.isFinite(raw) || raw <= 0) return fallback;
+    return Math.min(maximum, Math.max(1, Math.floor(raw)));
+}
+
+export function _normalizeTimeclockMonthKey(value) {
+    const raw = _safeTrim(value);
+    if (!raw) return "";
+    return /^\\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : null;
+}
+
 function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
     const startKey = _safeTrim(startValue || "");
     const endKey = _safeTrim(endValue || startKey);
@@ -606,7 +626,7 @@ export const getHistorialFichajes = webMethod(
                         traceId,
                     };
                 }
-                const limit = Math.min(Number(options?.limit) || 500, 500);
+                const limit = _normalizeTimeclockHistoryLimit(options?.limit, 500, 500);
                 const monthKeys = [...new Set(dayKeys.map((dayKey) => dayKey.slice(0, 7)))];
                 const monthResults = await Promise.all(monthKeys.map((monthKey) =>
                     dalQuery(REGISTROS_COL)
@@ -637,12 +657,22 @@ export const getHistorialFichajes = webMethod(
                     };
                 }
             } else {
-                const limit = Math.min(Number(options?.limit) || 30, 100);
+                const limit = _normalizeTimeclockHistoryLimit(options?.limit, 30, 100);
                 let query = dalQuery(REGISTROS_COL)
                     .eq(F.RESOURCE_ID, ctx.resourceId);
-                if (_safeTrim(options?.monthKey)) {
-                    query = query.eq(F.MONTH_KEY, _safeTrim(options.monthKey));
+                const requestedMonthKey = _normalizeTimeclockMonthKey(options?.monthKey);
+                if (requestedMonthKey === null) {
+                    return {
+                        status: "ERROR",
+                        data: null,
+                        error: {
+                            code: "INVALID_MONTH_KEY",
+                            message: "El mes debe tener formato AAAA-MM y un mes entre 01 y 12. Ejemplo: 2026-11.",
+                        },
+                        traceId,
+                    };
                 }
+                if (requestedMonthKey) query = query.eq(F.MONTH_KEY, requestedMonthKey);
                 const res = await query
                     .descending(F.RECORDED_AT)
                     .limit(limit)
@@ -814,7 +844,19 @@ export const getResumenHoras = webMethod(
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
 
-            const monthKey = _safeTrim(options?.monthKey) || _getMadridMonthKey();
+            const requestedMonthKey = _normalizeTimeclockMonthKey(options?.monthKey);
+            if (requestedMonthKey === null) {
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "INVALID_MONTH_KEY",
+                        message: "El mes debe tener formato AAAA-MM y un mes entre 01 y 12. Ejemplo: 2026-11.",
+                    },
+                    traceId,
+                };
+            }
+            const monthKey = requestedMonthKey || _getMadridMonthKey();
 
             const res = await dalQuery(REGISTROS_COL)
                 .eq(F.RESOURCE_ID, ctx.resourceId)
