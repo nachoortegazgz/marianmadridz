@@ -17,6 +17,7 @@ import {
 } from "backend/dataAccess";
 import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
+import { createPersistedTpvProjectionError } from "backend/tpv/tpvMovementContracts";
 import {
 
     assertTpvCajaIntegrity,
@@ -577,6 +578,19 @@ function _shouldProject(collection, record) {
         record?.status === "CONFIRMADA_SINTETICA";
 }
 
+async function _projectPersistedTpvEvent(collection, record, recordId, hash, idempotencyKey, replayed) {
+    if (!_shouldProject(collection, record)) return;
+    try {
+        await _writeCajaProjection(collection, record, recordId, hash);
+    } catch (cause) {
+        throw createPersistedTpvProjectionError(cause, {
+            recordId,
+            idempotencyKey,
+            replayed,
+        });
+    }
+}
+
 function _sessionCajaPatch(caja, record, eventHash) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
@@ -797,9 +811,9 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
     const existing = await findByIdempotencyKey(collection, key);
     if (existing) {
         const replay = assertSameRequest(existing, fingerprint);
-        if (_shouldProject(collection, existing)) {
-            await _writeCajaProjection(collection, existing, existing._id, existing.hash);
-        }
+        await _projectPersistedTpvEvent(
+            collection, existing, existing._id, existing.hash, key, true
+        );
         return replay;
     }
 
@@ -812,9 +826,9 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         const winner = await findByIdempotencyKey(collection, key);
         if (!winner) throw error;
         const replay = assertSameRequest(winner, fingerprint);
-        if (_shouldProject(collection, winner)) {
-            await _writeCajaProjection(collection, winner, winner._id, winner.hash);
-        }
+        await _projectPersistedTpvEvent(
+            collection, winner, winner._id, winner.hash, key, true
+        );
         return replay;
     }
 
@@ -824,9 +838,9 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         _createdDate: saved?._createdDate || new Date(),
         _updatedDate: saved?._updatedDate || new Date(),
     });
-    if (_shouldProject(collection, record)) {
-        await _writeCajaProjection(collection, record, item._id, item.hash);
-    }
+    await _projectPersistedTpvEvent(
+        collection, record, item._id, item.hash, key, false
+    );
     return { item, replayed: false };
 }
 
