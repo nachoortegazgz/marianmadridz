@@ -834,33 +834,39 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         const sessions = session ? [session] : [];
         return sessions.filter((item) => _matchesFilter(item, filter));
     }
-    const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
-    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    const movementTypes = [...new Set([
+        TPV_EVENT_MOVEMENT_TYPES[collection],
+        TPV_LEGACY_EVENT_MOVEMENT_TYPES[collection],
+    ].filter(Boolean))];
+    if (!movementTypes.length) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
-    const result = await queryItems({
+    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+    const pages = await Promise.all(movementTypes.map((movementType) => queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
         filter: wql.eq("movementType", movementType),
         sort: ["recordTimestamp ASC"],
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
-    });
-    const records = result.items
+    })));
+    const records = [];
+    const appendPage = (page) => records.push(...page.items
         .filter(_isRecognizedSyntheticLedgerItem)
         .map(_virtualRecord)
-        .filter((item) => _matchesFilter(item, filter));
-    if (options.allowTruncated === true) return records;
-    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
-    let page = result;
-    while (page.hasNext && records.length < maxRecords) {
-        page = await page.next();
-        records.push(...page.items
-            .filter(_isRecognizedSyntheticLedgerItem)
-            .map(_virtualRecord)
-            .filter((item) => _matchesFilter(item, filter)));
+        .filter((item) => _matchesFilter(item, filter)));
+    pages.forEach(appendPage);
+    if (options.allowTruncated !== true) {
+        while (pages.some((page) => page.hasNext) && records.length < maxRecords) {
+            for (let index = 0; index < pages.length; index += 1) {
+                if (pages[index].hasNext && records.length < maxRecords) {
+                    pages[index] = await pages[index].next();
+                    appendPage(pages[index]);
+                }
+            }
+        }
+        if (pages.some((page) => page.hasNext)) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     }
-    if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     if (Array.isArray(options.sort) && options.sort.length) {
-        const [field, direction = "ASC"] = String(options.sort[0]).split(/\s+/);
+        const [field, direction = "ASC"] = String(options.sort[0]).split(/\\s+/);
         records.sort((a, b) => {
             const av = field.split(".").reduce((v, k) => v?.[k], a);
             const bv = field.split(".").reduce((v, k) => v?.[k], b);
@@ -868,7 +874,7 @@ export async function queryTpvRecords(collection, filter, options = {}) {
             return direction.toUpperCase() === "DESC" ? -cmp : cmp;
         });
     }
-    return records;
+    return records.slice(0, maxRecords);
 }
 
 export async function queryTpvLedgerRecords(options = {}) {
