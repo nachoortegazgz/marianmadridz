@@ -326,7 +326,21 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId, null, resolutionAttempts);
                 }
 
-                // Another worker won the compare-and-swap. Re-read the row.
+                // Another worker won the compare-and-swap. Retry with bounded backoff.
+                if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
+                    throw createActionableError({
+                        code: "FISCAL_LEDGER_LOCK_BUSY",
+                        userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                        technicalDetail: "El compare-and-swap del lock perdió frente a otro worker y agotó los reintentos acotados.",
+                        remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si persiste, solicitar revisión al administrador técnico; no eliminar ni forzar el lock."],
+                        contextSnapshot: { lockId: LOCK_ID, lockStatus: "CAS_CONFLICT", expiresAt: expiresAt.toISOString(), waitMs, traceId: lockTraceId },
+                        retryable: true,
+                        resolutionAttempts,
+                    });
+                }
+                const delayMs = LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length];
+                resolutionAttempts.push({ strategy: "LOCK_COMPARE_AND_SWAP", delayMs, outcome: "CONFLICT" });
+                await _sleep(delayMs);
                 continue;
             }
 
