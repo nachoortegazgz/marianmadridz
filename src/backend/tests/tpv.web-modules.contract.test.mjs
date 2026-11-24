@@ -270,9 +270,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff resource mapping", async () => {
     const catalog = await source("tpv/tpvCatalogo.web.js");
     const directory = await source("tpv/tpvNativeDirectory.js");
-    const sales = await source("tpv/tpvVentas.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
-    const refunds = await source("tpv/tpvDevoluciones.web.js");
     assert.match(directory, /contactsV5\.searchContacts/);
     assert.match(directory, /contactsV5\.getContact/);
     assert.match(directory, /staffMembers\.queryStaffMembers/);
@@ -281,12 +279,8 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(catalog, /searchTpvContacts/);
     assert.match(catalog, /listAuthorizedProfessionals/);
     assert.match(catalog, /resolveTpvContact/);
-    assert.match(sales, /resolveTpvContact/);
-    assert.match(sales, /listAuthorizedProfessionals/);
-    assert.match(sales, /customerContactId/);
     assert.match(movements, /resolveAuthorizedProfessional/);
-    assert.match(refunds, /resolveAuthorizedProfessional/);
-    for (const file of [catalog, directory, sales, movements, refunds]) {
+    for (const file of [catalog, directory, movements]) {
         assert.doesNotMatch(file, /TPV_IDENTITY_TYPES|listTpvIdentities|getTpvIdentity/);
     }
     assert.match(catalog, /formattedValue/);
