@@ -138,7 +138,7 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     assert.equal(result.cambioEntregado, 5);
     assert.equal(result.efectivoAplicado, 40);
     assert.equal(result.importePendiente, 0);
-    assert.equal(result.realPayment, false);
+    assert.equal(result.realPayment, undefined);
 });
 
 test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-cent arithmetic", () => {
