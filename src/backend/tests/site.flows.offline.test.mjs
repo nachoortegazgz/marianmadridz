@@ -134,7 +134,6 @@ async function setupFiscalSecrets() {
   state._map.FISCAL_SIGNER_BEARER = 'mock-bearer-token';
   if (!globalThis.__mmSignerFetchInstalled) {
     globalThis.__mmSignerFetchInstalled = true;
-    const realFetch = globalThis.fetch;
     globalThis.fetch = async (url, opts) => {
       if (String(url).startsWith('https://signer.mock.local/')) {
         const body = JSON.parse(opts?.body || '{}');
@@ -147,7 +146,7 @@ async function setupFiscalSecrets() {
           text: async () => JSON.stringify({ signature }),
         };
       }
-      return realFetch ? realFetch(url, opts) : Promise.reject(new Error('offline fetch: ' + url));
+      throw new Error('OFFLINE_EXTERNAL_FETCH_BLOCKED');
     };
   }
   const cajas = await import('backend/cajas.web.js');
