@@ -105,8 +105,8 @@ function numeric(value, field, { allowZero = true } = {}) {
     if (typeof value === "number") {
         amount = value;
     } else if (typeof value === "string") {
-        let raw = value.trim().replace(/\\s+/g, "").replace(/€$/i, "");
-        if (!raw || !/^\\d+(?:[.,]\\d+)*$/.test(raw)) {
+        let raw = value.trim().replace(/\s+/g, "").replace(/€$/i, "");
+        if (!raw || !/^\d+(?:[.,]\d+)*$/.test(raw)) {
             throw new Error("TPV_INVALID_" + field);
         }
         const comma = raw.lastIndexOf(",");
@@ -118,9 +118,9 @@ function numeric(value, field, { allowZero = true } = {}) {
             const grouping = decimal === "," ? "." : ",";
             const parts = raw.split(decimal);
             const groups = parts[0].split(grouping);
-            if (parts.length !== 2 || !/^\\d{1,2}$/.test(parts[1]) ||
-                !/^\\d{1,3}$/.test(groups[0]) ||
-                !groups.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+            if (parts.length !== 2 || !/^\d{1,2}$/.test(parts[1]) ||
+                !/^\d{1,3}$/.test(groups[0]) ||
+                !groups.slice(1).every((part) => /^\d{3}$/.test(part))) {
                 throw new Error("TPV_INVALID_" + field);
             }
             integerPart = groups.join("");
@@ -131,8 +131,8 @@ function numeric(value, field, { allowZero = true } = {}) {
             if (parts.length === 2 && parts[1].length >= 1 && parts[1].length <= 2) {
                 integerPart = parts[0];
                 fractionPart = parts[1];
-            } else if (parts.length > 2 && /^\\d{1,3}$/.test(parts[0]) &&
-                parts.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+            } else if (parts.length > 2 && /^\d{1,3}$/.test(parts[0]) &&
+                parts.slice(1).every((part) => /^\d{3}$/.test(part))) {
                 integerPart = parts.join("");
             } else {
                 throw new Error("TPV_INVALID_" + field);
