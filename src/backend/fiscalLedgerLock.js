@@ -336,7 +336,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                     userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
                     technicalDetail: "Se agotó la ventana de espera del lock fiscal; el lock activo no se modifica ni se fuerza.",
                     remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si sigue activo después de expirar, solicitar revisión al administrador técnico; no eliminarlo manualmente."],
-                    contextSnapshot: { lockId: LOCK_ID, waitMs, traceId: lockTraceId },
+                    contextSnapshot: { lockId: LOCK_ID, lockStatus: "ACTIVE", expiresAt: expiresAt.toISOString(), waitMs, traceId: lockTraceId },
                     retryable: true,
                 });
             }
