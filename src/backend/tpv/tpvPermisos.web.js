@@ -10,7 +10,6 @@ export const obtenerPermisosTPV = webMethod(
         const traceId = makeTraceId("tpv-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
-        const isAdmin = staff?.rolWebsite === "ADMIN";
         return {
             status: "SUCCESS",
             data: {
