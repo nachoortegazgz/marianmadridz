@@ -34,8 +34,8 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
     assert.match(script, /customerIdentityId: state\.customerIdentityId/);
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
-    assert.match(controller, /lineas: lineItems\.map/);
-    assert.match(controller, /pagos: payments\.map/);
+    assert.match(controller, /const lineas = payload\.lineItems\.map/);
+    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);\n    assert.match(controller, /lineas,\\s*pagos,/);
     assert.match(controller, /medioPago:/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
