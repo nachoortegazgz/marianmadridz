@@ -420,7 +420,6 @@ export function MovimientosCaja_beforeInsert(item) {
         movementType.startsWith("SIMULATED_TPV_") ||
         movementType.startsWith("SANDBOX_LOGICAL_") ||
         recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource === TPV_HISTORICAL_POLICY.SOURCE_TYPE ||
         recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
