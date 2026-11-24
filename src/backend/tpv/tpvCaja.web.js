@@ -9,7 +9,7 @@ import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
-    return { status: "ERROR", data: null, error: { code }, persisted: false, realPayment: false };
+    return { status: "ERROR", data: null, error: { code }, persisted: false };
 }
 
 const OPERATIONAL_CASH_STATUS = Object.freeze({
@@ -54,8 +54,6 @@ export const inicializarCaja = webMethod(
                 },
                 error: null,
                 traceId,
-                isSynthetic: true,
-                realPayment: false,
             };
         } catch (error) {
             return {
@@ -64,8 +62,6 @@ export const inicializarCaja = webMethod(
                 error: { code: String(error?.message || "TPV_BOOTSTRAP_FAILED") },
                 traceId,
                 persisted: false,
-                isSynthetic: true,
-                realPayment: false,
             };
         }
     }
@@ -100,8 +96,6 @@ export const obtenerEstadoCaja = webMethod(
                 },
                 error: null,
                 traceId,
-                isSynthetic: true,
-                realPayment: false,
             };
         }
         const status = operationalStatus(session.status);
@@ -135,8 +129,6 @@ export const obtenerEstadoCaja = webMethod(
                 simulationStatus: "SYNTHETIC",
                 paymentStatus: "NOT_APPLICABLE",
                 ...responseClock(),
-                isSynthetic: true,
-                realPayment: false,
             },
             error: null,
             traceId,
@@ -213,8 +205,6 @@ export const abrirSesionCaja = webMethod(
                         ...responseClock(),
                         replayed,
                         persisted: true,
-                        isSynthetic: true,
-                        realPayment: false,
                     },
                     error: null,
                     traceId,
@@ -222,7 +212,7 @@ export const abrirSesionCaja = webMethod(
             });
 
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_SESSION_OPEN_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_SESSION_OPEN_FAILED")), persisted, recoverable: persisted };
         }
     }
 );
@@ -305,15 +295,13 @@ export const registrarArqueoParcial = webMethod(
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     replayed,
                     persisted: true,
-                    isSynthetic: true,
-                    realPayment: false,
                 },
                 error: null,
                 traceId,
             };
             });
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted, isSynthetic: true };
+            return { ...errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted };
         }
     }
 );
