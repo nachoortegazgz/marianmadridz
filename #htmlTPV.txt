@@ -447,6 +447,18 @@ body {
     operationalWritesAvailable: false,
   };
 
+  const BUTTON_CAPABILITIES = Object.freeze({
+    saveSale: "createSale",
+    cashIn: "registerCashMovement",
+    cashOut: "registerCashMovement",
+    refund: "requestRefund",
+    partialCount: "registerCashMovement",
+    ticketX: "issueTicketX",
+    ticketZ: "issueTicketZ",
+    exportMovements: "exportMovements",
+    exportAudit: "exportAudit",
+  });
+
   /* ---------- Toast ---------- */
   let toastTimer;
   function toast(msg) {
@@ -659,18 +671,7 @@ body {
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
       state.capabilities.openSession !== true;
-    const capabilityByButton = {
-      saveSale: "createSale",
-      cashIn: "registerCashMovement",
-      cashOut: "registerCashMovement",
-      refund: "requestRefund",
-      partialCount: "registerCashMovement",
-      ticketX: "issueTicketX",
-      ticketZ: "issueTicketZ",
-      exportMovements: "exportMovements",
-      exportAudit: "exportAudit",
-    };
-    Object.entries(capabilityByButton).forEach(([id, capability]) => {
+    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       $(id).disabled = !isOpen || state.busy || state.capabilities[capability] !== true;
     });
     if (!state.operationalWritesAvailable) {
@@ -694,18 +695,7 @@ body {
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession ||
       state.capabilities.openSession !== true;
-    const capabilityByButton = {
-      saveSale: "createSale",
-      cashIn: "registerCashMovement",
-      cashOut: "registerCashMovement",
-      refund: "requestRefund",
-      partialCount: "registerCashMovement",
-      ticketX: "issueTicketX",
-      ticketZ: "issueTicketZ",
-      exportMovements: "exportMovements",
-      exportAudit: "exportAudit",
-    };
-    Object.entries(capabilityByButton).forEach(([id, capability]) => {
+    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
       if (el) el.disabled = value || !isOpen || state.capabilities[capability] !== true;
     });
