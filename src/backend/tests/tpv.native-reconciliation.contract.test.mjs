@@ -46,8 +46,9 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /toMinorUnits\(input\.openingCash, "OPENING_CASH"\)/);
     assert.match(caja, /payload: makeTpvPayload\(\{ traceId, replayed, sessionId \}\)/);
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
-    assert.match(controller, /lineas: lineItems\.map/);
-    assert.match(controller, /pagos: payments\.map/);
+    assert.match(controller, /const lineas = payload\.lineItems\.map/);
+    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
+    assert.match(controller, /lineas,\s*pagos,/);
     assert.match(sales, /validateSaleDraft\(venta\)/);
 });
 
@@ -222,7 +223,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
     assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
-    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
+    assert.match(controller, /const sessionId = optionalString\(payload\.sessionId, 160\)/);
+    assert.match(controller, /if \(!sessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
     assert.match(widget, /operatorLabel/);
     assert.match(widget, /operationalStatus === "CERRADA"/);
