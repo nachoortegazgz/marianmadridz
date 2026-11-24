@@ -401,7 +401,9 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
 test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
-    assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
+    assert.match(repository, /while \(pages\.some\(\(page\) => page\.hasNext\) && records\.length < maxRecords\)/);
+    assert.match(repository, /pages\[index\] = await pages\[index\]\.next\(\)/);
+    assert.match(repository, /recordTimestamp ASC/);
     assert.match(repository, /export async function getPendingTpvSales\(sessionId\)/);
     assert.match(repository, /export async function getPendingTpvRefunds\(sessionId\)/);
     assert.match(repository, /actualByMethod\.size !== expectedByMethod\.size/);
