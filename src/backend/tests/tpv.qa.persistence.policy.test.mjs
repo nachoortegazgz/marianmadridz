@@ -185,6 +185,10 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         },
     };
 
+    const neutralItem = structuredClone(item);
+    delete neutralItem.payloadFiscal.isSynthetic;
+    delete neutralItem.payloadFiscal.realPayment;
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", neutralItem));
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
