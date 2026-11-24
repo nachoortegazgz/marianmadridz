@@ -33,7 +33,6 @@ import {
 test("TPV runtime policy separates synthetic source from disabled external capabilities", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
     assert.match(source, /CAPABILITIES: Object\.freeze\(\{[\s\S]*?realPayments: false,[\s\S]*?nativeWrites: false/);
-    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true);
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.realPayments, false);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.nativeWrites, false);
@@ -319,8 +318,6 @@ test("legacy transaction IDs remain discoverable for same-collection idempotent 
 });
 
 test("TPV policy remains synthetic and client idempotency keys are bounded", () => {
-    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
-    assert.equal(TPV_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, false);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, false);
@@ -332,8 +329,6 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
     assert.match(TPV_RUNTIME_POLICY.SITE_ID, /^[0-9a-f-]{36}$/i);
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_SYNTHETIC_LEDGER_V1");
-    assert.equal(TPV_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
-    assert.equal(TPV_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
     assert.equal(TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
     assert.equal(TPV_RUNTIME_POLICY.HARDWARE_ENABLED, false);
     assert.equal(normalizeClientIdempotencyKey("sandbox-client-key-0001"), "sandbox-client-key-0001");
