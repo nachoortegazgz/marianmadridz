@@ -48,8 +48,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
     assert.match(controller, /lineas: lineItems\.map/);
     assert.match(controller, /pagos: payments\.map/);
-    assert.match(sales, /lineas: input\.lineas/);
-    assert.match(sales, /pagos: input\.pagos/);
+    assert.match(sales, /validateSaleDraft\(venta\)/);
 });
 
 test("TPV role guards and session lifecycle are explicit backend contracts", async () => {
@@ -66,7 +65,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
-    assert.match(permissions, /createSale: isAdmin/);
+    assert.match(permissions, /createSale: false/);
     assert.match(permissions, /openSession: isAdmin/);
     assert.match(permissions, /closeSession: isAdmin/);
 
@@ -93,11 +92,10 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 });
 
 test("TPV split payments reconcile in minor units and cash movements affect physical cash only", async () => {
-    const [validation, summary, movements, refunds, config] = await Promise.all([
+    const [validation, summary, movements, config] = await Promise.all([
         source("tpv/tpvValidation.js"),
         source("tpv/tpvCierresCore.js"),
         source("tpv/tpvMovimientos.web.js"),
-        source("tpv/tpvDevoluciones.web.js"),
         source("internalConfig.js"),
     ]);
 
@@ -115,13 +113,11 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.match(summary, /case "BIZUM": totals\.bizumMinor \+= amount/);
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.BONO:"));
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.TARJETA_REGALO:"));
-    assert.ok(refunds.includes("Object.values(TPV_PAYMENT_METHOD)"));
     assert.ok(summary.includes("case TPV_PAYMENT_METHOD.OTROS:"));
     assert.match(summary, /totals\.expectedCashMinor = totals\.openingCashMinor \+ totals\.cashMinor \+ totals\.cashInMinor - totals\.cashOutMinor/);
     assert.match(movements, /input\.paymentMethod \|\| TPV_PAYMENT_METHOD\.EFECTIVO/);
     assert.match(movements, /affectsPhysicalCash: true/);
     assert.match(movements, /normalizeClientIdempotencyKey\(input\.idempotencyKey\)/);
-    assert.match(refunds, /paymentMethod: "EFECTIVO"/);
     assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
 });
@@ -161,7 +157,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /Auditoría de operaciones/);
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
-    assert.match(sales, /fiscalLedgerWritten: false/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(config, /fiscalEmission: false/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
     assert.doesNotMatch(sales, /createOrder|createInvoice|verifactuQrUrl/i);
@@ -201,7 +197,6 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /latestOpenTpvSession|withTpvSessionLock|insertTpvEvent/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(closures, /paymentStatus: "NOT_APPLICABLE"/);
