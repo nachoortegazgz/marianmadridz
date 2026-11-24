@@ -15,7 +15,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_HISTORICAL_POLICY, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
 import { createPersistedTpvProjectionError } from "backend/tpv/tpvMovementContracts";
 import {
@@ -313,54 +313,43 @@ function _eventAmount(record) {
     return Number.isSafeInteger(gross) ? gross / 100 : 0;
 }
 
-function _isHistoricalTpvLedgerItem(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item) ||
-        !(Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) ||
-            Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) return false;
+function _isRecognizedSyntheticLedgerItem(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item) || !(Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) return false;
     const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
     const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""));
-    const validCommon = [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES]
-        .some((types) => types[envelope.logicalCollection] === item.movementType) &&
+    const validCommon = [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[envelope.logicalCollection] === item.movementType) &&
         (envelope.isSynthetic === undefined || envelope.isSynthetic === true) &&
         (envelope.realPayment === undefined || envelope.realPayment === false) &&
-        envelope.externalSideEffects === false && validHash && validFingerprint;
+        envelope.externalSideEffects === false && validHash;
+    const validCurrentCommon = validCommon && validFingerprint;
     const validSessionOrAudit = envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
         Boolean(String(envelope.sessionId || "").trim());
     const validTraceForSite = String(item.traceId || "").startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":");
-    const currentRecordSources = [TPV_LEDGER_SOURCE, TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE];
-    const historicalV2 = currentRecordSources.includes(item.recordSource) &&
-        envelope.sourceType === TPV_HISTORICAL_POLICY.SOURCE_TYPE &&
-        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-        envelope.ledgerVersion === TPV_HISTORICAL_POLICY.LEDGER_VERSION &&
-        Number(envelope.schemaVersion) === TPV_HISTORICAL_POLICY.SCHEMA_VERSION &&
-        envelope.reconciliationStatus === TPV_HISTORICAL_POLICY.RECONCILIATION_STATUS &&
-        validSessionOrAudit && validTraceForSite;
-    const legacyRunId = String(envelope.legacyRunId || envelope.sandboxRunId || "").trim();
-    const legacy = [
-        TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE,
-        TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
-        TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE,
-    ].includes(item.recordSource) &&
-        legacyRunId === TPV_HISTORICAL_POLICY.LEGACY_RUN_ID &&
-        (String(item.traceId || "").startsWith("TPV:" + legacyRunId + ":") ||
-            String(item.traceId || "") === legacyRunId);
-    return validCommon && (historicalV2 || legacy);
-}
-
-function _isCanonicalTpvLedgerItem(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
-    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
-    return item.recordSource === TPV_LEDGER_SOURCE &&
-        Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) &&
-        Number.isSafeInteger(Number(item.sequenceNumber)) && Number(item.sequenceNumber) > 0 &&
+    const currentRecordSources = [TPV_LEDGER_SOURCE, TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE];
+    const currentV2 = currentRecordSources.includes(item.recordSource) &&
         envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
         Number(envelope.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-        Boolean(String(envelope.sessionId || "").trim()) &&
-        /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
-        /^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""));
+        envelope.reconciliationStatus === "NOT_RECONCILED" &&
+        validSessionOrAudit && validTraceForSite;
+    const currentV1 = currentRecordSources.includes(item.recordSource) &&
+        envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        (envelope.schemaVersion === undefined || envelope.schemaVersion === null || Number(envelope.schemaVersion) === 1) &&
+        (envelope.reconciliationStatus === undefined || envelope.reconciliationStatus === "NOT_RECONCILED") &&
+        validSessionOrAudit && validTraceForSite;
+    const legacyRunId = String(envelope.legacyRunId || envelope.sandboxRunId || "").trim();
+    const legacy = [
+        TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
+        TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
+    ].includes(item.recordSource) &&
+        legacyRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID &&
+        (String(item.traceId || "").startsWith("TPV:" + legacyRunId + ":") ||
+            String(item.traceId || "") === legacyRunId);
+    return (validCurrentCommon && (currentV2 || currentV1)) || (validCommon && legacy);
 }
 
 function _virtualRecord(item) {
@@ -377,9 +366,6 @@ function _virtualRecord(item) {
         _id: item._id,
         _createdDate: item._createdDate,
         _updatedDate: item._updatedDate,
-        sequenceNumber: item.sequenceNumber,
-        hash: item.hash,
-        previousRecordHash: item.previousRecordHash,
         idempotencyKey: envelope.idempotencyKey,
         payload: { ...(record.payload && typeof record.payload === "object" ? record.payload : {}), requestFingerprint: envelope.requestFingerprint },
         payloadFiscal: envelope,
@@ -418,18 +404,53 @@ async function _ensureCajaActual() {
     return caja;
 }
 
-function _sessionFromCaja(caja) {
-    const state = getTpvRuntimeState(caja);
-    const sessionId = String(state?.sessionId || "").trim();
-    const valid = ["ABIERTA", "CERRADA"].includes(caja?.cashRegisterStatus) &&
+function _isCurrentV1Caja(caja, state = getTpvRuntimeState(caja)) {
+    const traceId = String(caja?.traceId || "");
+    const validFingerprint = /^[a-f0-9]{64}$/i.test(String(state?.requestFingerprint || ""));
+    const validTrace = traceId.startsWith("TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":") ||
+        traceId.startsWith("TPV_SESSION:");
+    return caja?.cashRegisterStatus === "SIMULACION" &&
         caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
         state?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
         state?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
         state?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-        Number(state?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-        Boolean(sessionId) &&
-        /^[a-f0-9]{64}$/i.test(String(state?.eventHash || ""));
-    if (!valid) return null;
+        (state?.schemaVersion === undefined || state?.schemaVersion === null || Number(state.schemaVersion) === 1) &&
+        (state?.reconciliationStatus === undefined || state?.reconciliationStatus === "NOT_RECONCILED") &&
+        state?.externalSideEffects === false &&
+        Boolean(String(state?.sessionId || "").trim()) &&
+        (validFingerprint || validTrace);
+}
+
+function _isLegacyCaja(caja, state = getTpvRuntimeState(caja), { requireSession = true } = {}) {
+    const legacyRunId = TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+    return [
+        TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
+        TPV_RUNTIME_POLICY.LEGACY_CASH_REGISTER_SOURCE,
+    ].includes(String(caja?.snapshotSource || "")) &&
+        caja?.traceId === legacyRunId &&
+        (state?.sandboxRunId === legacyRunId || state?.legacyRunId === legacyRunId) &&
+        (!requireSession || Boolean(String(state?.sessionId || "").trim()));
+}
+
+function _sessionFromCaja(caja) {
+    const sourceState = getTpvRuntimeState(caja);
+    const sessionId = String(sourceState?.sessionId || "").trim();
+    const explicitSyntheticV2 = caja?.cashRegisterStatus === "SIMULACION" &&
+        caja?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        sourceState?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        sourceState?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        sourceState?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(sourceState?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+        sourceState?.externalSideEffects === false &&
+        (sourceState?.processingMode === undefined || sourceState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+        (sourceState?.reconciliationStatus === undefined || sourceState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
+        /^[a-f0-9]{64}$/i.test(String(sourceState?.eventHash || "")) &&
+        Boolean(sessionId);
+    const currentV1 = _isCurrentV1Caja(caja, sourceState);
+    const legacySynthetic = caja?.cashRegisterStatus === "SIMULACION" &&
+        _isLegacyCaja(caja, sourceState);
+    if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) return null;
+    if (!sessionId) throw new Error("TPV_SESSION_ID_MISSING");
     const openedAt = caja.openedAt instanceof Date ? caja.openedAt : new Date(caja.openedAt || 0);
     const closedAt = caja.closedAt ? (caja.closedAt instanceof Date ? caja.closedAt : new Date(caja.closedAt)) : null;
     return {
@@ -439,24 +460,514 @@ function _sessionFromCaja(caja) {
         openedAt,
         closedAt,
         openingCashMinor: Math.round(Number(caja.openingCashAmount || 0) * 100),
-        expectedCashMinor: Math.round(Number(caja.expectedCash || 0) * 100),
-        countedCashMinor: Math.round(Number(caja.countedCash || 0) * 100),
-        differenceMinor: Math.round(Number(caja.difference || 0) * 100),
-        operatorId: state.operatorId || caja.openedBy || null,
-        actorId: state.actorId || caja.openedBy || null,
-        operatorDisplayName: state.operatorDisplayName || null,
-        operatorResourceId: state.operatorResourceId || null,
-        traceId: caja.traceId || null,
-        hash: state.eventHash,
-        payload: {
+        cashierMemberId: caja.openedBy || null,
+        operatorId: caja.openedBy || null,
+        actorId: caja.openedBy || null,
+        operatorDisplayName: String(sourceState?.operatorDisplayName || "").trim() || null,
+        operatorResourceId: String(sourceState?.operatorResourceId || "").trim() || null,
+        conceptOperations: caja.conceptOperations,
+        payloadFiscal: { requestFingerprint: sourceState?.requestFingerprint },
+        payload: makeSyntheticPayload({
             sessionId,
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-            schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-        },
+            traceId: caja.traceId || "",
+            dayKey: openedAt.toISOString().slice(0, 10).replace(/-/g, ""),
+            source: explicitSyntheticV2 || currentV1
+                ? TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE
+                : TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE,
+        }),
+        _createdDate: caja._createdDate,
+        _updatedDate: caja._updatedDate,
         persisted: true,
     };
+}
+
+async function _writeCajaProjection(collection, record, eventId, eventHash) {
+    return withCajaActualProjectionLock(
+        String(record?.traceId || eventId || "TPV_CAJA_PROJECTION"),
+        async (lock) => {
+            const caja = await _getCajaActual();
+            if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_FOUND");
+            assertTpvCajaIntegrity(caja);
+            const preflightRuntimeState = getTpvRuntimeState(caja);
+            const explicitSyntheticV2 = caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+                preflightRuntimeState.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+                preflightRuntimeState.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+                preflightRuntimeState.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+                Number(preflightRuntimeState.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+                preflightRuntimeState.externalSideEffects === false &&
+                (preflightRuntimeState.processingMode === undefined || preflightRuntimeState.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
+                (preflightRuntimeState.reconciliationStatus === undefined || preflightRuntimeState.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) &&
+                /^[a-f0-9]{64}$/i.test(String(preflightRuntimeState.eventHash || "")) &&
+                Boolean(String(preflightRuntimeState.sessionId || "").trim());
+            const currentV1 = _isCurrentV1Caja(caja, preflightRuntimeState);
+            const legacySynthetic = _isLegacyCaja(caja, preflightRuntimeState);
+            if (!explicitSyntheticV2 && !currentV1 && !legacySynthetic) {
+                throw new Error("TPV_CASH_REGISTER_INTEGRITY_FAILED");
+            }
+            const conceptOperations = caja.conceptOperations && typeof caja.conceptOperations === "object"
+                ? { ...caja.conceptOperations }
+                : {};
+            const sourceState = { ...getTpvRuntimeState({ conceptOperations }) };
+            const appliedIds = Array.isArray(sourceState.appliedMovementIds) ? sourceState.appliedMovementIds : [];
+            if (eventId && appliedIds.includes(eventId)) return caja;
+            if (eventId && appliedIds.length >= MAX_TPV_PROJECTION_EVENTS) {
+                throw new Error("TPV_PROJECTION_IDEMPOTENCY_LIMIT");
+            }
+            const now = new Date();
+            const next = { ...caja, _updatedDate: now };
+            next.lastOperationId = eventId || caja.lastOperationId;
+            next.lastOperationAt = now;
+            next.lastOperationStatus = "SIMULATED";
+            next.traceId = String(record.traceId || caja.traceId || "");
+            next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
+            next.cashRegisterStatus = "SIMULACION";
+
+            if (collection === TPV_COLLECTIONS.VENTAS && ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) {
+                next.salesCount = Number(caja.salesCount || 0) + 1;
+            }
+            if (collection === TPV_COLLECTIONS.PAGOS) {
+                const method = String(record.paymentMethod || "").toUpperCase();
+                const amount = Number(record.amountMinor || 0) / 100;
+                if (method === "EFECTIVO") next.cashAmount = Number(caja.cashAmount || 0) + amount;
+                else if (method === "TARJETA") next.cardAmount = Number(caja.cardAmount || 0) + amount;
+                else if (method === "BIZUM") next.bizumAmount = Number(caja.bizumAmount || 0) + amount;
+                else next.otherAmount = Number(caja.otherAmount || 0) + amount;
+                next.expectedCash = Number(next.cashAmount || 0);
+            }
+            if (collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA) {
+                const type = String(record.movementType || "").toUpperCase();
+                const amount = Number(record.amountMinor || 0) / 100;
+                if (type === "ENTRADA") next.cashAmount = Number(caja.cashAmount || 0) + amount;
+                if (type === "SALIDA" || type === "RETIRADA") next.cashAmount = Number(caja.cashAmount || 0) - amount;
+                if (type === "ARQUEO_PARCIAL") {
+                    next.countedCash = amount;
+                    next.difference = amount - Number(caja.cashAmount || 0);
+                    next.differenceReason = String(record.reason || "");
+                }
+                next.expectedCash = Number(next.cashAmount || 0);
+            }
+            if (collection === TPV_COLLECTIONS.TICKET_Z) {
+                next.closedAt = record.generatedAt || now;
+                next.closedBy = record.operatorId || record.actorId || null;
+                next.countedCash = Number(record.totals?.countedCashMinor || 0) / 100;
+                next.expectedCash = Number(record.totals?.expectedCashMinor || 0) / 100;
+                next.difference = Number(record.totals?.differenceMinor || 0) / 100;
+                next.differenceReason = String(record.totals?.differenceReason || "");
+                next.lastOperationType = "TPV_SESSION_CLOSE";
+            } else {
+                next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
+            }
+            sourceState.sourceType = TPV_RUNTIME_POLICY.SOURCE_TYPE;
+            sourceState.siteId = TPV_RUNTIME_POLICY.SITE_ID;
+            sourceState.ledgerVersion = TPV_RUNTIME_POLICY.LEDGER_VERSION;
+            sourceState.externalSideEffects = false;
+            sourceState.schemaVersion = TPV_RUNTIME_POLICY.SCHEMA_VERSION;
+            sourceState.processingMode = TPV_RUNTIME_POLICY.PROCESSING_MODE;
+            sourceState.reconciliationStatus = TPV_RUNTIME_POLICY.RECONCILIATION_STATUS;
+            sourceState.allowNativePayments = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments;
+            sourceState.allowNativeRefunds = TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds;
+            sourceState.eventHash = String(eventHash || sourceState.eventHash || "");
+            sourceState.sessionId = String(sourceState.sessionId || record.sessionId || record.payload?.sessionId || "");
+            sourceState.appliedMovementIds = eventId ? [...appliedIds, eventId] : appliedIds;
+            sourceState.lastProjectedAt = now;
+            conceptOperations.tpvRuntime = sourceState;
+            next.conceptOperations = conceptOperations;
+            await assertFiscalLedgerLock(lock);
+            await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, next);
+            return next;
+        }
+    );
+}
+
+function _shouldProject(collection, record) {
+    if (collection === TPV_COLLECTIONS.PAGOS ||
+        collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA ||
+        collection === TPV_COLLECTIONS.TICKET_Z) return true;
+    return collection === TPV_COLLECTIONS.VENTAS &&
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record?.status);
+}
+
+async function _projectPersistedTpvEvent(collection, record, recordId, hash, idempotencyKey, replayed) {
+    if (!_shouldProject(collection, record)) return;
+    try {
+        await _writeCajaProjection(collection, record, recordId, hash);
+    } catch (cause) {
+        throw createPersistedTpvProjectionError(cause, {
+            recordId,
+            idempotencyKey,
+            replayed,
+        });
+    }
+}
+
+function _sessionCajaPatch(caja, record, eventHash) {
+    const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
+    const openingCash = Number(record.openingCashMinor || 0) / 100;
+    return {
+        ...caja,
+        cashRegisterStatus: "SIMULACION",
+        openedAt,
+        closedAt: null,
+        openedBy: record.operatorId || record.cashierMemberId || null,
+        closedBy: "",
+        openingCashAmount: openingCash,
+        openingCardAmount: 0,
+        openingBizumAmount: 0,
+        openingOtherAmount: 0,
+        cashAmount: openingCash,
+        cardAmount: 0,
+        bizumAmount: 0,
+        otherAmount: 0,
+        expectedCash: openingCash,
+        countedCash: openingCash,
+        difference: 0,
+        differenceReason: "",
+        salesCount: 0,
+        snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
+        traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
+        lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
+        lastOperationType: "TPV_SESSION_OPEN",
+        lastOperationAmount: openingCash,
+        lastOperationPaymentMethod: "EFECTIVO",
+        lastOperationAt: openedAt,
+        lastOperationStatus: "SIMULATED",
+        conceptOperations: {
+            ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
+            tpvRuntime: {
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+                externalSideEffects: false,
+                processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+                reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+                allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+                allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
+                eventHash: String(eventHash || ""),
+                sessionId: record.sessionId,
+                actorId: String(record.actorId || record.operatorId || record.cashierMemberId || "").trim() || null,
+                operatorId: String(record.operatorId || record.cashierMemberId || "").trim() || null,
+                operatorDisplayName: String(record.operatorDisplayName || "").trim() || null,
+                operatorResourceId: String(record.operatorResourceId || "").trim() || null,
+                requestFingerprint: String(record.requestFingerprint || eventHash || "") || null,
+                openedAt,
+                appliedMovementIds: [],
+            },
+        },
+        _updatedDate: new Date(),
+    };
+}
+
+async function findByIdempotencyKey(collection, key) {
+    _assertLogicalCollection(collection);
+    if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
+        const caja = await _getCajaActual();
+        const session = _sessionFromCaja(caja);
+        return session && session.sessionId ? session : null;
+    }
+    const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
+    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    const transactionIds = [
+        _testTransactionId(collection, key),
+        makeLegacyTpvTransactionIdByCollection(collection, key),
+        makeLegacyTpvTransactionId(key),
+    ];
+    const uniqueTransactionIds = [...new Set(transactionIds)];
+    for (const transactionId of uniqueTransactionIds) {
+        const result = await queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.and(
+                wql.eq("movementType", movementType),
+                wql.eq("transactionId", transactionId)
+            ),
+            limit: 2,
+            consistency: CONSISTENCY.STRONG,
+        });
+        if (result.items.length > 1) throw new Error("TPV_IDEMPOTENCY_INDEX_VIOLATION");
+        if (result.items[0] && _isRecognizedSyntheticLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
+    }
+    return null;
+}
+
+function assertSameRequest(existing, fingerprint) {
+    const existingFingerprint = existing?.payloadFiscal?.requestFingerprint ||
+        existing?.payload?.requestFingerprint ||
+        getTpvRuntimeState(existing).requestFingerprint;
+    if (existingFingerprint !== fingerprint) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+    return { item: existing, replayed: true };
+}
+
+function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
+    const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
+    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
+    const timestamp = now instanceof Date ? now : new Date(now);
+    if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_RECORD_TIMESTAMP_INVALID");
+    const dateYmd = timestamp.toLocaleDateString("en-CA", { timeZone: TPV_RUNTIME_POLICY.TIME_ZONE });
+    const transactionId = _testTransactionId(collection, key);
+    const amount = _eventAmount(record);
+    const sessionId = String(record.sessionId || record.payload?.sessionId || "").trim();
+    const traceId = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + String(sessionId || "GLOBAL");
+    const envelope = {
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+        processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
+        reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
+        allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
+        allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
+        sessionId: sessionId || null,
+        logicalCollection: collection,
+        idempotencyKey: key,
+        requestFingerprint: fingerprint,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+        ledgerRecord: record,
+        externalSideEffects: false,
+    };
+    const hashPayload = stableSerialize({
+        sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+        sessionId: sessionId || null,
+        logicalCollection: collection,
+        transactionId,
+        traceId,
+        record,
+    });
+    const hash = createHash("sha256").update(hashPayload).digest("hex");
+    return {
+        _id: transactionId,
+        hash,
+        sequenceNumber: 0,
+        numSerieFactura: "TPV-SYNTHETIC-NO-FISCAL-" + transactionId.slice(-20),
+        transactionId,
+        previousRecordHash: TPV_GENESIS_HASH,
+        recordTimestamp: timestamp,
+        schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
+        traceId,
+        movementType,
+        totalAmount: amount,
+        amount,
+        taxBase: 0,
+        taxAmount: 0,
+        paymentMethod: String(record.paymentMethod || "OTROS").toUpperCase(),
+        channelType: "PRESENCIAL",
+        operationDescription: "TPV SYNTHETIC " + collection,
+        staffResourceId: String(record.operatorResourceId || ""),
+        tipoFactura: "F2",
+        fechaExpedicionFactura: dateYmd,
+        tipoImpositivo: 0,
+        fiscalPeriod: dateYmd.slice(0, 7),
+        recordSource: TPV_LEDGER_SOURCE,
+        payloadFiscal: envelope,
+        desgloseDetallado: { accountCode: "SIMULATED" },
+        lineItems: { ledgerRecord: record.lineItems || [] },
+    };
+}
+
+function _matchesFilter(record, filter) {
+    if (!filter || typeof filter !== "object") return true;
+    if (Array.isArray(filter.$and)) return filter.$and.every((part) => _matchesFilter(record, part));
+    if (Array.isArray(filter.$or)) return filter.$or.some((part) => _matchesFilter(record, part));
+    return Object.entries(filter).every(([field, clause]) => {
+        const value = field.split(".").reduce((current, key) => current?.[key], record);
+        if (!clause || typeof clause !== "object" || Array.isArray(clause)) return value === clause;
+        return Object.entries(clause).every(([operator, expected]) => {
+            if (operator === "$eq") return value === expected;
+            if (operator === "$ne") return value !== expected;
+            if (operator === "$in") return Array.isArray(expected) && expected.includes(value);
+            if (operator === "$gt") return value > expected;
+            if (operator === "$gte") return value >= expected;
+            if (operator === "$lt") return value < expected;
+            if (operator === "$lte") return value <= expected;
+            if (operator === "$startsWith") return String(value || "").startsWith(String(expected));
+            if (operator === "$contains") return String(value || "").includes(String(expected));
+            return false;
+        });
+    });
+}
+
+export async function insertTpvEvent(collection, idempotencyKey, data) {
+
+    assertTpvOperationalLedgerConfigured();
+
+    _assertLogicalCollection(collection);
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const record = { ...data };
+    const fingerprint = _fingerprintOf(record);
+
+    if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
+        return withCajaActualProjectionLock(
+            "TPV_SESSION:" + key,
+            async (lock) => {
+                const caja = await _ensureCajaActual();
+                assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+                const existing = await findByIdempotencyKey(collection, key);
+                if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
+                if (caja.closedAt == null && _sessionFromCaja(caja)) {
+                    throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
+                }
+                const updated = _sessionCajaPatch(caja, record, fingerprint);
+                await assertFiscalLedgerLock(lock);
+                const saved = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
+                return { item: _sessionFromCaja(saved), replayed: false };
+            }
+        );
+    }
+
+    const caja = await _getCajaActual();
+    assertTpvCajaIntegrity(caja);
+    const existing = await findByIdempotencyKey(collection, key);
+    if (existing) {
+        const replay = assertSameRequest(existing, fingerprint);
+        await _projectPersistedTpvEvent(
+            collection, existing, existing._id, existing.hash, key, true
+        );
+        return replay;
+    }
+
+    const ledgerItem = _buildSyntheticLedgerItem(collection, key, record, fingerprint);
+    let saved;
+    try {
+        saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
+    } catch (error) {
+        if (!_isDuplicateTpvKeyError(error)) throw error;
+        const winner = await findByIdempotencyKey(collection, key);
+        if (!winner) throw error;
+        const replay = assertSameRequest(winner, fingerprint);
+        await _projectPersistedTpvEvent(
+            collection, winner, winner._id, winner.hash, key, true
+        );
+        return replay;
+    }
+
+    const item = _virtualRecord({
+        ...ledgerItem,
+        _id: saved?._id || ledgerItem._id,
+        _createdDate: saved?._createdDate || new Date(),
+        _updatedDate: saved?._updatedDate || new Date(),
+    });
+    await _projectPersistedTpvEvent(
+        collection, record, item._id, item.hash, key, false
+    );
+    return { item, replayed: false };
+}
+
+export async function queryTpvRecords(collection, filter, options = {}) {
+
+    _assertLogicalCollection(collection);
+    if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
+        const session = _sessionFromCaja(await _getCajaActual());
+        const sessions = session ? [session] : [];
+        return sessions.filter((item) => _matchesFilter(item, filter));
+    }
+    const movementTypes = [...new Set([
+        TPV_EVENT_MOVEMENT_TYPES[collection],
+        TPV_LEGACY_EVENT_MOVEMENT_TYPES[collection],
+    ].filter(Boolean))];
+    if (!movementTypes.length) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
+    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+    const pages = await Promise.all(movementTypes.map((movementType) => queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        filter: wql.eq("movementType", movementType),
+        sort: ["recordTimestamp ASC"],
+        limit: pageSize,
+        consistency: CONSISTENCY.STRONG,
+    })));
+    const records = [];
+    const appendPage = (page) => records.push(...page.items
+        .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
+        .filter((item) => _matchesFilter(item, filter)));
+    pages.forEach(appendPage);
+    if (options.allowTruncated !== true) {
+        while (pages.some((page) => page.hasNext) && records.length < maxRecords) {
+            for (let index = 0; index < pages.length; index += 1) {
+                if (pages[index].hasNext && records.length < maxRecords) {
+                    pages[index] = await pages[index].next();
+                    appendPage(pages[index]);
+                }
+            }
+        }
+        if (pages.some((page) => page.hasNext)) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
+    }
+    const sortSpec = Array.isArray(options.sort) && options.sort.length
+        ? options.sort
+        : ["recordTimestamp ASC"];
+    if (sortSpec.length) {
+        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\s+/);
+        records.sort((a, b) => {
+            const av = field.split(".").reduce((v, k) => v?.[k], a);
+            const bv = field.split(".").reduce((v, k) => v?.[k], b);
+            const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+            return direction.toUpperCase() === "DESC" ? -cmp : cmp;
+        });
+    }
+    return records.slice(0, maxRecords);
+}
+
+export async function queryTpvLedgerRecords(options = {}) {
+
+    const limit = Number(options.limit ?? 100);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
+        throw new Error("TPV_LEDGER_INVALID_LIMIT");
+    }
+    const [current, legacy, previous] = await Promise.all([
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
+    ]);
+    const records = [...current.items, ...legacy.items, ...previous.items]
+        .filter(_isRecognizedSyntheticLedgerItem)
+        .map(_virtualRecord)
+        .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
+        .slice(0, limit);
+    return { records, hasMore: current.hasNext === true || legacy.hasNext === true || previous.hasNext === true ||
+        current.items.length + legacy.items.length + previous.items.length > limit };
+}
+
+export async function appendTpvAudit({
+    idempotencyKey,
+    action,
+    actorId,
+    entityType,
+    entityId,
+    traceId,
+    payload = {},
+}) {
+    const { item, replayed } = await insertTpvEvent(
+        TPV_COLLECTIONS.AUDITORIA,
+        idempotencyKey,
+        {
+            action: String(action || "UNKNOWN").slice(0, 80),
+            actorId: String(actorId || "UNKNOWN").slice(0, 100),
+            entityType: String(entityType || "TPV").slice(0, 80),
+            entityId: String(entityId || "").slice(0, 120),
+            occurredAt: new Date(),
+            source: "TPV_WEB_METHOD",
+            payload: { ...payload, traceId: String(traceId || "") },
+        }
+    );
+    return { item, replayed };
 }
 
 export async function latestTpvSession() {
@@ -493,7 +1004,7 @@ export async function latestOpenTpvSession() {
 export async function getCommittedTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     return records.filter((item) =>
-        ["CONFIRMADA"].includes(item.status) &&
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }
@@ -504,7 +1015,7 @@ export async function getPendingTpvSales(sessionId) {
         .filter((item) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status))
         .map((item) => item.saleId));
     return records.filter((item) =>
-        ["PREPARADA"].includes(item.status) &&
+        ["PREPARADA", "PREPARADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId &&
         !committedIds.has(item.saleId)
     );
@@ -541,11 +1052,11 @@ export async function getPendingTpvRefunds(sessionId) {
         }
 
         const refundPayments = payments.filter((payment) =>
-            payment.status === "REEMBOLSO_CONFIRMADO" &&
+            payment.status === "REEMBOLSO_SINTETICO" &&
             payment.payload?.refundId === refund.refundId
         );
         const refundCashMovements = movements.filter((movement) =>
-            ["CONFIRMADO"].includes(movement.status) &&
+            ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status) &&
             movement.movementType === "DEVOLUCION_EFECTIVO" &&
             movement.payload?.refundId === refund.refundId
         );
@@ -586,7 +1097,7 @@ export async function getPendingTpvRefunds(sessionId) {
 export async function getTpvRefunds(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
-        ["CONFIRMADO"].includes(item.status) &&
+        ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }
