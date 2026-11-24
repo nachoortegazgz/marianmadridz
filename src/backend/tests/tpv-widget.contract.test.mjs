@@ -63,7 +63,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
 });
 
-test("TPV widget keeps all writes synthetic and does not implement a second payment gateway", async () => {
+test("TPV widget stays read-only until the canonical operational ledger is configured", async () => {
     const html = await source("%23htmlTPV.txt");
     const config = await source("src/backend/internalConfig.js");
     assert.match(config, /CAPABILITIES: Object\.freeze/);
