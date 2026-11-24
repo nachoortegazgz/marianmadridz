@@ -61,6 +61,8 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
+    assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
+        "the page controller must reject amounts outside safe integer minor units");
 });
 
 test("TPV widget stays read-only until the canonical operational ledger is configured", async () => {
