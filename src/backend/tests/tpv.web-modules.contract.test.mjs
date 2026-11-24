@@ -465,7 +465,8 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.match(repository, /const records = \[\.\.\.currentSource\.items, \.\.\.legacy\.items, \.\.\.previous\.items\]/);
     assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
     assert.match(utilities, /export function makeTpvPayload/);
-    assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds|processingMode|reconciliationStatus/);
+    assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds/);
+    assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
     assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
     assert.match(hooks, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
