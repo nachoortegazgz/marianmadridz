@@ -19,6 +19,7 @@ export const obtenerPermisosTPV = webMethod(
                     createSale: false,
                     openSession: false,
                     registerCashMovement: false,
+                    registerPartialCount: false,
                     requestRefund: false,
                     closeSession: false,
                     issueTicketX: false,
