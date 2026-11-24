@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
@@ -73,6 +73,7 @@ export const registrarMovimientoCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-cash-movement");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -214,6 +215,7 @@ export const exportarMovimientosCaja = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-movements-export");
         await requireCajero(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
         try {
             const sessionId = sessionIdFromInput(input);
