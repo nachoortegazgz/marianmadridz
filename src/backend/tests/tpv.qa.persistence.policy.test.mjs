@@ -336,8 +336,14 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(normalizeIdempotencyKey("sandbox-client-key-0001:PAYMENT:001"), "sandbox-client-key-0001:PAYMENT:001");
     assert.equal(normalizePaymentMethod("bizum"), "BIZUM");
     assert.equal(toMinorUnits(12.34), 1234);
+    assert.equal(toMinorUnits("12,34"), 1234);
+    assert.equal(toMinorUnits("1.234,56"), 123456);
+    assert.equal(toMinorUnits("1,234.56"), 123456);
+    assert.equal(toMinorUnits(" 12,5 € "), 1250);
     assert.equal(fromMinorUnits(1234), 12.34);
     assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
+    assert.throws(() => toMinorUnits("1.234"), /TPV_INVALID_FORMAT/);
+    assert.throws(() => toMinorUnits("12,345"), /TPV_INVALID_FORMAT/);
     const payload = makeSyntheticPayload({ sample: true });
     assert.equal(payload.isSynthetic, undefined);
     assert.equal(payload.realPayment, undefined);
