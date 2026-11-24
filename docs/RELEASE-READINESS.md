@@ -47,6 +47,5 @@ Regla dura: "Sin evidencia runtime enlazada = NO-GO automático del ítem".
 - **Runtime:** Wix Preview/Runtime, pruebas de escritura CMS y pagos/devoluciones nativos no ejecutados. El merge de #600 no autoriza despliegue ni apertura de escrituras; el estado operativo continúa NO-GO.
 
 **Decisión TPV: NO-GO operativo.** Se permite continuar revisión y pruebas offline; las escrituras permanecen cerradas hasta que el contrato canónico, la integración nativa y las pruebas requeridas estén demostrados.
-
 Consolidación F1+F2: B; MVP: ya mínimo consolidable, sin duplicidades sustituibles demostradas.
 Evidencia Runtime: no ejecutada; runAllRuntimeChecks no localizado. Decisión: NO-GO hasta contratos + runAllRuntimeChecks PASS.
