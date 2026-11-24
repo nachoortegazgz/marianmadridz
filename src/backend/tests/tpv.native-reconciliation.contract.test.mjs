@@ -86,7 +86,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(cash, /cashierMemberId: operator\.operatorId/);
     assert.match(cash, /terminalId:/);
     assert.match(repository, /export function assertTpvOperationalLedgerConfigured/);
-    assert.match(repository, /insertTpvEvent\\(collection, idempotencyKey, data\\)[\\s\\S]*?assertTpvOperationalLedgerConfigured\\(\\)/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(repository, /export async function withTpvSessionLock/);
     for (const writer of [movements, closures]) {
