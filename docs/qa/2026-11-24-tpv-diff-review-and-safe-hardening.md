@@ -73,8 +73,16 @@ Corregido el estado obsoleto de PR #600: MERGED, con merge commit y evidencias C
 
 ## Validación y despliegue
 
-- Pruebas locales: no ejecutadas desde este entorno.
-- CI de esta rama: pendiente de PR y ejecución de GitHub Actions.
+- CI inicial del head c7476636d18fc4e7c541f2964bafeb6afbbcf664: Layer 1 falló por una aserción estática obsoleta que prohibía mencionar los nombres de metadatos ahora rechazados. Se corrigió la prueba; no se relajó la validación.
+- CI final del head 7badb94cc0e5dd1566f2f14cc611a3b7f6de9c69:
+  - Backend offline quality gates SUCCESS, run 45448196443.
+  - Layer 1: 29 suites / 363 pruebas, 0 fallos.
+  - Layer 2: 17 suites / 249 pruebas, 0 fallos.
+  - Suite offline completa: 80 suites / 747 pruebas, 0 fallos.
+  - SDK eCommerce Cart V2, Order Transactions y TPV Catalog SDK: PASS.
+  - ESLint: PASS.
+  - Secret scanning / Gitleaks full-history SUCCESS, run 45448196393.
+- Pruebas locales: no ejecutadas desde este entorno; la ejecución acreditada es GitHub Actions.
 - Wix Preview/Runtime, CMS real, cobros, reembolsos, facturas y E2E: no ejecutados.
 - CMS LIVE y datos históricos: sin cambios.
-- Despliegue: NO-GO. La rama se entrega mediante PR; no se fusionará ni publicará desde esta intervención.
+- Despliegue: NO-GO. PR #601 permanece OPEN / DRAFT; no fusionada ni publicada.
