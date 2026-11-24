@@ -194,8 +194,6 @@ export function validateSaleDraft(input = {}) {
         importePendiente: importePendienteMinor / 100,
         estadoVenta: importePendienteMinor === 0 ? "COBRADA" :
             paymentResult.importePagadoMinor > 0 ? "PARCIAL" : "BORRADOR",
-        isSynthetic: true,
         persisted: false,
-        realPayment: false,
     });
 }
