@@ -147,7 +147,7 @@ export function _normalizeTimeclockHistoryLimit(value, defaultValue, maximum) {
 export function _normalizeTimeclockMonthKey(value) {
     const raw = _safeTrim(value);
     if (!raw) return "";
-    return /^\\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : null;
+    return /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : null;
 }
 
 function _getDayKeysInRange(startValue, endValue, maxDays = 31) {
