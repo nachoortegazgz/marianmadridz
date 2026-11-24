@@ -372,8 +372,12 @@ function _validateFiscalPayload(item) {
     }
 
     if (item.sequenceNumber !== undefined && item.sequenceNumber !== null && item.sequenceNumber !== "") {
-        if (!Number.isFinite(Number(item.sequenceNumber)) || Number(item.sequenceNumber) <= 0) {
-            _schemaError("sequenceNumber invalido (debe ser > 0)");
+        const sequenceNumber = Number(item.sequenceNumber);
+        const isTpvLedgerEntry = _isCurrentSyntheticTpvRow(item);
+        if (!Number.isFinite(sequenceNumber) || (isTpvLedgerEntry ? sequenceNumber < 0 : sequenceNumber <= 0)) {
+            _schemaError(isTpvLedgerEntry
+                ? "sequenceNumber invalido (TPV exige 0)"
+                : "sequenceNumber invalido (debe ser > 0)");
         }
     }
 
