@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isExplicitSimulationLedgerRecord } from "../validation.js";
+import { isExplicitSimulationLedgerRecord } from "../validation.js";\nimport { TPV_HISTORICAL_POLICY } from "../internalConfig.js";
 
 test("SIMULATION-01 recognizes movementType simulation markers without recordSource", () => {
   for (const movementType of [
@@ -69,11 +69,35 @@ test("SIMULATION-04 does not classify a bare synthetic flag or QA source alone",
   }), false);
 });
 
-test("SIMULATION-05 classifies neutral TPV ledger source as non-fiscal", () => {
+test("SIMULATION-05 does not classify canonical TPV ledger rows as historical", () => {
   assert.equal(isExplicitSimulationLedgerRecord({
     recordSource: "TPV_LEDGER",
     movementType: "TPV_PAYMENT",
     eventType: "PAYMENT",
+    sequenceNumber: 1,
     hash: "a".repeat(64),
+    payloadFiscal: {
+      sourceType: "TPV",
+      ledgerVersion: "TPV_LEDGER_V3",
+      schemaVersion: 3,
+    },
+  }), false);
+});
+
+test("SIMULATION-06 classifies only the explicit historical TPV ledger envelope", () => {
+  assert.equal(isExplicitSimulationLedgerRecord({
+    recordSource: "TPV_LEDGER",
+    movementType: "TPV_PAYMENT",
+    eventType: "PAYMENT",
+    sequenceNumber: 0,
+    hash: "a".repeat(64),
+    payloadFiscal: {
+      sourceType: TPV_HISTORICAL_POLICY.SOURCE_TYPE,
+      ledgerVersion: TPV_HISTORICAL_POLICY.LEDGER_VERSION,
+      schemaVersion: TPV_HISTORICAL_POLICY.SCHEMA_VERSION,
+      isSynthetic: true,
+      realPayment: false,
+      externalSideEffects: false,
+    },
   }), true);
 });
