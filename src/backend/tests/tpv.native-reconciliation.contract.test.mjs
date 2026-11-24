@@ -66,8 +66,14 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
     assert.match(permissions, /createSale: false/);
-    assert.match(permissions, /openSession: isAdmin/);
-    assert.match(permissions, /closeSession: isAdmin/);
+    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /registerCashMovement: false/);
+    assert.match(permissions, /requestRefund: false/);
+    assert.match(permissions, /closeSession: false/);
+    assert.match(permissions, /issueTicketX: false/);
+    assert.match(permissions, /issueTicketZ: false/);
+    assert.match(permissions, /operationalWritesAvailable: false/);
+    assert.match(permissions, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
 
     for (const writer of [cash, movements, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
@@ -79,6 +85,8 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(cash, /openingCashMinor/);
     assert.match(cash, /cashierMemberId: operator\.operatorId/);
     assert.match(cash, /terminalId:/);
+    assert.match(repository, /export function assertTpvOperationalLedgerConfigured/);
+    assert.match(repository, /insertTpvEvent\\(collection, idempotencyKey, data\\)[\\s\\S]*?assertTpvOperationalLedgerConfigured\\(\\)/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(repository, /export async function withTpvSessionLock/);
     for (const writer of [movements, closures]) {
