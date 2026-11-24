@@ -39,6 +39,8 @@ Regla dura: "Sin evidencia runtime enlazada = NO-GO automático del ítem".
 - `tpvUtils.toMinorUnits()` y el controlador de página rechazan importes cuyo valor en céntimos no sea un entero seguro; la suite incorpora casos de desbordamiento.
 - La capacidad `registerPartialCount` es independiente de `registerCashMovement`; el widget exige tanto la capacidad específica como `operationalWritesAvailable=true` antes de habilitar controles de escritura.
 - Los errores desconocidos del controlador dejan de ser reintentables automáticamente y requieren consultar el estado/conciliar antes de repetir.
+- `tpvCatalogo.web.js` ya no usa el precio mínimo como precio de una línea vendible: el widget resuelve siempre la variante concreta mediante Catalog V3 `getProduct`, usa su `actualPrice` y exige `variantId`; una única variante se selecciona automáticamente y varias requieren elección explícita.
+- La disponibilidad de variante es fail-closed: solo se acepta `inStock === true` o `preorderEnabled === true`; un estado ausente no se interpreta como stock disponible. La consulta actual sigue limitada al estado de la variante/devuelve default location; la disponibilidad multiubicación requiere Inventory Items V3.
 - La lectura histórica permanece separada de los cálculos operativos; no se deben incorporar registros históricos sintéticos a ventas, pagos, caja, X o Z.
 - **CI:** último CI acreditado antes del hardening adicional: backend quality gates y Gitleaks SUCCESS en el head `c1f8082913c3161faf522850bd6b08875d340249`. Los commits posteriores de hardening no tienen todavía ejecución CI asociada visible; no se declaran PASS.
 - **Runtime:** Wix Preview/Runtime, pruebas de escritura CMS y pagos/devoluciones nativos no ejecutados. La PR no autoriza merge ni despliegue.
