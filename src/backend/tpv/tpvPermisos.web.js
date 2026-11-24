@@ -1,12 +1,13 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { getMyStaffContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
+import { TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 export const obtenerPermisosTPV = webMethod(
     Permissions.SiteMember,
     async () => {
 
-        const traceId = makeTraceId("tpv-sandbox-permissions");
+        const traceId = makeTraceId("tpv-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
         const isAdmin = staff?.rolWebsite === "ADMIN";
