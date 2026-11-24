@@ -89,7 +89,6 @@ export const TPV_LEGACY_COLLECTIONS = Object.freeze({
   AUDITORIA: "SANDBOX_LOGICAL_AUDITORIA",
 });
 
-export const TPV_SYNTHETIC_SOURCE = "SYNTHETIC";
 export const TPV_PAYMENT_METHOD = Object.freeze({
   EFECTIVO: "EFECTIVO",
   TARJETA: "TARJETA",
@@ -141,31 +140,35 @@ export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
   [TPV_LEGACY_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 
+/**
+ * Runtime contract for the single TPV business flow.
+ * Historical synthetic markers are deliberately kept in TPV_HISTORICAL_POLICY
+ * and must never be emitted by operational writers.
+ */
 export const TPV_RUNTIME_POLICY = Object.freeze({
-  // Synthetic execution is isolated by explicit source/site/version/session/hash metadata.
-  // Legacy run markers remain compatibility-only; fiscal/payment side effects stay disabled.
-  SOURCE_TYPE: TPV_SYNTHETIC_SOURCE,
-  ALLOW_REAL_PAYMENTS: false,
-  ALLOW_NATIVE_WRITES: false,
-  PROCESSING_MODE: "INTERNAL",
-  RECONCILIATION_STATUS: "NOT_RECONCILED",
+  SOURCE_TYPE: "TPV",
   CURRENCY: "EUR",
   SITE_ID: "188bed94-177c-4bc9-a9f0-35080d874f3e",
-  LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
-  SCHEMA_VERSION: 2,
-  CAPABILITIES: Object.freeze({
-    realPayments: false,
-    nativeWrites: false,
-    allowNativePayments: false,
-    allowNativeRefunds: false,
-    fiscalEmission: false,
-    hardware: false,
-  }),
-  
+  LEDGER_VERSION: "TPV_LEDGER_V3",
+  SCHEMA_VERSION: 3,
   CURRENCY_CODE: "EUR",
   TIME_ZONE: "Europe/Madrid",
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
+  CASH_REGISTER_SOURCE: TPV_LEDGER_SOURCE,
+});
+
+/**
+ * Read-only compatibility contract for records created before the unified
+ * TPV flow. Never use these values to authorize, write, reconcile or filter
+ * current operational transactions.
+ */
+export const TPV_HISTORICAL_POLICY = Object.freeze({
+  SOURCE_TYPE: "SYNTHETIC",
+  LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
+  SCHEMA_VERSION: 2,
+  PROCESSING_MODE: "INTERNAL",
+  RECONCILIATION_STATUS: "NOT_RECONCILED",
   LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
   CASH_REGISTER_SOURCE: "TPV_SYNTHETIC",
   LEGACY_CASH_REGISTER_SOURCE: "TPV_SANDBOX_INITIALIZED",
