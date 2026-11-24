@@ -61,7 +61,7 @@ export const generarControlX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-ticket-x");
+        const traceId = makeTraceId("tpv-ticket-x");
         await requireAdmin(traceId);
         assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
