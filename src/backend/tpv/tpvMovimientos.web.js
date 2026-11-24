@@ -331,7 +331,6 @@ export const exportarAuditoriaTPV = webMethod(
                 count: items.length,
                 sessionId,
                 format: "CSV",
-                syntheticOnly: true,
                 truncated: false,
             }, traceId);
         } catch (error) {
