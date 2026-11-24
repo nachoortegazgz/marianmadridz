@@ -10,7 +10,7 @@ Preview use:
    non-ledger artifacts whose identifiers start with the supplied prefix.
    Append-only fiscal, accounting, cash and audit ledgers MUST be preserved.
 4. Run:
-   const report = await runAllRuntimeChecks({ flows, cleanup });
+   const report = await runAllRuntimeChecks({ deps: { flows, cleanup } });
    console.log(JSON.stringify(report));
 
 Every flow receives { runId, prefix }. Every created synthetic identifier
