@@ -35,7 +35,7 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.importePendiente, 0);
     assert.equal(result.estadoVenta, "COBRADA_SINTETICA");
     assert.equal(result.persisted, false);
-    assert.equal(result.realPayment, false);
+    assert.equal(result.realPayment, undefined);
 });
 
 test("TPV custom tariff lines remain explicitly typed and validated", () => {
@@ -227,12 +227,12 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
     const simulator = await source("tpv/tpvPaymentSimulator.js");
     assert.match(simulator, /providerCalled: false/);
-    assert.match(simulator, /realPayment: false/);
+    assert.doesNotMatch(simulator, /realPayment: false|isSynthetic: true/);
     assert.match(simulator, /externalSideEffects: false/);
     assert.match(simulator, /requestFingerprint/);
 
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(sales, /realPayment: false/);
+    assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /fiscalLedgerWritten: false/);
     assert.match(sales, /TPV_SALE_MUST_BE_FULLY_PAID/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
