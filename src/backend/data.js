@@ -882,7 +882,7 @@ export async function ControlOperativo_beforeUpdate(item) {
     if (!original) _schemaError("ControlOperativo update target not found");
 
     if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
-        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: modificación prohibida.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "UPDATE" }, retryable: false });
+        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: modificación prohibida.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "UPDATE" }, retryable: false });
     }
 
     const normalized = { ...original, ...item };
@@ -910,7 +910,7 @@ export async function ControlOperativo_beforeRemove(itemId) {
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
     if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
-        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: borrado prohibido.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
+        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: borrado prohibido.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
     }
     return id;
 }
