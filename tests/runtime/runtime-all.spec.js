@@ -5,11 +5,15 @@ This file contains no business logic and imports no production module.
 
 Preview use:
 1. Copy this module into a temporary QA page/module in the Wix Preview site.
-2. Bind deps.flows.F1..F6 to the approved real Preview checks.
-3. Bind deps.cleanup to a cleanup function that deletes ONLY disposable,
+2. Bind deps.flows.F1..F6 to the approved real Preview checks. Each adapter
+   must return { status: "PASS" | "FAIL", result? }; resolved promises alone
+   are never interpreted as PASS.
+3. Bind deps.cleanup to a cleanup function that returns the same explicit
+   status contract and deletes ONLY disposable,
    non-ledger artifacts whose identifiers start with the supplied prefix.
    Append-only fiscal, accounting, cash and audit ledgers MUST be preserved.
 4. Run:
+   const flows = { F1: runF1, F2: runF2, F3: runF3, F4: runF4, F5: runF5, F6: runF6 };
    const report = await runAllRuntimeChecks({ deps: { flows, cleanup } });
    console.log(JSON.stringify(report));
 
@@ -65,7 +69,11 @@ export async function runAllRuntimeChecks({ deps = {} } = {}) {
 
             try {
                 const result = await flow({ runId, prefix });
-                flows[flowId] = { status: "PASS", result: result ?? null };
+                const flowStatus = result?.status;
+                flows[flowId] = {
+                    status: flowStatus === "PASS" ? "PASS" : flowStatus === "FAIL" ? "FAIL" : "INCOMPLETE",
+                    result: result ?? null,
+                };
             } catch (error) {
                 flows[flowId] = { status: "FAIL", error: _errorSummary(error) };
             }
@@ -77,7 +85,11 @@ export async function runAllRuntimeChecks({ deps = {} } = {}) {
                 prefix,
                 preserveAppendOnly: true,
             });
-            cleanup = { status: "PASS", result: result ?? null };
+            const cleanupStatus = result?.status;
+            cleanup = {
+                status: cleanupStatus === "PASS" ? "PASS" : cleanupStatus === "FAIL" ? "FAIL" : "INCOMPLETE",
+                result: result ?? null,
+            };
         } catch (error) {
             cleanup = { status: "FAIL", error: _errorSummary(error) };
         }
@@ -87,9 +99,10 @@ export async function runAllRuntimeChecks({ deps = {} } = {}) {
     const passed = flowResults.filter((flow) => flow.status === "PASS").length;
     const failed = flowResults.filter((flow) => flow.status === "FAIL").length;
     const skipped = flowResults.filter((flow) => flow.status === "SKIPPED").length;
+    const incomplete = flowResults.filter((flow) => flow.status === "INCOMPLETE").length;
     const status = failed > 0 || cleanup.status === "FAIL"
         ? "FAIL"
-        : skipped > 0 || cleanup.status !== "PASS"
+        : skipped > 0 || incomplete > 0 || cleanup.status !== "PASS"
             ? "INCOMPLETE"
             : "PASS";
 
@@ -103,6 +116,7 @@ export async function runAllRuntimeChecks({ deps = {} } = {}) {
             passed,
             failed,
             skipped,
+            incomplete,
             cleanupStatus: cleanup.status,
             cleanup,
         },
