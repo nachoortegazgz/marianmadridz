@@ -1475,3 +1475,29 @@ test('FLOW-HOR-08 counts completed pauses but excludes in-progress time for an o
   assert.equal(result.data.jornadasAbiertas, 1);
   assert.equal(result.data.integrityStatus, 'VERIFIED');
 });
+
+
+test('FLOW-HOR-09 normalizes invalid history limits and rejects malformed month filters with guidance', async () => {
+  wixDataMock._reset();
+  await seedStaff();
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { horario } = await freshImports();
+
+  assert.equal(horario._normalizeTimeclockHistoryLimit(-5, 30, 100), 30);
+  assert.equal(horario._normalizeTimeclockHistoryLimit('not-a-number', 30, 100), 30);
+  assert.equal(horario._normalizeTimeclockHistoryLimit('12.8', 30, 100), 12);
+  assert.equal(horario._normalizeTimeclockHistoryLimit(5000, 30, 100), 100);
+  assert.equal(horario._normalizeTimeclockMonthKey(' 2026-11 '), '2026-11');
+  assert.equal(horario._normalizeTimeclockMonthKey('2026-13'), null);
+  assert.equal(horario._normalizeTimeclockMonthKey('11/2026'), null);
+
+  const history = await horario.getHistorialFichajes({ monthKey: '11/2026' });
+  assert.equal(history.status, 'ERROR');
+  assert.equal(history.error.code, 'INVALID_MONTH_KEY');
+  assert.match(history.error.message, /2026-11/);
+
+  const summary = await horario.getResumenHoras({ monthKey: '2026-00' });
+  assert.equal(summary.status, 'ERROR');
+  assert.equal(summary.error.code, 'INVALID_MONTH_KEY');
+  assert.match(summary.error.message, /AAAA-MM/);
+});
