@@ -220,27 +220,22 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
     assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
     const payments = await source("tpv/tpvPagos.web.js");
-    assert.match(payments, /simularPasarelaPago/);
-    assert.match(payments, /simularReembolsoPasarela/);
-    assert.match(payments, /simulateGatewayPayment/);
-    assert.match(payments, /simulateGatewayRefund/);
+    assert.doesNotMatch(payments, /simularPasarelaPago|simularReembolsoPasarela|simulateGatewayPayment|simulateGatewayRefund/);
+    assert.doesNotMatch(payments, /SIMULATED|SANDBOX/);
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
-    const simulator = await source("tpv/tpvPaymentSimulator.js");
-    assert.match(simulator, /providerCalled: false/);
-    assert.doesNotMatch(simulator, /realPayment: false|isSynthetic: true/);
-    assert.match(simulator, /externalSideEffects: false/);
-    assert.match(simulator, /requestFingerprint/);
 
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /fiscalLedgerWritten: false/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
     assert.match(sales, /TPV_SALE_MUST_BE_FULLY_PAID/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(sales, /withTpvSessionLock\(session\.sessionId/);
-    assert.match(refunds, /withTpvSaleLock\(saleId, traceId, async \(\) => \{[\s\S]*?\}, session\.sessionId\)/);
+    assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit|withTpvSaleLock/);
     assert.match(movements, /withTpvSessionLock\(session\.sessionId/);
     assert.match(cash, /withTpvSessionLock\(session\.sessionId/);
     assert.match(closures, /withTpvSessionLock\(session\.sessionId/);
@@ -493,28 +488,15 @@ test("TPV synthetic persistence maps logical events to CajaActual and Movimiento
 });
 
 
-test("new TPV synthetic identifiers are neutral while historical Sandbox markers remain compatible", async () => {
-    const utilities = await source("tpv/tpvUtils.js");
-    const validation = await source("validation.js");
-    const repository = await source("tpv/tpvRepository.js");
-    const closures = await source("tpv/tpvCierres.web.js");
+test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    const config = await source("internalConfig.js");
-    const directory = await source("tpv/tpvNativeDirectory.js");
-
-    assert.match(utilities, /return "TPV-" \+ String\(prefix/);
-    assert.match(utilities, /return "TPV_" \+ digest/);
-    assert.match(utilities, /return "TPVSANDBOX_" \+ digest/);
-    assert.doesNotMatch(validation, /legacyPrefix|SANDBOX-CUSTOMER|TPV_IDENTITIES/);
-    assert.match(directory, /identityId: contact\._id/);
-    assert.match(directory, /profesionalId: resourceId/);
-    assert.match(repository, /const traceId = "TPV:" \+ TPV_RUNTIME_POLICY\.SITE_ID/);
-    assert.match(closures, /reportId = "TPV-X-"/);
-    assert.match(closures, /reportId = "Z-"/);
-    assert.match(sales, /gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY"/);
-    assert.match(refunds, /gatewayReference: "TPV-SYNTHETIC-NO-GATEWAY"/);
-    assert.doesNotMatch(config, /ACTOR_ID: "TPV_SYSTEM"/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
+    assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
+    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit/);
+    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit/);
 });
 
 
