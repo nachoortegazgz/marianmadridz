@@ -167,7 +167,8 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
-    assert.match(config, /fiscalEmission: false/);
+    assert.match(config, /TPV_RUNTIME_POLICY/);
+    assert.doesNotMatch(config, /fiscalEmission|FISCAL_EMISSION_ENABLED/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
     assert.doesNotMatch(config, /ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.doesNotMatch(sales, /createOrder|createInvoice|verifactuQrUrl/i);
