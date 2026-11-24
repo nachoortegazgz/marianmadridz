@@ -28,8 +28,6 @@ import {
     makeTpvRefundLockId,
     makeTpvSessionLockId,
     makeTpvTransactionId,
-    makeLegacyTpvTransactionIdByCollection,
-    makeLegacyTpvTransactionId,
 } from "backend/tpv/tpvUtils";
 import {
     acquireFiscalLedgerLock,
@@ -631,24 +629,19 @@ async function findByIdempotencyKey(collection, key) {
     }
     const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
-    const transactionIds = [
-        _testTransactionId(collection, key),
-        makeLegacyTpvTransactionIdByCollection(collection, key),
-        makeLegacyTpvTransactionId(key),
-    ];
-    const uniqueTransactionIds = [...new Set(transactionIds)];
-    for (const transactionId of uniqueTransactionIds) {
+    const transactionId = _testTransactionId(collection, key);
+    for (const currentTransactionId of [transactionId]) {
         const result = await queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
             filter: wql.and(
                 wql.eq("movementType", movementType),
-                wql.eq("transactionId", transactionId)
+                wql.eq("transactionId", currentTransactionId)
             ),
             limit: 2,
             consistency: CONSISTENCY.STRONG,
         });
         if (result.items.length > 1) throw new Error("TPV_IDEMPOTENCY_INDEX_VIOLATION");
-        if (result.items[0] && _isRecognizedSyntheticLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
+        if (result.items[0] && _isCanonicalTpvLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
     }
     return null;
 }
@@ -661,51 +654,54 @@ function assertSameRequest(existing, fingerprint) {
     return { item: existing, replayed: true };
 }
 
-function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
+function _buildTpvLedgerItem(collection, key, record, fingerprint) {
     const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
     const timestamp = now instanceof Date ? now : new Date(now);
     if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_RECORD_TIMESTAMP_INVALID");
-    const dateYmd = timestamp.toLocaleDateString("en-CA", { timeZone: TPV_RUNTIME_POLICY.TIME_ZONE });
     const transactionId = _testTransactionId(collection, key);
     const amount = _eventAmount(record);
     const sessionId = String(record.sessionId || record.payload?.sessionId || "").trim();
-    const traceId = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + String(sessionId || "GLOBAL");
+    if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+    const sequenceNumber = Number(record.sequenceNumber);
+    const previousRecordHash = String(record.previousRecordHash || "");
+    if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber <= 0 ||
+        !/^[a-f0-9]{64}$/i.test(previousRecordHash)) {
+        throw new Error("TPV_LEDGER_SEQUENCE_OR_PREVIOUS_HASH_REQUIRED");
+    }
+    const traceId = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + sessionId;
     const envelope = {
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        processingMode: TPV_RUNTIME_POLICY.PROCESSING_MODE,
-        reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
-        allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
-        allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
-        sessionId: sessionId || null,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+        sessionId,
         logicalCollection: collection,
         idempotencyKey: key,
         requestFingerprint: fingerprint,
-        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         ledgerRecord: record,
-        externalSideEffects: false,
     };
     const hashPayload = stableSerialize({
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-        sessionId: sessionId || null,
+        schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+        sessionId,
         logicalCollection: collection,
         transactionId,
         traceId,
+        sequenceNumber,
+        previousRecordHash,
         record,
     });
     const hash = createHash("sha256").update(hashPayload).digest("hex");
     return {
         _id: transactionId,
         hash,
-        sequenceNumber: 0,
-        numSerieFactura: "TPV-SYNTHETIC-NO-FISCAL-" + transactionId.slice(-20),
+        sequenceNumber,
         transactionId,
-        previousRecordHash: TPV_GENESIS_HASH,
+        previousRecordHash,
         recordTimestamp: timestamp,
         schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
         traceId,
@@ -716,15 +712,10 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         taxAmount: 0,
         paymentMethod: String(record.paymentMethod || "OTROS").toUpperCase(),
         channelType: "PRESENCIAL",
-        operationDescription: "TPV SYNTHETIC " + collection,
+        operationDescription: String(record.concept || record.description || "Operación TPV").slice(0, 180),
         staffResourceId: String(record.operatorResourceId || ""),
-        tipoFactura: "F2",
-        fechaExpedicionFactura: dateYmd,
-        tipoImpositivo: 0,
-        fiscalPeriod: dateYmd.slice(0, 7),
         recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: envelope,
-        desgloseDetallado: { accountCode: "SIMULATED" },
         lineItems: { ledgerRecord: record.lineItems || [] },
     };
 }
@@ -790,7 +781,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         return replay;
     }
 
-    const ledgerItem = _buildSyntheticLedgerItem(collection, key, record, fingerprint);
+    const ledgerItem = _buildTpvLedgerItem(collection, key, record, fingerprint);
     let saved;
     try {
         saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
