@@ -6,7 +6,7 @@ import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvOperationalLedgerConfigured, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
-import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false };
