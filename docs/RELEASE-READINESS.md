@@ -30,3 +30,14 @@ P1: 0 con evidencia PASS / 4 pendientes.
 Decisión preliminar: NO-GO hasta que todos los P0 estén PASS.
 
 Regla dura: "Sin evidencia runtime enlazada = NO-GO automático del ítem".
+
+## TPV PERSONAL — control de implementación (24/11/2026)
+
+- **PR #592 — MERGED:** contratos de respuesta de movimiento, sesión activa y persistencia parcial explícita. Si el ledger append-only queda persistido y falla la proyección, la respuesta conserva `persisted=true`, el identificador del movimiento y el estado de proyección no confirmado.
+- **PR #600 — OPEN / DRAFT:** retirada de escrituras TPV sintéticas, aislamiento de registros históricos y cierre fail-closed de las escrituras operativas mientras no exista contrato canónico del ledger y proveedor nativo de pagos/devoluciones.
+- Las barreras de inserción de `dataAccessPolicy.js` y el hook `data.js` rechazan nuevos discriminadores TPV y los discriminadores históricos declarados en `TPV_LEGACY_EVENT_MOVEMENT_TYPES`. Los registros CMS existentes no se modifican.
+- La lectura histórica permanece separada de los cálculos operativos; no se deben incorporar registros históricos sintéticos a ventas, pagos, caja, X o Z.
+- **CI:** último CI acreditado antes del hardening adicional: backend quality gates y Gitleaks SUCCESS en el head `c1f8082913c3161faf522850bd6b08875d340249`. Los commits posteriores de hardening no tienen todavía ejecución CI asociada visible; no se declaran PASS.
+- **Runtime:** Wix Preview/Runtime, pruebas de escritura CMS y pagos/devoluciones nativos no ejecutados. La PR no autoriza merge ni despliegue.
+
+**Decisión TPV: NO-GO operativo.** Se permite continuar revisión y pruebas offline; las escrituras permanecen cerradas hasta que el contrato canónico, la integración nativa y las pruebas requeridas estén demostrados.
