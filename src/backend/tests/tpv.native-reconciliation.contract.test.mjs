@@ -201,8 +201,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(sales, /TPV_SESSION_CLOSED/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /paymentStatus: "NOT_PROCESSED"/);
-    assert.match(refunds, /paymentStatus: "NOT_PROCESSED"/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(closures, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
