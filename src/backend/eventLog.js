@@ -219,11 +219,7 @@ async function _getFiscalSystemConfig(traceId) {
 
     const items = res?.items || [];
     if (items.length !== 1) {
-        throw new Error(
-            items.length === 0
-                ? "FISCAL_CONFIG_MISSING: falta MapaStaff CONFIG_SISTEMA"
-                : "FISCAL_CONFIG_NOT_UNIQUE: existe más de un MapaStaff CONFIG_SISTEMA"
-        );
+        throw createActionableError({ code: items.length === 0 ? "FISCAL_CONFIG_MISSING" : "FISCAL_CONFIG_NOT_UNIQUE", userMessage: items.length === 0 ? "Configuración fiscal no disponible. Contacta al responsable legal para completarla." : "Hay varias configuraciones fiscales. Contacta al responsable legal para corregirlo.", technicalDetail: "Se esperaba un singleton CONFIG_SISTEMA_FISCAL; encontrados: " + items.length + ".", remediation: items.length === 0 ? ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos con AEAT y mantener LEDGER_WRITES_ENABLED=false hasta certificación.", "Reintentar tras la verificación."] : ["No borrar ni sobrescribir registros fiscales desde código.", "Identificar con el responsable legal el registro canónico.", "Resolver la duplicidad mediante procedimiento autorizado.", "Mantener los writers fiscales deshabilitados hasta validar la configuración."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: items.length }, retryable: false });
     }
 
     const resolved = _buildFiscalSystemConfig(items[0]);
