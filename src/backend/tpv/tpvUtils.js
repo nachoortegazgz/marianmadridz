@@ -197,8 +197,6 @@ export function makeSyntheticPayload(payload = {}) {
         reconciliationStatus: TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
         allowNativePayments: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativePayments,
         allowNativeRefunds: TPV_RUNTIME_POLICY.CAPABILITIES.allowNativeRefunds,
-        isSynthetic: true,
-        realPayment: false,
         externalSideEffects: false,
     };
 }
