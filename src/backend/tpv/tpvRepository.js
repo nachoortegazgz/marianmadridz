@@ -40,6 +40,17 @@ import {
 const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
+/**
+ * The current CMS contract still contains only historical QA ledger rows.
+ * No canonical operational TPV writer is configured yet. Keep all writes
+ * fail-closed; historical reads remain available through dedicated readers.
+ */
+export function assertTpvOperationalLedgerConfigured() {
+    const error = new Error("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED");
+    error.code = "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED";
+    throw error;
+}
+
 async function withCajaActualProjectionLock(traceId, operation) {
     const lock = await acquireFiscalLedgerLock(traceId || "TPV_CAJA_PROJECTION");
     let operationFailed = false;
@@ -777,6 +788,8 @@ function _matchesFilter(record, filter) {
 }
 
 export async function insertTpvEvent(collection, idempotencyKey, data) {
+
+    assertTpvOperationalLedgerConfigured();
 
     _assertLogicalCollection(collection);
     const key = normalizeIdempotencyKey(idempotencyKey);
