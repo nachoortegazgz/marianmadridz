@@ -487,7 +487,7 @@ function _isCurrentSyntheticTpvRow(value) {
     const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
     const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
     return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
-        Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(value?.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(value?.movementType) &&
+        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(value?.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(value?.movementType)) &&
         [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[value?.payloadFiscal?.logicalCollection] === value.movementType) &&
         (
             (
