@@ -81,7 +81,11 @@ test("TPV production modules use the shared movement response contracts", async 
         readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8"),
     ]);
     assert.match(movements, /buildCashMovementSuccessData/);
+    assert.match(movements, /session: activeSession/);
     assert.match(movements, /resolveCashSessionOperationalStatus/);
-    assert.match(movements, /buildCashMovementFailure/);
+    assert.match(movements, /operationalStatus,/);
+    assert.match(movements, /return buildCashMovementFailure\(error, persisted, traceId\)/);
     assert.match(repository, /createPersistedTpvProjectionError/);
+    assert.equal((repository.match(/await _projectPersistedTpvEvent\(/g) || []).length, 3,
+        "new, existing and duplicate-winner events must preserve projection failure metadata");
 });
