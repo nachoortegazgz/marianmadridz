@@ -48,6 +48,7 @@ import {
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
 import { requireCajero, requireAdmin, rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
+import { createActionableError } from "backend/errors/actionableError";
 
 import { _toPublicError } from "backend/responseUtils";
 
@@ -451,7 +452,7 @@ async function _getBusinessTaxId() {
   const items = Array.isArray(config?.items) ? config.items : [];
   if (items.length === 0) {
     throw new Error(
-      "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA"
+      createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "No existe MapaStaff recordType=CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos con AEAT antes de guardar.", "Mantener los writers fiscales deshabilitados hasta certificación.", "Reintentar tras la verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: 0 }, retryable: false })
     );
   }
   if (items.length !== 1) {
