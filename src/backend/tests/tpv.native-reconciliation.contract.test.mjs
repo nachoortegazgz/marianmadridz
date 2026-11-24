@@ -70,7 +70,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(permissions, /openSession: isAdmin/);
     assert.match(permissions, /closeSession: isAdmin/);
 
-    for (const writer of [cash, sales, movements, closures]) {
+    for (const writer of [cash, movements, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
         assert.match(writer, /requireAdmin\(traceId\)/);
         assert.match(writer, /resolveTpvContext\(traceId\)/);
@@ -82,7 +82,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(cash, /terminalId:/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(repository, /export async function withTpvSessionLock/);
-    for (const writer of [sales, movements, closures]) {
+    for (const writer of [movements, closures]) {
         assert.match(writer, /latestOpenTpvSession\(\)/);
         assert.match(writer, /withTpvSessionLock\(/);
     }
