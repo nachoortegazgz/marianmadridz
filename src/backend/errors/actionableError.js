@@ -40,7 +40,8 @@ export function createActionableError({
         throw new TypeError("ACTIONABLE_ERROR_REMEDIATION_REQUIRED");
     }
 
-    const error = new Error(userMessage.trim());
+    const legacyPrefix = code.trim() === "LEDGER_APPEND_ONLY" ? "DATA_ACCESS_ERROR: " : "";
+    const error = new Error(legacyPrefix + userMessage.trim() + " [" + code.trim() + "]");
     error.name = "ActionableError";
     error.code = code.trim();
     error.userMessage = userMessage.trim();
