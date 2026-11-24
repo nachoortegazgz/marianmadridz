@@ -77,7 +77,8 @@ function errorEnvelope(error, field = null) {
     const code = String(error?.code || error?.message || "TPV_OPERATION_FAILED");
     const definition = ERROR_CATALOG[code] || [
         "No se pudo completar la operación.",
-        "Consulta el estado antes de repetirla.",
+        "Consulta el estado y solicita conciliación antes de repetirla.",
+        false,
         false,
         true,
     ];
