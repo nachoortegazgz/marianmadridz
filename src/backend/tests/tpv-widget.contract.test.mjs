@@ -66,10 +66,9 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
 test("TPV widget stays read-only until the canonical operational ledger is configured", async () => {
     const html = await source("%23htmlTPV.txt");
     const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
-    assert.match(config, /CAPABILITIES: Object\.freeze/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /TPV_LEDGER_SOURCE = "TPV_LEDGER"/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(permissions, /operationalWritesAvailable: false/);
+    assert.match(permissions, /createSale: false/);
+    assert.match(permissions, /openSession: false/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
     assert.match(html, /paymentStatus === "NOT_PROCESSED"|gatewayCalled === false/);
