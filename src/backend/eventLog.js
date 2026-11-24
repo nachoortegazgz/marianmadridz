@@ -167,7 +167,7 @@ function _toFiscalStartDateText(value) {
 function _buildFiscalSystemConfig(config) {
     if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
         _safeTrim(config._id) !== "CONFIG_SISTEMA_FISCAL") {
-        throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "Falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL o su recordType no es CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear el singleton CONFIG_SISTEMA_FISCAL con los campos del contrato fiscal aprobado.", "Validar los datos identificativos con AEAT antes de guardar.", "Mantener LEDGER_WRITES_ENABLED=false hasta completar la certificación legal y Runtime.", "Reintentar tras el alta y su verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, expectedId: "CONFIG_SISTEMA_FISCAL", traceId }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "Falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL o su recordType no es CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear el singleton CONFIG_SISTEMA_FISCAL con los campos del contrato fiscal aprobado.", "Validar los datos identificativos con AEAT antes de guardar.", "Mantener LEDGER_WRITES_ENABLED=false hasta completar la certificación legal y Runtime.", "Reintentar tras el alta y su verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, expectedId: "CONFIG_SISTEMA_FISCAL" }, retryable: false });
     }
 
     const resolved = {
@@ -183,16 +183,14 @@ function _buildFiscalSystemConfig(config) {
         fechaInicioVerifactu: _toFiscalStartDateText(config.fechaInicioVerifactu),
     };
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
-        throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
+        throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Mantener deshabilitados los writers hasta corregir y certificar."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null }, retryable: false });
     }
 
     const missing = Object.entries(resolved)
         .filter(([, value]) => value === "" || value === null)
         .map(([key]) => key);
     if (missing.length) {
-        throw new Error(
-            `FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de campos verificados: ${missing.join(", ")}`
-        );
+        throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "La configuración fiscal está incompleta. Contacta al responsable legal.", technicalDetail: "Faltan campos fiscales obligatorios: " + missing.join(", "), remediation: ["Revisar el contrato fiscal aprobado y los campos obligatorios de CONFIG_SISTEMA_FISCAL.", "Completar únicamente datos respaldados por documentación legal.", "Validar el NIF con AEAT y mantener los writers deshabilitados hasta certificación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null, missingFields: missing }, retryable: false });
     }
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
         throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
@@ -216,7 +214,7 @@ async function _getFiscalSystemConfig(traceId) {
         log.error("FISCAL_CONFIG_READ_FAILED", {
             traceId, message: err?.message,
         });
-        throw new Error("FISCAL_CONFIG_READ_FAILED: no se pudo verificar MapaStaff CONFIG_SISTEMA");
+        throw createActionableError({ code: "FISCAL_CONFIG_READ_FAILED", userMessage: "No se pudo leer la configuración fiscal. Contacta al administrador técnico.", technicalDetail: err?.message || "Fallo de lectura de MapaStaff CONFIG_SISTEMA.", remediation: ["Comprobar disponibilidad y permisos de lectura de MapaStaff.", "Revisar los logs técnicos usando el traceId.", "No habilitar escrituras fiscales mientras no se verifique la configuración."], contextSnapshot: { collection: MAPA_STAFF_COL, traceId }, retryable: true });
     }
 
     const items = res?.items || [];
