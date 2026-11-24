@@ -71,8 +71,6 @@ export async function buildTpvSessionSummary(session) {
     totals.totalCollectedMinor = totals.cashMinor + totals.cardMinor + totals.bizumMinor + totals.bonoMinor + totals.giftCardMinor + totals.otherMinor;
     totals.expectedCashMinor = totals.openingCashMinor + totals.cashMinor + totals.cashInMinor - totals.cashOutMinor;
     totals.reconciliationOk = totals.totalCollectedMinor === totals.netSalesMinor;
-    totals.isSynthetic = true;
-    totals.realPayment = false;
 
     return totals;
 }
