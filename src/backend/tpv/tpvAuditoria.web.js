@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { queryTpvRecords } from "backend/tpv/tpvRepository";
+import { queryTpvLedgerRecords } from "backend/tpv/tpvRepository";
 
 export const obtenerAuditoriaTPV = webMethod(
     Permissions.SiteMember,
@@ -22,10 +22,9 @@ export const obtenerAuditoriaTPV = webMethod(
                 throw new Error("TPV_SESSION_REQUIRED");
             }
 
-            const records = await queryTpvRecords(
-                TPV_COLLECTIONS.AUDITORIA,
-                undefined,
-                { limit: 1000, maxRecords: 10000 }
+            const ledger = await queryTpvLedgerRecords({ limit: 1000 });
+            const records = ledger.records.filter((record) =>
+                record.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA
             );
 
             const items = records
