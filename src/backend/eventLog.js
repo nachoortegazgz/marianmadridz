@@ -81,6 +81,7 @@ import {
 } from "public/mmUtils";
 
 import { logger } from "backend/logger";
+import { createActionableError, toPublicShape } from "backend/errors/actionableError";
 import {
     acquireFiscalLedgerLock,
     allocateFiscalSequence,
@@ -166,7 +167,7 @@ function _toFiscalStartDateText(value) {
 function _buildFiscalSystemConfig(config) {
     if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
         _safeTrim(config._id) !== "CONFIG_SISTEMA_FISCAL") {
-        throw new Error("FISCAL_CONFIG_MISSING: falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL");
+        throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "Falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL o su recordType no es CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear el singleton CONFIG_SISTEMA_FISCAL con los campos del contrato fiscal aprobado.", "Validar los datos identificativos con AEAT antes de guardar.", "Mantener LEDGER_WRITES_ENABLED=false hasta completar la certificación legal y Runtime.", "Reintentar tras el alta y su verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, expectedId: "CONFIG_SISTEMA_FISCAL", traceId }, retryable: false });
     }
 
     const resolved = {
@@ -464,8 +465,7 @@ export async function registrarEventoEconomico(input) {
             status: "ERROR",
             data: null,
             error: {
-                code: "FISCAL_LEDGER_WRITES_DISABLED",
-                message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime.",
+                ...toPublicShape(createActionableError({ code: "FISCAL_LEDGER_WRITES_DISABLED", userMessage: "La escritura fiscal está deshabilitada hasta completar su certificación legal y técnica.", technicalDetail: "FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true.", remediation: ["No intentar habilitar el writer ni sortear este control.", "Completar CONFIG_SISTEMA_FISCAL con datos legalmente verificados.", "Ejecutar y documentar las pruebas Runtime y la certificación aplicable.", "Solicitar autorización expresa antes de cambiar el flag fiscal."], contextSnapshot: { traceId, gate: "LEDGER_WRITES_ENABLED" }, retryable: false })),
                 traceId,
             },
         };
