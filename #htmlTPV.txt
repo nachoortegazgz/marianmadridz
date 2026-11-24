@@ -670,9 +670,10 @@ body {
       : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
-      state.capabilities.openSession !== true;
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      $(id).disabled = !isOpen || state.busy || state.capabilities[capability] !== true;
+      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
+        state.capabilities[capability] !== true;
     });
     if (!state.operationalWritesAvailable) {
       $("cashLabel").textContent = isOpen
@@ -694,10 +695,11 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession ||
-      state.capabilities.openSession !== true;
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
-      if (el) el.disabled = value || !isOpen || state.capabilities[capability] !== true;
+      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
+        state.capabilities[capability] !== true;
     });
   }
 
