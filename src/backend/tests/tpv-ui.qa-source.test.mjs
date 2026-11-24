@@ -81,3 +81,14 @@ test("TPV controller parses localized amounts without guessing ambiguous separat
     assert.throws(() => context.numeric("12,345", "AMOUNT"), /TPV_INVALID_AMOUNT/);
     assert.throws(() => context.numeric(12.345, "AMOUNT"), /TPV_INVALID_AMOUNT/);
 });
+
+test("product selection always resolves a concrete Catalog V3 variant and fails closed on unknown stock", async () => {
+    const html = await read("%23htmlTPV.txt");
+    const catalog = await read("src/backend/tpv/tpvCatalogo.web.js");
+    assert.match(html, /if \(item\.tipoLinea === "PRODUCTO"\) \{/);
+    assert.match(html, /if \(variants\.length === 1\)[\s\S]*?selected\.varianteId/);
+    assert.match(html, /typeof variant\.varianteId === "string"/);
+    assert.match(catalog, /variant\.inventoryStatus\?\.inStock === true/);
+    assert.match(catalog, /variant\.inventoryStatus\?\.preorderEnabled === true/);
+    assert.match(catalog, /toMinorUnitsStrict\(raw, "CATALOG_PRICE"\)/);
+});
