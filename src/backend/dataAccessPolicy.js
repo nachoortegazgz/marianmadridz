@@ -102,7 +102,6 @@ export function assertInsertAllowed(collection, item) {
     const movementType = String(item.movementType || "").trim().toUpperCase();
     const isHistoricalTpvMarker =
         Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SIMULATED_TPV_") ||
         movementType.startsWith("SANDBOX_LOGICAL_") ||
         recordSource.startsWith("SANDBOX_LOGICAL_") ||
         recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
