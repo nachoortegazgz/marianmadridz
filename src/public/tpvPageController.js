@@ -12,6 +12,7 @@ import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
+import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 
 const REQUEST_TYPES = Object.freeze([
     "CASHIER_STATE",
@@ -252,7 +253,21 @@ export function initializeTpvPage(widget) {
         allowOpaqueOrigin: true,
         handshakeTimeoutMs: 65000,
         onContextReady: async () => {
-            const config = envelope(await obtenerConfiguracionTPV());
+            const [configResult, permissionsResult] = await Promise.all([
+                obtenerConfiguracionTPV(),
+                obtenerPermisosTPV().catch(() => ({
+                    status: "ERROR",
+                    data: null,
+                    error: { code: "TPV_PERMISSIONS_UNAVAILABLE" },
+                })),
+            ]);
+            const config = envelope(configResult);
+            const permissions = envelope(permissionsResult);
+            const capabilities = permissions.status === "SUCCESS" &&
+                permissions.data?.capabilities &&
+                typeof permissions.data.capabilities === "object"
+                ? permissions.data.capabilities
+                : {};
             return {
                 status: config.status,
                 data: {
@@ -260,6 +275,11 @@ export function initializeTpvPage(widget) {
                     protocolVersion: PROTOCOL_VERSION,
                     currency: config.status === "SUCCESS" ? config.data?.currency : null,
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
+                    capabilities,
+                    operationalWritesAvailable: permissions.status === "SUCCESS" &&
+                        permissions.data?.operationalWritesAvailable === true,
+                    operationalWritesUnavailableReason: permissions.data?.operationalWritesUnavailableReason ||
+                        "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
                 },
                 error: config.error || null,
             };
