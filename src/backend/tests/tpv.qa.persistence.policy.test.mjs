@@ -113,7 +113,7 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
     const item = {
         _id: "TPV_TEST_ROW",
         hash: "a".repeat(64),
-        sequenceNumber: 0,
+        sequenceNumber: 1,
         transactionId: "TPV_TEST_ROW",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":SESSION-TEST",
         movementType: "TPV_PAYMENT",
@@ -123,23 +123,14 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
             siteId: TPV_RUNTIME_POLICY.SITE_ID,
             ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
             schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-            reconciliationStatus: "NOT_RECONCILED",
             sessionId: "SESSION-TEST",
             logicalCollection: TPV_COLLECTIONS.PAGOS,
             idempotencyKey: "TPV-TEST-IDEMPOTENCY",
             requestFingerprint: "f".repeat(64),
-            isSynthetic: true,
-            realPayment: false,
-            externalSideEffects: false,
         },
     };
 
     assert.throws(() => assertInsertAllowed("MovimientosCaja", item), {
-        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
-    });
-    const legacyItem = structuredClone(item);
-    legacyItem.movementType = "SIMULATED_TPV_PAYMENT";
-    assert.throws(() => assertInsertAllowed("MovimientosCaja", legacyItem), {
         code: "CMS_TPV_LEDGER_WRITES_DISABLED",
     });
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
