@@ -488,7 +488,11 @@ body {
       ACCESS_DENIED: "Tu usuario no tiene permisos para esta operación. Solicita el rol correspondiente al administrador.",
       RATE_LIMITED: "Se han realizado demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo."
     };
-    return messages[key] || "No se ha podido completar la operación. Código: " + (key || "ERROR_DESCONOCIDO") + ". Revisa el estado antes de repetirla.";
+    if (messages[key]) return messages[key];
+    if (/^[A-Z][A-Z0-9_]+$/.test(key)) {
+      return "No se ha podido completar la operación. Código: " + key + ". Revisa el estado antes de repetirla.";
+    }
+    return String(code || "Se ha producido un error.");
   }
   function error(msg) { toast(publicErrorMessage(msg)); }
 
