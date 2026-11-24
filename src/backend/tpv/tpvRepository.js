@@ -842,20 +842,40 @@ export async function queryTpvRecords(collection, filter, options = {}) {
     return records.slice(0, maxRecords);
 }
 
-export async function queryTpvLedgerRecords(options = {}) {
-
+/**
+ * Operational reader: returns only records written under the canonical TPV contract.
+ * Historical rows are deliberately excluded from all normal business queries.
+ */
+export async function queryTpvOperationalLedgerRecords(options = {}) {
     const limit = Number(options.limit ?? 100);
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
         throw new Error("TPV_LEDGER_INVALID_LIMIT");
     }
-    const [current, legacy, previous] = await Promise.all([
-        queryItems({
-            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-            filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
-            sort: ["recordTimestamp DESC"],
-            limit,
-            consistency: CONSISTENCY.STRONG,
-        }),
+    const result = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+        sort: ["recordTimestamp DESC"],
+        limit,
+        consistency: CONSISTENCY.STRONG,
+    });
+    const records = result.items
+        .filter(_isCanonicalTpvLedgerItem)
+        .map(_virtualRecord)
+        .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
+        .slice(0, limit);
+    return { records, hasMore: result.hasNext === true };
+}
+
+/**
+ * Explicit historical reader only. It never participates in current operational
+ * movement, audit, payment, cash-session or closure calculations.
+ */
+export async function queryHistoricalTpvLedgerRecords(options = {}) {
+    const limit = Number(options.limit ?? 100);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
+        throw new Error("TPV_LEDGER_INVALID_LIMIT");
+    }
+    const [legacy, previous] = await Promise.all([
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
             filter: wql.eq("recordSource", TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE),
@@ -871,13 +891,12 @@ export async function queryTpvLedgerRecords(options = {}) {
             consistency: CONSISTENCY.STRONG,
         }),
     ]);
-    const records = [...current.items, ...legacy.items, ...previous.items]
+    const records = [...legacy.items, ...previous.items]
         .filter(_isHistoricalTpvLedgerItem)
         .map(_virtualRecord)
         .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
         .slice(0, limit);
-    return { records, hasMore: current.hasNext === true || legacy.hasNext === true || previous.hasNext === true ||
-        current.items.length + legacy.items.length + previous.items.length > limit };
+    return { records, hasMore: legacy.hasNext === true || previous.hasNext === true };
 }
 
 export async function appendTpvAudit({
