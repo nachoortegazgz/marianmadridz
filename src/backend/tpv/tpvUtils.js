@@ -134,11 +134,11 @@ export function normalizeClientIdempotencyKey(value) {
 export function parseTpvAmount(value) {
     if (typeof value === "number") return Number.isFinite(value) ? value : null;
     if (typeof value !== "string") return null;
-    let raw = value.trim().replace(/\\s+/g, "").replace(/€$/i, "");
+    let raw = value.trim().replace(/\s+/g, "").replace(/€$/i, "");
     if (!raw) return null;
     const sign = /^[+-]/.test(raw) ? raw[0] : "";
     if (sign) raw = raw.slice(1);
-    if (!/^\\d+(?:[.,]\\d+)*$/.test(raw)) return null;
+    if (!/^\d+(?:[.,]\d+)*$/.test(raw)) return null;
 
     const comma = raw.lastIndexOf(",");
     const dot = raw.lastIndexOf(".");
@@ -148,9 +148,9 @@ export function parseTpvAmount(value) {
         const decimalSeparator = comma > dot ? "," : ".";
         const groupSeparator = decimalSeparator === "," ? "." : ",";
         const parts = raw.split(decimalSeparator);
-        if (parts.length !== 2 || !/^\\d{1,2}$/.test(parts[1])) return null;
+        if (parts.length !== 2 || !/^\d{1,2}$/.test(parts[1])) return null;
         const groups = parts[0].split(groupSeparator);
-        if (!/^\\d{1,3}$/.test(groups[0]) || !groups.slice(1).every((part) => /^\\d{3}$/.test(part))) return null;
+        if (!/^\d{1,3}$/.test(groups[0]) || !groups.slice(1).every((part) => /^\d{3}$/.test(part))) return null;
         integerPart = groups.join("");
         fractionPart = parts[1];
     } else if (comma >= 0 || dot >= 0) {
@@ -160,7 +160,7 @@ export function parseTpvAmount(value) {
         if (parts.length === 2 && parts[1].length >= 1 && parts[1].length <= 2) {
             integerPart = parts[0];
             fractionPart = parts[1];
-        } else if (parts.length > 2 && /^\\d{1,3}$/.test(parts[0]) && parts.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+        } else if (parts.length > 2 && /^\d{1,3}$/.test(parts[0]) && parts.slice(1).every((part) => /^\d{3}$/.test(part))) {
             integerPart = parts.join("");
         } else {
             return null;
