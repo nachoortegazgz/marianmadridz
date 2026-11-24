@@ -307,7 +307,8 @@ function _isRecognizedSyntheticLedgerItem(item) {
     const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""));
     const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
-        envelope.isSynthetic === true && envelope.realPayment === false &&
+        (envelope.isSynthetic === undefined || envelope.isSynthetic === true) &&
+        (envelope.realPayment === undefined || envelope.realPayment === false) &&
         envelope.externalSideEffects === false && validHash;
     const validCurrentCommon = validCommon && validFingerprint;
     const validSessionOrAudit = envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
@@ -361,8 +362,6 @@ function _virtualRecord(item) {
         traceId: record.traceId || item.traceId,
         cmsTraceId: item.traceId,
         persisted: true,
-        isSynthetic: true,
-        realPayment: false,
     };
 }
 
@@ -466,7 +465,6 @@ function _sessionFromCaja(caja) {
         }),
         _createdDate: caja._createdDate,
         _updatedDate: caja._updatedDate,
-        isSynthetic: true,
         persisted: true,
     };
 }
@@ -699,8 +697,6 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         requestFingerprint: fingerprint,
         schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         ledgerRecord: record,
-        isSynthetic: true,
-        realPayment: false,
         externalSideEffects: false,
     };
     const hashPayload = stableSerialize({
