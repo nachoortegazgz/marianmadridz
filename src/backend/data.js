@@ -22,6 +22,8 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_LEDGER_SOURCE,
+    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -411,9 +413,21 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
+    const recordSource = String(item.recordSource || "").trim().toUpperCase();
+    const movementType = String(item.movementType || "").trim().toUpperCase();
+    const isHistoricalTpvMarker =
+        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SIMULATED_TPV_") ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource === TPV_HISTORICAL_POLICY.SOURCE_TYPE ||
+        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
     if (item.recordSource === TPV_LEDGER_SOURCE ||
-        String(item.recordSource || "").startsWith("TPV_") ||
-        String(item.movementType || "").startsWith("TPV_")) {
+        recordSource.startsWith("TPV_") ||
+        movementType.startsWith("TPV_") ||
+        isHistoricalTpvMarker) {
         _schemaError("CMS_TPV_LEDGER_WRITES_DISABLED: el ledger operativo TPV aún no tiene contrato canónico aprobado.");
     }
 
