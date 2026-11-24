@@ -875,7 +875,14 @@ export async function queryHistoricalTpvLedgerRecords(options = {}) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) {
         throw new Error("TPV_LEDGER_INVALID_LIMIT");
     }
-    const [legacy, previous] = await Promise.all([
+    const [currentSource, legacy, previous] = await Promise.all([
+        queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+            sort: ["recordTimestamp DESC"],
+            limit,
+            consistency: CONSISTENCY.STRONG,
+        }),
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
             filter: wql.eq("recordSource", TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE),
@@ -891,12 +898,12 @@ export async function queryHistoricalTpvLedgerRecords(options = {}) {
             consistency: CONSISTENCY.STRONG,
         }),
     ]);
-    const records = [...legacy.items, ...previous.items]
+    const records = [...currentSource.items, ...legacy.items, ...previous.items]
         .filter(_isHistoricalTpvLedgerItem)
         .map(_virtualRecord)
         .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
         .slice(0, limit);
-    return { records, hasMore: legacy.hasNext === true || previous.hasNext === true };
+    return { records, hasMore: currentSource.hasNext === true || legacy.hasNext === true || previous.hasNext === true };
 }
 
 export async function appendTpvAudit({
