@@ -252,8 +252,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
-    assert.match(policy, /TPV_RUNTIME_POLICY/);
-    assert.match(policy, /TPV_SANDBOX_SYNTHETIC/);
+    assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
+    assert.match(policy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
