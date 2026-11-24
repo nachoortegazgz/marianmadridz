@@ -19,16 +19,6 @@
 - [Manifiesto del archivo histórico](docs/ARCHIVE-MANIFEST.md)
 - [README backend TPV](src/backend/tpv/README.md)
 
-## Invariantes
-
-- Wix CMS es la fuente de verdad transaccional de los datos de dominio propios; las apps Wix gobiernan sus dominios nativos.
-- SharePoint almacena evidencia documental; no gobierna Capa 1.
-- Frontend sin lógica de negocio ni autoridad de permisos; validación y autorización en backend/WebMethods.
-- Los ledgers declarados append-only permanecen inmutables; las correcciones se registran mediante eventos rectificativos trazables.
-- Los datos sintéticos QA no se deben confundir con hechos económicos, laborales o fiscales reales. Cualquier limpieza preproducción debe ser selectiva, autorizada, respaldada y auditada; no habilita mutaciones indiscriminadas de ledgers.
-- No habilitar pagos reales, writers fiscales, emisión Veri*Factu, automatizaciones externas ni publicación durante QA sin sus gates y autorización.
-- No borrar informes históricos por parecer antiguos: se conservan como evidencia fechada y se etiquetan como no vigentes cuando corresponda.
-
 ## Validación
 
 El estado de cada control debe asociarse al SHA y al entorno exactos. No declarar Wix Runtime, Preview, E2E ni producción a partir de pruebas offline.
