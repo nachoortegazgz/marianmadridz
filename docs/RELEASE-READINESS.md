@@ -36,6 +36,9 @@ Regla dura: "Sin evidencia runtime enlazada = NO-GO automático del ítem".
 - **PR #592 — MERGED:** contratos de respuesta de movimiento, sesión activa y persistencia parcial explícita. Si el ledger append-only queda persistido y falla la proyección, la respuesta conserva `persisted=true`, el identificador del movimiento y el estado de proyección no confirmado.
 - **PR #600 — OPEN / DRAFT:** retirada de escrituras TPV sintéticas, aislamiento de registros históricos y cierre fail-closed de las escrituras operativas mientras no exista contrato canónico del ledger y proveedor nativo de pagos/devoluciones.
 - Las barreras de inserción de `dataAccessPolicy.js` y el hook `data.js` rechazan nuevos discriminadores TPV y los discriminadores históricos declarados en `TPV_LEGACY_EVENT_MOVEMENT_TYPES`. Los registros CMS existentes no se modifican.
+- `tpvUtils.toMinorUnits()` y el controlador de página rechazan importes cuyo valor en céntimos no sea un entero seguro; la suite incorpora casos de desbordamiento.
+- La capacidad `registerPartialCount` es independiente de `registerCashMovement`; el widget exige tanto la capacidad específica como `operationalWritesAvailable=true` antes de habilitar controles de escritura.
+- Los errores desconocidos del controlador dejan de ser reintentables automáticamente y requieren consultar el estado/conciliar antes de repetir.
 - La lectura histórica permanece separada de los cálculos operativos; no se deben incorporar registros históricos sintéticos a ventas, pagos, caja, X o Z.
 - **CI:** último CI acreditado antes del hardening adicional: backend quality gates y Gitleaks SUCCESS en el head `c1f8082913c3161faf522850bd6b08875d340249`. Los commits posteriores de hardening no tienen todavía ejecución CI asociada visible; no se declaran PASS.
 - **Runtime:** Wix Preview/Runtime, pruebas de escritura CMS y pagos/devoluciones nativos no ejecutados. La PR no autoriza merge ni despliegue.
