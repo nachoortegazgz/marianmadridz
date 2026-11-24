@@ -452,7 +452,7 @@ body {
     cashIn: "registerCashMovement",
     cashOut: "registerCashMovement",
     refund: "requestRefund",
-    partialCount: "registerCashMovement",
+    partialCount: "registerPartialCount",
     ticketX: "issueTicketX",
     ticketZ: "issueTicketZ",
     exportMovements: "exportMovements",
