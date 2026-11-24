@@ -424,7 +424,8 @@ export async function appendAccountingEntry(input, traceId) {
                         recoveredExistingRows: true,
                     });
                 }
-                return { status: "SUCCESS", data: { journalEntryId: entry.journalEntryId, lineCount: existingRows.length, idempotent: true }, error: null };
+                log.info("AUTO_RESOLVED", { event: "AUTO_RESOLVED", domain: "ACCOUNTING_LEDGER", strategy: "IDEMPOTENT_REPLAY_READ_EXISTING", journalEntryId: entry.journalEntryId, traceId: entry.traceId });
+                return { status: "SUCCESS", data: { journalEntryId: entry.journalEntryId, lineCount: existingRows.length, idempotent: true, autoResolved: true, resolutionAttempts: [{ strategy: "READ_EXISTING_LEDGER", outcome: "MATCHED_HASH_CHAIN" }] }, error: null };
             }
             await _markEntryClaim(claim, "REPAIR_REQUIRED", {
                 observedLineCount: existingRows.length,

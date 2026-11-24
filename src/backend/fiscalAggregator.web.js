@@ -48,6 +48,7 @@ import {
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
 import { requireCajero, requireAdmin, rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
+import { createActionableError } from "backend/errors/actionableError";
 
 import { _toPublicError } from "backend/responseUtils";
 
@@ -450,14 +451,10 @@ async function _getBusinessTaxId() {
   );
   const items = Array.isArray(config?.items) ? config.items : [];
   if (items.length === 0) {
-    throw new Error(
-      "FISCAL_CONFIG_MISSING: no existe MapaStaff recordType=CONFIG_SISTEMA"
-    );
+    throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "No existe MapaStaff recordType=CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos con AEAT antes de guardar.", "Mantener los writers fiscales deshabilitados hasta certificación.", "Reintentar tras la verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: 0 }, retryable: false });
   }
   if (items.length !== 1) {
-    throw new Error(
-      "FISCAL_CONFIG_NOT_UNIQUE: existe más de un MapaStaff CONFIG_SISTEMA"
-    );
+    throw createActionableError({ code: "FISCAL_CONFIG_NOT_UNIQUE", userMessage: "Hay varias configuraciones fiscales. Contacta al responsable legal para corregirlo.", technicalDetail: "La consulta del singleton fiscal devolvió " + items.length + " registros.", remediation: ["No borrar ni sobrescribir registros desde código.", "Identificar con el responsable legal el registro canónico.", "Resolver la duplicidad mediante procedimiento autorizado.", "Mantener los writers fiscales deshabilitados hasta validar el singleton."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: items.length }, retryable: false });
   }
 
   const item = items[0];
@@ -465,21 +462,15 @@ async function _getBusinessTaxId() {
     _safeTrim(item?.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
     _safeTrim(item?._id) !== "CONFIG_SISTEMA_FISCAL"
   ) {
-    throw new Error(
-      "FISCAL_CONFIG_MISSING: el registro CONFIG_SISTEMA no usa el singleton canónico"
-    );
+    throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "La configuración fiscal no es canónica. Contacta al responsable legal.", technicalDetail: "El registro CONFIG_SISTEMA no usa el _id CONFIG_SISTEMA_FISCAL.", remediation: ["Revisar el registro en Wix CMS → MapaStaff.", "Confirmar con el responsable legal el singleton fiscal canónico.", "No renombrar ni eliminar registros por código.", "Mantener los writers fiscales deshabilitados hasta validar la configuración."], contextSnapshot: { collection: MAPA_STAFF_COL, recordType: item?.recordType, canonicalIdExpected: "CONFIG_SISTEMA_FISCAL" }, retryable: false });
   }
 
   const taxId = _safeTrim(item.taxId);
   if (!taxId) {
-    throw new Error(
-      "FISCAL_CONFIG_INCOMPLETE: MapaStaff CONFIG_SISTEMA carece de taxId verificado"
-    );
+    throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "Faltan datos fiscales obligatorios. Contacta al responsable legal.", technicalDetail: "El singleton fiscal no contiene taxId.", remediation: ["Revisar el campo taxId del singleton CONFIG_SISTEMA_FISCAL.", "Aportar el identificador fiscal desde documentación legal válida.", "Validar el dato con AEAT y no habilitar writers antes de certificar."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: item?._id || null, missingField: "taxId" }, retryable: false });
   }
   if (!isValidNifOrEuVat(taxId)) {
-    throw new Error(
-      "FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido"
-    );
+    throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Mantener deshabilitados los writers hasta corregir y certificar."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: item?._id || null, field: "taxId" }, retryable: false });
   }
   return taxId.toUpperCase();
 }

@@ -146,7 +146,7 @@ test("update policy keeps operational projections mutable and append-only ledger
     ]) {
         assert.throws(() => assertUpdateAllowed(collection, {
             _id: "synthetic-ledger-row",
-        }), { code: "CMS_UPDATE_COLLECTION_DENIED" });
+        }), { code: "LEDGER_APPEND_ONLY" });
     }
     assert.throws(() => assertUpdateAllowed(O.CONTROL_OPERATIVO, {
         controlType: T.SYSTEM_FLAG,
@@ -169,10 +169,10 @@ test("MovimientosCaja rejects all new TPV ledger writes and remains append-only"
         code: "CMS_TPV_LEDGER_WRITES_DISABLED",
     });
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
-        code: "CMS_UPDATE_COLLECTION_DENIED",
+        code: "LEDGER_APPEND_ONLY",
     });
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
+        code: "LEDGER_APPEND_ONLY",
     });
 });
 
@@ -242,7 +242,7 @@ test("single-item removal keeps ControlOperativo scoped and denies append-only l
         C.HISTORICO_CIERRES_Z,
     ]) {
         assert.throws(() => assertRemoveAllowed(collection, "synthetic-ledger-row"), {
-            code: "CMS_REMOVE_SCOPE_DENIED",
+            code: "LEDGER_APPEND_ONLY",
         });
     }
 });

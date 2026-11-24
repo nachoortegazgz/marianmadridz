@@ -23,7 +23,10 @@ import {
     SDK_CONFIG,
 } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
+import { createActionableError } from "backend/errors/actionableError";
+import { logger } from "backend/logger";
 
+const log = logger;
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
 const CASH_COL = BUSINESS_COLLECTIONS.CAJA_ACTUAL;
 const LOCK_ID = FISCAL_LEDGER_LOCK_CONFIG.ID;
@@ -32,6 +35,7 @@ const LOCK_DEDUPE_KEY = FISCAL_LEDGER_LOCK_CONFIG.DEDUPE_KEY;
 const LOCK_TTL_MS = FISCAL_LEDGER_LOCK_CONFIG.TTL_MS;
 const DEFAULT_WAIT_MS = FISCAL_LEDGER_LOCK_CONFIG.WAIT_MS;
 const POLL_MS = FISCAL_LEDGER_LOCK_CONFIG.POLL_MS;
+const LOCK_RETRY_BACKOFF_MS = Object.freeze([200, 500, 1500]);
 const LOCK_SERVICE_ID = FISCAL_LEDGER_LOCK_CONFIG.SERVICE_ID;
 const LOCK_RESOURCE_ID = FISCAL_LEDGER_LOCK_CONFIG.RESOURCE_ID;
 
@@ -245,8 +249,18 @@ function _lockPayload(ownerId, acquiredAt, previousPayload = {}, traceId = "") {
     };
 }
 
-function _lockResult(ownerId, version, expiresAt, traceId, revision = null) {
-    return { id: LOCK_ID, ownerId, version, revision, expiresAt, traceId };
+function _lockResult(ownerId, version, expiresAt, traceId, revision = null, resolutionAttempts = []) {
+    const autoResolved = resolutionAttempts.length > 0;
+    if (autoResolved) {
+        log.info("AUTO_RESOLVED", {
+            event: "AUTO_RESOLVED",
+            domain: "FISCAL_LEDGER_LOCK",
+            strategy: "BOUNDED_LOCK_WAIT",
+            attemptCount: resolutionAttempts.length,
+            traceId,
+        });
+    }
+    return { id: LOCK_ID, ownerId, version, revision, expiresAt, traceId, autoResolved, resolutionAttempts };
 }
 
 export async function acquireFiscalLedgerLock(traceId, options = {}) {
@@ -254,6 +268,7 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
     const lockTraceId = String(traceId || makeTraceId("fiscal-lock"));
     const waitMs = Math.max(0, Number(options.waitMs ?? DEFAULT_WAIT_MS));
     const deadline = Date.now() + waitMs;
+    const resolutionAttempts = [];
 
     while (true) {
         const now = new Date();
@@ -308,19 +323,40 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
                 }
 
                 if (_lockPatchSucceeded(patched)) {
-                    return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId);
+                    return _lockResult(ownerId, nextVersion, nextExpiry, lockTraceId, null, resolutionAttempts);
                 }
 
-                // Another worker won the compare-and-swap. Re-read the row.
+                // Another worker won the compare-and-swap. Retry with bounded backoff.
+                if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
+                    throw createActionableError({
+                        code: "FISCAL_LEDGER_LOCK_BUSY",
+                        userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                        technicalDetail: "El compare-and-swap del lock perdió frente a otro worker y agotó los reintentos acotados.",
+                        remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si persiste, solicitar revisión al administrador técnico; no eliminar ni forzar el lock."],
+                        contextSnapshot: { lockId: LOCK_ID, lockStatus: "CAS_CONFLICT", expiresAt: expiresAt.toISOString(), waitMs, traceId: lockTraceId },
+                        retryable: true,
+                        resolutionAttempts,
+                    });
+                }
+                const delayMs = LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length];
+                resolutionAttempts.push({ strategy: "LOCK_COMPARE_AND_SWAP", delayMs, outcome: "CONFLICT" });
+                await _sleep(delayMs);
                 continue;
             }
 
-            if (Date.now() >= deadline) {
-                const error = new Error("FISCAL_LEDGER_LOCK_BUSY");
-                error.code = "FISCAL_LEDGER_LOCK_BUSY";
-                throw error;
+            if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
+                throw createActionableError({
+                    code: "FISCAL_LEDGER_LOCK_BUSY",
+                    userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                    technicalDetail: "Se agotó la ventana de espera del lock fiscal; el lock activo no se modifica ni se fuerza.",
+                    remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si sigue activo después de expirar, solicitar revisión al administrador técnico; no eliminarlo manualmente."],
+                    contextSnapshot: { lockId: LOCK_ID, lockStatus: "ACTIVE", expiresAt: expiresAt.toISOString(), waitMs, traceId: lockTraceId },
+                    retryable: true,
+                });
             }
-            await _sleep(Math.min(POLL_MS, Math.max(1, deadline - Date.now())));
+            const delayMs = Math.min(LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length], Math.max(1, deadline - Date.now()));
+            resolutionAttempts.push({ strategy: "LOCK_WAIT", delayMs, outcome: "WAITED" });
+            await _sleep(delayMs);
             continue;
         }
 
@@ -344,15 +380,22 @@ export async function acquireFiscalLedgerLock(traceId, options = {}) {
 
         try {
             const saved = await dalInsert(CONTROL_COL, lock);
-            return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null);
+            return _lockResult(ownerId, 0, expiresAt, lockTraceId, saved?._revision ?? null, resolutionAttempts);
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
-            if (Date.now() >= deadline) {
-                const busy = new Error("FISCAL_LEDGER_LOCK_BUSY");
-                busy.code = "FISCAL_LEDGER_LOCK_BUSY";
-                throw busy;
+            if (Date.now() >= deadline || resolutionAttempts.length >= LOCK_RETRY_BACKOFF_MS.length) {
+                throw createActionableError({
+                    code: "FISCAL_LEDGER_LOCK_BUSY",
+                    userMessage: "La caja está ocupada. Espera a que termine la operación en curso.",
+                    technicalDetail: "Se agotó la ventana de espera del lock fiscal; el lock activo no se modifica ni se fuerza.",
+                    remediation: ["Esperar a que finalice la operación que mantiene el bloqueo.", "Comprobar el estado y la expiración del lock en ControlOperativo.", "Si sigue activo después de expirar, solicitar revisión al administrador técnico; no eliminarlo manualmente."],
+                    contextSnapshot: { lockId: LOCK_ID, waitMs, traceId: lockTraceId },
+                    retryable: true,
+                });
             }
-            await _sleep(POLL_MS);
+            const delayMs = LOCK_RETRY_BACKOFF_MS[resolutionAttempts.length];
+            resolutionAttempts.push({ strategy: "DUPLICATE_KEY_RECHECK", delayMs, outcome: "WAITED" });
+            await _sleep(delayMs);
         }
     }
 }
