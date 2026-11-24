@@ -825,10 +825,8 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         const sessions = session ? [session] : [];
         return sessions.filter((item) => _matchesFilter(item, filter));
     }
-    const movementTypes = [...new Set([
-        TPV_EVENT_MOVEMENT_TYPES[collection],
-        TPV_LEGACY_EVENT_MOVEMENT_TYPES[collection],
-    ].filter(Boolean))];
+    const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
+    const movementTypes = movementType ? [movementType] : [];
     if (!movementTypes.length) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
     const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
@@ -841,7 +839,7 @@ export async function queryTpvRecords(collection, filter, options = {}) {
     })));
     const records = [];
     const appendPage = (page) => records.push(...page.items
-        .filter(_isRecognizedSyntheticLedgerItem)
+        .filter(_isCanonicalTpvLedgerItem)
         .map(_virtualRecord)
         .filter((item) => _matchesFilter(item, filter)));
     pages.forEach(appendPage);
@@ -887,21 +885,21 @@ export async function queryTpvLedgerRecords(options = {}) {
         }),
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.LEGACY_LEDGER_SOURCE),
+            filter: wql.eq("recordSource", TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE),
             sort: ["recordTimestamp DESC"],
             limit,
             consistency: CONSISTENCY.STRONG,
         }),
         queryItems({
             dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-            filter: wql.eq("recordSource", TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE),
+            filter: wql.eq("recordSource", TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE),
             sort: ["recordTimestamp DESC"],
             limit,
             consistency: CONSISTENCY.STRONG,
         }),
     ]);
     const records = [...current.items, ...legacy.items, ...previous.items]
-        .filter(_isRecognizedSyntheticLedgerItem)
+        .filter(_isHistoricalTpvLedgerItem)
         .map(_virtualRecord)
         .sort((a, b) => new Date(b.recordTimestamp || 0).getTime() - new Date(a.recordTimestamp || 0).getTime())
         .slice(0, limit);
