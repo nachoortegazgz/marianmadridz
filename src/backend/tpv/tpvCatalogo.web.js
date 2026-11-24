@@ -5,6 +5,7 @@ import { catalogVersioning, productsV3 } from "@wix/stores";
 import { searchTpvContacts, resolveTpvContact, listAuthorizedProfessionals } from "backend/tpv/tpvNativeDirectory";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
+import { toMinorUnits as toMinorUnitsStrict } from "backend/tpv/tpvUtils";
 
 const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
 const queryServicesElevated = auth.elevate(services.queryServices);
@@ -18,10 +19,11 @@ function toMinorUnits(value) {
         ? (value.amount ?? value.value ?? null)
         : value;
     if (raw === null || raw === undefined || raw === "") return null;
-    const amount = Number(raw);
-    if (!Number.isFinite(amount) || amount < 0) return null;
-    const minor = Math.round((amount + Number.EPSILON) * 100);
-    return Math.abs(amount * 100 - minor) <= 1e-7 ? minor : null;
+    try {
+        return toMinorUnitsStrict(raw, "CATALOG_PRICE");
+    } catch (_) {
+        return null;
+    }
 }
 
 function normalizePage(input = {}) {
@@ -284,7 +286,7 @@ export const obtenerVariantesProducto = webMethod(
                     precioMinor: toMinorUnits(variant.price?.actualPrice?.amount),
                     precioFormateado: variant.price?.actualPrice?.formattedAmount ?? null,
                     moneda: product.currency || null,
-                    disponible: variant.inventoryStatus?.inStock !== false ||
+                    disponible: variant.inventoryStatus?.inStock === true ||
                         variant.inventoryStatus?.preorderEnabled === true,
                 }));
             return {
