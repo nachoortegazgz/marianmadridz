@@ -243,7 +243,8 @@ async function dispatch(message) {
             });
             const impuestosTotal = numeric(payload.tax, "TAX");
             const lineTaxMinor = lineas.reduce((sum, line) => sum + Math.round(line.impuestosImporte * 100), 0);
-            const declaredTaxMinor = Math.round(impuestosTotal * 100);\n            if (lineTaxMinor !== declaredTaxMinor) {
+            const declaredTaxMinor = Math.round(impuestosTotal * 100);
+            if (lineTaxMinor !== declaredTaxMinor) {
                 throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
             }
             const salePayload = {
