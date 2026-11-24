@@ -25,6 +25,7 @@ import {
     TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
+    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -371,8 +372,12 @@ function _validateFiscalPayload(item) {
     }
 
     if (item.sequenceNumber !== undefined && item.sequenceNumber !== null && item.sequenceNumber !== "") {
-        if (!Number.isFinite(Number(item.sequenceNumber)) || Number(item.sequenceNumber) <= 0) {
-            _schemaError("sequenceNumber invalido (debe ser > 0)");
+        const sequenceNumber = Number(item.sequenceNumber);
+        const isTpvLedgerEntry = _isCurrentSyntheticTpvRow(item);
+        if (!Number.isFinite(sequenceNumber) || (isTpvLedgerEntry ? sequenceNumber < 0 : sequenceNumber <= 0)) {
+            _schemaError(isTpvLedgerEntry
+                ? "sequenceNumber invalido (TPV exige 0)"
+                : "sequenceNumber invalido (debe ser > 0)");
         }
     }
 
@@ -414,7 +419,7 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
     if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
-        String(item.movementType || "").startsWith("SIMULATED_TPV_")) {
+        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) {
         if (!_isCurrentSyntheticTpvRow(item)) {
             _schemaError("Evento TPV no cumple el contrato neutral de origen, sitio y versión.");
         }
@@ -486,8 +491,8 @@ function _isCurrentSyntheticTpvRow(value) {
     const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
     const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
     return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
-        String(value?.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_EVENT_MOVEMENT_TYPES[value?.payloadFiscal?.logicalCollection] === value.movementType &&
+        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(value?.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(value?.movementType)) &&
+        [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[value?.payloadFiscal?.logicalCollection] === value.movementType) &&
         (
             (
                 value?.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
@@ -506,8 +511,8 @@ function _isCurrentSyntheticTpvRow(value) {
                 value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
-        value?.payloadFiscal?.isSynthetic === true &&
-        value?.payloadFiscal?.realPayment === false &&
+        (value?.payloadFiscal?.isSynthetic === undefined || value?.payloadFiscal.isSynthetic === true) &&
+        (value?.payloadFiscal?.realPayment === undefined || value?.payloadFiscal.realPayment === false) &&
         value?.payloadFiscal?.externalSideEffects === false &&
         Boolean(value?.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&

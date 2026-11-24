@@ -33,7 +33,6 @@ import {
 test("TPV runtime policy separates synthetic source from disabled external capabilities", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
     assert.match(source, /CAPABILITIES: Object\.freeze\(\{[\s\S]*?realPayments: false,[\s\S]*?nativeWrites: false/);
-    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true);
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.realPayments, false);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES.nativeWrites, false);
@@ -167,7 +166,7 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         sequenceNumber: 0,
         transactionId: "TPV_TEST_ROW",
         traceId: "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":SESSION-TEST",
-        movementType: "SIMULATED_TPV_PAYMENT",
+        movementType: "TPV_PAYMENT",
         recordSource: TPV_LEDGER_SOURCE,
         payloadFiscal: {
             sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
@@ -185,6 +184,13 @@ test("logical TPV entities persist only as marked synthetic rows in canonical CM
         },
     };
 
+    const neutralItem = structuredClone(item);
+    delete neutralItem.payloadFiscal.isSynthetic;
+    delete neutralItem.payloadFiscal.realPayment;
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", neutralItem));
+    const legacyItem = structuredClone(item);
+    legacyItem.movementType = "SIMULATED_TPV_PAYMENT";
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", legacyItem));
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
@@ -312,8 +318,6 @@ test("legacy transaction IDs remain discoverable for same-collection idempotent 
 });
 
 test("TPV policy remains synthetic and client idempotency keys are bounded", () => {
-    assert.equal(TPV_RUNTIME_POLICY.ENABLED, true, "offline test harness override");
-    assert.equal(TPV_RUNTIME_POLICY.SYNTHETIC_ONLY, true);
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "SYNTHETIC");
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, false);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, false);
@@ -325,8 +329,6 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
     assert.match(TPV_RUNTIME_POLICY.SITE_ID, /^[0-9a-f-]{36}$/i);
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_SYNTHETIC_LEDGER_V1");
-    assert.equal(TPV_RUNTIME_POLICY.REAL_PAYMENTS_ENABLED, false);
-    assert.equal(TPV_RUNTIME_POLICY.FISCAL_WRITES_ENABLED, false);
     assert.equal(TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED, false);
     assert.equal(TPV_RUNTIME_POLICY.HARDWARE_ENABLED, false);
     assert.equal(normalizeClientIdempotencyKey("sandbox-client-key-0001"), "sandbox-client-key-0001");
@@ -337,8 +339,8 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(fromMinorUnits(1234), 12.34);
     assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
     const payload = makeSyntheticPayload({ sample: true });
-    assert.equal(payload.isSynthetic, true);
-    assert.equal(payload.realPayment, false);
+    assert.equal(payload.isSynthetic, undefined);
+    assert.equal(payload.realPayment, undefined);
     assert.equal(payload.externalSideEffects, false);
     assert.equal(payload.schemaVersion, TPV_RUNTIME_POLICY.SCHEMA_VERSION);
     assert.equal(payload.processingMode, "INTERNAL");

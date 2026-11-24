@@ -33,9 +33,9 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.totalVenta, 108.9);
     assert.equal(result.importePagado, 108.9);
     assert.equal(result.importePendiente, 0);
-    assert.equal(result.estadoVenta, "COBRADA_SINTETICA");
+    assert.equal(result.estadoVenta, "COBRADA");
     assert.equal(result.persisted, false);
-    assert.equal(result.realPayment, false);
+    assert.equal(result.realPayment, undefined);
 });
 
 test("TPV custom tariff lines remain explicitly typed and validated", () => {
@@ -138,7 +138,7 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     assert.equal(result.cambioEntregado, 5);
     assert.equal(result.efectivoAplicado, 40);
     assert.equal(result.importePendiente, 0);
-    assert.equal(result.realPayment, false);
+    assert.equal(result.realPayment, undefined);
 });
 
 test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-cent arithmetic", () => {
@@ -227,12 +227,12 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
     const simulator = await source("tpv/tpvPaymentSimulator.js");
     assert.match(simulator, /providerCalled: false/);
-    assert.match(simulator, /realPayment: false/);
+    assert.doesNotMatch(simulator, /realPayment: false|isSynthetic: true/);
     assert.match(simulator, /externalSideEffects: false/);
     assert.match(simulator, /requestFingerprint/);
 
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(sales, /realPayment: false/);
+    assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /fiscalLedgerWritten: false/);
     assert.match(sales, /TPV_SALE_MUST_BE_FULLY_PAID/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
@@ -262,10 +262,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(policy, /TPV_RUNTIME_POLICY/);
     assert.match(policy, /TPV_SANDBOX_SYNTHETIC/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
-    assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
-    assert.match(config, /FISCAL_WRITES_ENABLED: false/);
-    assert.match(config, /SYNTHETIC_ONLY: true/);
-    assert.match(config, /TPV_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
+    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
+    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
@@ -403,7 +401,9 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
 test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
-    assert.match(repository, /while \(page\.hasNext && records\.length < maxRecords\)/);
+    assert.match(repository, /while \(pages\.some\(\(page\) => page\.hasNext\) && records\.length < maxRecords\)/);
+    assert.match(repository, /pages\[index\] = await pages\[index\]\.next\(\)/);
+    assert.match(repository, /recordTimestamp ASC/);
     assert.match(repository, /export async function getPendingTpvSales\(sessionId\)/);
     assert.match(repository, /export async function getPendingTpvRefunds\(sessionId\)/);
     assert.match(repository, /actualByMethod\.size !== expectedByMethod\.size/);

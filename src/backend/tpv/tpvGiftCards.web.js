@@ -21,7 +21,6 @@ export const consultarTarjetaRegalo = webMethod(
             },
             readOnly: true,
             syntheticOnly: true,
-            realPayment: false,
             traceId,
         };
     }

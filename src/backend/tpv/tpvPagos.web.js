@@ -36,8 +36,6 @@ export const validarDesglosePagos = webMethod(
                     totalApplied: appliedMinor / 100,
                     physicalCash: breakdown.EFECTIVO / 100,
                     gatewayCalled: false,
-                    realPayment: false,
-                    isSynthetic: true,
                 },
                 error: null,
                 traceId,

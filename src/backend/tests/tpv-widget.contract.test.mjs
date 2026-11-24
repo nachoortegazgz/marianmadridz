@@ -67,11 +67,12 @@ test("TPV widget keeps all writes synthetic and does not implement a second paym
     const html = await source("%23htmlTPV.txt");
     const config = await source("src/backend/internalConfig.js");
     assert.match(config, /CAPABILITIES: Object\.freeze/);
-    assert.match(config, /SYNTHETIC_ONLY: true/);
-    assert.match(config, /REAL_PAYMENTS_ENABLED: false/);
+    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
     assert.match(config, /TPV_LEDGER_SOURCE = "TPV_LEDGER"/);
-    assert.match(config, /FISCAL_WRITES_ENABLED: false/);
+    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
+    assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
+    assert.match(html, /paymentStatus === "NOT_PROCESSED"|gatewayCalled === false/);
     assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);
     assert.match(html, /data\.type !== "MM_CONTEXT"/);

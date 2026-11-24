@@ -56,8 +56,6 @@ export const obtenerAuditoriaTPV = webMethod(
                     occurredAt: record.occurredAt || record.createdAt || null,
                     source: record.source || null,
                     traceId: record.payload?.traceId || null,
-                    isSynthetic: true,
-                    realPayment: false,
                 }));
 
             return {
@@ -67,7 +65,6 @@ export const obtenerAuditoriaTPV = webMethod(
                     count: items.length,
                     sessionId,
                     integrationStatus: "NO_ENVIADO",
-                    simulationStatus: "SYNTHETIC",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,

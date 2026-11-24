@@ -9,6 +9,7 @@ import {
     TPV_LEDGER_SOURCE,
     TPV_COLLECTIONS,
     TPV_EVENT_MOVEMENT_TYPES,
+    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
 } from "backend/internalConfig";
 
 function _policyError(code) {
@@ -76,8 +77,8 @@ function _isRecord(value) {
 function _isSyntheticTpvRecord(item) {
     return _isRecord(item) &&
         [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) &&
-        String(item.movementType || "").startsWith("SIMULATED_TPV_") &&
-        TPV_EVENT_MOVEMENT_TYPES[item.payloadFiscal?.logicalCollection] === item.movementType &&
+        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType)) &&
+        [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[item.payloadFiscal?.logicalCollection] === item.movementType) &&
         (
             (
                 item.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
@@ -96,8 +97,8 @@ function _isSyntheticTpvRecord(item) {
                 item.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
             )
         ) &&
-        item.payloadFiscal?.isSynthetic === true &&
-        item.payloadFiscal?.realPayment === false &&
+        (item.payloadFiscal?.isSynthetic === undefined || item.payloadFiscal.isSynthetic === true) &&
+        (item.payloadFiscal?.realPayment === undefined || item.payloadFiscal.realPayment === false) &&
         item.payloadFiscal?.externalSideEffects === false &&
         Boolean(item.payloadFiscal?.requestFingerprint) &&
         /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
@@ -134,7 +135,7 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) || String(item.movementType || "").startsWith("SIMULATED_TPV_"))) {
+        ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) || (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType)))) {
         if (!_isSyntheticTpvRecord(item)) {
             throw _policyError("CMS_TPV_LEDGER_CONTRACT_INVALID");
         }

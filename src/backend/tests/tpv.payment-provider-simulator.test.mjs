@@ -14,7 +14,7 @@ test("approved payment returns deterministic captured synthetic transaction", ()
     assert.equal(first.requestFingerprint, replay.requestFingerprint);
     assert.equal(first.amountMinor, 2550);
     assert.equal(first.providerCalled, false);
-    assert.equal(first.realPayment, false);
+    assert.equal(first.realPayment, undefined);
     assert.equal(first.persisted, false);
     assert.equal(first.externalSideEffects, false);
 });
@@ -56,7 +56,7 @@ test("approved partial refund returns synthetic reference and no side effects", 
     assert.equal(refund.status, "REFUNDED");
     assert.equal(refund.refundAmountMinor, 1250);
     assert.equal(refund.providerCalled, false);
-    assert.equal(refund.realPayment, false);
+    assert.equal(refund.realPayment, undefined);
     assert.equal(refund.externalSideEffects, false);
 });
 

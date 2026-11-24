@@ -2,13 +2,19 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
+    TPV_SALE: "VENTA",
+    TPV_CASH_MOVEMENT: null,
+    TPV_REFUND: "DEVOLUCION",
+    TPV_TICKET_X: "CONTROL_X",
+    TPV_TICKET_Z: "CIERRE_Z",
+    // Read-only compatibility for previously persisted movement discriminators.
     SIMULATED_TPV_SALE: "VENTA",
     SIMULATED_TPV_CASH_MOVEMENT: null,
     SIMULATED_TPV_REFUND: "DEVOLUCION",
@@ -23,7 +29,7 @@ function sessionOf(record) {
 function mapMovementRecord(record) {
     const sourceType = String(record?.cmsMovementType || "");
     if (!Object.prototype.hasOwnProperty.call(TPV_LEDGER_DISPLAY_TYPES, sourceType)) return null;
-    if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return null;
+    if ((sourceType === "TPV_SALE" || sourceType === "SIMULATED_TPV_SALE") && !["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) return null;
     const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
         ? Number(record.amountMinor)
         : Number.isSafeInteger(Number(record.totalMinor))
@@ -33,7 +39,7 @@ function mapMovementRecord(record) {
         movementId: record._id,
         sessionId: sessionOf(record) || null,
         movementType: TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA"),
-        sourceType,
+        sourceType: TPV_LEDGER_SOURCE,
         amount: amountMinor === null ? null : fromMinorUnits(amountMinor),
         paymentMethod: record.paymentMethod || null,
         reason: record.reason || record.totals?.differenceReason || "",
@@ -42,7 +48,6 @@ function mapMovementRecord(record) {
         createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
         totals: record.totals || null,
         currency: record.currency || "EUR",
-        isSynthetic: true,
         persisted: true,
     };
 }
@@ -103,7 +108,7 @@ export const registrarMovimientoCaja = webMethod(
                 paymentMethod,
                 profesionalId: profesionalId || null,
                 reason,
-                status: "CONFIRMADO_SINTETICO",
+                status: "CONFIRMADO",
                 createdAt: new Date(),
                 payload: {
                     sessionId: session.sessionId,
@@ -168,7 +173,7 @@ export const obtenerMovimientosCaja = webMethod(
                 .filter((record) => {
                     const sourceType = String(record.cmsMovementType || "");
                     if (!visibleTypes.has(sourceType)) return false;
-                    if (sourceType === "SIMULATED_TPV_SALE" && record.status !== "CONFIRMADA_SINTETICA") return false;
+                    if ((sourceType === "TPV_SALE" || sourceType === "SIMULATED_TPV_SALE") && !["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) return false;
                     const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
                     return recordSessionId === sessionId;
                 })
@@ -183,7 +188,6 @@ export const obtenerMovimientosCaja = webMethod(
                     sessionId,
                     operationalStatus,
                     integrationStatus: "NO_ENVIADO",
-                    simulationStatus: "SYNTHETIC",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
@@ -302,7 +306,6 @@ export const exportarAuditoriaTPV = webMethod(
                         allocations: record.payload?.allocations || null,
                         recordCount: record.payload?.recordCount ?? null,
                     }),
-                    isSynthetic: true,
                 }))
                 .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
             await appendTpvAudit({

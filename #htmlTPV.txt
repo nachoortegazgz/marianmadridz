@@ -578,9 +578,8 @@ body {
       : "Hora: —";
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
-    const simulationStatus = state.session?.simulationStatus || (state.session?.isSynthetic ? "SYNTHETIC" : "NOT_APPLICABLE");
     $("cashLabel").textContent = isOpen
-      ? "ABIERTA · Integración: " + integrationStatus + " · Simulación: " + simulationStatus
+      ? "ABIERTA · Integración: " + integrationStatus
       : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy;
@@ -904,8 +903,8 @@ body {
         total,
       }, "SALE_REGISTER_RES");
       state.lastSale = result;
-      toast(result?.paymentStatus === "SIMULATED_ONLY"
-        ? "Venta sintética registrada; no se ha ejecutado ningún cobro real."
+      toast(result?.paymentStatus === "NOT_PROCESSED" || result?.gatewayCalled === false
+        ? "Venta registrada en TPV interno; el pago no se ha enviado a una pasarela externa."
         : "Venta registrada.");
       state.items = [];
       state.payments = [];

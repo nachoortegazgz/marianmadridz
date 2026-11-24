@@ -68,3 +68,12 @@ test("SIMULATION-04 does not classify a bare synthetic flag or QA source alone",
     movementType: "SALE",
   }), false);
 });
+
+test("SIMULATION-05 classifies neutral TPV ledger source as non-fiscal", () => {
+  assert.equal(isExplicitSimulationLedgerRecord({
+    recordSource: "TPV_LEDGER",
+    movementType: "TPV_PAYMENT",
+    eventType: "PAYMENT",
+    hash: "a".repeat(64),
+  }), true);
+});

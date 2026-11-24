@@ -61,7 +61,7 @@ export async function buildTpvSessionSummary(session) {
     }
 
     for (const movement of movements) {
-        if (movement.status !== "CONFIRMADO_SINTETICO") continue;
+        if (!["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status)) continue;
         const amount = Number(movement.amountMinor || 0);
         if (movement.movementType === "ENTRADA") totals.cashInMinor += amount;
         if (movement.movementType === "SALIDA" || movement.movementType === "RETIRADA") totals.cashOutMinor += amount;
@@ -71,8 +71,6 @@ export async function buildTpvSessionSummary(session) {
     totals.totalCollectedMinor = totals.cashMinor + totals.cardMinor + totals.bizumMinor + totals.bonoMinor + totals.giftCardMinor + totals.otherMinor;
     totals.expectedCashMinor = totals.openingCashMinor + totals.cashMinor + totals.cashInMinor - totals.cashOutMinor;
     totals.reconciliationOk = totals.totalCollectedMinor === totals.netSalesMinor;
-    totals.isSynthetic = true;
-    totals.realPayment = false;
 
     return totals;
 }

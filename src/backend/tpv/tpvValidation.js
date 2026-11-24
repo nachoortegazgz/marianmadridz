@@ -192,10 +192,8 @@ export function validateSaleDraft(input = {}) {
         totalVenta: totalMinor / 100,
         importePagado: paymentResult.importePagadoMinor / 100,
         importePendiente: importePendienteMinor / 100,
-        estadoVenta: importePendienteMinor === 0 ? "COBRADA_SINTETICA" :
-            paymentResult.importePagadoMinor > 0 ? "PARCIAL_SINTETICA" : "BORRADOR",
-        isSynthetic: true,
+        estadoVenta: importePendienteMinor === 0 ? "COBRADA" :
+            paymentResult.importePagadoMinor > 0 ? "PARCIAL" : "BORRADOR",
         persisted: false,
-        realPayment: false,
     });
 }

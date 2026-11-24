@@ -15,7 +15,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
 import { createPersistedTpvProjectionError } from "backend/tpv/tpvMovementContracts";
 import {
@@ -303,12 +303,13 @@ function _eventAmount(record) {
 }
 
 function _isRecognizedSyntheticLedgerItem(item) {
-    if (!item || typeof item !== "object" || Array.isArray(item) || !String(item.movementType || "").startsWith("SIMULATED_TPV_")) return false;
+    if (!item || typeof item !== "object" || Array.isArray(item) || !(Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) return false;
     const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
     const validHash = /^[a-f0-9]{64}$/i.test(String(item.hash || "")) && Number(item.sequenceNumber) === 0;
     const validFingerprint = /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""));
-    const validCommon = TPV_EVENT_MOVEMENT_TYPES[envelope.logicalCollection] === item.movementType &&
-        envelope.isSynthetic === true && envelope.realPayment === false &&
+    const validCommon = [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[envelope.logicalCollection] === item.movementType) &&
+        (envelope.isSynthetic === undefined || envelope.isSynthetic === true) &&
+        (envelope.realPayment === undefined || envelope.realPayment === false) &&
         envelope.externalSideEffects === false && validHash;
     const validCurrentCommon = validCommon && validFingerprint;
     const validSessionOrAudit = envelope.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
@@ -362,8 +363,6 @@ function _virtualRecord(item) {
         traceId: record.traceId || item.traceId,
         cmsTraceId: item.traceId,
         persisted: true,
-        isSynthetic: true,
-        realPayment: false,
     };
 }
 
@@ -467,7 +466,6 @@ function _sessionFromCaja(caja) {
         }),
         _createdDate: caja._createdDate,
         _updatedDate: caja._updatedDate,
-        isSynthetic: true,
         persisted: true,
     };
 }
@@ -513,7 +511,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
             next.cashRegisterStatus = "SIMULACION";
 
-            if (collection === TPV_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
+            if (collection === TPV_COLLECTIONS.VENTAS && ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) {
                 next.salesCount = Number(caja.salesCount || 0) + 1;
             }
             if (collection === TPV_COLLECTIONS.PAGOS) {
@@ -575,7 +573,7 @@ function _shouldProject(collection, record) {
         collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA ||
         collection === TPV_COLLECTIONS.TICKET_Z) return true;
     return collection === TPV_COLLECTIONS.VENTAS &&
-        record?.status === "CONFIRMADA_SINTETICA";
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record?.status);
 }
 
 async function _projectPersistedTpvEvent(collection, record, recordId, hash, idempotencyKey, replayed) {
@@ -713,8 +711,6 @@ function _buildSyntheticLedgerItem(collection, key, record, fingerprint) {
         requestFingerprint: fingerprint,
         schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
         ledgerRecord: record,
-        isSynthetic: true,
-        realPayment: false,
         externalSideEffects: false,
     };
     const hashPayload = stableSerialize({
@@ -852,33 +848,42 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         const sessions = session ? [session] : [];
         return sessions.filter((item) => _matchesFilter(item, filter));
     }
-    const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
-    if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
+    const movementTypes = [...new Set([
+        TPV_EVENT_MOVEMENT_TYPES[collection],
+        TPV_LEGACY_EVENT_MOVEMENT_TYPES[collection],
+    ].filter(Boolean))];
+    if (!movementTypes.length) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
     const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
-    const result = await queryItems({
+    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+    const pages = await Promise.all(movementTypes.map((movementType) => queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
         filter: wql.eq("movementType", movementType),
         sort: ["recordTimestamp ASC"],
         limit: pageSize,
         consistency: CONSISTENCY.STRONG,
-    });
-    const records = result.items
+    })));
+    const records = [];
+    const appendPage = (page) => records.push(...page.items
         .filter(_isRecognizedSyntheticLedgerItem)
         .map(_virtualRecord)
-        .filter((item) => _matchesFilter(item, filter));
-    if (options.allowTruncated === true) return records;
-    const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
-    let page = result;
-    while (page.hasNext && records.length < maxRecords) {
-        page = await page.next();
-        records.push(...page.items
-            .filter(_isRecognizedSyntheticLedgerItem)
-            .map(_virtualRecord)
-            .filter((item) => _matchesFilter(item, filter)));
+        .filter((item) => _matchesFilter(item, filter)));
+    pages.forEach(appendPage);
+    if (options.allowTruncated !== true) {
+        while (pages.some((page) => page.hasNext) && records.length < maxRecords) {
+            for (let index = 0; index < pages.length; index += 1) {
+                if (pages[index].hasNext && records.length < maxRecords) {
+                    pages[index] = await pages[index].next();
+                    appendPage(pages[index]);
+                }
+            }
+        }
+        if (pages.some((page) => page.hasNext)) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
     }
-    if (page.hasNext) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
-    if (Array.isArray(options.sort) && options.sort.length) {
-        const [field, direction = "ASC"] = String(options.sort[0]).split(/\s+/);
+    const sortSpec = Array.isArray(options.sort) && options.sort.length
+        ? options.sort
+        : ["recordTimestamp ASC"];
+    if (sortSpec.length) {
+        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\s+/);
         records.sort((a, b) => {
             const av = field.split(".").reduce((v, k) => v?.[k], a);
             const bv = field.split(".").reduce((v, k) => v?.[k], b);
@@ -886,7 +891,7 @@ export async function queryTpvRecords(collection, filter, options = {}) {
             return direction.toUpperCase() === "DESC" ? -cmp : cmp;
         });
     }
-    return records;
+    return records.slice(0, maxRecords);
 }
 
 export async function queryTpvLedgerRecords(options = {}) {
@@ -986,7 +991,7 @@ export async function latestOpenTpvSession() {
 export async function getCommittedTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     return records.filter((item) =>
-        item.status === "CONFIRMADA_SINTETICA" &&
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }
@@ -994,10 +999,10 @@ export async function getCommittedTpvSales(sessionId) {
 export async function getPendingTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     const committedIds = new Set(records
-        .filter((item) => item.status === "CONFIRMADA_SINTETICA")
+        .filter((item) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status))
         .map((item) => item.saleId));
     return records.filter((item) =>
-        item.status === "PREPARADA_SINTETICA" &&
+        ["PREPARADA", "PREPARADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId &&
         !committedIds.has(item.saleId)
     );
@@ -1038,7 +1043,7 @@ export async function getPendingTpvRefunds(sessionId) {
             payment.payload?.refundId === refund.refundId
         );
         const refundCashMovements = movements.filter((movement) =>
-            movement.status === "CONFIRMADO_SINTETICO" &&
+            ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status) &&
             movement.movementType === "DEVOLUCION_EFECTIVO" &&
             movement.payload?.refundId === refund.refundId
         );
@@ -1079,7 +1084,7 @@ export async function getPendingTpvRefunds(sessionId) {
 export async function getTpvRefunds(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
-        item.status === "CONFIRMADO_SINTETICO" &&
+        ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }

@@ -153,7 +153,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(audit, /TPV_COLLECTIONS\.AUDITORIA/);
     assert.match(audit, /record\.payload\?\.sessionId/);
     assert.match(audit, /data: \{[\s\S]*items,[\s\S]*count: items\.length/);
-    assert.match(audit, /isSynthetic: true,\s*realPayment: false/);
+    assert.doesNotMatch(audit, /isSynthetic: true|realPayment: false/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.match(controller, /import \{ obtenerAuditoriaTPV \} from "backend\/tpv\/tpvAuditoria\.web"/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPV/);
@@ -200,9 +200,9 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
 
     assert.match(sales, /if \(!requestedSessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(sales, /TPV_SESSION_CLOSED/);
-    assert.match(sales, /realPayment: false/);
-    assert.match(sales, /paymentStatus: "SIMULATED_ONLY"/);
-    assert.match(refunds, /paymentStatus: "SIMULATED_ONLY"/);
+    assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
+    assert.match(sales, /paymentStatus: "NOT_PROCESSED"/);
+    assert.match(refunds, /paymentStatus: "NOT_PROCESSED"/);
     assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(closures, /paymentStatus: "NOT_APPLICABLE"/);
     assert.match(movements, /const requestedSessionId = sessionIdFromInput\(input\)/);
