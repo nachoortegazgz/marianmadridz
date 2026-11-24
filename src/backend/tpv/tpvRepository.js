@@ -948,7 +948,7 @@ export async function getCommittedTpvSales(sessionId) {
 export async function getPendingTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     const committedIds = new Set(records
-        .filter((item) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status))
+        .filter((item) => item.status === "CONFIRMADA")
         .map((item) => item.saleId));
     return records.filter((item) =>
         item.status === "PREPARADA" &&
