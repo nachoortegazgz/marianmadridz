@@ -38,7 +38,7 @@ import {
 /**
  * Valida que value es miembro del enum object.
  * Lanza Error con codigo SCHEMA_VIOLATION si no lo es.
- * Acepta undefined/null como valido solo si allowEmpty === true.
+ * Rechaza undefined/null; la opcionalidad debe resolverse explicitamente en el llamador.
  */
 export function assertValidEnum(value, enumObject, fieldName) {
     const allowedValues = enumObject && typeof enumObject === "object"

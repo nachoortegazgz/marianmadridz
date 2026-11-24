@@ -1116,14 +1116,33 @@ export async function load(url, context, nextLoad) {
     return { format: "module", source, shortCircuit: true };
   }
   if (url === 'mock:wix-fetch') {
-    // Velo exposes fetch as a named export from wix-fetch. Node's offline
-    // harness uses the native fetch implementation only as a test adapter;
-    // production code still imports the Wix module.
-    return {
-      format: 'module',
-      source: 'export const fetch = (...args) => globalThis.fetch(...args);\nexport default fetch;\n',
-      shortCircuit: true,
-    };
+    // The offline signer is the only permitted HTTP destination. The test
+    // suite must install its deterministic mock before this adapter can run.
+    // Never delegate arbitrary URLs to Node's native fetch.
+    const source = `
+const ALLOWED_HOST = "signer.mock.local";
+export const fetch = async (input, init) => {
+  const rawUrl = typeof input === "string" ? input : input?.url;
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("OFFLINE_FETCH_URL_INVALID");
+  }
+  if (parsed.protocol !== "https:" || parsed.hostname !== ALLOWED_HOST) {
+    throw new Error("OFFLINE_EXTERNAL_FETCH_BLOCKED");
+  }
+  if (globalThis.__mmSignerFetchInstalled !== true) {
+    throw new Error("OFFLINE_FETCH_MOCK_NOT_INSTALLED");
+  }
+  if (typeof globalThis.fetch !== "function") {
+    throw new Error("OFFLINE_FETCH_ADAPTER_UNAVAILABLE");
+  }
+  return globalThis.fetch(input, init);
+};
+export default fetch;
+`;
+    return { format: "module", source, shortCircuit: true };
   }
   if (url.startsWith('mock:wix-data') || url === 'mock:@wix/data' || url === 'mock:@wix/essentials') {
     // @wix/data (API v2, usado por dataAccess.js) -> adaptador v2 sobre el
