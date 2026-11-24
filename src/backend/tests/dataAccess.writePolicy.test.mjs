@@ -16,9 +16,6 @@ import {
     CONTROL_TYPE as T,
     RECORD_TYPE,
     DATA_ACCESS_WRITE_POLICY,
-    TPV_RUNTIME_POLICY,
-    TPV_LEDGER_SOURCE,
-    TPV_COLLECTIONS,
     BOOKING_TYPE,
     CITAS_BOOKING_STATUS,
     CITAS_PAYMENT_STATUS,
@@ -158,39 +155,29 @@ test("removed CMS collections are absent from the canonical registry", () => {
     assert.equal(C.TPV_IDENTITIES, undefined);
     assert.equal(C.PAQUETES_GESTORIA, undefined);
 });
-test("MovimientosCaja is append-only even for synthetic TPV records", () => {
+test("MovimientosCaja rejects all new TPV ledger writes and remains append-only", () => {
     const item = {
         _id: "TPV_TEST_ROW",
-        recordSource: TPV_LEDGER_SOURCE,
-        movementType: "SIMULATED_TPV_PAYMENT",
-        traceId: "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":SESSION-1",
-        sequenceNumber: 0,
+        recordSource: "TPV_LEDGER",
+        movementType: "TPV_PAYMENT",
+        traceId: "TPV:site:session",
+        sequenceNumber: 1,
         hash: "a".repeat(64),
-        payloadFiscal: {
-            sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
-            schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-            reconciliationStatus: "NOT_RECONCILED",
-            sessionId: "SESSION-1",
-            sandboxRunId: TPV_RUNTIME_POLICY.LEGACY_RUN_ID,
-            logicalCollection: TPV_COLLECTIONS.PAGOS,
-            requestFingerprint: "f".repeat(64),
-            isSynthetic: true,
-            realPayment: false,
-            externalSideEffects: false,
-        },
     };
-    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
-    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item, traceId: "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":LEGACY-SESSION",
-    }), "legacy trace IDs remain readable");
-    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), { code: "CMS_UPDATE_COLLECTION_DENIED" });
-    assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), { code: "CMS_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item), {
+        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
+    });
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
         ...item,
-        payloadFiscal: { ...item.payloadFiscal, externalSideEffects: true },
-    }), { code: "CMS_TPV_LEDGER_CONTRACT_INVALID" });
+        recordSource: "TPV_SANDBOX_SYNTHETIC",
+        movementType: "SIMULATED_TPV_PAYMENT",
+    }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" });
+    assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
+        code: "CMS_UPDATE_COLLECTION_DENIED",
+    });
+    assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), {
+        code: "CMS_REMOVE_SCOPE_DENIED",
+    });
 });
 
 test("WEBHOOK_EVENT is neither mutable nor removable", () => {
