@@ -81,7 +81,9 @@ export const obtenerEstadoCaja = webMethod(
                 data: {
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
-                    canOpenSession: true,
+                    canOpenSession: false,
+                    operationalWritesAvailable: false,
+                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
                     sessionId: null,
                     operatorId: null,
                     actorId: null,
