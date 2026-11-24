@@ -3,10 +3,10 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
-import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 
 function errorResult(code) {
     return { status: "ERROR", data: null, error: { code }, persisted: false };
@@ -81,7 +81,9 @@ export const obtenerEstadoCaja = webMethod(
                 data: {
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
-                    canOpenSession: true,
+                    canOpenSession: false,
+                    operationalWritesAvailable: false,
+                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
                     sessionId: null,
                     operatorId: null,
                     actorId: null,
@@ -140,6 +142,7 @@ export const abrirSesionCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-session-open");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -166,7 +169,7 @@ export const abrirSesionCaja = webMethod(
                         operatorId: operator.operatorId,
                         operatorDisplayName: operator.operatorDisplayName,
                         operatorResourceId: operator.operatorResourceId,
-                        payload: makeSyntheticPayload({
+                        payload: makeTpvPayload({
                             dayKey,
                             openingReason: String(input.reason || "Apertura de TPV").slice(0, 200),
                             traceId,
@@ -182,7 +185,7 @@ export const abrirSesionCaja = webMethod(
                     entityId: sessionId,
                     occurredAt: new Date(),
                     source: "TPV_WEB_METHOD",
-                    payload: makeSyntheticPayload({ traceId, replayed, sessionId }),
+                    payload: makeTpvPayload({ traceId, replayed, sessionId }),
                 });
                 return {
                     status: "SUCCESS",
@@ -220,6 +223,7 @@ export const registrarArqueoParcial = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-partial-count");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -257,7 +261,7 @@ export const registrarArqueoParcial = webMethod(
                     reason,
                     status: "REGISTRADO_SINTETICO",
                     createdAt: new Date(),
-                    payload: makeSyntheticPayload({
+                    payload: makeTpvPayload({
                         expectedCashMinor: expectedMinor,
                         countedCashMinor: countedMinor,
                         differenceMinor,

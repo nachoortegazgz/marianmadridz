@@ -10,7 +10,6 @@ export const obtenerPermisosTPV = webMethod(
         const traceId = makeTraceId("tpv-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
-        const isAdmin = staff?.rolWebsite === "ADMIN";
         return {
             status: "SUCCESS",
             data: {
@@ -18,15 +17,20 @@ export const obtenerPermisosTPV = webMethod(
                 capabilities: {
                     read: true,
                     createSale: false,
-                    openSession: isAdmin,
-                    registerCashMovement: isAdmin,
+                    openSession: false,
+                    registerCashMovement: false,
+                    registerPartialCount: false,
                     requestRefund: false,
-                    closeSession: isAdmin,
-                    issueTicketX: isAdmin,
-                    issueTicketZ: isAdmin,
+                    closeSession: false,
+                    issueTicketX: false,
+                    issueTicketZ: false,
+                    exportMovements: false,
+                    exportAudit: false,
                     customerNotifications: TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
                     physicalHardware: TPV_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
+                operationalWritesAvailable: false,
+                operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
             },
             error: null,
             traceId,

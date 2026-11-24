@@ -34,9 +34,9 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
     assert.match(script, /customerIdentityId: state\.customerIdentityId/);
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
-    assert.match(controller, /lineas: lineItems\.map/);
-    assert.match(controller, /pagos: payments\.map/);
-    assert.match(controller, /medioPago:/);
+    assert.match(controller, /const lineas = payload\.lineItems\.map/);
+    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
+    assert.match(controller, /lineas,\s*pagos,/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
     assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
@@ -58,4 +58,37 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     assert.match(html, /Impuestos \(reglas Wix pendientes\)/);
     const controller = await read("src/public/tpvPageController.js");
     assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
+    assert.match(controller, /"SALE_VALIDATE"/);
+    assert.match(controller, /validarVentaBorrador/);
+    assert.match(controller, /"PENDING"/);
+    assert.match(controller, /requiresReconciliation/);
+    assert.match(controller, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(controller, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+});
+
+
+test("TPV controller parses localized amounts without guessing ambiguous separators", async () => {
+    const controller = await read("src/public/tpvPageController.js");
+    const numericSource = controller.match(/function numeric\([\s\S]*?\n}\n/)?.[0];
+    assert.ok(numericSource, "controller numeric normalizer must exist");
+    const context = {};
+    new Script(numericSource + "\nglobalThis.numeric = numeric;").runInNewContext(context);
+    assert.equal(context.numeric("12,50", "AMOUNT"), 12.5);
+    assert.equal(context.numeric("12.50", "AMOUNT"), 12.5);
+    assert.equal(context.numeric("1.234,56", "AMOUNT"), 1234.56);
+    assert.equal(context.numeric("1,234.56", "AMOUNT"), 1234.56);
+    assert.throws(() => context.numeric("1.234", "AMOUNT"), /TPV_INVALID_AMOUNT/);
+    assert.throws(() => context.numeric("12,345", "AMOUNT"), /TPV_INVALID_AMOUNT/);
+    assert.throws(() => context.numeric(12.345, "AMOUNT"), /TPV_INVALID_AMOUNT/);
+});
+
+test("product selection always resolves a concrete Catalog V3 variant and fails closed on unknown stock", async () => {
+    const html = await read("%23htmlTPV.txt");
+    const catalog = await read("src/backend/tpv/tpvCatalogo.web.js");
+    assert.match(html, /if \(item\.tipoLinea === "PRODUCTO"\) \{/);
+    assert.match(html, /if \(variants\.length === 1\)[\s\S]*?selected\.varianteId/);
+    assert.match(html, /typeof variant\.varianteId === "string"/);
+    assert.match(catalog, /variant\.inventoryStatus\?\.inStock === true/);
+    assert.match(catalog, /variant\.inventoryStatus\?\.preorderEnabled === true/);
+    assert.match(catalog, /toMinorUnitsStrict\(raw, "CATALOG_PRICE"\)/);
 });

@@ -252,31 +252,42 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-CAJA-TPV-01 accepts canonical TPV ledger metadata without synthetic boolean flags', () => {
+test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract exists', () => {
   const item = {
     ...cajaBase(),
     movementType: 'TPV_PAYMENT',
     recordSource: 'TPV_LEDGER',
-    sequenceNumber: 0,
+    sequenceNumber: 1,
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
     payloadFiscal: {
       sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
       siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
       ledgerVersion: IC.TPV_RUNTIME_POLICY.LEDGER_VERSION,
       schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
-      reconciliationStatus: IC.TPV_RUNTIME_POLICY.RECONCILIATION_STATUS,
-      processingMode: IC.TPV_RUNTIME_POLICY.PROCESSING_MODE,
-      allowNativePayments: false,
-      allowNativeRefunds: false,
       sessionId: 'SESSION-TEST',
       logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
       requestFingerprint: 'f'.repeat(64),
       externalSideEffects: false,
     },
   };
-  assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(item));
-  assert.equal(item.payloadFiscal.isSynthetic, undefined);
-  assert.equal(item.payloadFiscal.realPayment, undefined);
+  assert.throws(() => H.MovimientosCaja_beforeInsert(item), /CMS_TPV_LEDGER_WRITES_DISABLED/);
+});
+
+test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
+  for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
+      ...cajaBase(),
+      recordSource: "SYNTHETIC",
+      movementType,
+    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, movementType);
+  }
+  for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
+      ...cajaBase(),
+      recordSource,
+      movementType: "COBRO",
+    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, recordSource);
+  }
 });
 
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
@@ -708,8 +719,8 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
-test('HOOK-CAJA-04 keeps MovimientosCaja append-only for synthetic TPV rows', async () => {
-  const runId = IC.TPV_RUNTIME_POLICY.LEGACY_RUN_ID;
+test('HOOK-CAJA-04 preserves historical TPV rows as append-only records', async () => {
+  const runId = IC.TPV_HISTORICAL_POLICY.LEGACY_RUN_ID;
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
     hash: 'a'.repeat(64),

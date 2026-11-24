@@ -1,12 +1,12 @@
 /*
 P4 OFFICIAL REFERENCE: dev.wix.com — Velo Wix Data beforeInsert API.
-The hook is a CMS and Data API write boundary: reject invalid TPV runtime
-metadata before persistence and normalize canonical enum tokens.
+The hook is a CMS and Data API write boundary: reject TPV operational writes
+until the canonical ledger contract exists and normalize fiscal enum tokens.
 */
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5017-SYNTHETIC-TPV-EDIT
+VERSION: v5018-TPV-OPERATIONAL-WRITES-RETIRED
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
 RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
                 estricta de esquemas CMS.
@@ -21,11 +21,9 @@ import {
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
-    TPV_RUNTIME_POLICY,
     TPV_LEDGER_SOURCE,
-    TPV_COLLECTIONS,
-    TPV_EVENT_MOVEMENT_TYPES,
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -373,11 +371,8 @@ function _validateFiscalPayload(item) {
 
     if (item.sequenceNumber !== undefined && item.sequenceNumber !== null && item.sequenceNumber !== "") {
         const sequenceNumber = Number(item.sequenceNumber);
-        const isTpvLedgerEntry = _isCurrentSyntheticTpvRow(item);
-        if (!Number.isFinite(sequenceNumber) || (isTpvLedgerEntry ? sequenceNumber < 0 : sequenceNumber <= 0)) {
-            _schemaError(isTpvLedgerEntry
-                ? "sequenceNumber invalido (TPV exige 0)"
-                : "sequenceNumber invalido (debe ser > 0)");
+        if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber <= 0) {
+            _schemaError("sequenceNumber invalido (debe ser un entero > 0)");
         }
     }
 
@@ -418,11 +413,20 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    if ([TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource) ||
-        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(item.movementType))) {
-        if (!_isCurrentSyntheticTpvRow(item)) {
-            _schemaError("Evento TPV no cumple el contrato neutral de origen, sitio y versión.");
-        }
+    const recordSource = String(item.recordSource || "").trim().toUpperCase();
+    const movementType = String(item.movementType || "").trim().toUpperCase();
+    const isHistoricalTpvMarker =
+        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
+    if (item.recordSource === TPV_LEDGER_SOURCE ||
+        recordSource.startsWith("TPV_") ||
+        movementType.startsWith("TPV_") ||
+        isHistoricalTpvMarker) {
+        _schemaError("CMS_TPV_LEDGER_WRITES_DISABLED: el ledger operativo TPV aún no tiene contrato canónico aprobado.");
     }
 
     const taxId = readRecipientTaxId(item);
@@ -484,42 +488,6 @@ export function MovimientosCaja_beforeInsert(item) {
     assertMovimientosCajaRequiredFields(item);
     _normalizeMovimientosCajaPhysicalFields(item, true);
     return item;
-}
-
-function _isCurrentSyntheticTpvRow(value) {
-    const expectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.SITE_ID + ":";
-    const legacyExpectedPrefix = "TPV:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
-    const oldestLegacyPrefix = "TPVSANDBOX:" + TPV_RUNTIME_POLICY.LEGACY_RUN_ID + ":";
-    return [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(value?.recordSource) &&
-        (Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(value?.movementType) || Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(value?.movementType)) &&
-        [TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES].some((types) => types[value?.payloadFiscal?.logicalCollection] === value.movementType) &&
-        (
-            (
-                value?.payloadFiscal?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-                value?.payloadFiscal?.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-                value?.payloadFiscal?.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-                Number(value?.payloadFiscal?.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-                value?.payloadFiscal?.reconciliationStatus === TPV_RUNTIME_POLICY.RECONCILIATION_STATUS &&
-                (value?.payloadFiscal?.processingMode === undefined || value.payloadFiscal.processingMode === TPV_RUNTIME_POLICY.PROCESSING_MODE) &&
-                (value?.payloadFiscal?.allowNativePayments === undefined || value.payloadFiscal.allowNativePayments === false) &&
-                (value?.payloadFiscal?.allowNativeRefunds === undefined || value.payloadFiscal.allowNativeRefunds === false) &&
-                (value?.payloadFiscal?.logicalCollection === TPV_COLLECTIONS.AUDITORIA ||
-                    Boolean(String(value?.payloadFiscal?.sessionId || "").trim()))
-            ) ||
-            (
-                value?.payloadFiscal?.sourceType == null &&
-                value?.payloadFiscal?.sandboxRunId === TPV_RUNTIME_POLICY.LEGACY_RUN_ID
-            )
-        ) &&
-        (value?.payloadFiscal?.isSynthetic === undefined || value?.payloadFiscal.isSynthetic === true) &&
-        (value?.payloadFiscal?.realPayment === undefined || value?.payloadFiscal.realPayment === false) &&
-        value?.payloadFiscal?.externalSideEffects === false &&
-        Boolean(value?.payloadFiscal?.requestFingerprint) &&
-        /^[a-f0-9]{64}$/i.test(String(value?.hash || "")) &&
-        Number(value?.sequenceNumber) === 0 &&
-        (String(value?.traceId || "").startsWith(expectedPrefix) ||
-            String(value?.traceId || "").startsWith(legacyExpectedPrefix) ||
-            String(value?.traceId || "").startsWith(oldestLegacyPrefix));
 }
 
 export async function MovimientosCaja_beforeUpdate() {
@@ -634,30 +602,10 @@ function _clearStaleCajaClosedAt(item) {
 
 function _normalizeCajaTpvRuntime(item) {
     const runtime = item?.conceptOperations?.tpvRuntime;
-    const isTpvRuntime = item?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE ||
-        runtime !== undefined;
-    if (!isTpvRuntime) return item;
-
-    if (!item.conceptOperations || typeof item.conceptOperations !== "object" ||
-        Array.isArray(item.conceptOperations) ||
-        !runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
-        _schemaError("CajaActual TPV runtime requiere conceptOperations.tpvRuntime");
-    }
-
-    runtime.sourceType = _safeTrim(runtime.sourceType).toUpperCase();
-    runtime.processingMode = _safeTrim(runtime.processingMode).toUpperCase();
-    runtime.reconciliationStatus = _safeTrim(runtime.reconciliationStatus).toUpperCase();
-
-    if (runtime.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
-        runtime.processingMode !== TPV_RUNTIME_POLICY.PROCESSING_MODE ||
-        runtime.reconciliationStatus !== TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) {
-        _schemaError("CajaActual TPV runtime sourceType/processingMode/reconciliationStatus invalidos");
-    }
-    if (_safeTrim(runtime.siteId) !== TPV_RUNTIME_POLICY.SITE_ID ||
-        _safeTrim(runtime.ledgerVersion) !== TPV_RUNTIME_POLICY.LEDGER_VERSION ||
-        Number(runtime.schemaVersion) !== TPV_RUNTIME_POLICY.SCHEMA_VERSION ||
-        runtime.externalSideEffects !== false) {
-        _schemaError("CajaActual TPV runtime metadata obligatoria o aislamiento invalido");
+    const snapshotSource = _safeTrim(item?.snapshotSource).toUpperCase();
+    const isTpvRuntime = runtime !== undefined || snapshotSource.startsWith("TPV");
+    if (isTpvRuntime) {
+        _schemaError("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: CajaActual no admite nuevas proyecciones TPV hasta disponer del contrato canónico.");
     }
     return item;
 }

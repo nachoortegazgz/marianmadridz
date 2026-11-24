@@ -22,11 +22,7 @@ export const obtenerAuditoriaTPV = webMethod(
                 throw new Error("TPV_SESSION_REQUIRED");
             }
 
-            const records = await queryTpvRecords(
-                TPV_COLLECTIONS.AUDITORIA,
-                undefined,
-                { limit: 1000, maxRecords: 10000 }
-            );
+            const records = await queryTpvRecords(TPV_COLLECTIONS.AUDITORIA, undefined, { limit: 1000, maxRecords: 10000 });
 
             const items = records
                 .filter((record) => {

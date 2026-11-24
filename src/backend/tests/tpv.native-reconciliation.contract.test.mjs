@@ -44,10 +44,11 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
     assert.match(caja, /toMinorUnits\(input\.openingCash, "OPENING_CASH"\)/);
-    assert.match(caja, /payload: makeSyntheticPayload\(\{ traceId, replayed, sessionId \}\)/);
+    assert.match(caja, /payload: makeTpvPayload\(\{ traceId, replayed, sessionId \}\)/);
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
-    assert.match(controller, /lineas: lineItems\.map/);
-    assert.match(controller, /pagos: payments\.map/);
+    assert.match(controller, /const lineas = payload\.lineItems\.map/);
+    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
+    assert.match(controller, /lineas,\s*pagos,/);
     assert.match(sales, /validateSaleDraft\(venta\)/);
 });
 
@@ -66,8 +67,14 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
     assert.match(permissions, /createSale: false/);
-    assert.match(permissions, /openSession: isAdmin/);
-    assert.match(permissions, /closeSession: isAdmin/);
+    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /registerCashMovement: false/);
+    assert.match(permissions, /requestRefund: false/);
+    assert.match(permissions, /closeSession: false/);
+    assert.match(permissions, /issueTicketX: false/);
+    assert.match(permissions, /issueTicketZ: false/);
+    assert.match(permissions, /operationalWritesAvailable: false/);
+    assert.match(permissions, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
 
     for (const writer of [cash, movements, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
@@ -79,6 +86,8 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(cash, /openingCashMinor/);
     assert.match(cash, /cashierMemberId: operator\.operatorId/);
     assert.match(cash, /terminalId:/);
+    assert.match(repository, /export function assertTpvOperationalLedgerConfigured/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(repository, /export async function withTpvSessionLock/);
     for (const writer of [movements, closures]) {
@@ -118,8 +127,9 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.match(movements, /input\.paymentMethod \|\| TPV_PAYMENT_METHOD\.EFECTIVO/);
     assert.match(movements, /affectsPhysicalCash: true/);
     assert.match(movements, /normalizeClientIdempotencyKey\(input\.idempotencyKey\)/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
 });
 
 test("TPV X/Z reports, immutable audit records and native/fiscal side-effect boundaries are explicit", async () => {
@@ -158,8 +168,10 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
-    assert.match(config, /fiscalEmission: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /TPV_RUNTIME_POLICY/);
+    assert.doesNotMatch(config, /fiscalEmission|FISCAL_EMISSION_ENABLED/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.doesNotMatch(config, /ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.doesNotMatch(sales, /createOrder|createInvoice|verifactuQrUrl/i);
     assert.doesNotMatch(widget, /verifactuQrUrl|Veri\*Factu/i);
     assert.match(summary, /reconciliationOk = totals\.totalCollectedMinor === totals\.netSalesMinor/);
@@ -180,12 +192,13 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
 
     assert.match(repository, /export async function latestTpvSession/);
     assert.match(repository, /status: "CERRADA"/);
-    assert.match(repository, /operatorResourceId: String\(sourceState\?\.operatorResourceId/);
-    assert.match(repository, /operatorDisplayName: String\(sourceState\?\.operatorDisplayName/);
+    assert.match(repository, /operatorResourceId: String\(state\.operatorResourceId/);
+    assert.match(repository, /operatorDisplayName: String\(state\.operatorDisplayName/);
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
-    assert.match(cash, /canOpenSession: true/);
+    assert.match(cash, /canOpenSession: false/);
+    assert.match(cash, /operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED"/);
     assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ madridDayKey\(\)/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
@@ -210,7 +223,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
     assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial/);
-    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\) \|\| ""/);
+    assert.match(controller, /const sessionId = optionalString\(payload\.sessionId, 160\)/);
+    assert.match(controller, /if \(!sessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
     assert.match(widget, /operatorLabel/);
     assert.match(widget, /operationalStatus === "CERRADA"/);

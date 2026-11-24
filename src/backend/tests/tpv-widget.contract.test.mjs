@@ -61,15 +61,21 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
+    assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
+        "the page controller must reject amounts outside safe integer minor units");
+    assert.match(controller, /Consulta el estado y solicita conciliación antes de repetirla\.[\s\S]{0,80}false,[\s\S]{0,40}false,[\s\S]{0,40}true/,
+        "unknown operation outcomes must require reconciliation, not blind retry");
 });
 
-test("TPV widget keeps all writes synthetic and does not implement a second payment gateway", async () => {
+test("TPV widget stays read-only until the canonical operational ledger is configured", async () => {
     const html = await source("%23htmlTPV.txt");
-    const config = await source("src/backend/internalConfig.js");
-    assert.match(config, /CAPABILITIES: Object\.freeze/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /TPV_LEDGER_SOURCE = "TPV_LEDGER"/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
+    assert.match(permissions, /operationalWritesAvailable: false/);
+    assert.match(permissions, /createSale: false/);
+    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /registerPartialCount: false/);
+    assert.match(html, /!state\.operationalWritesAvailable/);
+    assert.match(html, /partialCount: "registerPartialCount"/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
     assert.match(html, /paymentStatus === "NOT_PROCESSED"|gatewayCalled === false/);

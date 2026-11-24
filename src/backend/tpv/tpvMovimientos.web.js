@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvOperationalLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
@@ -14,12 +14,6 @@ const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_REFUND: "DEVOLUCION",
     TPV_TICKET_X: "CONTROL_X",
     TPV_TICKET_Z: "CIERRE_Z",
-    // Read-only compatibility for previously persisted movement discriminators.
-    SIMULATED_TPV_SALE: "VENTA",
-    SIMULATED_TPV_CASH_MOVEMENT: null,
-    SIMULATED_TPV_REFUND: "DEVOLUCION",
-    SIMULATED_TPV_TICKET_X: "CONTROL_X",
-    SIMULATED_TPV_TICKET_Z: "CIERRE_Z",
 });
 
 function sessionOf(record) {
@@ -29,7 +23,7 @@ function sessionOf(record) {
 function mapMovementRecord(record) {
     const sourceType = String(record?.cmsMovementType || "");
     if (!Object.prototype.hasOwnProperty.call(TPV_LEDGER_DISPLAY_TYPES, sourceType)) return null;
-    if ((sourceType === "TPV_SALE" || sourceType === "SIMULATED_TPV_SALE") && !["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) return null;
+    if (sourceType === "TPV_SALE" && record.status !== "CONFIRMADA") return null;
     const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
         ? Number(record.amountMinor)
         : Number.isSafeInteger(Number(record.totalMinor))
@@ -45,6 +39,7 @@ function mapMovementRecord(record) {
         reason: record.reason || record.totals?.differenceReason || "",
         reference: record.saleId || record.refundId || record.reportId || record._id,
         status: record.status || null,
+        concept: String(record.operationDescription || record.reason || "Operación TPV histórica").replace(/\s*\[SINTÉTICO\]$/i, "") + " [SINTÉTICO]",
         createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
         totals: record.totals || null,
         currency: record.currency || "EUR",
@@ -70,8 +65,9 @@ export const registrarMovimientoCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         let persisted = false;
-        const traceId = makeTraceId("tpv-sandbox-cash-movement");
+        const traceId = makeTraceId("tpv-cash-movement");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -155,7 +151,7 @@ export const registrarMovimientoCaja = webMethod(
 export const obtenerMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-sandbox-cash-movements-read");
+        const traceId = makeTraceId("tpv-cash-movements-read");
         await requireCajero(traceId);
 
         try {
@@ -167,13 +163,13 @@ export const obtenerMovimientosCaja = webMethod(
             const latestSession = await latestTpvSession();
             const closures = await queryTpvRecords(TPV_COLLECTIONS.TICKET_Z, undefined);
             const operationalStatus = resolveCashSessionOperationalStatus(latestSession, closures, sessionId);
-            const ledger = await queryTpvLedgerRecords({ limit: 1000 });
+            const ledger = await queryTpvOperationalLedgerRecords({ limit: 1000 });
             const visibleTypes = new Set(Object.keys(TPV_LEDGER_DISPLAY_TYPES));
             const items = ledger.records
                 .filter((record) => {
                     const sourceType = String(record.cmsMovementType || "");
                     if (!visibleTypes.has(sourceType)) return false;
-                    if ((sourceType === "TPV_SALE" || sourceType === "SIMULATED_TPV_SALE") && !["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) return false;
+                    if (sourceType === "TPV_SALE" && record.status !== "CONFIRMADA") return false;
                     const recordSessionId = String(record.sessionId || record.payload?.sessionId || "");
                     return recordSessionId === sessionId;
                 })
@@ -191,7 +187,6 @@ export const obtenerMovimientosCaja = webMethod(
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    syntheticOnly: true,
                     truncated: ledger.hasMore,
                 },
                 error: null,
@@ -212,8 +207,9 @@ export const obtenerMovimientosCaja = webMethod(
 export const exportarMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-synthetic-movements-export");
+        const traceId = makeTraceId("tpv-movements-export");
         await requireCajero(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
         try {
             const sessionId = sessionIdFromInput(input);
@@ -254,7 +250,6 @@ export const exportarMovimientosCaja = webMethod(
                 count: items.length,
                 sessionId,
                 format: "CSV",
-                syntheticOnly: true,
                 truncated: false,
             }, traceId);
         } catch (error) {
@@ -266,8 +261,9 @@ export const exportarMovimientosCaja = webMethod(
 export const exportarAuditoriaTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-synthetic-audit-export");
+        const traceId = makeTraceId("tpv-audit-export");
         await requireCajero(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
         try {
             const sessionId = sessionIdFromInput(input);
@@ -329,7 +325,6 @@ export const exportarAuditoriaTPV = webMethod(
                 count: items.length,
                 sessionId,
                 format: "CSV",
-                syntheticOnly: true,
                 truncated: false,
             }, traceId);
         } catch (error) {

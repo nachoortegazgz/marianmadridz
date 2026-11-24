@@ -443,7 +443,21 @@ body {
     // Compatibility transport key: this value is a native Wix Contacts _id.
     customerIdentityId: null,
     customerLabel: null,
+    capabilities: {},
+    operationalWritesAvailable: false,
   };
+
+  const BUTTON_CAPABILITIES = Object.freeze({
+    saveSale: "createSale",
+    cashIn: "registerCashMovement",
+    cashOut: "registerCashMovement",
+    refund: "requestRefund",
+    partialCount: "registerPartialCount",
+    ticketX: "issueTicketX",
+    ticketZ: "issueTicketZ",
+    exportMovements: "exportMovements",
+    exportAudit: "exportAudit",
+  });
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -655,10 +669,17 @@ body {
       ? "ABIERTA · Integración: " + integrationStatus
       : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
-    $("openCash").disabled = isOpen || !canOpenSession || state.busy;
-    ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
-      $(id).disabled = !isOpen || state.busy;
+    $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
+      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
+        state.capabilities[capability] !== true;
     });
+    if (!state.operationalWritesAvailable) {
+      $("cashLabel").textContent = isOpen
+        ? "SESIÓN ABIERTA · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS"
+        : "SIN SESIÓN · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS";
+    }
   }
 
   async function refreshCashState() {
@@ -673,10 +694,12 @@ body {
     const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
     const isOpen = operationalStatus === "ABIERTA";
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
-    $("openCash").disabled = value || isOpen || !canOpenSession;
-    ["saveSale", "cashIn", "cashOut", "refund", "partialCount", "ticketX", "ticketZ", "exportMovements", "exportAudit"].forEach((id) => {
+    $("openCash").disabled = value || isOpen || !canOpenSession ||
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
-      if (el) el.disabled = value || !isOpen;
+      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
+        state.capabilities[capability] !== true;
     });
   }
 
@@ -711,13 +734,19 @@ body {
   }
 
   async function selectCatalogItem(item) {
-    if (item.tipoLinea === "PRODUCTO" && item.requiereSeleccionVariante === true) {
+    if (item.tipoLinea === "PRODUCTO") {
       const result = await call("CATALOG_VARIANTS", { productId: item.itemId }, "CATALOG_VARIANTS_RES");
       const variants = (result?.variantes || []).filter((variant) =>
-        variant.disponible === true && Number.isSafeInteger(variant.precioMinor)
+        variant.disponible === true && Number.isSafeInteger(variant.precioMinor) &&
+        typeof variant.varianteId === "string" && variant.varianteId.length > 0
       );
       if (!variants.length) {
         toast("No hay variantes disponibles con precio válido.");
+        return;
+      }
+      if (variants.length === 1) {
+        const selected = variants[0];
+        addCatalogLine(item, selected.precioMinor, selected.varianteId, selected.concepto);
         return;
       }
       openModal("Seleccionar variante", `
@@ -1276,6 +1305,11 @@ body {
     const connected = context.status === "SUCCESS" &&
       context.data?.component === "htmlTPV" &&
       context.data?.protocolVersion === BRIDGE_PROTOCOL_VERSION;
+    state.capabilities = context.data?.capabilities &&
+      typeof context.data.capabilities === "object"
+      ? context.data.capabilities
+      : {};
+    state.operationalWritesAvailable = context.data?.operationalWritesAvailable === true;
     $("connStatus").className = "dot " + (connected ? "ok" : "error");
     $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
 

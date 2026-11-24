@@ -23,6 +23,9 @@ test("TPV movement response uses the active session status", () => {
     assert.equal(data.amount, 12.5);
     assert.equal(data.persisted, true);
     assert.equal(data.replayed, false);
+    assert.equal(data.isSynthetic, undefined);
+    assert.equal(data.realPayment, undefined);
+    assert.equal(data.simulationStatus, undefined);
 });
 
 test("TPV movement session status resolves closed historical sessions", () => {
@@ -63,6 +66,8 @@ test("TPV movement failure reports persisted=true when repository confirms the l
     const result = buildCashMovementFailure(error, false, "trace-1");
     assert.equal(result.status, "ERROR");
     assert.equal(result.persisted, true);
+    assert.equal(result.isSynthetic, undefined);
+    assert.equal(result.realPayment, undefined);
     assert.equal(result.recoverable, true);
     assert.equal(result.projectionStatus, "UNCONFIRMED");
     assert.equal(result.movementId, "ledger-row-2");

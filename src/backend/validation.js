@@ -29,6 +29,7 @@ import {
     PAYMENT_METHOD,
     TIPO_FACTURA,
     TPV_LEDGER_SOURCE,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 // =============================================================================
@@ -268,12 +269,13 @@ export function assertMovimientosCajaRequiredFields(item) {
         !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja requires SHA-256 hash chain fields");
     }
-    if (![TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(item.recordSource)) {
-        assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
-        assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
-        assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
-        assertValidEnum(item.tipoFactura, TIPO_FACTURA, "tipoFactura");
+    if (!Number.isSafeInteger(item.sequenceNumber) || item.sequenceNumber <= 0) {
+        throw new Error("SCHEMA_VIOLATION: MovimientosCaja.sequenceNumber must be a positive integer");
     }
+    assertValidEnum(item.movementType, MOVEMENT_TYPE, "movementType");
+    assertValidEnum(item.paymentMethod, PAYMENT_METHOD, "paymentMethod");
+    assertValidEnum(item.channelType, CHANNEL_TYPE, "channelType");
+    assertValidEnum(item.tipoFactura, TIPO_FACTURA, "tipoFactura");
     return true;
 }
 
@@ -736,7 +738,18 @@ export function isExplicitSimulationLedgerRecord(item) {
     const legacyTpvDevelopmentRecord = item.synthetic === true &&
         recordSource === "TPV_QA_DEVELOPMENT" &&
         source === "TPV_FUNCTIONAL_TEST";
-    const tpvLedgerSource = [TPV_LEDGER_SOURCE, "TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC"].includes(recordSource);
+    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object"
+        ? item.payloadFiscal
+        : {};
+    const historicalTpvLedgerRecord = recordSource === TPV_LEDGER_SOURCE &&
+        envelope.sourceType === TPV_HISTORICAL_POLICY.SOURCE_TYPE &&
+        envelope.ledgerVersion === TPV_HISTORICAL_POLICY.LEDGER_VERSION &&
+        [1, TPV_HISTORICAL_POLICY.SCHEMA_VERSION].includes(Number(envelope.schemaVersion)) &&
+        Number(item.sequenceNumber) === 0 &&
+        envelope.externalSideEffects === false &&
+        (envelope.isSynthetic === true || envelope.realPayment === false);
+    const tpvLedgerSource = historicalTpvLedgerRecord ||
+        [TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE, TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE].includes(recordSource);
     return tpvLedgerSource ||
         recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||

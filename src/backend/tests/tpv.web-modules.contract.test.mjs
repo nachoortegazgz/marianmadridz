@@ -252,11 +252,13 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
-    assert.match(policy, /TPV_RUNTIME_POLICY/);
-    assert.match(policy, /TPV_SANDBOX_SYNTHETIC/);
+    assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
+    assert.match(policy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
-    assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
-    assert.match(config, /ALLOW_NATIVE_WRITES: false/);
+    assert.match(config, /TPV_RUNTIME_POLICY/);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
@@ -436,48 +438,48 @@ test("TPV public utility module exposes only the configuration contract consumed
     assert.doesNotMatch(controller, /validarImportesTPVSANDBOX/);
 });
 
-test("TPV synthetic persistence maps logical events to CajaActual and MovimientosCaja without fiscal side effects", async () => {
-    const repository = await source("tpv/tpvRepository.js");
-    const config = await source("internalConfig.js");
-    const utilities = await source("tpv/tpvUtils.js");
-    const movements = await source("tpv/tpvMovimientos.web.js");
-    assert.match(config, /LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC"/);
-    assert.match(config, /SIMULATED_TPV_/);
-    assert.match(repository, /sequenceNumber: 0/);
-    assert.match(repository, /cmsMovementType: item\.movementType/);
-    assert.doesNotMatch(repository, /movementType: item\.movementType/);
-    assert.match(repository, /previousRecordHash: TPV_GENESIS_HASH/);
-    assert.match(repository, /createHash\("sha256"\)/);
-    assert.match(repository, /cashRegisterStatus: "SIMULACION"/);
-    assert.match(repository, /async function _ensureCajaActual\(/);
-    assert.match(repository, /TPV_CASH_REGISTER_NOT_SEEDED/);
-    assert.match(repository, /assertTpvCajaIntegrity/);
-    assert.match(repository, /export async function initializeTpvCaja\(/);
-    assert.match(repository, /TPV_CASH_REGISTER_NOT_PRESEEDED/);
-    assert.doesNotMatch(repository, /insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, seed\)/);
-    assert.match(utilities, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
-    assert.match(utilities, /LEGACY_LEDGER_SOURCE/);
-    assert.match(repository, /export async function queryTpvLedgerRecords\(/);
-    assert.match(repository, /dataCollectionId: BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
-    assert.match(repository, /sort: \["recordTimestamp DESC"\]/);
-    assert.match(movements, /queryTpvLedgerRecords\(\{ limit: 1000 \}\)/);
-    assert.match(movements, /SIMULATED_TPV_SALE/);
-    assert.match(movements, /SIMULATED_TPV_REFUND/);
-    assert.match(repository, /envelope\.sourceType === TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
-    assert.match(repository, /MAX_TPV_PROJECTION_EVENTS = 1000/);
-    assert.match(repository, /sourceState\?\.sessionId/);
-    assert.match(repository, /snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE/);
-    assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
-    assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
-    assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
-    assert.match(repository, /snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE/);
-    assert.match(repository, /sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE/);
-    assert.match(repository, /siteId: TPV_RUNTIME_POLICY.SITE_ID/);
-    assert.match(repository, /ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION/);
-    assert.match(repository, /updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
-    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
-    assert.doesNotMatch(repository, /registerManualTransaction|signFiscal|sendToAeat|createPayment|capturePayment|processRefund/i);
+test("TPV operational ledger is neutral, write-disabled and isolated from historical reads", async () => {
+    const [repository, config, utilities, movements, accessPolicy, hooks, validation] = await Promise.all([
+        source("tpv/tpvRepository.js"),
+        source("internalConfig.js"),
+        source("tpv/tpvUtils.js"),
+        source("tpv/tpvMovimientos.web.js"),
+        source("dataAccessPolicy.js"),
+        source("data.js"),
+        source("validation.js"),
+    ]);
+    assert.match(config, /SOURCE_TYPE: "TPV"/);
+    assert.match(config, /LEDGER_VERSION: "TPV_LEDGER_V3"/);
+    assert.match(config, /SCHEMA_VERSION: 3/);
+    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured/);
+    assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(repository, /_isCanonicalTpvLedgerItem/);
+    assert.match(repository, /_isHistoricalTpvLedgerItem/);
+    assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
+    assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
+    assert.match(repository, /filter\(_isHistoricalTpvLedgerItem\)/);
+    assert.match(repository, /filter\(_isCanonicalTpvLedgerItem\)/);
+    assert.match(repository, /export async function queryHistoricalTpvLedgerRecords\(/);
+    assert.match(repository, /const records = \[\.\.\.currentSource\.items, \.\.\.legacy\.items, \.\.\.previous\.items\]/);
+    assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
+    assert.match(utilities, /export function makeTpvPayload/);
+    assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds|processingMode|reconciliationStatus/);
+    assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
+    assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
+    assert.match(hooks, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
+    assert.match(repository, /TPV_LEDGER_SEQUENCE_OR_PREVIOUS_HASH_REQUIRED/);
+    assert.match(validation, /historicalTpvLedgerRecord/);
+    assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
+    assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
+    assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
+    assert.doesNotMatch(movements, /SIMULATED_TPV_REFUND|CONFIRMADO_SINTETICO/);
+    assert.match(movements, /\[SINTÉTICO\]/);
+    assert.doesNotMatch(movements, /syntheticOnly: true/);
 });
+
 
 
 test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
