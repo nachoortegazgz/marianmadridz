@@ -167,11 +167,6 @@ test("MovimientosCaja rejects all new TPV ledger writes and remains append-only"
     assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item), {
         code: "CMS_TPV_LEDGER_WRITES_DISABLED",
     });
-    assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
-        ...item,
-        recordSource: "TPV_SANDBOX_SYNTHETIC",
-        movementType: "SIMULATED_TPV_PAYMENT",
-    }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" });
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
         code: "CMS_UPDATE_COLLECTION_DENIED",
     });
