@@ -1,3 +1,4 @@
+import { createActionableError } from "backend/errors/actionableError";
 import {
     DATA_ACCESS_BULK_PATCH_POLICY,
     DATA_ACCESS_WRITE_POLICY,
@@ -131,7 +132,14 @@ export function assertUpdateAllowed(collection, item) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
-        throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
+        throw createActionableError({
+            code: "LEDGER_APPEND_ONLY",
+            userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.",
+            technicalDetail: "CMS mutation denied for append-only collection: " + collection,
+            remediation: ["No intentar update/remove sobre MovimientosCaja, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como movimiento nuevo de tipo AJUSTE o ANULACION, referenciando el _id original y conforme al contrato aprobado.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
+            contextSnapshot: { collection, operation: "MUTATION" },
+            retryable: false,
+        });
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
@@ -174,7 +182,14 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
             throw _policyError("CMS_REMOVE_SCOPE_DENIED");
         }
     } else if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
-        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+        throw createActionableError({
+            code: "LEDGER_APPEND_ONLY",
+            userMessage: "Los ledgers fiscales no se modifican. Registra un asiento de corrección.",
+            technicalDetail: "CMS mutation denied for append-only collection: " + collection,
+            remediation: ["No intentar update/remove sobre MovimientosCaja, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como movimiento nuevo de tipo AJUSTE o ANULACION, referenciando el _id original y conforme al contrato aprobado.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
+            contextSnapshot: { collection, operation: "MUTATION" },
+            retryable: false,
+        });
     }
 }
 
