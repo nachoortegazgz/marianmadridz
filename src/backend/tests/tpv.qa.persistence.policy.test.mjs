@@ -89,18 +89,18 @@ test("CajaActual integrity accepts only the neutral v3 contract", () => {
     assert.throws(() => assertTpvCajaIntegrity(historicalCaja), /TPV_CASH_REGISTER_INTEGRITY_FAILED/);
 });
 
-test("CajaActual operational projections use neutral metadata; legacy projection is not operational", async () => {
+test("CajaActual operational projections use neutral metadata and ignore historical fields", async () => {
     const [repository, utilities] = await Promise.all([
         readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8"),
         readFile(new URL("../tpv/tpvUtils.js", import.meta.url), "utf8"),
     ]);
     assert.match(repository, /conceptOperations\.tpvRuntime = sourceState/);
-    assert.match(repository, /tpvRuntime: \\{/);
-    assert.match(repository, /TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
+    assert.match(repository, /tpvRuntime: \{/);
+    assert.match(repository, /TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.doesNotMatch(repository, /processingMode:|reconciliationStatus:|allowNativePayments:|allowNativeRefunds:/);
-    assert.match(utilities, /export function getTpvRuntimeState\\(caja\\)/);
-    assert.match(utilities, /const current = operations\\?\\.tpvRuntime/);
-    assert.match(utilities, /const legacy = operations\\?\\.tpvSandbox/);
+    assert.match(utilities, /export function getTpvRuntimeState\(caja\)/);
+    assert.match(utilities, /caja\?\.conceptOperations\?\.tpvRuntime/);
+    assert.doesNotMatch(utilities, /tpvSandbox/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
     assert.match(repository, /_isHistoricalTpvLedgerItem/);
 });
