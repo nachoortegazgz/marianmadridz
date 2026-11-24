@@ -134,6 +134,9 @@ export function toMinorUnits(value, field = "AMOUNT") {
     if (amount === null) throw new Error("TPV_INVALID_FORMAT_" + field);
     if (amount < 0) throw new Error("TPV_INVALID_" + field);
     const minor = Math.round((amount + Number.EPSILON) * 100);
+    if (!Number.isSafeInteger(minor)) {
+        throw new Error("TPV_MINOR_UNITS_OUT_OF_RANGE_" + field);
+    }
     if (Math.abs(amount * 100 - minor) > 1e-7) {
         throw new Error("TPV_INVALID_PRECISION_" + field);
     }
