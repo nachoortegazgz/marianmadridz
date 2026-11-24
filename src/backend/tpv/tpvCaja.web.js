@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeSyntheticPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -140,6 +140,7 @@ export const abrirSesionCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-session-open");
         await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured();
         const operator = await resolveTpvContext(traceId);
 
         try {
