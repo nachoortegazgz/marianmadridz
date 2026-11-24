@@ -590,30 +590,10 @@ function _clearStaleCajaClosedAt(item) {
 
 function _normalizeCajaTpvRuntime(item) {
     const runtime = item?.conceptOperations?.tpvRuntime;
-    const isTpvRuntime = item?.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE ||
-        runtime !== undefined;
-    if (!isTpvRuntime) return item;
-
-    if (!item.conceptOperations || typeof item.conceptOperations !== "object" ||
-        Array.isArray(item.conceptOperations) ||
-        !runtime || typeof runtime !== "object" || Array.isArray(runtime)) {
-        _schemaError("CajaActual TPV runtime requiere conceptOperations.tpvRuntime");
-    }
-
-    runtime.sourceType = _safeTrim(runtime.sourceType).toUpperCase();
-    runtime.processingMode = _safeTrim(runtime.processingMode).toUpperCase();
-    runtime.reconciliationStatus = _safeTrim(runtime.reconciliationStatus).toUpperCase();
-
-    if (runtime.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
-        runtime.processingMode !== TPV_RUNTIME_POLICY.PROCESSING_MODE ||
-        runtime.reconciliationStatus !== TPV_RUNTIME_POLICY.RECONCILIATION_STATUS) {
-        _schemaError("CajaActual TPV runtime sourceType/processingMode/reconciliationStatus invalidos");
-    }
-    if (_safeTrim(runtime.siteId) !== TPV_RUNTIME_POLICY.SITE_ID ||
-        _safeTrim(runtime.ledgerVersion) !== TPV_RUNTIME_POLICY.LEDGER_VERSION ||
-        Number(runtime.schemaVersion) !== TPV_RUNTIME_POLICY.SCHEMA_VERSION ||
-        runtime.externalSideEffects !== false) {
-        _schemaError("CajaActual TPV runtime metadata obligatoria o aislamiento invalido");
+    const snapshotSource = _safeTrim(item?.snapshotSource).toUpperCase();
+    const isTpvRuntime = runtime !== undefined || snapshotSource.startsWith("TPV");
+    if (isTpvRuntime) {
+        _schemaError("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: CajaActual no admite nuevas proyecciones TPV hasta disponer del contrato canónico.");
     }
     return item;
 }
