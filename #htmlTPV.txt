@@ -393,7 +393,39 @@ body {
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
   }[c]));
-  const num = (v) => Number.parseFloat(v) || 0;
+  function parseLocalizedAmount(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    let raw = String(value ?? "").trim().replace(/\\s+/g, "").replace(/€$/i, "");
+    if (!raw) return null;
+    const sign = /^[+-]/.test(raw) ? raw[0] : "";
+    if (sign) raw = raw.slice(1);
+    if (!/^\\d+(?:[.,]\\d+)*$/.test(raw)) return null;
+    const comma = raw.lastIndexOf(",");
+    const dot = raw.lastIndexOf(".");
+    let integerPart = raw;
+    let fractionPart = "";
+    if (comma >= 0 && dot >= 0) {
+      const decimalSeparator = comma > dot ? "," : ".";
+      const groupSeparator = decimalSeparator === "," ? "." : ",";
+      const parts = raw.split(decimalSeparator);
+      if (parts.length !== 2 || !/^\\d{1,2}$/.test(parts[1])) return null;
+      const groups = parts[0].split(groupSeparator);
+      if (!/^\\d{1,3}$/.test(groups[0]) || !groups.slice(1).every((part) => /^\\d{3}$/.test(part))) return null;
+      integerPart = groups.join("");
+      fractionPart = parts[1];
+    } else if (comma >= 0 || dot >= 0) {
+      const parts = raw.split(comma >= 0 ? "," : ".");
+      if (parts.length === 2 && parts[1].length >= 1 && parts[1].length <= 2) {
+        integerPart = parts[0];
+        fractionPart = parts[1];
+      } else if (parts.length > 2 && /^\\d{1,3}$/.test(parts[0]) && parts.slice(1).every((part) => /^\\d{3}$/.test(part))) {
+        integerPart = parts.join("");
+      } else return null;
+    }
+    const amount = Number(sign + integerPart + (fractionPart ? "." + fractionPart : ""));
+    return Number.isFinite(amount) ? amount : null;
+  }
+  const num = (v) => v === null || v === undefined || v === "" ? 0 : (parseLocalizedAmount(v) ?? Number.NaN);
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
   const PAYMENT_METHODS = ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"];
 
@@ -422,7 +454,43 @@ body {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
   }
-  function error(msg) { toast("Error: " + msg); }
+  function publicErrorMessage(code) {
+    const key = String(code || "").trim().toUpperCase();
+    if (/^TPV_INVALID_FORMAT_/.test(key)) return "El importe no tiene un formato reconocible. Usa 12,50 o 12.50; para miles, 1.234,56. No uses formatos ambiguos como 1.234.";
+    if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
+    const messages = {
+      TPV_INVALID_PAYMENT_AMOUNT: "El importe del pago debe ser mayor que 0. Introduce, por ejemplo, 12,50.",
+      TPV_INVALID_AMOUNT: "Introduce un importe numérico igual o superior a 0, con un máximo de dos decimales.",
+      TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
+      TPV_INVALID_UNIT_PRICE: "El precio unitario no es válido. Usa un importe como 25,90.",
+      TPV_INVALID_CHANGE_AMOUNT: "El cambio debe ser un importe válido, por ejemplo 2,50.",
+      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago seleccionado no está admitido. Elige Efectivo, Tarjeta, Bizum, Bono, Tarjeta regalo u Otros.",
+      TPV_INVALID_PAYMENT_METHOD: "El medio de pago no es válido. Selecciona una de las opciones disponibles.",
+      TPV_SANDBOX_PAYMENT_TOTAL_MISMATCH: "El desglose de pagos no coincide con el total. Ajusta los importes hasta cubrir exactamente el total pendiente.",
+      TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
+      TPV_LINES_REQUIRED: "El ticket está vacío. Añade al menos un servicio o producto antes de cobrar.",
+      TPV_SESSION_REQUIRED: "No hay una sesión de caja seleccionada. Actualiza el estado de caja y abre una sesión antes de operar.",
+      TPV_SESSION_NOT_OPEN: "No existe una sesión de caja abierta. Abre la caja antes de registrar la operación.",
+      TPV_SESSION_CLOSED: "La sesión está cerrada. Abre una nueva sesión para continuar.",
+      TPV_SESSION_MISMATCH: "La sesión seleccionada ya no es la sesión activa. Actualiza el estado de caja y vuelve a seleccionar la sesión.",
+      TPV_REFUND_REFERENCE_AND_REASON_REQUIRED: "Indica el ID de la venta original y un motivo de al menos 3 caracteres.",
+      TPV_REFUND_ORIGINAL_SALE_NOT_FOUND: "No se encuentra la venta original. Comprueba el ID de venta y vuelve a intentarlo.",
+      TPV_REFUND_EXCEEDS_REMAINING: "El importe supera lo que queda por devolver en ese medio de pago. Consulta el ticket original y las devoluciones anteriores.",
+      TPV_REFUND_METHOD_INVALID: "El medio de pago no coincide con el pago original. Selecciona el mismo medio de pago del ticket.",
+      TPV_COUNT_DIFFERENCE_REASON_REQUIRED: "Hay una diferencia entre el efectivo esperado y el contado. Explica el motivo con al menos 3 caracteres.",
+      TPV_PENDING_SALES_PREVENT_CLOSE: "No se puede cerrar la caja: hay ventas pendientes de completar o conciliar. Consulta el detalle antes de volver a intentarlo.",
+      TPV_PENDING_REFUNDS_PREVENT_CLOSE: "No se puede cerrar la caja: hay devoluciones pendientes de completar o conciliar.",
+      TPV_RECONCILIATION_FAILED: "No se puede cerrar la caja porque los movimientos no cuadran. Revisa el resumen y los movimientos pendientes.",
+      TPV_IDEMPOTENCY_KEY_INVALID: "No se ha podido validar la clave de operación. No repitas la acción; actualiza la página y consulta el estado antes de reintentar.",
+      TPV_CASH_REGISTER_INTEGRITY_FAILED: "La integridad de la sesión de caja no se puede verificar. La operación se ha bloqueado para proteger los datos; facilita este código a soporte.",
+      TPV_CONTEXT_REQUIRED: "No se ha podido identificar de forma segura al operador o al sitio. Cierra sesión y vuelve a entrar; si continúa, contacta con soporte.",
+      TPV_TIMEOUT: "La operación ha tardado demasiado y su resultado podría estar pendiente. No la repitas hasta actualizar el estado de caja.",
+      ACCESS_DENIED: "Tu usuario no tiene permisos para esta operación. Solicita el rol correspondiente al administrador.",
+      RATE_LIMITED: "Se han realizado demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo."
+    };
+    return messages[key] || "No se ha podido completar la operación. Código: " + (key || "ERROR_DESCONOCIDO") + ". Revisa el estado antes de repetirla.";
+  }
+  function error(msg) { toast(publicErrorMessage(msg)); }
 
   /* ---------- Modales ---------- */
   function openModal(title, bodyHtml, onConfirm) {
@@ -920,7 +988,7 @@ body {
     <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
   `, async () => {
     const openingCash = num($("openingCash").value);
-    if (openingCash < 0) throw new Error("El fondo inicial no puede ser negativo.");
+    if (!Number.isFinite(openingCash) || openingCash < 0) throw new Error("TPV_INVALID_AMOUNT");
     const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
       openingCash,
       reason: $("openingReason").value.trim(),
@@ -943,7 +1011,7 @@ body {
       async () => {
         const amount = num($("movementAmount").value);
         const reason = $("movementConcept").value.trim();
-        if (amount <= 0 || reason.length < 3) {
+        if (!Number.isFinite(amount) || amount <= 0 || reason.length < 3) {
           throw new Error("Indica importe y concepto válidos.");
         }
         await keyedAction("CASH_" + type, "CASH_MOVEMENT", {
@@ -981,7 +1049,7 @@ body {
       const amount = num($("refundAmount").value);
       const paymentMethod = $("refundMethod").value;
       const reason = $("refundReason").value.trim();
-      if (!saleId || amount <= 0 || reason.length < 3) {
+      if (!saleId || !Number.isFinite(amount) || amount <= 0 || reason.length < 3) {
         throw new Error("Completa venta, importe y motivo.");
       }
       await keyedAction("REFUND", "REFUND", {
