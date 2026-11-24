@@ -25,6 +25,5 @@ export async function resolveTpvContext(traceId = null) {
         siteId,
         sourceType,
         ledgerVersion,
-        capabilities: TPV_RUNTIME_POLICY.CAPABILITIES,
     });
 }
