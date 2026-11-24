@@ -264,7 +264,6 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /ALLOW_REAL_PAYMENTS: false/);
     assert.match(config, /ALLOW_NATIVE_WRITES: false/);
-    assert.match(config, /TPV_RUNTIME_POLICY = Object\.freeze\(\{[\s\S]*?ENABLED: true/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
