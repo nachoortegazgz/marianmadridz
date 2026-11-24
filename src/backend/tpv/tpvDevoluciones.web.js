@@ -147,8 +147,6 @@ export const registrarDevolucion = webMethod(
                     paymentStatus: "SIMULATED_ONLY",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    isSynthetic: true,
-                    realPayment: false,
                     gatewayCalled: false,
                     persisted: true,
                 },
@@ -157,7 +155,7 @@ export const registrarDevolucion = webMethod(
             };
             }, session.sessionId);
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_REFUND_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_REFUND_FAILED") }, persisted, recoverable: persisted, traceId };
         }
     }
 );
