@@ -143,7 +143,6 @@ export const registrarDevolucion = webMethod(
                     actorId: operator.actorId,
                     operationalStatus: "ABIERTA",
                     integrationStatus: "NO_ENVIADO",
-                    simulationStatus: "SYNTHETIC",
                     paymentStatus: "NOT_PROCESSED",
                     now: new Date().toISOString(),
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
