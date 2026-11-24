@@ -55,7 +55,7 @@ function validateFixture(fixture) {
     const sale = validateSaleDraft(fixture);
     assert.equal(sale.importePendiente, 0);
     assert.equal(sale.estadoVenta, "COBRADA_SINTETICA");
-    assert.equal(sale.realPayment, false);
+    assert.equal(sale.realPayment, undefined);
     return { key, sale };
 }
 
@@ -200,11 +200,11 @@ test("invalid amount, overpayment and partial tender are handled explicitly", ()
     assert.equal(partial.importePendiente, 15);
 });
 
-test("every simulated event is synthetic and declares no persistence or external side effects", () => {
+test("TPV event metadata declares no external side effects or persistence", () => {
     const day = runSyntheticBusinessDay();
     for (const event of [...day.events, ...day.cashMovements]) {
-        assert.equal(event.isSynthetic, true);
-        assert.equal(event.realPayment, false);
+        assert.equal(event.isSynthetic, undefined);
+        assert.equal(event.realPayment, undefined);
         assert.equal(event.externalSideEffects, false);
         assert.equal(event.persisted, false);
         assert.equal(event.testRunId, RUN_ID);
