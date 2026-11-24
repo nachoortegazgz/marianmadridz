@@ -235,7 +235,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
-    const key = "sandbox-arqueo-reintento-0001";
+    const key = "arqueo-reintento-0001";
     const cashCountId = makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
     const ticketId = makeTpvTransactionId(TPV_COLLECTIONS.TICKET_Z, key);
     const auditId = makeTpvTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
