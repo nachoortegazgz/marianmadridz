@@ -510,7 +510,7 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             next.snapshotSource = TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE;
             next.cashRegisterStatus = "SIMULACION";
 
-            if (collection === TPV_COLLECTIONS.VENTAS && record.status === "CONFIRMADA_SINTETICA") {
+            if (collection === TPV_COLLECTIONS.VENTAS && ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record.status)) {
                 next.salesCount = Number(caja.salesCount || 0) + 1;
             }
             if (collection === TPV_COLLECTIONS.PAGOS) {
@@ -572,7 +572,7 @@ function _shouldProject(collection, record) {
         collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA ||
         collection === TPV_COLLECTIONS.TICKET_Z) return true;
     return collection === TPV_COLLECTIONS.VENTAS &&
-        record?.status === "CONFIRMADA_SINTETICA";
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(record?.status);
 }
 
 function _sessionCajaPatch(caja, record, eventHash) {
@@ -968,7 +968,7 @@ export async function latestOpenTpvSession() {
 export async function getCommittedTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     return records.filter((item) =>
-        item.status === "CONFIRMADA_SINTETICA" &&
+        ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }
@@ -976,10 +976,10 @@ export async function getCommittedTpvSales(sessionId) {
 export async function getPendingTpvSales(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
     const committedIds = new Set(records
-        .filter((item) => item.status === "CONFIRMADA_SINTETICA")
+        .filter((item) => ["CONFIRMADA", "CONFIRMADA_SINTETICA"].includes(item.status))
         .map((item) => item.saleId));
     return records.filter((item) =>
-        item.status === "PREPARADA_SINTETICA" &&
+        ["PREPARADA", "PREPARADA_SINTETICA"].includes(item.status) &&
         item.payload?.sessionId === sessionId &&
         !committedIds.has(item.saleId)
     );
@@ -1020,7 +1020,7 @@ export async function getPendingTpvRefunds(sessionId) {
             payment.payload?.refundId === refund.refundId
         );
         const refundCashMovements = movements.filter((movement) =>
-            movement.status === "CONFIRMADO_SINTETICO" &&
+            ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(movement.status) &&
             movement.movementType === "DEVOLUCION_EFECTIVO" &&
             movement.payload?.refundId === refund.refundId
         );
@@ -1061,7 +1061,7 @@ export async function getPendingTpvRefunds(sessionId) {
 export async function getTpvRefunds(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.REEMBOLSOS, undefined);
     return records.filter((item) =>
-        item.status === "CONFIRMADO_SINTETICO" &&
+        ["CONFIRMADO", "CONFIRMADO_SINTETICO"].includes(item.status) &&
         item.payload?.sessionId === sessionId
     );
 }
