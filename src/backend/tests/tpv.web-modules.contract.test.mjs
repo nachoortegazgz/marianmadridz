@@ -458,7 +458,9 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
     assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
     assert.match(repository, /filter\(_isHistoricalTpvLedgerItem\)/);
-    assert.match(repository, /filter\(_isCanonicalTpvLedgerItem\)/);\n    assert.match(repository, /export async function queryHistoricalTpvLedgerRecords\\(/);\n    assert.match(repository, /export async function queryTpvOperationalLedgerRecords\\(/);
+    assert.match(repository, /filter\(_isCanonicalTpvLedgerItem\)/);
+    assert.match(repository, /export async function queryHistoricalTpvLedgerRecords\\(/);
+    assert.match(repository, /export async function queryTpvOperationalLedgerRecords\\(/);
     assert.match(utilities, /export function makeTpvPayload/);
     assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds|processingMode|reconciliationStatus/);
     assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
@@ -467,8 +469,9 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
     assert.match(validation, /sequenceNumber invalido \(debe ser un entero > 0\)/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
-    assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);\n    assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
-    assert.match(movements, /SIMULATED_TPV_REFUND/);
+    assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
+    assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
+    assert.doesNotMatch(movements, /SIMULATED_TPV_REFUND|CONFIRMADO_SINTETICO/);
     assert.match(movements, /\[SINTÉTICO\]/);
     assert.doesNotMatch(movements, /syntheticOnly: true/);
 });
