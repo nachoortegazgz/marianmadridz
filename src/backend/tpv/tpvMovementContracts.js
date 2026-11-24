@@ -49,14 +49,11 @@ export function buildCashMovementSuccessData({
         actorId: operator.actorId,
         operationalStatus: session.status,
         integrationStatus: "NO_ENVIADO",
-        simulationStatus: "SYNTHETIC",
         paymentStatus: "NOT_APPLICABLE",
         now: now.toISOString(),
         timeZone,
         replayed: replayed === true,
         persisted: true,
-        isSynthetic: true,
-        realPayment: false,
     };
 }
 
@@ -68,8 +65,6 @@ export function buildCashMovementFailure(error, persistedBeforeError, traceId) {
         error: { code: String(error?.code || error?.message || "TPV_CASH_MOVEMENT_FAILED") },
         persisted,
         recoverable: persisted,
-        isSynthetic: true,
-        realPayment: false,
         traceId,
     };
     if (error?.projectionStatus) result.projectionStatus = error.projectionStatus;
