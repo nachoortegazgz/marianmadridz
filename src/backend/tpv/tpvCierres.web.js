@@ -11,7 +11,7 @@ import { wql } from "backend/dataAccess";
 export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-sandbox-summary");
+        const traceId = makeTraceId("tpv-session-summary");
         await requireCajero(traceId);
 
         try {
