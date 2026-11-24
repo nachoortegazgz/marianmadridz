@@ -33,7 +33,7 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.totalVenta, 108.9);
     assert.equal(result.importePagado, 108.9);
     assert.equal(result.importePendiente, 0);
-    assert.equal(result.estadoVenta, "COBRADA_SINTETICA");
+    assert.equal(result.estadoVenta, "COBRADA");
     assert.equal(result.persisted, false);
     assert.equal(result.realPayment, undefined);
 });
