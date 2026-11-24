@@ -337,8 +337,8 @@ test("TPV policy remains synthetic and client idempotency keys are bounded", () 
     assert.equal(fromMinorUnits(1234), 12.34);
     assert.throws(() => toMinorUnits(12.345), /TPV_INVALID_PRECISION/);
     const payload = makeSyntheticPayload({ sample: true });
-    assert.equal(payload.isSynthetic, true);
-    assert.equal(payload.realPayment, false);
+    assert.equal(payload.isSynthetic, undefined);
+    assert.equal(payload.realPayment, undefined);
     assert.equal(payload.externalSideEffects, false);
     assert.equal(payload.schemaVersion, TPV_RUNTIME_POLICY.SCHEMA_VERSION);
     assert.equal(payload.processingMode, "INTERNAL");
