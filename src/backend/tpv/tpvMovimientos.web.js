@@ -41,7 +41,6 @@ function mapMovementRecord(record) {
         createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
         totals: record.totals || null,
         currency: record.currency || "EUR",
-        isSynthetic: true,
         persisted: true,
     };
 }
@@ -141,15 +140,13 @@ export const registrarMovimientoCaja = webMethod(
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     replayed,
                     persisted: true,
-                    isSynthetic: true,
-                    realPayment: false,
                 },
                 error: null,
                 traceId,
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, isSynthetic: true, realPayment: false, traceId };
+            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_CASH_MOVEMENT_FAILED") }, persisted, recoverable: persisted, traceId };
         }
     }
 );
@@ -313,7 +310,6 @@ export const exportarAuditoriaTPV = webMethod(
                         allocations: record.payload?.allocations || null,
                         recordCount: record.payload?.recordCount ?? null,
                     }),
-                    isSynthetic: true,
                 }))
                 .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
             await appendTpvAudit({
