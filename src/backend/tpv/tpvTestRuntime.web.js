@@ -190,6 +190,12 @@ export const validarVentaBorradorPrueba = webMethod(
                 pagos: validated.pagos,
                 totalVenta: validated.totalVenta,
             });
+            const testCatalogReady = prepared.lineas.length > 0 &&
+                !blockers.some((code) => [
+                    "TPV_WRITE_V1_LINES_REQUIRED",
+                    "TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE",
+                    "TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED",
+                ].includes(code));
             const lineas = validated.lineas.map((line, index) => ({
                 ...line,
                 taxGroupId: prepared.lineas[index].taxGroupId,
@@ -201,6 +207,7 @@ export const validarVentaBorradorPrueba = webMethod(
                 catalogVerified: true,
                 taxVerified: true,
                 testReady: blockers.length === 0,
+                testCatalogReady,
                 testReadinessBlockers: blockers,
                 saleReady: false,
                 paymentVerified: false,
