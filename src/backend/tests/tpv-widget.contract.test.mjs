@@ -96,7 +96,7 @@ test("TPV widget stays read-only until the canonical operational ledger is confi
 
 test("TPV HTML component JavaScript parses without syntax errors", async () => {
     const html = await source("%23htmlTPV.txt");
-    const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+    const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
     assert.ok(scripts.length > 0, "HTML component must contain a script block");
     for (const match of scripts) {
         assert.doesNotThrow(() => new Script(match[1], { filename: "#htmlTPV.txt" }));
