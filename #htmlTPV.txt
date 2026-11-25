@@ -485,6 +485,7 @@ body {
       TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
       TPV_TAX_SETTINGS_UNAVAILABLE: "No se ha podido leer la configuración fiscal vigente de Wix.",
       TPV_STAFF_NOT_ALLOWED: "El profesional seleccionado no está autorizado en el mapa de personal.",
+      TPV_PAYMENT_METHOD_NOT_VERIFIED: "Bono o tarjeta regalo no verificable: consulta de saldo todavía no integrada.",
       TPV_INVALID_PAYMENT_AMOUNT: "El importe del pago debe ser mayor que 0. Introduce, por ejemplo, 12,50.",
       TPV_INVALID_AMOUNT: "Introduce un importe numérico igual o superior a 0, con un máximo de dos decimales.",
       TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
