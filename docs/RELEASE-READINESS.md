@@ -45,6 +45,6 @@ La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIS
 
 ## Normativa
 
-El RDL 15/2025 (BOE-A-2025-24446) fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. El RDL 1/2007, arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. El sitio devuelve `taxIncludedInItemPrices=false` y la presentación pública del precio no está verificada; se mantiene bloqueada la venta hasta resolverlo.
+El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. El sitio devuelve `taxIncludedInItemPrices=false` y la presentación pública del precio no está verificada; se mantiene bloqueada la venta hasta resolverlo.
 
 Estado operativo: **NO-GO**. Read-back CMS de solo lectura 2026-11-25; no se ha ejecutado Preview/Runtime. No se han modificado datos CMS, configuración fiscal, secretos, ledgers ni pedidos.
