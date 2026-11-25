@@ -14,7 +14,7 @@ import {
     getLatestTpvTestRun,
     getTpvTestRun,
 } from "backend/tpv/tpvTestRuntimeRepository";
-import { summarizeTpvTestRun } from "backend/tpv/tpvTestRuntimeCore";
+import { hashTpvTestValue, summarizeTpvTestRun } from "backend/tpv/tpvTestRuntimeCore";
 
 function ok(data, traceId) {
     return { status: "SUCCESS", data, error: null, traceId };
@@ -87,6 +87,44 @@ async function currentOpenRun(actor) {
     const run = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
     if (!run) throw new Error("TPV_SESSION_NOT_OPEN");
     return run;
+}
+
+function findPriorEvent(run, idempotencyKey, eventType, request) {
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const claim = run.payload.idempotencyIndex?.[key];
+    if (!claim) return null;
+    const event = run.payload.events.find((entry) => entry.sequence === claim.sequence);
+    const fingerprint = hashTpvTestValue(request);
+    if (!event || event.eventType !== eventType ||
+        event.data?.requestFingerprint !== fingerprint) {
+        throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+    }
+    return event;
+}
+
+function saleReplayResponse(event, sessionId, traceId) {
+    const data = event.data;
+    return ok({
+        saleId: data.saleId,
+        sessionId,
+        totalVenta: fromMinorUnits(data.totalMinor),
+        subtotalNeto: fromMinorUnits(data.taxBaseMinor),
+        impuestosTotal: fromMinorUnits(data.taxMinor),
+        lineas: data.lineas,
+        pagos: data.payments,
+        paymentStatus: "SIMULATED",
+        paymentVerified: false,
+        inventoryMutated: false,
+        fiscalDocumentIssued: false,
+        sourceType: "SYNTHETIC",
+        testRuntime: true,
+        testPersisted: true,
+        persisted: false,
+        realPayment: false,
+        externalSideEffects: false,
+        replayed: true,
+        traceId,
+    }, traceId);
 }
 
 async function appendEvent(actor, input, eventType, data, { closeRun = false } = {}) {
@@ -245,6 +283,9 @@ export const registrarVentaPrueba = webMethod(
             const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
             const lineas = Array.isArray(input.lineas) ? input.lineas : [];
             const pagos = Array.isArray(input.pagos) ? input.pagos : [];
+            const requestFingerprint = hashTpvTestValue({ lineas, pagos });
+            const prior = findPriorEvent(run, idempotencyKey, "SALE_RECORDED", { lineas, pagos });
+            if (prior) return saleReplayResponse(prior, run.payload.sessionId, traceId);
             assertTpvPaymentMethodsSupported(pagos);
             const prepared = await prepareTpvSaleCatalog(lineas);
             const validated = validateSaleDraft({
@@ -276,6 +317,7 @@ export const registrarVentaPrueba = webMethod(
             }));
             const result = await appendEvent(actor, input, "SALE_RECORDED", {
                 saleId,
+                requestFingerprint,
                 totalMinor: toMinorUnits(validated.totalVenta, "SALE_TOTAL"),
                 taxBaseMinor: toMinorUnits(validated.subtotalNeto, "SALE_BASE"),
                 taxMinor: toMinorUnits(validated.impuestosTotal, "SALE_TAX"),
@@ -393,6 +435,24 @@ export const registrarDevolucionPrueba = webMethod(
                 method: String(payment.paymentMethod || "").trim().toUpperCase(),
                 amountMinor: toMinorUnits(payment.amount, "REFUND_AMOUNT"),
             }));
+            const requestFingerprint = hashTpvTestValue({ saleId, payments, reason: String(input.reason || "").trim() });
+            const prior = findPriorEvent(run, input.idempotencyKey, "REFUND_RECORDED", {
+                saleId,
+                payments,
+                reason: String(input.reason || "").trim(),
+            });
+            if (prior) return ok({
+                refundId: prior.data.refundId,
+                saleId,
+                total: fromMinorUnits(prior.data.totalMinor),
+                refundStatus: "SIMULATED",
+                realRefund: false,
+                testPersisted: true,
+                persisted: false,
+                replayed: true,
+                sourceType: "SYNTHETIC",
+                traceId,
+            }, traceId);
             if (!payments.length || payments.some((payment) =>
                 !["EFECTIVO", "TARJETA", "BIZUM"].includes(payment.method) || payment.amountMinor <= 0
             )) throw new Error("TPV_TEST_REFUND_ALLOCATION_INVALID");
@@ -419,6 +479,8 @@ export const registrarDevolucionPrueba = webMethod(
             const totalMinor = payments.reduce((sum, payment) => sum + payment.amountMinor, 0);
             const result = await appendEvent(actor, input, "REFUND_RECORDED", {
                 refundId: "TPV-TEST-REFUND-" + resultId(input.idempotencyKey),
+                requestFingerprint,
+                reason: String(input.reason || "").trim().slice(0, 500),
                 saleId,
                 totalMinor,
                 payments,
@@ -456,10 +518,25 @@ export const generarControlXPrueba = webMethod(
             const actor = await trustedAdmin(traceId);
             const run = await getTpvTestRun(input.sessionId, actor.actorId);
             if (run.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
+            const requestFingerprint = hashTpvTestValue({ sessionId: input.sessionId });
+            const prior = findPriorEvent(run, input.idempotencyKey, "TICKET_X_ISSUED", { sessionId: input.sessionId });
+            if (prior) return ok({
+                reportId: prior.data.reportId,
+                sessionId: input.sessionId,
+                totals: prior.data.totals,
+                operationalStatus: "ABIERTA",
+                closesSession: false,
+                testPersisted: true,
+                persisted: false,
+                replayed: true,
+                sourceType: "SYNTHETIC",
+                traceId,
+            }, traceId);
             const totals = summarizeTpvTestRun(run.payload);
             const reportId = "TPV-TEST-X-" + resultId(input.idempotencyKey);
             const result = await appendEvent(actor, input, "TICKET_X_ISSUED", {
                 reportId,
+                requestFingerprint,
                 totals,
                 closesSession: false,
             });
@@ -489,6 +566,27 @@ export const generarCierreZPrueba = webMethod(
             const actor = await trustedAdmin(traceId);
             const run = await getTpvTestRun(input.sessionId, actor.actorId);
             const countedCashMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
+            const request = {
+                sessionId: input.sessionId,
+                countedCashMinor,
+                differenceReason: String(input.differenceReason || "").trim(),
+            };
+            const prior = findPriorEvent(run, input.idempotencyKey, "TICKET_Z_CLOSED", request);
+            if (prior) return ok({
+                reportId: prior.data.reportId,
+                sessionId: input.sessionId,
+                expectedCash: fromMinorUnits(prior.data.totals.expectedCashMinor),
+                countedCash: fromMinorUnits(prior.data.countedCashMinor),
+                difference: fromMinorUnits(prior.data.differenceMinor),
+                closed: true,
+                operationalStatus: "CERRADA",
+                fiscalLedgerWritten: false,
+                testPersisted: true,
+                persisted: false,
+                replayed: true,
+                sourceType: "SYNTHETIC",
+                traceId,
+            }, traceId);
             const totals = summarizeTpvTestRun(run.payload);
             const differenceMinor = countedCashMinor - totals.expectedCashMinor;
             const differenceReason = String(input.differenceReason || "").trim();
@@ -498,6 +596,7 @@ export const generarCierreZPrueba = webMethod(
             const reportId = "TPV-TEST-Z-" + resultId(input.idempotencyKey);
             const result = await appendEvent(actor, input, "TICKET_Z_CLOSED", {
                 reportId,
+                requestFingerprint: hashTpvTestValue(request),
                 countedCashMinor,
                 differenceMinor,
                 differenceReason,
