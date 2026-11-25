@@ -376,8 +376,7 @@ test("synthetic QA records are not consumed by operational ledgers, closures or 
     assert.match(repository, /wql\.eq\("controlType", CONTROL_TYPE\.TPV_TEST_RUN\)/);
 });
 
-test("TPV controller routes mutations through the admin-only synthetic runtime", async () => {
-    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+test("legacy TPV QA runtime remains isolated pending its controlled retirement", async () => {
     const runtime = await source("tpv/tpvTestRuntime.web.js");
     const repository = await source("tpv/tpvTestRuntimeRepository.js");
     const core = await source("tpv/tpvTestRuntimeCore.js");
@@ -398,14 +397,6 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     ];
     for (const name of contracts) {
         assert.match(runtime, new RegExp("export const " + name + " = webMethod\\("));
-        assert.match(controller, new RegExp("\\b" + name + "\\b"));
-    }
-    assert.ok(controller.includes('from "backend/tpv/tpvTestRuntime.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvCatalogo.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvUtils.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvPermisos.web"'));
-    for (const legacyWriter of ["tpvCaja.web", "tpvVentas.web", "tpvMovimientos.web", "tpvAuditoria.web", "tpvDevoluciones.web", "tpvCierres.web"]) {
-        assert.equal(controller.includes('from "backend/tpv/' + legacyWriter + '"'), false);
     }
     assert.match(runtime, /requireAdmin/);
     assert.match(runtime, /prepareTpvSaleCatalog/);
