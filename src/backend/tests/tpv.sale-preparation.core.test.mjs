@@ -14,13 +14,13 @@ const BOOKINGS_APP_ID = "13d21c63-b5ec-5912-8397-c3a5ddb27a97";
 const PRODUCTS_TAX_GROUP = "215238eb-22a5-4c36-9e7b-e7c08025e04e";
 const SERVICES_TAX_GROUP = "13d21c63-b5ec-5912-8397-c3a5ddb27a97";
 
-function taxDetail(id, taxGroupId, taxableAmount, taxAmount) {
+function taxDetail(id, taxGroupId, fullPrice, taxableAmount, taxAmount, taxIncludedInPrice = false) {
     return {
         id,
         taxGroupId,
-        taxIncludedInPrice: false,
+        taxIncludedInPrice,
         taxSummary: {
-            fullPrice: taxableAmount,
+            fullPrice,
             taxableAmount,
             taxAmount,
             appId: "57d13128-4a4c-494b-80b3-a6fb2e28018d",
@@ -45,6 +45,7 @@ test("normalizes product and service lines using identifiers and integer quantit
     assert.equal(result[0].varianteId, VARIANT_ID);
     assert.equal(result[0].cantidad, 2);
     assert.equal(result[1].tipoLinea, "SERVICIO");
+    assert.equal(result[0].stockAfectado, false);
 });
 
 test("rejects custom lines whose tax group is not configured", () => {
@@ -65,7 +66,7 @@ test("rejects client-originated discounts until a backend discount contract exis
     );
 });
 
-test("builds tax lines with canonical Wix app IDs and never accepts a client price", () => {
+test("builds tax lines with canonical Wix app IDs and the explicit global tax setting", () => {
     const result = buildTpvTaxCalculationLines([
         {
             itemId: PRODUCT_ID,
@@ -86,16 +87,17 @@ test("builds tax lines with canonical Wix app IDs and never accepts a client pri
             currency: "EUR",
             appId: BOOKINGS_APP_ID,
         },
-    ]);
+    ], false);
 
     assert.equal(result[0].price, "22.90");
     assert.equal(result[0].taxGroupId, PRODUCTS_TAX_GROUP);
     assert.equal(result[0].appId, STORES_APP_ID);
     assert.equal(result[1].appId, BOOKINGS_APP_ID);
+    assert.equal(result[0].taxIncludedInPrice, false);
     assert.deepEqual(result[0].addressIndex, { singleAddress: 0 });
 });
 
-test("maps Wix line tax details and derives the payable total from taxable base plus tax", () => {
+test("maps tax-exclusive Wix catalog prices to net base plus tax", () => {
     const catalogLines = [
         {
             itemId: PRODUCT_ID,
@@ -118,6 +120,7 @@ test("maps Wix line tax details and derives the payable total from taxable base 
     ];
     const result = mapTpvTaxCalculation({
         catalogLines,
+        taxIncludedInPrice: false,
         taxResult: {
             currency: "EUR",
             taxSummary: {
@@ -127,8 +130,8 @@ test("maps Wix line tax details and derives the payable total from taxable base 
                 totalTaxIncludedInPrice: "0.00",
             },
             lineItemTaxDetails: [
-                taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "4.81"),
-                taxDetail("TPV_LINE_2", SERVICES_TAX_GROUP, "100.00", "21.00"),
+                taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "22.90", "4.81"),
+                taxDetail("TPV_LINE_2", SERVICES_TAX_GROUP, "100.00", "100.00", "21.00"),
             ],
         },
     });
@@ -141,7 +144,40 @@ test("maps Wix line tax details and derives the payable total from taxable base 
     assert.equal(result.lineas[1].impuestosImporte, 21);
 });
 
-test("fails closed when Wix reports tax included in price", () => {
+test("maps tax-inclusive Wix catalog prices to net base and preserves the catalog gross total", () => {
+    const result = mapTpvTaxCalculation({
+        catalogLines: [{
+            itemId: PRODUCT_ID,
+            tipoLinea: "PRODUCTO",
+            concepto: "Producto",
+            cantidad: 1,
+            precioUnitario: "22.90",
+            currency: "EUR",
+            appId: STORES_APP_ID,
+        }],
+        taxIncludedInPrice: true,
+        taxResult: {
+            currency: "EUR",
+            taxSummary: {
+                totalAmount: "22.90",
+                totalTaxableAmount: "18.93",
+                totalTax: "3.97",
+                totalTaxIncludedInPrice: "3.97",
+            },
+            lineItemTaxDetails: [
+                taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "18.93", "3.97", true),
+            ],
+        },
+    });
+
+    assert.equal(result.subtotalNeto, 18.93);
+    assert.equal(result.impuestosTotal, 3.97);
+    assert.equal(result.totalVenta, 22.9);
+    assert.equal(result.taxIncludedInPrice, true);
+    assert.equal(result.taxIncludedInPriceAmount, 3.97);
+});
+
+test("fails closed when Wix reports a tax price mode different from the global setting", () => {
     assert.throws(
         () => mapTpvTaxCalculation({
             catalogLines: [{
@@ -153,20 +189,20 @@ test("fails closed when Wix reports tax included in price", () => {
                 currency: "EUR",
                 appId: STORES_APP_ID,
             }],
+            taxIncludedInPrice: false,
             taxResult: {
                 currency: "EUR",
                 taxSummary: {
-                    totalTaxableAmount: "22.90",
-                    totalTax: "4.81",
-                    totalTaxIncludedInPrice: "4.81",
+                    totalTaxableAmount: "18.93",
+                    totalTax: "3.97",
+                    totalTaxIncludedInPrice: "3.97",
                 },
-                lineItemTaxDetails: [{
-                    ...taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "4.81"),
-                    taxIncludedInPrice: true,
-                }],
+                lineItemTaxDetails: [
+                    taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "18.93", "3.97", true),
+                ],
             },
         }),
-        { code: "TPV_TAX_INCLUDED_PRICING_NOT_SUPPORTED" },
+        { code: "TPV_TAX_PRICE_MODE_MISMATCH" },
     );
 });
 
@@ -184,6 +220,7 @@ test("fails closed when Wix tax response is incomplete or inconsistent", () => {
     assert.throws(
         () => mapTpvTaxCalculation({
             catalogLines,
+            taxIncludedInPrice: false,
             taxResult: {
                 currency: "EUR",
                 taxSummary: {
@@ -200,15 +237,17 @@ test("fails closed when Wix tax response is incomplete or inconsistent", () => {
     assert.throws(
         () => mapTpvTaxCalculation({
             catalogLines,
+            taxIncludedInPrice: false,
             taxResult: {
                 currency: "EUR",
                 taxSummary: {
+                    totalAmount: "22.90",
                     totalTaxableAmount: "22.90",
                     totalTax: "5.00",
                     totalTaxIncludedInPrice: "0",
                 },
                 lineItemTaxDetails: [
-                    taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "4.81"),
+                    taxDetail("TPV_LINE_1", PRODUCTS_TAX_GROUP, "22.90", "22.90", "4.81"),
                 ],
             },
         }),
