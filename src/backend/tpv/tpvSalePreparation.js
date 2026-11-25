@@ -3,6 +3,7 @@ import { services } from "@wix/bookings";
 import { productsV3 } from "@wix/stores";
 import { taxCalculation } from "@wix/ecom";
 import { TPV_CATALOG_APP_IDS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { listAuthorizedProfessionals } from "backend/tpv/tpvNativeDirectory";
 import {
     buildTpvTaxCalculationLines,
     mapTpvTaxCalculation,
@@ -133,7 +134,20 @@ async function resolveServices(requests) {
  * calculation. It never creates orders, payments, CMS records or ledger events.
  */
 export async function prepareTpvSaleCatalog(inputLines) {
-    const requests = normalizeTpvSaleLineRequests(inputLines);
+    const rawRequests = normalizeTpvSaleLineRequests(inputLines);
+    const requests = rawRequests.some((line) => line.profesionalId)
+        ? await (async () => {
+            const professionals = await listAuthorizedProfessionals();
+            const byResourceId = new Map(professionals.map((person) => [person.resourceId, person]));
+            return rawRequests.map((line) => {
+                if (!line.profesionalId) return line;
+                const professional = byResourceId.get(line.profesionalId);
+                if (!professional) fail("TPV_STAFF_NOT_ALLOWED");
+                return { ...line, profesionalId: professional.resourceId };
+            });
+        })()
+        : rawRequests;
+
     const productRequests = requests.filter((line) => line.tipoLinea === "PRODUCTO");
     const serviceRequests = requests.filter((line) => line.tipoLinea === "SERVICIO");
 
