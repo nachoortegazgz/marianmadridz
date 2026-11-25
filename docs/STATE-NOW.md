@@ -118,5 +118,5 @@ Las implementaciones de PR #615/#616 y el documento de preparación online descr
 
 La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md). **NO-GO** hasta superar sus criterios y los gates fiscales/comerciales de [RELEASE-READINESS.md](RELEASE-READINESS.md).
 ## Prioridad 1 TPV — verificación estática 2026-11-25
-- Resultado global por proceso: 0 VERIFICADOS, 0 PARCIALES, 4 PENDIENTES (P1.2/P1.4/P1.5/P1.7) y 3 BLOQUEADOS (P1.1/P1.3/P1.6); pruebas de ejecución no disponibles en esta sesión.
+- Resultado global por proceso: 0 VERIFICADOS, 0 PARCIALES, 2 PENDIENTES (P1.2/P1.7) y 5 BLOQUEADOS (P1.1/P1.3/P1.4/P1.5/P1.6); pruebas de ejecución no disponibles en esta sesión.
 - F1 ya aplicado; F2 normalizado; F3 ausente; F4 documentado UI-only; F5 DIFERIDO por conflicto con ledger canónico y gates fiscales; F6 ya usa objetos. npm install/test pendientes por checkout local no disponible.
