@@ -5,9 +5,13 @@
  * DOC: https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder
  *      https://developer.mozilla.org/en-US/docs/Web/API/URL
  *
- * CONTEXTO WIX: HTML Components sandboxed pueden emitir origin opaco ("", "null").
- * Seguridad TPV: allowOpaqueOrigin:false rechaza esos mensajes; compatibilidad del
- * handshake/origen queda pendiente de verificar (#416). Origins no opacos siguen allowlisted.
+ * CONTEXTO WIX: los iframes/widgets sandboxed pueden operar con origin opaco ("null").
+ * Wix documenta este comportamiento en contextos sandboxed del Editor; su contrato
+ * HtmlComponent onMessage documenta event.data, pero no garantiza event.origin.
+ * Seguridad: allowOpaqueOrigin es opt-in por flujo, false por defecto. El bypass
+ * omite solo la comprobación de origin; nunca la allowlist de tipos, protocolo ni
+ * autorización backend. TPV mantiene false; reservas conservan la excepción existente
+ * hasta validar su handshake en Preview/Runtime.
  */
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
