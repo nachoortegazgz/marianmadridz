@@ -136,6 +136,7 @@ test("maps Wix line tax details and derives the payable total from taxable base 
     assert.equal(result.subtotalNeto, 122.9);
     assert.equal(result.impuestosTotal, 25.81);
     assert.equal(result.totalVenta, 148.71);
+    assert.equal(result.taxIncludedInPrice, false);
     assert.equal(result.lineas[0].taxGroupId, PRODUCTS_TAX_GROUP);
     assert.equal(result.lineas[1].impuestosImporte, 21);
 });
