@@ -1,6 +1,6 @@
 # PROJECT-CANON — marianmadridz
 
-Revisión: 2026-11-25 · Base: `main@0acb60df65bba1545d3a57cfa261d1de518eb39d`
+Revisión: 2026-11-25 · Base: `main@62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`
 
 ## 1. IDENTIDAD
 
@@ -128,3 +128,19 @@ Detalle operativo P0/P1: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](R
 | Bookings duales y cancelaciones | [ADR Bookings](archive/2026-11/adr/ADR-002-bookings-v2-sdk-field-names.md), [revalidación](archive/2026-11/audits/2026-11-23-bookings-revalidation.md) |
 | Veri*Factu | [ADR Veri*Factu](archive/2026-11/architecture/ADR-VERIFACTU-REMISSION.md), [AEAT SIF](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu.html) |
 | Evidencia detallada de pruebas Runtime | [Checklist archivada](archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md), [arnés](../tests/runtime/runtime-all.spec.js) |
+
+
+## 9. ACTUALIZACIÓN VINCULANTE — 2026-11-25 (PR #611)
+
+Esta sección prevalece sobre cualquier referencia anterior de este documento que indique que la PR #611 está abierta, en Draft o no fusionada.
+
+- PR [#611](https://github.com/nachoortegazgz/marianmadridz/pull/611) está **MERGED** en `main`; merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
+- Se integró preparación de venta TPV de solo lectura: backend resuelve catálogo Stores Catalog V3/Bookings, profesional autorizado y fiscalidad mediante `taxSettings.getTaxSettings` + `taxCalculation.calculateTax`. El frontend presenta importes devueltos por backend; no es autoridad de precios/impuestos.
+- CI offline PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f`: run `45555933654`; Gitleaks full-history PASS: run `45555933681`. Wix Preview/Runtime no ejecutado.
+- Evidencia Wix read-only 2026-11-25: 24 productos, 70 servicios de precio fijo EUR, 30 registros de inventario en ubicación virtual online y 0 en ubicación física; `taxIncludedInItemPrices=false`.
+- `saleReady=false`, `paymentVerified=false`, `persisted=false`. No se crean pedidos, Draft Orders, movimientos, pagos ni devoluciones. El guard de repository y el hook `MovimientosCaja_beforeInsert` siguen cerrados.
+- No crear `TransaccionesTPV`: `MovimientosCaja` sigue siendo el ledger físico canónico. No inicializar ni transferir inventario sin recuento físico.
+- Precio final al consumidor no verificado; la venta continúa bloqueada por el requisito de precio completo con impuestos incluidos (RDL 1/2007, arts. 20.1.c y 60.2.c).
+- La consulta de `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros; `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
+
+Fuente operativa única: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md). Si hay discrepancia con cualquier tabla histórica de este canon, prevalecen esos dos documentos y el código del commit indicado.
