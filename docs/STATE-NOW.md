@@ -1,6 +1,6 @@
 # STATE-NOW — 2026-11-25
 
-**Main:** `738793743c677eafedd3aa8605fb84d4f81753f9` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** QA/Draft (último read-back 2026-11-23).
+**Main:** `67e62955d89ab5a1ff12f0a61c3ab735199e52f5` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** QA/Draft (último read-back 2026-11-23).
 **Release:** NO-GO. No publicar, operar comercialmente ni activar pagos/writers fiscales.
 **Fuente canónica:** [PROJECT-CANON.md](PROJECT-CANON.md). Detalle y criterios: [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
@@ -28,9 +28,11 @@
 - PR #603: arnés Runtime F1–F6 creado; ciclo debt sweep 1 cerrado con 0 eliminaciones justificadas.
 - PR #604: helper de errores accionables A/B; lock fiscal con retry acotado y replay contable verificado.
 - CI offline de PR #603: 80 suites/747 tests PASS; PR #604: 81 suites/750 tests PASS; secret scanning PASS en ambas.
-- PR #606 integrada (`7387937`): bridge opaco rechazado (handshake HTML Component pendiente #416), envelope desconocido devuelve ERROR, export sin consumidor eliminado y envelope TPV compartido.
-- P4 BLOQUEADA: `MovimientosCaja` es el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`); writer fail-closed. No crear `TransaccionesTPV`. Catalog V3 `getProduct/queryProducts` y `@wix/ecom draftOrders.createDraftOrder` están disponibles en SDK; no invocar Draft Order sin idempotencia durable y fiscalidad resuelta.
-- Follow-up TPV: retry genérico ahora deniega por defecto; timeout marca resultado incierto; permisos no resueltos bloquean contexto/escrituras; SALE_REGISTER envía solo IDs, variante, cantidad y medio de pago; logs bridge saneados.
+- PR #606 y #607 integradas: bridge opaco rechazado (handshake HTML Component pendiente #416), envelope desconocido devuelve ERROR, export sin consumidor eliminado, envelope TPV compartido, retry genérico denegado por defecto, timeout incierto, permisos no resueltos bloquean escrituras, SALE_REGISTER transmite solo IDs/variante/cantidad/medio de pago y logs bridge saneados.
+- Diagnóstico Wix CMS 2026-11-25: `MovimientosCaja`, `ControlOperativo`, `CajaActual` y `MapaStaff` existen; `MovimientosCaja` sigue siendo el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`). `TransaccionesTPV` no debe crearse. `ControlOperativo` no devuelve índices; contiene dos registros `IDEMPOTENCY` antiguos de Bookings, ninguno TPV ni reutilizable como replay de venta.
+- P4 BLOQUEADA: `tpvRepository.assertTpvOperationalLedgerConfigured()` lanza incondicionalmente; además `dataAccessPolicy`/hook `MovimientosCaja_beforeInsert` rechazan los nuevos eventos TPV. No se puede retirar solo el guard. Wix Catalog V3 y `@wix/ecom` Draft Orders están disponibles, pero no existe ruta autorizada de persistencia idempotente TPV hasta completar contrato del writer.
+- Fiscalidad Wix: región ES (`*`) encontrada con mappings manuales de 0% y 21% por `taxGroupId`; falta verificar el `taxGroupId` de cada producto vendible y la política fiscal del negocio antes de calcular impuestos. La presencia de mappings no equivale a configuración fiscal certificada ni habilita writers.
+- `CajaActual` no acredita por sí sola una sesión TPV V3; no crear Draft Order hasta poder guardar/reproducir idempotentemente su `orderId` y mantener trazabilidad append-only.
 - Wix Preview/Runtime no ejecutado; arnés pendiente de ejecución. Ningún merge de código equivale a autorización de publicación.
 
 ## Glosario mínimo
