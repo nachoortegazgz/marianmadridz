@@ -1,12 +1,12 @@
 # RELEASE-READINESS — 2026-11-25
 
-Criterio vinculante: **NO-GO** mientras los gates P0/P1 no dispongan de evidencia reproducible del entorno Wix correspondiente. CI offline no sustituye Wix Preview/Runtime, aceptación de hardware, conciliación real ni revisión fiscal. Los writers y pagos permanecen deshabilitados.
+Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan de evidencia reproducible. El propietario autoriza pruebas online en desarrollo sobre el sitio y colecciones actuales, con un único código y formato de registros. recordNature se deriva en backend de recordTimestamp UTC frente a productionActivationAt UTC. Los datos sintéticos podrán resetearse antes del corte; tras el corte los registros reales son inmutables. CI offline no sustituye Wix Runtime, aceptación de hardware, conciliación ni revisión fiscal. No se habilitan cobros reales ni remisión AEAT durante QA.
 
 ## P0
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas de caja; no alterar históricos | PENDIENTE. PR #611 integra preparación de venta read-only y PR #612 contrato de preescritura V1 (una tasa, un tender físico, total exacto). El writer canónico de `MovimientosCaja` sigue sin implementarse/configurarse; fiscal singleton, pago externo, idempotencia y aceptación Runtime pendientes. |
+| #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas online sobre datos sintéticos; reset controlado antes del corte real | PENDIENTE. PR #611 integra preparación de venta read-only y PR #612 contrato de preescritura V1 (una tasa, un tender físico, total exacto). El writer canónico de `MovimientosCaja` sigue sin implementarse/configurarse; fiscal singleton, pago externo, idempotencia y aceptación Runtime pendientes. |
 | #415/#209 Fiscal/SIF | Singleton fiscal único y válido; writer append-only; revisión legal y flags false hasta autorización | PENDIENTE. Query CMS `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros (2026-11-25); `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`. |
 | #525 CajaActual | Una sola sesión bajo llamadas concurrentes | PENDIENTE. CAS integrado en código; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros originales. |
