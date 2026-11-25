@@ -1011,8 +1011,12 @@ export async function appendTpvAudit({
     const key = normalizeIdempotencyKey(idempotencyKey);
     const eventId = "TPVAUDIT-" + createHash("sha256").update(key).digest("hex").slice(0, 32);
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+    const auditFingerprint = createHash("sha256").update(stableSerialize({ action, actorId, entityType, entityId, traceId, payload })).digest("hex");
     const existing = await getItem(collection, eventId, CONSISTENCY.STRONG);
-    if (existing) return { item: existing, replayed: true };
+    if (existing) {
+        if (existing.payload?.auditFingerprint !== auditFingerprint) throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
+        return { item: existing, replayed: true };
+    }
 
     const record = {
         _id: eventId,
@@ -1025,12 +1029,14 @@ export async function appendTpvAudit({
         status: "COMPLETED",
         operationDescription: String(action || "UNKNOWN").slice(0, 180),
         payload: {
+            ...payload,
             action: String(action || "UNKNOWN").slice(0, 80),
             actorId: String(actorId || "UNKNOWN").slice(0, 100),
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
             source: "TPV_WEB_METHOD",
-            ...payload,
+            traceId: String(traceId || "TPV_AUDIT"),
+            auditFingerprint,
         },
     };
     try {
@@ -1039,7 +1045,9 @@ export async function appendTpvAudit({
     } catch (error) {
         const winner = await getItem(collection, eventId, CONSISTENCY.STRONG);
         if (!winner) throw error;
-        if (winner.dedupeKey !== key) throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
+        if (winner.dedupeKey !== key || winner.payload?.auditFingerprint !== auditFingerprint) {
+            throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
+        }
         return { item: winner, replayed: true };
     }
 }
