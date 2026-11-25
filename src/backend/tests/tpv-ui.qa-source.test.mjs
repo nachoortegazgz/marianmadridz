@@ -23,7 +23,8 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     const html = await read("%23htmlTPV.txt");
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
-    assert.match(script, /payments: state\.payments\.map/);
+    assert.match(script, /medioPago: state\.paymentMethod/);
+    assert.match(script, /payments: \[\]/);
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
     assert.match(script, /call\("SALE_VALIDATE"/);
     assert.match(script, /saleReady !== true/);
