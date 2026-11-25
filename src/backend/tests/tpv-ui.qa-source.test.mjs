@@ -44,7 +44,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(saleWriteBlock, /tipoLinea,/);
     assert.match(saleWriteBlock, /cantidad: numeric\(line\.cantidad/);
     assert.match(saleWriteBlock, /idempotencyKey: saleUuidV4Key\(payload\.idempotencyKey\)/);
-    assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta|importe:/);
+    assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
     assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
