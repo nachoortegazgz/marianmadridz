@@ -5,6 +5,7 @@ import {
     assertBulkRemoveAllowed,
     assertInsertAllowed,
     assertRemoveAllowed,
+    assertUpdateAllowed,
 } from "../dataAccessPolicy.js";
 import { CONTROL_TYPE, TPV_RUNTIME_POLICY } from "../internalConfig.js";
 import { ControlOperativo_beforeInsert } from "../data.js";
@@ -162,6 +163,7 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
     };
     assert.doesNotThrow(() => assertInsertAllowed("ControlOperativo", item));
     assert.doesNotThrow(() => ControlOperativo_beforeInsert({ ...item, payload: { ...item.payload } }));
+    assert.throws(() => assertUpdateAllowed("ControlOperativo", item), /CMS_UPDATE_CONTROL_TYPE_DENIED/);
     assert.doesNotThrow(() => assertBulkPatchAllowed("ControlOperativo", [
         { fieldPath: "payload", action: "SET_FIELD", value: opened.payload },
         { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
