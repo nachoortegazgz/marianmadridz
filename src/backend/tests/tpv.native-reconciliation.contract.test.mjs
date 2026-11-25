@@ -165,7 +165,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(audit, /data: \{[\s\S]*items,[\s\S]*count: items\.length/);
     assert.doesNotMatch(audit, /isSynthetic: true|realPayment: false/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(controller, /import \{ obtenerAuditoriaTPVPrueba \} from "backend\/tpv\/tpvTestRuntime\.web"/);
+    assert.match(controller, /obtenerAuditoriaTPVPrueba,[\s\S]*?from "backend\/tpv\/tpvTestRuntime\.web"/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPVPrueba/);
     assert.equal(controller.includes('from "backend/tpv/tpvAuditoria.web"'), false);
     assert.match(widget, /Auditoría de operaciones/);
