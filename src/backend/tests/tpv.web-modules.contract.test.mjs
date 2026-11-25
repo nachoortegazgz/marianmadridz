@@ -342,6 +342,19 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
+test("TPV QA runtime uses a dedicated lock discriminator and deterministic ID helper", async () => {
+    const repository = await source("tpv/tpvTestRuntimeRepository.js");
+    const config = await source("internalConfig.js");
+    assert.match(repository, /import \{ createHash \} from "node:crypto"/);
+    assert.match(repository, /function makeTpvTestSessionLockId\(actorId\)/);
+    assert.match(repository, /return "TPVT" \+ digest/);
+    assert.doesNotMatch(repository, /makeTpvSessionLockId/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
+    assert.doesNotMatch(repository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
+    assert.match(config, /TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK"/);
+    assert.match(config, /\[CONTROL_TYPE\.TPV_TEST_SESSION_LOCK\]: Object\.freeze/);
+});
+
 test("TPV controller routes mutations through the admin-only synthetic runtime", async () => {
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     const runtime = await source("tpv/tpvTestRuntime.web.js");
