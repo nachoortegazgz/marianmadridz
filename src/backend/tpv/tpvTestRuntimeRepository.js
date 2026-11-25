@@ -162,6 +162,15 @@ export async function appendTpvTestRunEvent({
             }
             return { item: current, event: prior, replayed: true };
         }
+        if (claim) {
+            const replay = appendTpvTestEvent(current.payload, {
+                eventType,
+                idempotencyKey,
+                actorId,
+                data,
+            });
+            if (replay.replayed) return { item: current, event: replay.event, replayed: true };
+        }
         if (current.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
         const eventData = typeof buildData === "function" ? buildData(current.payload) : data;
         const appended = appendTpvTestEvent(current.payload, {
