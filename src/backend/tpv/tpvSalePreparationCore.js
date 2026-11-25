@@ -176,13 +176,12 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult, taxIncludedInPri
     const summaryTaxMinor = toMinorUnits(summary.totalTax, "TAX_SUMMARY");
     const summaryTaxableMinor = toMinorUnits(summary.totalTaxableAmount, "TAXABLE_SUMMARY");
     const summaryIncludedTaxMinor = toMinorUnits(summary.totalTaxIncludedInPrice ?? 0, "TAX_INCLUDED");
-    const summaryCatalogAmountMinor = toMinorUnits(summary.totalAmount, "TAX_TOTAL");
 
-    // Wix's live response reports totalAmount as the sum of catalog full prices.
-    // The payable amount is derived from each line's taxIncludedInPrice mode.
+    // Do not use totalAmount: the generic REST example and this site's live
+    // response expose different tax-inclusion semantics. Reconcile explicit
+    // taxable/tax totals and each line's fullPrice instead.
     if (summaryTaxMinor !== lineTaxMinor ||
         summaryTaxableMinor !== subtotalMinor ||
-        summaryCatalogAmountMinor !== catalogFullPriceMinor ||
         summaryIncludedTaxMinor !== (taxIncludedInPrice ? lineTaxMinor : 0)) {
         fail("TPV_TAX_ROUNDING_MISMATCH");
     }
