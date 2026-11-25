@@ -90,7 +90,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(controller, /async function dispatch\(message\)/);
     assert.doesNotMatch(controller, /async async function/);
     assert.match(controller, /validarVentaBorradorPrueba/);
-    assert.match(controller, /quote\.testReady !== true/);
+    assert.match(controller, /return registrarVentaPrueba/);
     assert.match(controller, /TPV_SALE_NOT_READY: Object\.freeze/);
     assert.match(controller, /requiresReconciliation/);
     assert.match(controller, /hasOwnProperty\.call\(result, "data"\)/);
