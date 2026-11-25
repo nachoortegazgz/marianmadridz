@@ -159,7 +159,7 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
         traceId: "TPV-TEST-TRACE-001",
         status: "OPEN",
         version: 0,
-        expiresAt: new Date("2026-11-25T21:00:00.000Z"),
+        expiresAt: new Date("2026-12-02T09:00:00.000Z"),
         payload: opened.payload,
     };
     assert.doesNotThrow(() => assertInsertAllowed("ControlOperativo", item));
