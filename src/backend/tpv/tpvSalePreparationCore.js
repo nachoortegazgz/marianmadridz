@@ -172,6 +172,7 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         taxCalculatorIds: Object.freeze([...new Set(details
             .map((detail) => String(detail?.taxSummary?.appId || "").trim())
             .filter(Boolean))]),
+        taxIncludedInPrice: false,
         taxIncludedInPriceAmount: fromMinorUnits(totalTaxIncludedMinor),
     });
 }
