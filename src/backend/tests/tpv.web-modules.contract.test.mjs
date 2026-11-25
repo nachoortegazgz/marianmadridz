@@ -226,7 +226,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_TRANSACTION_COLLECTION_UNAVAILABLE/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);\n    assert.match(sales, /UUID_V4/);\n    assert.match(sales, /MovimientosCaja/);\n    assert.doesNotMatch(sales, /TransaccionesTPV/);
     assert.match(sales, /async \(input = \{\}\)/);
     assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
@@ -487,7 +487,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    assert.match(sales, /TPV_TRANSACTION_COLLECTION_UNAVAILABLE/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
