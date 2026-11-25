@@ -364,6 +364,7 @@ async function dispatch(message) {
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
                 pagos,
+                medioPago: optionalString(payload.medioPago, 40) || null,
             });
         }
         case "CASH_MOVEMENT":
