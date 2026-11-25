@@ -29,6 +29,7 @@ import {
     PAYMENT_METHOD,
     TIPO_FACTURA,
     TPV_LEDGER_SOURCE,
+    TPV_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
     TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
@@ -243,6 +244,41 @@ export function assertFiscalMovementInputEnums(item) {
 }
 
 export function assertMovimientosCajaRequiredFields(item) {
+    if (item?.recordSource === TPV_LEDGER_SOURCE) {
+        if (!Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(String(item.movementType || ""))) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical movementType invalid");
+        }
+        for (const field of ["transactionId", "previousRecordHash", "schemaVersion", "traceId", "paymentMethod", "channelType", "operationDescription", "staffResourceId"]) {
+            if (!String(item[field] ?? "").trim()) throw new Error("SCHEMA_VIOLATION: TPV physical MovimientosCaja requires " + field);
+        }
+        for (const field of ["amount", "sequenceNumber", "totalAmount"]) {
+            if (typeof item[field] !== "number" || !Number.isFinite(item[field])) {
+                throw new Error("SCHEMA_VIOLATION: TPV physical MovimientosCaja requires finite NUMBER " + field);
+            }
+        }
+        if (!Number.isSafeInteger(item.sequenceNumber) || item.sequenceNumber <= 0) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical sequenceNumber must be positive");
+        }
+        if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical recordTimestamp must be DATETIME");
+        }
+        if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
+            !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical SHA-256 chain invalid");
+        }
+        const envelope = item.payloadFiscal;
+        if (!envelope || typeof envelope !== "object" || Array.isArray(envelope) ||
+            envelope.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+            envelope.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+            envelope.ledgerVersion !== TPV_RUNTIME_POLICY.LEDGER_VERSION ||
+            !String(envelope.sessionId || "").trim() ||
+            !String(envelope.logicalCollection || "").trim() ||
+            !String(envelope.idempotencyKey || "").trim() ||
+            !/^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""))) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical envelope invalid");
+        }
+        return true;
+    }
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: MovimientosCaja item must be an object");
     }
