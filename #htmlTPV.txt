@@ -530,7 +530,7 @@ body {
 
       TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
       TPV_LINES_REQUIRED: "El ticket está vacío. Añade al menos un servicio o producto antes de cobrar.",
-      TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: "El ledger operativo aún no está configurado. La operación no se ha registrado.",
+      TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: "El ledger fiscal aún no está configurado. La operación fiscal no se ha registrado.",
       TPV_WRITE_V1_CONTRACT_UNSUPPORTED: "La venta no cumple el contrato de escritura V1. Revisa los bloqueos fiscales y de pago.",
       TPV_REFUND_INPUT_INVALID: "La devolución requiere una venta original, sesión, motivo e importe válidos.",
       TPV_REFUND_PROVIDER_NOT_CONFIGURED: "La solicitud está validada, pero el proveedor de pagos no está configurado. No se ha ejecutado ni registrado el reembolso.",
