@@ -9,7 +9,7 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas online sobre datos sintéticos; reset controlado antes del corte real | PENDIENTE. PR #611 integra preparación de venta read-only y PR #612 contrato de preescritura V1 (una tasa, un tender físico, total exacto). El writer canónico de `MovimientosCaja` sigue sin implementarse/configurarse; fiscal singleton, pago externo, idempotencia y aceptación Runtime pendientes. |
 | #415/#209 Fiscal/SIF | Singleton fiscal único y válido; writer append-only; revisión legal y flags false hasta autorización | PENDIENTE. Query CMS `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros (2026-11-25); `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`. |
 | #525 CajaActual | Una sola sesión bajo llamadas concurrentes | PENDIENTE. CAS integrado en código; ninguna prueba Runtime de concurrencia ejecutada. |
-| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros originales. |
+| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros reales tras productionActivationAt; durante desarrollo se permite mantenimiento auditado de datos sintéticos. |
 | #520 Automations | Estado actual de automatizaciones y ausencia de efectos no autorizados acreditados | PENDIENTE. Último read-back documentado: siete PREINSTALLED ACTIVE y app laboral INACTIVE; requiere relectura. |
 
 ## P1
