@@ -63,7 +63,7 @@ Nota Payments: la deprecación afecta a métodos/eventos de Transactions y Card 
 | Lock con compare-and-swap (CAS), expiración y recuperación acotada | Caja, fiscalidad y procesos concurrentes | PR #587; `fiscalLedgerLock.js` | Exclusión mutua verificable sin forzar locks |
 | Hooks `beforeInsert` para validar/normalizar el sobre y rechazar datos inválidos | Wix Data/CMS | [Wix beforeInsert](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert) · PR #587 | Validación server-side antes de persistir |
 | Errores accionables A/B | Operaciones y gates legales | PR [#604](https://github.com/nachoortegazgz/marianmadridz/pull/604), merge `0acb60d` | A: retry/replay acotado y observable; B: remediation humana sin quitar el gate |
-| Ledgers append-only; rectificación mediante nuevo registro trazable | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | TEC-038; PR [#589](https://github.com/nachoortegazgz/marianmadridz/pull/589), [#590](https://github.com/nachoortegazgz/marianmadridz/pull/590) | Preservar evidencia y trazabilidad |
+| Writer operativo append-only; rectificación mediante nuevo registro trazable. Mantenimiento de datos de desarrollo solo antes del corte y autorizado en backend | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | TEC-038; PR #589/#590; TPV-UNIFIED-FLOW.md | Preservar evidencia y trazabilidad; congelación total tras inicio de actividad real |
 | Wix CMS es SSOT; SharePoint solo evidencia; Capa 3 no gobierna Capa 1 | Todo el ecosistema | [Directriz](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md), [dossier de flujos](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Una autoridad transaccional |
 | Backend/WebMethods contiene lógica y permisos; frontend no decide negocio ni autorización | Todo el sitio | [README](../README.md), directriz del propietario | Seguridad y separación de responsabilidades |
 
@@ -102,9 +102,9 @@ La naturaleza del registro se marca como metadato persistido derivado por backen
 | Gate fiscal y append-only | DONE en código; datos legales PENDING | PR #589 `b667bae`; #590 `63b55f1` | Propietario + asesoría fiscal |
 | Arnés Runtime F1–F6 | DONE en código; ejecución PENDING | PR #603 merge `f42ef7f`; `tests/runtime/runtime-all.spec.js` | QA Preview |
 | Errores accionables A/B | DONE en código; Runtime PENDING | PR #604 merge `0acb60d`; CI 81 suites/750 tests | QA Preview |
-| #416 Caja, compensaciones y pedidos POS | BLOCKED P0 | [STATE-NOW histórico](archive/2026-11/PROJECT-STATUS.md); [RELEASE-READINESS](RELEASE-READINESS.md) | Propietario + QA; reconciliación documentada sin mutar registros |
+| #416 Caja, compensaciones y pedidos POS | BLOCKED P0 | [STATE-NOW histórico](archive/2026-11/PROJECT-STATUS.md); [RELEASE-READINESS](RELEASE-READINESS.md) | Propietario + QA; reconciliación y pruebas sobre datos de desarrollo, reset preproducción |
 | #415/#209 Configuración fiscal y SIF | BLOCKED P0 | F1 pendiente; PR #589/#604 | Propietario + asesoría fiscal; CONFIG_SISTEMA_FISCAL legalmente verificado |
-| #525 Concurrencia CajaActual | BLOCKED P0 Runtime | PR #587; P1 pendiente | QA Preview |
+| #525 Concurrencia CajaActual | BLOCKED P0 Runtime | PR #587; P1 pendiente | QA online sobre el sitio/colecciones actuales |
 | #434 Discrepancia MovimientosCaja | BLOCKED P0 | PR #590; M4 pendiente | Propietario + administrador Wix; Activity Logs/backups |
 | #520 Wix Automations | BLOCKED P0 | Último read-back: 7 PREINSTALLED ACTIVE; app laboral INACTIVE | Propietario + administrador Wix |
 | #523/#522 Bookings y canales de pago | PENDING P1 | Revalidación 2026-11-23 | QA + propietario; estado nativo y flags |
