@@ -130,12 +130,10 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
         },
     };
 
-    assert.throws(() => assertInsertAllowed("MovimientosCaja", item), {
-        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
-    });
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /LEDGER_APPEND_ONLY/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /LEDGER_APPEND_ONLY/);
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
