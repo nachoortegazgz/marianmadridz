@@ -158,6 +158,9 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         });
     });
 
+    // Wix live responses can report totalAmount as the taxable base even though
+    // the generic REST example shows a tax-inclusive total. Use explicit taxable
+    // and tax totals; never infer the payable amount from totalAmount.
     const summaryTaxMinor = toMinorUnits(summary.totalTax, "TAX_SUMMARY");
     const summaryTaxableMinor = toMinorUnits(summary.totalTaxableAmount, "TAXABLE_SUMMARY");
     if (summaryTaxMinor !== lineTaxMinor || summaryTaxableMinor !== subtotalMinor) {
