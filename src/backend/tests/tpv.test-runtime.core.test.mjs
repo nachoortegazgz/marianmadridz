@@ -9,6 +9,7 @@ import {
 } from "../dataAccessPolicy.js";
 import { CONTROL_TYPE, TPV_RUNTIME_POLICY } from "../internalConfig.js";
 import { ControlOperativo_beforeInsert } from "../data.js";
+import { assertTpvTestRunAppendOnly } from "../validation.js";
 import {
     appendTpvTestEvent,
     createTpvTestRunPayload,
@@ -195,4 +196,50 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
     const wrongSite = { ...item, payload: { ...item.payload, siteId: "another-site" } };
     assert.throws(() => ControlOperativo_beforeInsert(wrongSite), /synthetic envelope invalid/);
     assert.equal(TPV_RUNTIME_POLICY.SITE_ID, payload.siteId);
+});
+
+test("ControlOperativo beforeUpdate accepts one CAS append and rejects history mutation", () => {
+    const initial = basePayload();
+    const opened = append(initial, "SESSION_OPENED", "append-open-001", { openingCashMinor: 15000 });
+    const original = {
+        _id: tpvTestRunId(initial.sessionId, initial.siteId),
+        controlType: CONTROL_TYPE.TPV_TEST_RUN,
+        dedupeKey: "TPV_TEST_RUN:" + tpvTestRunId(initial.sessionId, initial.siteId),
+        traceId: "TPV-TEST-TRACE-001",
+        status: "OPEN",
+        version: 0,
+        expiresAt: new Date("2026-12-02T09:00:00.000Z"),
+        payload: opened.payload,
+    };
+    const nextEvent = append(opened.payload, "SALE_RECORDED", "append-sale-001", {
+        saleId: "SALE-APPEND-1",
+        totalMinor: 12100,
+        payments: [{ method: "TARJETA", amountAppliedMinor: 12100 }],
+    });
+    const next = {
+        ...original,
+        version: 1,
+        payload: nextEvent.payload,
+    };
+    assert.equal(assertTpvTestRunAppendOnly(original, next), true);
+
+    const tampered = {
+        ...next,
+        payload: {
+            ...next.payload,
+            events: next.payload.events.map((event, index) => index === 0
+                ? { ...event, data: { openingCashMinor: 1 } }
+                : event),
+        },
+    };
+    assert.throws(() => assertTpvTestRunAppendOnly(original, tampered), /historical event mutation/);
+
+    const changedOwner = {
+        ...next,
+        payload: { ...next.payload, operatorId: "other-operator" },
+    };
+    assert.throws(() => assertTpvTestRunAppendOnly(original, changedOwner), /immutable payload field changed/);
+
+    const noAppend = { ...original, version: 1 };
+    assert.throws(() => assertTpvTestRunAppendOnly(original, noAppend), /append exactly one event/);
 });
