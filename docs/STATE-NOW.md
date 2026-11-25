@@ -1,12 +1,12 @@
 # STATE-NOW — 2026-11-25
 
-**Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación de flujo único:** integrada en la historia de `main` (commit `19378e00f6568afaf68df6550d7fbb7844e221ab`) · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Site Context read-back 2026-11-25:** Published, Velo habilitado, Editor, Stores Catalog V3, Bookings, Payments e Invoices V1; Preview/Runtime no ejecutado.
+**Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación de flujo único:** integrada en la historia de `main` (commit `19378e00f6568afaf68df6550d7fbb7844e221ab`) · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Site Context read-back 2026-11-25 17:53 CET:** Draft, Velo habilitado, Editor, Stores Catalog V3, Bookings, Payments e Invoices V1; Preview/Runtime no ejecutado.
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 
 ## Decisión arquitectónica nueva — TPV de flujo único (2026-11-25)
 
-El propietario establece un único flujo de código para operaciones con cualquier dato. No se crearán ni conservarán ramas de negocio, runtimes, flags, enums o contratos que separen operaciones por entorno, procedencia de prueba o estado de publicación. La decisión queda desarrollada en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y prevalece sobre directrices históricas incompatibles.
+El propietario establece un único código, contrato, validación y writer para desarrollo y producción. Los registros comparten formato y recordNature se deriva en backend comparando recordTimestamp UTC con productionActivationAt UTC: anteriores = SYNTHETIC; iguales o posteriores = REAL. La marca es metadato de trazabilidad, no selector de motor. El propietario autoriza pruebas online completas en el sitio/colecciones actuales durante desarrollo; los registros sintéticos podrán modificarse y se resetearán mediante procedimiento controlado antes de iniciar actividad real. El estado Published/Draft de Wix no determina el corte comercial. Ver [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md).
 
 **Código aún no unificado:** `tpvPageController.js` importa `tpvTestRuntime.web.js`; `tpvPermisos.web.js` expone capacidades de ese runtime; `internalConfig.js`, `validation.js`, `data.js`, `dataAccessPolicy.js`, `tpvUtils.js` y `tpvRepository.js` conservan clasificadores/compatibilidad histórica. `insertTpvEvent()` está bloqueado y `_buildTpvLedgerItem()` no completa los campos fiscales físicos de `MovimientosCaja`. El runtime separado persiste en `ControlOperativo`. No se han eliminado módulos ni abierto escrituras.
 
@@ -96,7 +96,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 - Ledgers append-only: no actualizar ni borrar históricos; rectificaciones mediante nuevos registros trazables.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - El frontend no contiene lógica de negocio ni autoridad de permisos.
-- No mutar inventario sin recuento físico; no alterar tax settings/precios para hacer pasar pruebas.
+- No mutar inventario real sin recuento físico; no alterar tax settings/precios para hacer pasar pruebas. Los datos sintéticos de desarrollo pueden prepararse/resetearse antes del corte oficial.
 - No activar pagos, writers fiscales, pedidos, devoluciones o automatizaciones externas durante QA.
 - No eliminar documentos históricos: conservar evidencia y mantener solo los documentos canónicos como entrada operativa.
 
@@ -106,7 +106,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 2. Cerrar contrato de sesión/caja y confirmación manual del lector, incluyendo referencia y evidencia del justificante.
 3. Diseñar el writer append-only de `MovimientosCaja` reutilizando los controles del writer manual; completar campos fiscales, numeración F1/F2 separada, idempotencia durable y compatibilidad exacta de hook/DAL.
 4. Resolver precio final al consumidor y recuento/asignación de inventario físico por variante.
-5. Ejecutar pruebas Runtime de concurrencia, idempotencia, permisos, caja, impresión/hardware y conciliación antes de cualquier release.
+5. Ejecutar pruebas online/Runtime de concurrencia, idempotencia, permisos, caja, movimientos, devoluciones y cierres sobre las colecciones actuales; verificar destino efectivo de escritura y reset sintético preproducción. Hardware y efectos externos permanecen separados.
 
 **Decisión:** NO-GO. No desplegar ni habilitar ventas reales hasta cerrar todos los gates y documentar rollback.
 
