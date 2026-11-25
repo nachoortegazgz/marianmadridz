@@ -6,7 +6,7 @@ Revisión: 2026-11-25 · Base de código TPV: `PR #611 merge 62fdcb7b560f7eab16f
 
 | Cliente | Negocio | Stack | Repo | Sitio Wix ID | Entorno actual | Última revisión |
 |---|---|---|---|---|---|---|
-| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | QA/desarrollo; Site Context Draft, `published=false` (read-back 2026-11-23) | 2026-11-25 |
+| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Published; Site Context read-back 2026-11-25 | 2026-11-25 |
 
 Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md) y [directriz anterior](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). La clasificación histórica de datos no gobierna el flujo TPV vigente.
 
@@ -34,7 +34,7 @@ Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.
 - Inventario paralelo en CMS: Wix Stores Catalog V3 es la autoridad nativa del stock.
 - Emisión/remisión fiscal real: falta configuración legal validada y aceptación fiscal/runtime.
 - SharePoint como sistema transaccional: solo repositorio de evidencia; Wix CMS es SSOT.
-- Publicación y operación comercial: entorno QA/Draft y release NO-GO.
+- Operación comercial TPV: release NO-GO hasta completar writer, gates fiscales, pagos, inventario, precio final y aceptación Runtime; el sitio principal está Published.
 
 ## 3. STACK Y VERSIONES
 
@@ -76,11 +76,11 @@ Decisiones registradas (fecha y origen):
 | 2026-11-23 | Concurrencia, identidad, idempotencia y hooks; fiscal fail-closed; MovimientosCaja append-only | PR #587 `5983ddf`; #589 `b667bae`; #590 `63b55f1` |
 | 2026-11-24 | Decisión histórica de retirar el runtime anterior; supersedida por el flujo único | PR #600 `7ffca8c`; PR #601 `46a7e01`; decisión 2026-11-25 en TPV-UNIFIED-FLOW.md |
 | 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
-| 2026-11-25 | Preparación de venta TPV autoritativa read-only integrada | PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`; CI offline PASS; Runtime pendiente |
+| 2026-11-25 | Preparación de venta y contrato previo V1 integrados; decisión de flujo único consolidada | PR #611/#612; commit de documentación `19378e00f6568afaf68df6550d7fbb7844e221ab` está en la historia de main; Runtime pendiente |
 
 ## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
 
-[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por Sandbox/Live, sintético/real, Preview/Published o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
+[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
 
 Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de origen/entorno como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
 
