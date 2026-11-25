@@ -1,6 +1,6 @@
 # STATE-NOW — 2026-11-25
 
-**Main:** `0acb60df65bba1545d3a57cfa261d1de518eb39d` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** QA/Draft (último read-back 2026-11-23).
+**Main:** `738793743c677eafedd3aa8605fb84d4f81753f9` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** QA/Draft (último read-back 2026-11-23).
 **Release:** NO-GO. No publicar, operar comercialmente ni activar pagos/writers fiscales.
 **Fuente canónica:** [PROJECT-CANON.md](PROJECT-CANON.md). Detalle y criterios: [RELEASE-READINESS.md](RELEASE-READINESS.md).
 
@@ -28,8 +28,9 @@
 - PR #603: arnés Runtime F1–F6 creado; ciclo debt sweep 1 cerrado con 0 eliminaciones justificadas.
 - PR #604: helper de errores accionables A/B; lock fiscal con retry acotado y replay contable verificado.
 - CI offline de PR #603: 80 suites/747 tests PASS; PR #604: 81 suites/750 tests PASS; secret scanning PASS en ambas.
-- Rama sin merge — P1/P2/P3/P5: bridge opaco rechazado; TODO #416 para verificar compatibilidad del handshake HTML Component; envelope desconocido devuelve ERROR; stub de devolución sin consumidor eliminado y envelope TPV compartido.
-- P4 BLOQUEADA: MovimientosCaja es el ledger físico canónico para TPV_LOGICAL_VENTAS/TPV_SALE y transactionId; su writer operativo sigue fail-closed. No crear TransaccionesTPV duplicada ni Draft Order sin idempotencia durable.
+- PR #606 integrada (`7387937`): bridge opaco rechazado (handshake HTML Component pendiente #416), envelope desconocido devuelve ERROR, export sin consumidor eliminado y envelope TPV compartido.
+- P4 BLOQUEADA: `MovimientosCaja` es el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`); writer fail-closed. No crear `TransaccionesTPV` ni Draft Order sin idempotencia durable y fiscalidad resuelta.
+- Follow-up TPV: retry genérico ahora deniega por defecto; timeout marca resultado incierto; permisos no resueltos bloquean contexto/escrituras; SALE_REGISTER envía solo IDs, variante, cantidad y medio de pago; logs bridge saneados.
 - Wix Preview/Runtime no ejecutado; arnés pendiente de ejecución. Ningún merge de código equivale a autorización de publicación.
 
 ## Glosario mínimo
