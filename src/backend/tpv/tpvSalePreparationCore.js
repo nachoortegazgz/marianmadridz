@@ -45,7 +45,7 @@ export function normalizeTpvSaleLineRequests(lines) {
             ...(varianteId ? { varianteId } : {}),
             cantidad,
             profesionalId: line.profesionalId ? String(line.profesionalId).trim() : null,
-            stockAfectado: tipoLinea === "PRODUCTO" && line.stockAfectado === true,
+            stockAfectado: false,
         });
     });
 }
@@ -154,7 +154,7 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
             taxGroupId,
             desgloseImpuestos: taxBreakdown,
             profesionalId: line.profesionalId || null,
-            stockAfectado: line.stockAfectado === true,
+            stockAfectado: false,
         });
     });
 
