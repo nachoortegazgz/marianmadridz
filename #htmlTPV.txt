@@ -264,7 +264,7 @@ body {
         <div class="tabs">
           <button id="tabServicios" class="btn active">Servicios</button>
           <button id="tabProductos" class="btn">Productos</button>
-          <button id="tabPersonalizada" class="btn">Tarifa personalizada</button>
+          <button id="tabPersonalizada" class="btn" disabled title="Pendiente de clasificación fiscal y autorización de descuentos">Tarifa personalizada</button>
         </div>
         <div id="catalogList" class="catalog-list">
           <p>Esperando catálogo…</p>
@@ -307,9 +307,10 @@ body {
 
         <div class="totals">
           <div class="row"><span>Subtotal</span><span id="subtotal">0,00 €</span></div>
-          <div class="row"><span>Impuestos (reglas Wix pendientes)</span><input id="tax" type="text" value="0,00 €" disabled aria-label="Impuestos (reglas Wix pendientes)" /></div>
+          <div class="row"><span>Impuestos (cálculo fiscal Wix)</span><input id="tax" type="text" value="0,00 €" disabled aria-label="Impuestos calculados por Wix" /></div>
           <div class="row total"><span>Total</span><span id="total">0,00 €</span></div>
         </div>
+        <div id="saleReadiness" class="status" role="status" aria-live="polite">Añade líneas para calcular el total fiscal.</div>
       </section>
 
       <!-- Pago -->
@@ -445,6 +446,10 @@ body {
     customerLabel: null,
     capabilities: {},
     operationalWritesAvailable: false,
+    saleQuote: null,
+    quoteLoading: false,
+    quoteError: null,
+    quoteSequence: 0,
   };
 
   const BUTTON_CAPABILITIES = Object.freeze({
