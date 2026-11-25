@@ -252,13 +252,24 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract exists', () => {
+test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields', () => {
   const item = {
-    ...cajaBase(),
+    _id: 'TPV-physical-hook-001',
+    transactionId: 'TPV-physical-hook-001',
     movementType: 'TPV_PAYMENT',
     recordSource: 'TPV_LEDGER',
     sequenceNumber: 1,
+    previousRecordHash: '0'.repeat(64),
+    hash: 'a'.repeat(64),
+    amount: 10,
+    totalAmount: 10,
+    recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
+    schemaVersion: '3',
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
+    paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
+    channelType: IC.CHANNEL_TYPE.PRESENCIAL,
+    operationDescription: 'Movimiento físico de caja',
+    staffResourceId: 'resource-test',
     payloadFiscal: {
       sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
       siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
@@ -266,11 +277,14 @@ test('HOOK-CAJA-TPV-01 rejects TPV ledger writes until the canonical contract ex
       schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
       sessionId: 'SESSION-TEST',
       logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
+      idempotencyKey: 'TPV-TEST-IDEMPOTENCY',
       requestFingerprint: 'f'.repeat(64),
-      externalSideEffects: false,
     },
+    lineItems: { ledgerRecord: [] },
   };
-  assert.throws(() => H.MovimientosCaja_beforeInsert(item), /CMS_TPV_LEDGER_WRITES_DISABLED/);
+  assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(item));
+  assert.equal(item.recordSource, 'TPV_LEDGER');
+  assert.equal(item.tipoFactura, undefined);
 });
 
 test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
@@ -279,14 +293,14 @@ test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new ins
       ...cajaBase(),
       recordSource: "SYNTHETIC",
       movementType,
-    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, movementType);
+    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, movementType);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource,
       movementType: "COBRO",
-    }), /CMS_TPV_LEDGER_WRITES_DISABLED/, recordSource);
+    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, recordSource);
   }
 });
 
