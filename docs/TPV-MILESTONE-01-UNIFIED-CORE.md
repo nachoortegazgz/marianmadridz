@@ -77,7 +77,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 - CI completa sobre SHA exacto: cero fallos, lint y secret scan PASS.
 - Ejecutar las pruebas online autorizadas por el propietario en el sitio y colecciones actuales, usando el mismo código y la misma ruta. Verificar antes el destino efectivo de cada colección (Online/Sandbox); no asumir que Preview aísla CMS o apps nativas. El reset sintético se realiza antes del inicio de actividad real.
 - Probar catálogo, sesión, venta, pago manual confirmado, caja, devolución, arqueos, X/Z, auditoría, idempotencia, concurrencia, permisos, hooks y recuperación.
-- Usar el mismo commit y WebMethods; la separación se realiza por sitio/datos de validación, no por ramas de negocio.
+- Usar el mismo commit, WebMethods, sitio y colecciones actuales autorizadas por el propietario; la clasificación temporal del registro diferencia desarrollo y actividad real, no una separación por sitios ni por ramas de negocio.
 - Validar el HTML Component real, Epson, cajón y lector si forman parte del alcance; los mocks no acreditan hardware.
 
 ### 8. Despliegue controlado
