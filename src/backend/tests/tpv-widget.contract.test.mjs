@@ -131,18 +131,42 @@ test("widget bridge reports the rejected type and active allowlist", () => {
     const allowedTypes = [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, "CASHIER_STATE"];
     const bridge = createWidgetBridge(widget, {
         allowedTypes,
-        allowOpaqueOrigin: true,
+        allowedOrigin: "https://tpv.example.test",
+        allowOpaqueOrigin: false,
         onError: (error) => { reported = error; },
     });
 
     receive({
-        origin: "null",
+        origin: "https://tpv.example.test",
         data: { type: "UNLISTED_REQUEST", version: 1, messageId: "rejected-12345678" },
     });
 
     assert.equal(reported?.code, "WIDGET_MESSAGE_TYPE_NOT_ALLOWED");
     assert.equal(reported?.detail?.receivedType, "UNLISTED_REQUEST");
     assert.deepEqual(reported?.detail?.allowedTypes, allowedTypes);
+    bridge.destroy();
+});
+
+
+test("widget bridge rejects opaque origins when strict TPV origin policy is active", () => {
+    let receive;
+    let reported;
+    const widget = {
+        onMessage(handler) { receive = handler; return () => { receive = null; }; },
+        postMessage() {},
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        allowedOrigin: "https://tpv.example.test",
+        allowOpaqueOrigin: false,
+        onError: (error) => { reported = error; },
+    });
+    receive({
+        origin: "null",
+        data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "opaque-origin-123456" },
+    });
+    assert.equal(reported?.code, "WIDGET_ORIGIN_OPAQUE_REJECTED");
+    assert.equal(bridge.handshakeCompleted, false);
     bridge.destroy();
 });
 
@@ -160,7 +184,8 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     };
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
-        allowOpaqueOrigin: true,
+        allowedOrigin: "https://tpv.example.test",
+        allowOpaqueOrigin: false,
         handshakeTimeoutMs: 1000,
         onContextReady: async () => ({
             status: "SUCCESS",
@@ -170,7 +195,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     });
 
     receive({
-        origin: "null",
+        origin: "https://tpv.example.test",
         data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-ready-12345678" },
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
