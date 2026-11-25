@@ -6,9 +6,9 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE |
+| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. P1/P2/P3/P5 endurecidos en esta rama; P4 bloqueada: TransaccionesTPV no existe en CMS (40 colecciones consultadas), auditoría TPV sigue fail-closed y no se crea Draft Order sin persistencia idempotente. |
 | #415/#209 Fiscal/SIF | F1 singleton único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE |
-| #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE |
+| #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
 | #520 Automations | Siete PREINSTALLED en estado PAUSED y sin ejecuciones/efectos externos no autorizados; app laboral permanece INACTIVE | PENDIENTE |
 
