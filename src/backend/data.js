@@ -1,15 +1,15 @@
 /*
 P4 OFFICIAL REFERENCE: dev.wix.com — Velo Wix Data beforeInsert API.
-The hook is a CMS and Data API write boundary: reject TPV operational writes
-until the canonical ledger contract exists and normalize fiscal enum tokens.
+The hook is a CMS and Data API write boundary: validate append-only physical TPV
+movements separately from fiscal invoice records.
 */
 /*
 =============================================================================
 MODULE: backend/data.js
-VERSION: v5018-TPV-OPERATIONAL-WRITES-RETIRED
+VERSION: v5021-TPV-PHYSICAL-LEDGER-SEPARATED
 REPO: https://github.com/nachoortegazgz/marianmadridz.git
-RESPONSIBILITY: Política temporal de mutación del sitio aislado y validación
-                estricta de esquemas CMS.
+RESPONSIBILITY: Validación de esquemas CMS con rutas físicas TPV separadas
+                de las validaciones fiscales de documentos.
 STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only; persisted fields are canonical.
 =============================================================================
 */
