@@ -524,7 +524,7 @@ test("TPV public utility module exposes only the configuration contract consumed
     assert.doesNotMatch(controller, /validarImportesTPVSANDBOX/);
 });
 
-test("TPV operational ledger is neutral, write-disabled and isolated from historical reads", async () => {
+test("TPV physical, commercial and audit ledgers are separated from the fiscal guard", async () => {
     const [repository, config, utilities, movements, accessPolicy, hooks, validation] = await Promise.all([
         source("tpv/tpvRepository.js"),
         source("internalConfig.js"),
@@ -541,7 +541,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.match(repository, /assertTpvOperationalLedgerConfigured\\(ledgerType = "fiscal"\\)/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
     assert.match(repository, /_isHistoricalTpvLedgerItem/);
@@ -574,7 +574,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 
 
 test("registrarVenta replays the same TransaccionesTPV idempotency key without duplicating the sale", async () => {
-    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    const sales = await source("tpv/tpvVentas.web.js");
     assert.match(sales, /getItem\(\s*BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
     assert.match(sales, /requestFingerprint/);
     assert.match(sales, /withTpvSessionLock/);
@@ -585,7 +585,7 @@ test("registrarVenta replays the same TransaccionesTPV idempotency key without d
 
 test("registrarVenta reports every unavailable Catalog V3 product ID", async () => {
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
-    const preparation = await source("src/backend/tpv/tpvSalePreparation.js");
+    const preparation = await source("tpv/tpvSalePreparation.js");
     assert.match(preparation, /TPV_CATALOG_PRODUCTS_NOT_FOUND/);
     assert.match(preparation, /invalidProductIds/);
     assert.match(sales, /invalidProductIds\.join\(", "\)/);
