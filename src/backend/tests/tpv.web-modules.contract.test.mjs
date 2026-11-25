@@ -508,3 +508,11 @@ test("Ticket X and Z use neutral status values and explicit synthetic source met
     assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
     assert.match(closures, /toMinorUnits\(input\.countedCash, "COUNTED_CASH"\)/);
 });
+
+
+test("TPV envelope helpers expose the complete status/data/error contract", async () => {
+    const envelope = await source("tpv/tpvEnvelope.js");
+    assert.match(envelope, /status: "SUCCESS",[\s\S]*?data,[\s\S]*?error: null/);
+    assert.match(envelope, /status: "PENDING",[\s\S]*?data: null,[\s\S]*?error: null/);
+    assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: toPublicShape\(actionable\)/);
+});

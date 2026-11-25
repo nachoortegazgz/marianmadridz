@@ -547,7 +547,20 @@ body {
           cleanup();
           const response = data.payload || {};
           if (data.error || response.status === "ERROR") {
-            reject(new Error(response.error?.code || data.error || "TPV_OPERATION_FAILED"));
+            const sourceError = response.error || {};
+            const error = new Error(sourceError.message || sourceError.code || data.error || "TPV_OPERATION_FAILED");
+            error.code = sourceError.code || data.error || "TPV_OPERATION_FAILED";
+            error.retryable = sourceError.retryable === true;
+            error.requiresReconciliation = sourceError.requiresReconciliation === true;
+            error.recoverable = sourceError.recoverable === true;
+            reject(error);
+          } else if (response.status === "PENDING") {
+            const error = new Error(response.reason || "TPV_OPERATION_PENDING");
+            error.code = response.reason || "TPV_OPERATION_PENDING";
+            error.status = "PENDING";
+            error.retryable = false;
+            error.requiresReconciliation = response.requiresReconciliation === true;
+            reject(error);
           } else {
             resolve(response.data !== undefined ? response.data : response);
           }
@@ -556,7 +569,13 @@ body {
       window.addEventListener("message", handler);
       timer = setTimeout(() => {
         cleanup();
-        reject(new Error("TPV_TIMEOUT"));
+        const error = new Error("TPV_TIMEOUT");
+        error.code = "TPV_TIMEOUT";
+        error.outcomeUnknown = true;
+        error.operationMayContinue = true;
+        error.retryable = false;
+        error.requiresReconciliation = true;
+        reject(error);
       }, 15000);
       window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
     });
@@ -572,7 +591,9 @@ body {
     }
     const fullPayload = Object.assign({}, payload, { idempotencyKey: key });
     return call(type, fullPayload, responseType).then((result) => {
-      sessionStorage.removeItem(storageKey);
+      if (result !== null && result !== undefined) {
+        sessionStorage.removeItem(storageKey);
+      }
       return result;
     });
   }

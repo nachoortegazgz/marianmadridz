@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { orderTransactions } from "@wix/ecom";
+import { draftOrders, orderTransactions } from "@wix/ecom";
 
 assert.equal(
     typeof orderTransactions?.listTransactionsForSingleOrder,
@@ -7,6 +7,12 @@ assert.equal(
     "@wix/ecom orderTransactions.listTransactionsForSingleOrder must be exported by the installed SDK"
 );
 
+assert.equal(
+    typeof draftOrders?.createDraftOrder,
+    "function",
+    "@wix/ecom draftOrders.createDraftOrder must be exported by the installed SDK"
+);
+
 process.stdout.write(
-    "Wix SDK contract OK: @wix/ecom orderTransactions.listTransactionsForSingleOrder\n"
+    "Wix SDK contracts OK: @wix/ecom orderTransactions.listTransactionsForSingleOrder and draftOrders.createDraftOrder\n"
 );

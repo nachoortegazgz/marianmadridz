@@ -36,7 +36,12 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
     assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
-    assert.match(controller, /lineas,\s*pagos,/);
+    assert.match(controller, /case "SALE_REGISTER": \{[\s\S]*?return registrarVenta\(\{/);
+    const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "SALE_VALIDATE":/)?.[1] || "";
+    assert.match(saleWriteBlock, /productId,/);
+    assert.match(saleWriteBlock, /cantidad: numeric\(line\.cantidad/);
+    assert.match(saleWriteBlock, /idempotencyKey: saleUuidV4Key\(payload\.idempotencyKey\)/);
+    assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta|importe:/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
     assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
@@ -50,6 +55,11 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
     assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);
+    assert.match(script, /response\.status === "PENDING"/);
+    assert.match(script, /error\.outcomeUnknown = true/);
+    assert.match(script, /error\.operationMayContinue = true/);
+    assert.match(script, /if \(result !== null && result !== undefined\) \{\s*sessionStorage\.removeItem\(storageKey\)/);
+
 });
 
 test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {
@@ -65,8 +75,15 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     assert.match(controller, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(controller, /TPV_INVALID_IDEMPOTENCY_KEY: Object\.freeze/);
     assert.match(controller, /TPV_PRODUCT_LINES_ONLY: Object\.freeze/);
-    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey \|\| key\)/);
-    assert.match(controller, /productId: line\.itemId/);
+    assert.match(controller, /hasOwnProperty\.call\(result, "data"\)/);
+    assert.match(controller, /hasOwnProperty\.call\(result, "error"\)/);
+    assert.match(controller, /permissionsReady/);
+    assert.match(controller, /permissionsStatus: permissions\.status/);
+    assert.match(controller, /contextStatus/);
+    assert.doesNotMatch(controller, /error\?\.detail \|\| null/);
+
+    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
+    assert.match(controller, /const productId = optionalString\(line\.itemId, 160\)/);
     assert.doesNotMatch(controller.match(/return registrarVenta\(\{[\s\S]*?\n            \}\);/)?.[0] || "", /precioUnitario|subtotalNeto|impuestosTotal|totalVenta/);
 });
 
