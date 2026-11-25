@@ -1,10 +1,42 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { auth } from "@wix/essentials";
+import { productsV3 } from "@wix/stores";
+import { draftOrders, taxCalculation, taxGroups, taxRegions } from "@wix/ecom";
+import { requireCajero, getMyStaffContext } from "backend/security";
+import {
+    getItem,
+    insertItem,
+    updateItem,
+} from "backend/dataAccess";
 import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { error as tpvError } from "backend/tpv/tpvEnvelope";
+import { registerTpvSaleDraft } from "backend/tpv/tpvSaleDraftCore";
 
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const getProductElevated = auth.elevate(productsV3.getProduct);
+const createDraftOrderElevated = auth.elevate(draftOrders.createDraftOrder);
+const getDraftOrderElevated = auth.elevate(draftOrders.getDraftOrder);
+const queryDraftOrdersElevated = auth.elevate(draftOrders.queryDraftOrders);
+const deleteDraftOrderElevated = auth.elevate(draftOrders.deleteDraftOrder);
+const queryTaxRegionsElevated = auth.elevate(taxRegions.queryTaxRegions);
+const queryTaxGroupsElevated = auth.elevate(taxGroups.queryTaxGroups);
+const listDefaultTaxGroupsElevated = auth.elevate(taxGroups.listDefaultTaxGroupsByAppIds);
+const calculateTaxElevated = auth.elevate(taxCalculation.calculateTax);
+
+const SALE_DRAFT_DEPENDENCIES = Object.freeze({
+    getItem,
+    insertItem,
+    updateItem,
+    getProduct: getProductElevated,
+    createDraftOrder: createDraftOrderElevated,
+    getDraftOrder: getDraftOrderElevated,
+    queryDraftOrders: queryDraftOrdersElevated,
+    deleteDraftOrder: deleteDraftOrderElevated,
+    queryTaxRegions: queryTaxRegionsElevated,
+    queryTaxGroups: queryTaxGroupsElevated,
+    listDefaultTaxGroupsByAppIds: listDefaultTaxGroupsElevated,
+    calculateTax: calculateTaxElevated,
+});
 
 export const validarVentaBorrador = webMethod(
     Permissions.SiteMember,
@@ -26,7 +58,11 @@ export const validarVentaBorrador = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_SALE_VALIDATION_FAILED", reasonCode: String(error?.message || "TPV_SALE_VALIDATION_FAILED"), message: "El borrador no supera las validaciones." },
+                error: {
+                    code: "TPV_SALE_VALIDATION_FAILED",
+                    reasonCode: String(error?.message || "TPV_SALE_VALIDATION_FAILED"),
+                    message: "El borrador no supera las validaciones.",
+                },
             };
         }
     }
@@ -35,46 +71,28 @@ export const validarVentaBorrador = webMethod(
 export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-sale-write-block");
+        const traceId = makeTraceId("tpv-sale-draft");
         await requireCajero(traceId);
 
-        const sessionId = String(input?.sessionId || "").trim();
-        const idempotencyKey = String(input?.idempotencyKey || "").trim();
-        const lineas = Array.isArray(input?.lineas) ? input.lineas : [];
-
-        if (!input || typeof input !== "object" || Array.isArray(input) ||
-            !sessionId || !UUID_V4.test(idempotencyKey) || lineas.length === 0 ||
-            lineas.length > 100 ||
-            lineas.some((line) =>
-                !line || typeof line !== "object" ||
-                !String(line.productId || "").trim() ||
-                !Number.isFinite(Number(line.cantidad)) ||
-                Number(line.cantidad) <= 0
-            )) {
+        let staffContext;
+        try {
+            staffContext = await getMyStaffContext(traceId);
+        } catch {
             return tpvError(
-                "TPV_INVALID_INPUT",
-                "La solicitud de venta no contiene una sesión, clave o líneas de producto válidas.",
-                ["Envía sessionId, una clave UUID v4 y al menos una línea con productId y cantidad positiva."],
-                { persisted: false, retryable: false, traceId }
+                "TPV_OPERATOR_CONTEXT_UNAVAILABLE",
+                "No se pudo resolver la identidad del profesional que registra la venta.",
+                ["Verificar la asignación del empleado en MapaStaff y volver a intentar."],
+                { traceId, retryable: false }
             );
         }
 
-        // MovimientosCaja is the physical append-only ledger; TPV_LOGICAL_VENTAS maps to TPV_SALE/transactionId there.
-        // TODO(#416): implement Catalog V3 pricing, regional tax resolution, Draft Orders and durable replay only after the existing ledger writer is explicitly enabled and audited.
-        return tpvError(
-            "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
-            "La venta no se ha registrado: la escritura operativa del ledger TPV continúa deshabilitada.",
-            [
-                "No se ha creado ningún pedido DRAFT ni se ha confirmado ningún pago.",
-                "El destino canónico es MovimientosCaja mediante el adaptador TPV existente; no crear TransaccionesTPV duplicada.",
-                "Completar el contrato del writer append-only, la idempotencia durable y la resolución fiscal regional antes de habilitar pedidos.",
-            ],
+        return registerTpvSaleDraft(
+            input,
             {
-                persisted: false,
-                retryable: false,
-                requiresReconciliation: false,
                 traceId,
-            }
+                operatorResourceId: staffContext?.resourceId || staffContext?.operatorResourceId || "",
+            },
+            SALE_DRAFT_DEPENDENCIES
         );
     }
 );
