@@ -248,7 +248,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.match(sales, /getMyCajeroContext/);
     assert.match(sales, /prepareTpvSaleCatalog/);
     assert.match(sales, /catalogVerified: true/);
     assert.match(sales, /taxVerified: true/);
@@ -261,7 +263,10 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /MovimientosCaja/);
     assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);
     assert.match(sales, /async \(input = \{\}\)/);
-    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
+    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /appendTpvAudit/);
+    assert.match(sales, /withTpvSessionLock/);
+    assert.match(sales, /insertItem\\(BUSINESS_COLLECTIONS\\.TRANSACCIONES_TPV/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -564,10 +569,12 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 
 
 
-test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
+test("TPV sale persists a pending commercial transaction while refunds remain provider-gated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /requiresReconciliation: draft\\.requiresReconciliation/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /async \(input = \{\}\) =>/);
     assert.match(refunds, /validateRefundRequest\(input\)/);
@@ -578,9 +585,10 @@ test("TPV sale and refund write methods fail closed until a native payment provi
     const controller = await source("../public/tpvPageController.js");
     assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{[\s\S]*?saleId: optionalString\(payload\.saleId/);
     assert.match(controller, /idempotencyKey: key/);
-    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
+    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
-    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit/);
+    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /appendTpvAudit/);
     assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit/);
 });
 
