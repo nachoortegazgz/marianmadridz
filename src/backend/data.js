@@ -23,6 +23,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
     TPV_LEDGER_SOURCE,
+    TPV_EVENT_MOVEMENT_TYPES,
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
@@ -424,11 +425,17 @@ export function MovimientosCaja_beforeInsert(item) {
         recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-    if (item.recordSource === TPV_LEDGER_SOURCE ||
-        recordSource.startsWith("TPV_") ||
-        movementType.startsWith("TPV_") ||
-        isHistoricalTpvMarker) {
-        _schemaError("CMS_TPV_LEDGER_WRITES_DISABLED: el ledger operativo TPV aún no tiene contrato canónico aprobado.");
+    if (isHistoricalTpvMarker) {
+        _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED: los marcadores sintéticos históricos no se admiten en nuevas escrituras.");
+    }
+    if (recordSource === TPV_LEDGER_SOURCE) {
+        if (!Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(movementType)) {
+            _schemaError("TPV_PHYSICAL_MOVEMENT_TYPE_INVALID");
+        }
+        _normalizeMovimientosCajaObjectFields(item);
+        assertMovimientosCajaRequiredFields(item);
+        _normalizeMovimientosCajaPhysicalFields(item, true);
+        return item;
     }
 
     const taxId = readRecipientTaxId(item);
