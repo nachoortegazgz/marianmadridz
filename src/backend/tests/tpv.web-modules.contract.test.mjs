@@ -226,7 +226,8 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
 
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_TRANSACTION_COLLECTION_UNAVAILABLE/);
+    assert.match(sales, /async \(input = \{\}\)/);
     assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
