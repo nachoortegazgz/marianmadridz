@@ -913,7 +913,7 @@ body {
     renderTicket();
 
     try {
-      const quote = await requestSaleQuote([]);
+      const quote = await requestSaleQuote(state.payments);
       if (sequence !== state.quoteSequence) return;
       state.saleQuote = quote;
     } catch (err) {
@@ -1075,7 +1075,7 @@ body {
     $("paymentList").querySelectorAll("[data-remove-payment]").forEach((button) => {
       button.onclick = () => {
         state.payments.splice(Number(button.dataset.removePayment), 1);
-        renderPaymentSummary();
+        refreshSaleQuote();
       };
     });
   }
@@ -1105,8 +1105,8 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
-      toast("No se aceptan importes de prueba: valida primero la venta.");
+    if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
+      toast("No se aceptan importes de prueba: verifica primero catálogo e impuestos.");
       return;
     }
     const amount = num($("paymentAmount").value);
@@ -1141,7 +1141,8 @@ body {
     });
     $("paymentAmount").value = "";
     renderPaymentSummary();
-    if (changeMinor > 0) toast("Pago añadido. Cambio: " + money(changeMinor / 100));
+    refreshSaleQuote();
+    if (changeMinor > 0) toast("Importe de prueba añadido. Cambio simulado: " + money(changeMinor / 100));
   };
 
   /* ---------- Guardar venta ---------- */
