@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     assertBulkPatchAllowed,
+    assertBulkRemoveAllowed,
     assertInsertAllowed,
     assertRemoveAllowed,
 } from "../dataAccessPolicy.js";
@@ -174,7 +175,20 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
         item._id,
         CONTROL_TYPE.TPV_TEST_RUN,
         item
-    ), /DATA_ACCESS_ERROR/);
+    ), /CMS_REMOVE_SCOPE_DENIED/);
+    assert.doesNotThrow(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
+        condition: {
+            filter: {
+                controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
+                expiresAt: { $lt: new Date("2026-11-26T00:00:00.000Z") },
+            },
+        },
+    }));
+    assert.throws(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
+        condition: {
+            filter: { controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN } },
+        },
+    }), /CMS_BULK_REMOVE_SCOPE_DENIED/);
 
     const wrongSite = { ...item, payload: { ...item.payload, siteId: "another-site" } };
     assert.throws(() => ControlOperativo_beforeInsert(wrongSite), /synthetic envelope invalid/);
