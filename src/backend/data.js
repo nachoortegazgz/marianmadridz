@@ -17,6 +17,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 import {
     BUSINESS_COLLECTIONS,
     CATALOG_ENTRY_TYPE,
+    CONTROL_TYPE,
     FISCAL_ROLE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
@@ -25,7 +26,7 @@ import {
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertTpvTestRunAppendOnly, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -889,6 +890,9 @@ export async function ControlOperativo_beforeUpdate(item) {
     _normalizeCmsDateTimes(normalized, [
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
+    if (original.controlType === CONTROL_TYPE.TPV_TEST_RUN) {
+        assertTpvTestRunAppendOnly(original, normalized);
+    }
     assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
