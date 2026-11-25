@@ -4,6 +4,8 @@ import {
     CONTROL_TYPE,
     TPV_RUNTIME_POLICY,
     TPV_STORES_APP_ID,
+    TPV_TAX_ADDRESS,
+    TPV_WIX_BUSINESS_LOCATION,
 } from "../internalConfig.js";
 import {
     fromMinorUnits,
@@ -323,7 +325,6 @@ function assertDraftMatches(draftOrder, expected, resolvedLines, lineItemIds) {
 }
 
 function findCorrelatedDraft(draftOrders, expectedLineItemIds) {
-    const expected = new Set(expectedLineItemIds);
     const matches = [];
     let partial = false;
     for (const draft of draftOrders) {
@@ -734,7 +735,7 @@ async function calculateSaleTax(deps, resolvedLines) {
     });
     const response = await deps.calculateTax({
         currency: TPV_RUNTIME_POLICY.CURRENCY,
-        addresses: [{ country: "ES" }],
+        addresses: [TPV_TAX_ADDRESS],
         lineItems,
     });
     if (Array.isArray(response?.errors) && response.errors.length) {
@@ -939,8 +940,10 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
         const response = await deps.createDraftOrder({
             draftOrder: {
                 catalogLineItems,
-                recipientInfo: { address: { country: "ES" } },
-                billingInfo: { address: { country: "ES" } },
+                businessLocation: {
+                    _id: TPV_WIX_BUSINESS_LOCATION.id,
+                    name: TPV_WIX_BUSINESS_LOCATION.name,
+                },
                 taxExempt: false,
             },
         });
