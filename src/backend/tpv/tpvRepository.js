@@ -742,6 +742,9 @@ function _matchesFilter(record, filter) {
 export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType = "physical" } = {}) {
 
     assertTpvOperationalLedgerConfigured(ledgerType);
+    if (collection === TPV_COLLECTIONS.VENTAS) {
+        throw new Error("TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV");
+    }
     if (collection === TPV_COLLECTIONS.AUDITORIA) {
         return appendTpvAudit({
             idempotencyKey,
