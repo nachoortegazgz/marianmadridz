@@ -345,7 +345,7 @@ export const registrarVentaPrueba = webMethod(
                 paymentStatus: "SIMULATED",
                 realPayment: false,
             }));
-            const result = await appendEvent(actor, input, "SALE_RECORDED", {
+            const saleEventData = {
                 saleId,
                 requestFingerprint,
                 totalMinor: toMinorUnits(validated.totalVenta, "SALE_TOTAL"),
@@ -357,6 +357,10 @@ export const registrarVentaPrueba = webMethod(
                 realPayment: false,
                 stockMutation: false,
                 fiscalDocumentIssued: false,
+            };
+            const result = await appendEvent(actor, input, "SALE_RECORDED", null, {
+                requestFingerprint,
+                buildData: () => saleEventData,
             });
             return ok({
                 saleId,
