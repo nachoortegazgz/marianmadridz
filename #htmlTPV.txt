@@ -489,6 +489,7 @@ body {
       TPV_TEST_SALE_CONTRACT_INVALID: "La venta no cumple el contrato V1: una tasa verificable y un único medio de pago simulado por el total exacto.",
       TPV_TEST_REFUND_SALE_NOT_FOUND: "No se encuentra esa venta dentro de la sesión de prueba actual.",
       TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT: "La devolución supera el importe simulado original de ese medio de pago.",
+      TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: "La salida supera el efectivo esperado de la sesión de prueba.",
       TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: "Hay operaciones simultáneas. Actualiza el estado antes de repetir con la misma clave.",
       TPV_TEST_EVENT_LIMIT_EXCEEDED: "La sesión alcanzó el límite de eventos. Cierra la prueba y abre otra sesión.",
       TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED: "El historial alcanzó el límite de almacenamiento. Cierra la prueba y abre otra sesión.",
