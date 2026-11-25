@@ -542,12 +542,11 @@ export function assertControlOperativo(item) {
             !/^[a-f0-9]{64}$/i.test(String(payload.eventHash || ""))) {
             throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN synthetic envelope invalid");
         }
-        if (payload.events.length > 1000 ||
-            payload.events.some((event, index) =>
-                !event || typeof event !== "object" ||
-                event.sequence !== index + 1 ||
-                !/^[a-f0-9]{64}$/i.test(String(event.eventHash || "")) ||
-                !/^[a-f0-9]{64}$/i.test(String(event.requestFingerprint || "")))) {
+        if (!isValidTpvTestRunPayload(payload, {
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            sessionId: payload.sessionId,
+            actorId: payload.actorId,
+        })) {
             throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN event chain invalid");
         }
     }
