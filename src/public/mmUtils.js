@@ -448,6 +448,9 @@ export function withTimeout(promiseOrFactory, timeoutMs, label = "OPERATION_TIME
             settled = true;
             const error = new Error(label);
             error.code = "TIMEOUT";
+            error.outcomeUnknown = true;
+            error.operationMayContinue = true;
+            error.retryable = false;
             reject(error);
         }, timeout);
         Promise.resolve().then(factory).then((value) => {
@@ -471,7 +474,9 @@ export async function _executeWithRetry(fn, maxRetries = 2, delayMs = 300, isRet
     for (let attempt = 0; attempt <= retries; attempt += 1) {
         try { return await fn(); } catch (error) {
             lastError = error;
-            const retryable = typeof isRetryable === "function" ? isRetryable(error) : true;
+            const retryable = error?.code !== "TIMEOUT" &&
+                typeof isRetryable === "function" &&
+                isRetryable(error) === true;
             if (!retryable || attempt >= retries) break;
             await new Promise((resolve) => { setTimeout(resolve, baseDelay * 2 ** attempt); });
         }

@@ -161,6 +161,17 @@ test("BOOK-FLOW-RETRY-01 shared retry helper performs three total attempts with 
   assert.equal(attempts, 3);
 });
 
+test("BOOK-FLOW-RETRY-02 shared retry helper does not retry unless an error classifier explicitly approves it", async () => {
+  let attempts = 0;
+  await assert.rejects(_executeWithRetry(async () => {
+    attempts += 1;
+    const error = new Error("transient");
+    error.code = "TEMPORARY_FAILURE";
+    throw error;
+  }, 3, 1));
+  assert.equal(attempts, 1, "unclassified failures must never be retried");
+});
+
 test("BOOK-FLOW-BRIDGE-01 failed context is retried and correlated MM_CONTEXT is delivered", async () => {
   const listeners = [];
   const sent = [];
@@ -269,7 +280,12 @@ test("BOOK-FLOW-TIMEOUT-03 withTimeout invokes a factory asynchronously and time
   }, 1, "factory-timeout");
 
   assert.equal(started, false, "factory must not start before the watchdog is established");
-  await assert.rejects(operation, (error) => error?.code === "TIMEOUT");
+  await assert.rejects(operation, (error) =>
+    error?.code === "TIMEOUT" &&
+    error?.outcomeUnknown === true &&
+    error?.operationMayContinue === true &&
+    error?.retryable === false
+  );
   await new Promise((resolve) => setTimeout(resolve, 35));
   assert.equal(started, true);
   assert.equal(completed, true, "timeout rejects the waiter but does not cancel the remote operation");

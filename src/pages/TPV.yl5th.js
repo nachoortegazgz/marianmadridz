@@ -17,6 +17,8 @@ $w.onReady(() => {
     try {
         initializeTpvPage(widget);
     } catch (error) {
-        console.error("[TPV] HTML bridge initialization failed", error);
+        console.error("[TPV] HTML bridge initialization failed", {
+            code: String(error?.code || error?.message || "TPV_BRIDGE_INIT_FAILED"),
+        });
     }
 });
