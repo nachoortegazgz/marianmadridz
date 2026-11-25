@@ -292,7 +292,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
     assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
-    assert.match(policy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
+    assert.match(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
@@ -555,9 +555,11 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
     assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
-    assert.match(hooks, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
-    assert.match(repository, /TPV_LEDGER_SEQUENCE_OR_PREVIOUS_HASH_REQUIRED/);
+    assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
+    assert.match(repository, /sequenceNumber: previousSequence \+ 1/);
     assert.match(validation, /historicalTpvLedgerRecord/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
