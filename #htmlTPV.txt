@@ -844,23 +844,83 @@ body {
   $("tabPersonalizada").onclick = () => toast("Tarifa personalizada no disponible: falta clasificación fiscal autorizada.");
     $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
 
+  /* ---------- Preparación fiscal autoritativa ---------- */
+  function saleLineRequests() {
+    return state.items.map((item) => ({
+      tipoLinea: item.tipoLinea,
+      itemId: item.id,
+      ...(item.varianteId ? { varianteId: item.varianteId } : {}),
+      cantidad: item.qty,
+      profesionalId: state.profesionalId || null,
+      descuentoImporte: 0,
+    }));
+  }
+
+  async function requestSaleQuote(payments = []) {
+    return call("SALE_VALIDATE", {
+      lineItems: saleLineRequests(),
+      payments: payments.map((payment) => ({
+        method: payment.method,
+        amount: payment.amountMinor / 100,
+        change: payment.changeMinor / 100,
+      })),
+    }, "SALE_VALIDATE_RES");
+  }
+
+  async function refreshSaleQuote() {
+    const sequence = ++state.quoteSequence;
+    if (!state.items.length) {
+      state.saleQuote = null;
+      state.quoteLoading = false;
+      state.quoteError = null;
+      renderTicket();
+      return;
+    }
+
+    state.saleQuote = null;
+    state.quoteLoading = true;
+    state.quoteError = null;
+    renderTicket();
+
+    try {
+      const quote = await requestSaleQuote([]);
+      if (sequence !== state.quoteSequence) return;
+      state.saleQuote = quote;
+    } catch (err) {
+      if (sequence !== state.quoteSequence) return;
+      state.quoteError = err.code || err.message || "TPV_SALE_PREPARATION_FAILED";
+    } finally {
+      if (sequence === state.quoteSequence) {
+        state.quoteLoading = false;
+        renderTicket();
+      }
+    }
+  }
+
   /* ---------- Ticket ---------- */
   function renderTicket() {
     const container = $("ticketLines");
+    const quoteLines = Array.isArray(state.saleQuote?.lineas) ? state.saleQuote.lineas : [];
     if (!state.items.length) {
       container.innerHTML = '<p style="color:var(--muted);">Añade conceptos del catálogo.</p>';
     } else {
-      container.innerHTML = state.items.map((item, i) => `
-        <div class="ticket-line">
-          <span>${esc(item.name)}</span>
-          <span class="qty">
-            <button data-action="minus" data-idx="${i}">−</button>
-            <span>${item.qty}</span>
-            <button data-action="plus" data-idx="${i}">+</button>
-          </span>
-          <span>${money(item.price * item.qty)}</span>
-        </div>
-      `).join("");
+      container.innerHTML = state.items.map((item, i) => {
+        const lineTotal = quoteLines[i]?.totalLinea;
+        const displayTotal = lineTotal !== undefined
+          ? money(lineTotal)
+          : (state.quoteLoading ? "Calculando…" : "No disponible");
+        return `
+          <div class="ticket-line">
+            <span>${esc(item.name)}</span>
+            <span class="qty">
+              <button data-action="minus" data-idx="${i}">−</button>
+              <span>${item.qty}</span>
+              <button data-action="plus" data-idx="${i}">+</button>
+            </span>
+            <span>${displayTotal}</span>
+          </div>
+        `;
+      }).join("");
       container.querySelectorAll("button[data-action]").forEach((btn) => {
         btn.onclick = () => {
           const idx = Number(btn.dataset.idx);
@@ -869,20 +929,48 @@ body {
             state.items[idx].qty--;
             if (state.items[idx].qty <= 0) state.items.splice(idx, 1);
           }
+          state.payments = [];
           renderTicket();
+          refreshSaleQuote();
         };
       });
     }
-    const subtotal = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    $("subtotal").textContent = money(subtotal);
-    $("tax").value = money(0);
-    $("total").textContent = money(subtotal);
+
+    const quote = state.saleQuote;
+    const hasQuote = quote && Number.isFinite(Number(quote.totalVenta));
+    $("subtotal").textContent = hasQuote ? money(quote.subtotalNeto) : (state.items.length ? (state.quoteLoading ? "Calculando…" : "—") : money(0));
+    $("tax").value = hasQuote ? money(quote.impuestosTotal) : (state.items.length ? (state.quoteLoading ? "Calculando…" : "—") : money(0));
+    $("total").textContent = hasQuote ? money(quote.totalVenta) : (state.items.length ? (state.quoteLoading ? "Calculando…" : "—") : money(0));
+
+    const readiness = $("saleReadiness");
+    if (hasQuote) {
+      const blockers = quote.saleReadinessBlockers || [];
+      const messages = [];
+      if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
+      if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
+      if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
+      if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario no conciliado.");
+      if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
+      readiness.textContent = quote.saleReady === true
+        ? "Venta preparada para validación final."
+        : "No lista para cobro: " + (messages.join(" ") || "controles pendientes.");
+    } else if (state.quoteLoading) {
+      readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
+    } else if (state.quoteError) {
+      readiness.textContent = "No se pudo preparar la venta: " + publicErrorMessage(state.quoteError);
+    } else {
+      readiness.textContent = "Añade líneas para calcular el total fiscal.";
+    }
     renderPaymentSummary();
   }
 
   $("clearTicket").onclick = () => {
+    state.quoteSequence++;
     state.items = [];
     state.payments = [];
+    state.saleQuote = null;
+    state.quoteLoading = false;
+    state.quoteError = null;
     renderTicket();
   };
 
