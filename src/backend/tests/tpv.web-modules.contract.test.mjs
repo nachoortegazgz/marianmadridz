@@ -572,6 +572,7 @@ test("TPV sale and refund write methods fail closed until a native payment provi
     assert.match(refunds, /async \(input = \{\}\) =>/);
     assert.match(refunds, /validateRefundRequest\(input\)/);
     assert.match(refunds, /payments\.length !== 1/);
+    assert.match(refunds, /!idempotencyKey \|\| idempotencyKey\.length > 120/);
     assert.match(refunds, /SUPPORTED_REFUND_METHODS/);
     assert.match(refunds, /originalSaleId: request\.saleId/);
     const controller = await source("../public/tpvPageController.js");
