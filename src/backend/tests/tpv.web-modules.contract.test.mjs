@@ -218,15 +218,20 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
     assert.doesNotMatch(cashierModule, /backend\/cajas\.web|CajaActual|getCashierState/);
-    assert.match(joined, /TPV_OPERATIONAL_REFUNDS_DISABLED/);
     const payments = await source("tpv/tpvPagos.web.js");
     assert.doesNotMatch(payments, /simularPasarelaPago|simularReembolsoPasarela|simulateGatewayPayment|simulateGatewayRefund/);
     assert.doesNotMatch(payments, /SIMULATED|SANDBOX/);
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
 
     const sales = await source("tpv/tpvVentas.web.js");
+    assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /validationScope: "STRUCTURAL_ONLY"/);
+    assert.match(sales, /UUID_V4/);
+    assert.match(sales, /MovimientosCaja/);
+    assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);
+    assert.match(sales, /async \(input = \{\}\)/);
     assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
@@ -264,9 +269,10 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
     assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_EVENT_MOVEMENT_TYPES/);
-    for (const writer of [cash, movements, sales, closures]) {
+    for (const writer of [cash, movements, closures]) {
         assert.match(writer, /requireAdmin/);
     }
+    assert.match(sales, /requireCajero/);
 });
 
 test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff resource mapping", async () => {
@@ -486,7 +492,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);

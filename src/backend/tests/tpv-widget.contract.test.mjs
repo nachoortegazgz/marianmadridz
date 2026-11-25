@@ -15,7 +15,8 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
-    assert.match(controller, /allowOpaqueOrigin: true/);
+    assert.match(controller, /allowOpaqueOrigin: false/);
+    assert.match(controller, /TODO\(#416\): Wix HTML Components may emit opaque origins/);
     assert.doesNotMatch(controller, /ALLOWED_ORIGIN\s*=\s*["']\*["']/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);

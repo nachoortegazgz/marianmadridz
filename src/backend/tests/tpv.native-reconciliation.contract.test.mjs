@@ -167,7 +167,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /Auditoría de operaciones/);
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.doesNotMatch(config, /fiscalEmission|FISCAL_EMISSION_ENABLED/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
@@ -207,7 +207,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /latestOpenTpvSession|withTpvSessionLock|insertTpvEvent/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);

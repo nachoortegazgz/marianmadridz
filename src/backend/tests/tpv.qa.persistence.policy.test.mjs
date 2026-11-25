@@ -319,6 +319,8 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
 });
 
 
+// TODO(#416): Add registrarVenta idempotency, product-not-found and Draft Order integration tests when the test environment is available.
+ // Local verification was blocked: git clone could not resolve github.com (DNS); npm view @wix/ecom@1.0.2539 timed out.
 test("every exposed TPV WebMethod checks backend role authorization before repository access", async () => {
     const protectedMethods = [
         ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"]],
@@ -364,9 +366,6 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
         "tpvVentas.web.js": {
             guarded: ["registrarVenta"],
             readOnly: ["validarVentaBorrador"],
-            disabled: {
-                procesarDevolucion: "TPV_OPERATIONAL_REFUNDS_DISABLED",
-            },
         },
         "tpvDevoluciones.web.js": {
             guarded: ["registrarDevolucion"],

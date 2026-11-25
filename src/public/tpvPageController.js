@@ -12,6 +12,7 @@ import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
+// UI-only capability hints; backend WebMethods enforce authorization independently.
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 
 const REQUEST_TYPES = Object.freeze([
@@ -54,45 +55,108 @@ function boundedInteger(value, field, min, max) {
 }
 
 function envelope(result) {
-    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status) &&
-        Object.prototype.hasOwnProperty.call(result, "data") &&
-        Object.prototype.hasOwnProperty.call(result, "error")) return result;
-    return { status: "SUCCESS", data: result ?? null, error: null };
+    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status)) return result;
+    return {
+        status: "ERROR",
+        code: "TPV_UNEXPECTED_RESPONSE",
+        message: "Respuesta backend no reconocida",
+        raw: result,
+    };
 }
 
 const ERROR_CATALOG = Object.freeze({
-    TPV_INVALID_MESSAGE: ["La solicitud no es válida.", "Actualiza la TPV y vuelve a intentarlo.", true, true],
-    TPV_INVALID_PAYLOAD: ["Faltan datos de la operación.", "Revisa los datos introducidos.", true, false],
-    TPV_SESSION_REQUIRED: ["No hay una sesión de caja abierta.", "Abre la caja antes de continuar.", true, false],
-    TPV_PAYMENT_PENDING: ["El pago está pendiente de confirmación.", "Consulta el estado antes de repetir la operación.", false, true],
-    TPV_PAYMENT_FAILED: ["El pago no se ha confirmado.", "Comprueba el medio de pago antes de volver a intentarlo.", true, true],
-    TPV_RECONCILIATION_REQUIRED: ["La operación necesita comprobación.", "No la repitas; solicita una conciliación.", false, false, true],
-    TPV_IDEMPOTENCY_CONFLICT: ["La clave de operación ya se utilizó con otros datos.", "Consulta la operación original; no la repitas.", false, false],
-    TPV_ORDER_CREATION_FAILED: ["No se pudo crear el pedido.", "Consulta su estado antes de repetir la venta.", false, true, true],
-    TPV_PAYMENT_PROVIDER_NOT_CONFIGURED: ["El proveedor de pago no está configurado.", "No se ha registrado ni confirmado la venta.", false, false],
-    TPV_REFUND_PROVIDER_NOT_CONFIGURED: ["El proveedor de devoluciones no está configurado.", "No se ha registrado ni confirmado la devolución.", false, false],
+    TPV_INVALID_INPUT: Object.freeze({
+        message: "La solicitud de venta no contiene datos válidos.",
+        solution: "Comprueba la sesión, la clave UUID v4 y las líneas de producto.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_IDEMPOTENCY_KEY: Object.freeze({
+        message: "La clave idempotente de la venta no es válida.",
+        solution: "Genera una nueva clave UUID v4 para la operación.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_PRODUCT_LINES_ONLY: Object.freeze({
+        message: "Este flujo de venta admite actualmente líneas de producto.",
+        solution: "No registres líneas de servicio en este flujo pendiente de implementación.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_PAYMENT_PENDING: Object.freeze({
+        message: "El pago está pendiente de confirmación.",
+        solution: "Consulta el estado antes de repetir la operación.",
+        recoverable: false,
+        retryable: true,
+        requiresReconciliation: false,
+    }),
+    TPV_PAYMENT_FAILED: Object.freeze({
+        message: "El pago no se ha confirmado.",
+        solution: "Comprueba el medio de pago antes de volver a intentarlo.",
+        recoverable: true,
+        retryable: true,
+        requiresReconciliation: false,
+    }),
+    TPV_RECONCILIATION_REQUIRED: Object.freeze({
+        message: "La operación necesita comprobación.",
+        solution: "No la repitas; solicita una conciliación.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: true,
+    }),
+    TPV_IDEMPOTENCY_CONFLICT: Object.freeze({
+        message: "La clave de operación ya se utilizó con otros datos.",
+        solution: "Consulta la operación original; no la repitas.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_ORDER_CREATION_FAILED: Object.freeze({
+        message: "No se pudo crear el pedido.",
+        solution: "Consulta su estado antes de repetir la venta.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: true,
+    }),
+    TPV_PAYMENT_PROVIDER_NOT_CONFIGURED: Object.freeze({
+        message: "El proveedor de pago no está configurado.",
+        solution: "No se ha registrado ni confirmado la venta.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: Object.freeze({
+        message: "La escritura operativa del ledger TPV continúa deshabilitada.",
+        solution: "No se ha creado ningún pedido; habilita el writer append-only aprobado y la idempotencia durable.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
 });
 
 function errorEnvelope(error, field = null) {
     const code = String(error?.code || error?.message || "TPV_OPERATION_FAILED");
-    const definition = ERROR_CATALOG[code] || [
-        "No se pudo completar la operación.",
-        "Consulta el estado y solicita conciliación antes de repetirla.",
-        false,
-        false,
-        true,
-    ];
+    const definition = ERROR_CATALOG[code] || {
+        message: "No se pudo completar la operación.",
+        solution: "Consulta el estado y solicita conciliación antes de repetirla.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: true,
+    };
     return {
         status: "ERROR",
         data: null,
         error: {
             code,
-            message: definition[0],
-            solution: definition[1],
+            message: definition.message,
+            solution: definition.solution,
             field,
-            recoverable: definition[2] === true,
-            retryable: definition[3] === true,
-            requiresReconciliation: definition[4] === true,
+            recoverable: definition.recoverable === true,
+            retryable: definition.retryable === true,
+            requiresReconciliation: definition.requiresReconciliation === true,
         },
     };
 }
@@ -163,6 +227,21 @@ function idempotencyKey(message, payload = {}) {
     const messageId = String(message?.messageId || "").replace(/[^A-Za-z0-9:_-]/g, "").slice(0, 70);
     if (messageId.length < 8) throw new Error("TPV_MESSAGE_ID_REQUIRED_FOR_IDEMPOTENCY");
     return ("TPV_UI_" + String(message.type || "OP") + "_" + messageId).slice(0, 100);
+}
+
+function saleUuidV4Key(value) {
+    const candidate = String(value || "").split("_").pop().replace(/-/g, "");
+    if (!/^[0-9a-f]{32}$/i.test(candidate)) {
+        throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
+    }
+    const uuid = candidate.replace(
+        /^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/i,
+        "$1-$2-$3-$4-$5"
+    );
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) {
+        throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
+    }
+    return uuid;
 }
 
 async function dispatch(message) {
@@ -262,10 +341,18 @@ async function dispatch(message) {
             }
             const sessionId = optionalString(payload.sessionId, 160);
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+            if (lineas.some((line) => line.tipoLinea !== "PRODUCTO")) {
+                throw new Error("TPV_PRODUCT_LINES_ONLY");
+            }
             return registrarVenta({
-                ...salePayload,
                 sessionId,
-                idempotencyKey: key,
+                idempotencyKey: saleUuidV4Key(payload.idempotencyKey || key),
+                lineas: lineas.map((line) => ({
+                    productId: line.itemId,
+                    ...(line.varianteId ? { variantId: line.varianteId } : {}),
+                    cantidad: line.cantidad,
+                })),
+                ...(pagos.length === 1 ? { medioPago: pagos[0].medioPago } : {}),
             });
         }
 
@@ -349,7 +436,7 @@ export function initializeTpvPage(widget) {
 
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
-        allowOpaqueOrigin: true,
+        allowOpaqueOrigin: false, // TODO(#416): Wix HTML Components may emit opaque origins; verify supported handshake/origin contract before enabling bridge traffic.
         handshakeTimeoutMs: 65000,
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
