@@ -70,16 +70,16 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
-    assert.match(permissions, /createSale: false/);
-    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /createSale: true/);
+    assert.match(permissions, /openSession: staff\\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerCashMovement: false/);
     assert.match(permissions, /requestRefund: false/);
     assert.match(permissions, /closeSession: false/);
     assert.match(permissions, /issueTicketX: false/);
     assert.match(permissions, /issueTicketZ: false/);
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
-    assert.match(permissions, /operationalWritesAvailable: false/);
-    assert.match(permissions, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(permissions, /operationalWritesAvailable: true/);
+    assert.match(permissions, /getMyCajeroContext/);
 
     for (const writer of [cash, movements, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
@@ -172,7 +172,8 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(widget, /Auditoría de operaciones/);
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /BUSINESS_COLLECTIONS\\.TRANSACCIONES_TPV/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.doesNotMatch(config, /fiscalEmission|FISCAL_EMISSION_ENABLED/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
@@ -203,7 +204,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
     assert.match(cash, /canOpenSession: false/);
-    assert.match(cash, /operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED"/);
+    assert.match(cash, /operationalWritesAvailable: true/);
     assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ madridDayKey\(\)/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
@@ -212,8 +213,10 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.doesNotMatch(sales, /latestOpenTpvSession|withTpvSessionLock|insertTpvEvent/);
+    assert.match(sales, /insertItem\\(BUSINESS_COLLECTIONS\\.TRANSACCIONES_TPV/);
+    assert.match(sales, /latestOpenTpvSession/);
+    assert.match(sales, /withTpvSessionLock/);
+    assert.doesNotMatch(sales, /insertTpvEvent/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
