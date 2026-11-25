@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+    assertBulkPatchAllowed,
+    assertInsertAllowed,
+    assertRemoveAllowed,
+} from "../dataAccessPolicy.js";
+import { CONTROL_TYPE, TPV_RUNTIME_POLICY } from "../internalConfig.js";
+import { ControlOperativo_beforeInsert } from "../data.js";
+import {
     appendTpvTestEvent,
     createTpvTestRunPayload,
     isValidTpvTestRunPayload,
@@ -137,4 +144,39 @@ test("test-run IDs are stable, site scoped and CMS length bounded", () => {
     assert.notEqual(first, tpvTestRunId("SESSION-1", "SITE-2"));
     assert.equal(first.length, 36);
     assert.match(first, /^TPVTR[a-f0-9]{31}$/);
+});
+
+test("ControlOperativo test-run writes are isolated and CAS-only", () => {
+    const payload = basePayload();
+    const opened = append(payload, "SESSION_OPENED", "policy-open-001", { openingCashMinor: 15000 });
+    const item = {
+        _id: tpvTestRunId(payload.sessionId, payload.siteId),
+        controlType: CONTROL_TYPE.TPV_TEST_RUN,
+        dedupeKey: "TPV_TEST_RUN:" + tpvTestRunId(payload.sessionId, payload.siteId),
+        traceId: "TPV-TEST-TRACE-001",
+        status: "OPEN",
+        version: 0,
+        expiresAt: new Date("2026-11-25T21:00:00.000Z"),
+        payload: opened.payload,
+    };
+    assert.doesNotThrow(() => assertInsertAllowed("ControlOperativo", item));
+    assert.doesNotThrow(() => ControlOperativo_beforeInsert({ ...item, payload: { ...item.payload } }));
+    assert.doesNotThrow(() => assertBulkPatchAllowed("ControlOperativo", [
+        { fieldPath: "payload", action: "SET_FIELD", value: opened.payload },
+        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+    ], {
+        controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
+        version: { $eq: 0 },
+        status: { $eq: "OPEN" },
+    }));
+    assert.throws(() => assertRemoveAllowed(
+        "ControlOperativo",
+        item._id,
+        CONTROL_TYPE.TPV_TEST_RUN,
+        item
+    ), /DATA_ACCESS_ERROR/);
+
+    const wrongSite = { ...item, payload: { ...item.payload, siteId: "another-site" } };
+    assert.throws(() => ControlOperativo_beforeInsert(wrongSite), /synthetic envelope invalid/);
+    assert.equal(TPV_RUNTIME_POLICY.SITE_ID, payload.siteId);
 });
