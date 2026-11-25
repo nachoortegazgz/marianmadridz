@@ -94,6 +94,15 @@ test("TPV widget stays read-only until the canonical operational ledger is confi
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);
 });
 
+test("TPV HTML component JavaScript parses without syntax errors", async () => {
+    const html = await source("%23htmlTPV.txt");
+    const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+    assert.ok(scripts.length > 0, "HTML component must contain a script block");
+    for (const match of scripts) {
+        assert.doesNotThrow(() => new Script(match[1], { filename: "#htmlTPV.txt" }));
+    }
+});
+
 test("TPV bridge permits the context response and retries READY until a valid context arrives", async () => {
     const controller = await source("src/public/tpvPageController.js");
     const bridge = await source("src/public/widgetBridge.js");
