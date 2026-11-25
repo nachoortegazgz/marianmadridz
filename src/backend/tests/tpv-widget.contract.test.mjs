@@ -11,6 +11,10 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     const page = await source("src/pages/TPV.yl5th.js");
     const controller = await source("src/public/tpvPageController.js");
     const bridge = await source("src/public/widgetBridge.js");
+    const html = await source("%23htmlTPV.txt");
+    assert.match(html, /function resolveParentOrigin/);
+    assert.match(html, /window\.parent\.postMessage\(message, PARENT_ORIGIN\)/);
+    assert.doesNotMatch(html, /window\.parent\.postMessage\([^;]*,\s*["']\*["']\)/);
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
