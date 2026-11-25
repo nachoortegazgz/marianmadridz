@@ -62,7 +62,7 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     assert.match(controller, /validarVentaBorrador/);
     assert.match(controller, /"PENDING"/);
     assert.match(controller, /requiresReconciliation/);
-    assert.match(controller, /TPV_TRANSACTION_COLLECTION_UNAVAILABLE/);
+    assert.match(controller, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
 });
 
 
