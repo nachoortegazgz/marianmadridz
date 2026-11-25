@@ -91,7 +91,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
 
     const sales = await read("src/backend/tpv/tpvVentas.web.js");
     const preparation = await read("src/backend/tpv/tpvSalePreparation.js");
-    assert.match(sales, /saleReady: false/);
+    assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(preparation, /taxSettings\.getTaxSettings/);
     assert.match(preparation, /taxCalculation\.calculateTax/);
