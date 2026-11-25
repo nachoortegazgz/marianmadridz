@@ -348,13 +348,6 @@ async function dispatch(message) {
                 };
             });
 
-            const validation = await validarVentaBorradorPrueba({ lineas, pagos });
-            if (validation?.status === "ERROR") return validation;
-            const quote = validation?.data;
-            if (!quote || quote.testReady !== true || Number(quote.importePendiente || 0) > 0) {
-                return errorEnvelope({ code: "TPV_SALE_NOT_READY" });
-            }
-
             return registrarVentaPrueba({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
