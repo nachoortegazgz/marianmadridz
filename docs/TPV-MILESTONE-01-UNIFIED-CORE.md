@@ -53,7 +53,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 
 ### 4. Unificar hooks y políticas
 - Alinear `MovimientosCaja_beforeInsert`, `dataAccessPolicy.js` y validadores con el único contrato físico.
-- `MovimientosCaja` append-only para todas las filas; update/remove siempre rechazados; rectificación mediante nuevo registro trazable.
+- El writer operativo de `MovimientosCaja` inserta registros append-only en todas las fases. Antes de productionActivationAt, el backend puede autorizar mantenimiento update/remove de datos de desarrollo; después del corte se rechaza cualquier mutación o borrado de registros TPV. Rectificaciones operativas/fiscales mediante nuevos registros trazables.
 - Retirar excepciones de mutación o clasificación del runtime anterior después de inventariar y cerrar el tratamiento de registros existentes.
 - Persistir una marca de naturaleza del registro derivada por backend: recordTimestamp UTC < productionActivationAt UTC = SYNTHETIC; recordTimestamp UTC >= productionActivationAt UTC = REAL. No aceptar la marca del cliente ni usarla para seleccionar lógica alternativa.
 - Mantener fail-closed fiscal y autorización backend.
@@ -69,7 +69,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 - Consultar `ControlOperativo` y `MovimientosCaja` de forma consistente para inventariar registros y locks del runtime anterior.
 - Entregar IDs, tipos, cantidades y referencias antes de cualquier borrado.
 - Distinguir datos técnicos de prueba de movimientos fiscales/contables reales. No tocar registros que no estén probados como datos de prueba.
-- Durante desarrollo, los registros sintéticos pueden modificarse/resetearse para repetir pruebas. Antes de productionActivationAt, inventariar y exportar evidencia, verificar que todo el conjunto es sintético y ejecutar reset controlado de los datos y proyecciones de desarrollo. Tras el corte, no modificar ni borrar registros reales; mantener append-only y rectificar con nuevos registros.
+- Durante desarrollo, los registros del conjunto TPV pueden modificarse/resetearse mediante mantenimiento backend autorizado y auditado; el writer operativo sigue siendo append-only para probar el comportamiento real. Antes de productionActivationAt, inventariar y exportar evidencia, verificar que todo el conjunto es sintético y ejecutar reset controlado de los datos y proyecciones de desarrollo. Tras el corte, no modificar ni borrar registros reales; mantener append-only y rectificar con nuevos registros.
 - Verificar y documentar el resultado después de la limpieza.
 
 ### 7. Validación offline y Wix
