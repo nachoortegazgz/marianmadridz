@@ -107,7 +107,6 @@ export const validarVentaBorrador = webMethod(
             });
             const saleReadinessBlockers = [
                 "FISCAL_CONFIG_UNVERIFIED",
-                "TPV_LEDGER_WRITER_NOT_CONFIGURED",
                 "PAYMENT_NOT_VERIFIED",
                 "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
             ];
@@ -127,6 +126,7 @@ export const validarVentaBorrador = webMethod(
                 lineas,
                 catalogVerified: true,
                 taxVerified: true,
+                commercialRecordReady: lineas.length > 0,
                 paymentVerified: false,
                 inventoryVerified: !containsProducts,
                 consumerPricePresentationVerified: false,
