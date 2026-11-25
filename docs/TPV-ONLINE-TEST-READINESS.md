@@ -17,7 +17,7 @@ El código deja disponible un runtime de pruebas online aislado, no un TPV opera
 - El runtime declara `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`, `realPayment=false` y `externalSideEffects=false`.
 - No escribe `MovimientosCaja`, `CajaActual`, pedidos, Wix Payments, Wix Invoices, Wix Bookings ni inventario.
 - No crea colecciones TPV nuevas ni una colección `TransaccionesTPV`.
-- Los registros `TPV_TEST_RUN` llevan `expiresAt` a 7 días y la purga solo permite ese tipo exacto con filtro de expiración. La purga es oportunista al abrir una nueva sesión; no es un cron ni garantiza eliminación automática en el instante de caducidad. Los locks QA tienen lease de 12 horas y se liberan por CAS; no se purgan con la política de runs.
+- Los registros `TPV_TEST_RUN` llevan `expiresAt` a 24 horas y la purga solo permite ese tipo exacto con filtro de expiración. La purga es oportunista al abrir una nueva sesión; no es un cron ni garantiza eliminación automática en el instante de caducidad. Los locks QA tienen lease de 12 horas y se liberan por CAS; no se purgan con la política de runs.
 
 ## 2. Verificación del CMS live
 
@@ -99,7 +99,7 @@ Decisión de diseño:
 
 La búsqueda estática del repositorio y los contratos añadidos comprueban que los módulos operativos de caja, ledger, cierres, movimientos y devoluciones no consumen `TPV_TEST_RUN` ni `TPV_TEST_SESSION_LOCK`. Esta comprobación es estática; no sustituye una prueba Wix Runtime.
 
-La retención de 7 días es una ventana de elegibilidad para purga oportunista al abrir otra sesión, no una garantía de borrado programado. No se ha añadido un cron de limpieza porque no hay requisito de negocio para ello.
+La retención de 24 horas es una ventana de elegibilidad para purga oportunista al abrir otra sesión, no una garantía de borrado programado. No se ha añadido un cron de limpieza porque no hay requisito de negocio para ello.
 ## 9. Bloqueos operativos y fiscales
 
 El hito de pruebas online no habilita el writer fiscal operativo. Permanecen bloqueados:
