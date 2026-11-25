@@ -253,6 +253,9 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.match(sales, /taxVerified: true/);
     assert.match(sales, /paymentVerified: false/);
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
+    assert.match(sales, /const containsProducts = prepared\.lineas\.some/);
+    assert.match(sales, /if \(containsProducts\)/);
+    assert.match(sales, /inventoryVerified: !containsProducts/);
     assert.match(sales, /UUID_V4/);
     assert.match(sales, /MovimientosCaja/);
     assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);
