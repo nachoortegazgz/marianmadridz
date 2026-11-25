@@ -587,14 +587,17 @@ export const generarControlXPrueba = webMethod(
                 traceId,
             }, traceId);
             if (run.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
-            const totals = summarizeTpvTestRun(run.payload);
             const reportId = "TPV-TEST-X-" + resultId(input.idempotencyKey);
-            const result = await appendEvent(actor, input, "TICKET_X_ISSUED", {
-                reportId,
+            const result = await appendEvent(actor, input, "TICKET_X_ISSUED", null, {
                 requestFingerprint,
-                totals,
-                closesSession: false,
+                buildData: (payload) => ({
+                    reportId,
+                    requestFingerprint,
+                    totals: summarizeTpvTestRun(payload),
+                    closesSession: false,
+                }),
             });
+            const totals = result.event.data.totals;
             return ok({
                 reportId,
                 sessionId: input.sessionId,
@@ -642,23 +645,31 @@ export const generarCierreZPrueba = webMethod(
                 sourceType: "SYNTHETIC",
                 traceId,
             }, traceId);
-            const totals = summarizeTpvTestRun(run.payload);
-            const differenceMinor = countedCashMinor - totals.expectedCashMinor;
-            const differenceReason = String(input.differenceReason || "").trim();
-            if (differenceMinor !== 0 && differenceReason.length < 3) {
-                throw new Error("TPV_COUNT_DIFFERENCE_REASON_REQUIRED");
-            }
             const reportId = "TPV-TEST-Z-" + resultId(input.idempotencyKey);
-            const result = await appendEvent(actor, input, "TICKET_Z_CLOSED", {
-                reportId,
-                requestFingerprint: hashTpvTestValue(request),
-                countedCashMinor,
-                differenceMinor,
-                differenceReason,
-                totals: { ...totals, countedCashMinor, differenceMinor },
-                fiscalLedgerWritten: false,
-                closesSession: true,
-            }, { closeRun: true });
+            const requestFingerprint = hashTpvTestValue(request);
+            const result = await appendEvent(actor, input, "TICKET_Z_CLOSED", null, {
+                closeRun: true,
+                requestFingerprint,
+                buildData: (payload) => {
+                    const totals = summarizeTpvTestRun(payload);
+                    const differenceMinor = countedCashMinor - totals.expectedCashMinor;
+                    if (differenceMinor !== 0 && request.differenceReason.length < 3) {
+                        throw new Error("TPV_COUNT_DIFFERENCE_REASON_REQUIRED");
+                    }
+                    return {
+                        reportId,
+                        requestFingerprint,
+                        countedCashMinor,
+                        differenceMinor,
+                        differenceReason: request.differenceReason,
+                        totals: { ...totals, countedCashMinor, differenceMinor },
+                        fiscalLedgerWritten: false,
+                        closesSession: true,
+                    };
+                },
+            });
+            const totals = result.event.data.totals;
+            const differenceMinor = result.event.data.differenceMinor;
             return ok({
                 reportId,
                 sessionId: input.sessionId,
