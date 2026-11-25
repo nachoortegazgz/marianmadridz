@@ -566,6 +566,7 @@ export const CONTROL_TYPE = Object.freeze({
   TPV_REFUND_LOCK: "TPV_REFUND_LOCK",
   TPV_SESSION_LOCK: "TPV_SESSION_LOCK",
   TPV_TEST_RUN: "TPV_TEST_RUN",
+  TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -658,6 +659,18 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
       fields: Object.freeze({
         status: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.TPV_TEST_SESSION_LOCK]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        traceId: Object.freeze(["SET_FIELD"]),
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
