@@ -156,7 +156,8 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(closures, /totals\.reconciliationOk !== true/);
     assert.match(closures, /closed: true/);
     assert.match(closures, /closedByMemberId: operator\.operatorId/);
-    assert.match(repository, /occurredAt: new Date\(\)/);
+    assert.match(repository, /processedAt: new Date\(\)/);
+    assert.match(repository, /controlType: CONTROL_TYPE.TPV_AUDIT_EVENT/);
     assert.match(repository, /action: String\(action \|\| "UNKNOWN"\)/);
     assert.match(repository, /actorId: String\(actorId \|\| "UNKNOWN"\)/);
     assert.match(audit, /await requireCajero\(traceId\)/);
