@@ -40,3 +40,13 @@ Los 156 archivos Markdown/texto inventariados se trasladan sin alterar su conten
 | Archivos nuevos permitidos | 0 | 3 |
 
 Reducción del corpus vivo: **156 → 3 (98,08 %)**. Reducción de documentos en la raíz: **9 → 3 (66,67 %)**.
+
+
+## Ciclo 2026-11-25
+
+| Archivo de origen | Acción | Destino | Contenido crítico conservado en |
+|---|---|---|---|
+| `docs/RUNTIME-EVIDENCE-CHECKLIST.md` | Archivado tras consolidar los seis criterios PASS y sus procedimientos | `docs/archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md` | `docs/RELEASE-READINESS.md` (bloques P1–P4, F1 y F5); `docs/PROJECT-CANON.md` (contratos y patrones) |
+| `docs/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | Archivado como revisión de sesión; referencias contractuales trasladadas al canónico | `docs/archive/2026-11/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | `docs/PROJECT-CANON.md` (TPV, inventario, pagos y estado) |
+
+Conteo de este ciclo: 2 archivos movidos; 0 eliminados; 158 Markdown archivados; 5 Markdown vivos en `docs/` raíz. Los tres JSON de `docs/qa/` permanecen como fixtures/snapshots QA.
