@@ -4,6 +4,7 @@ import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { error as tpvError, ok as tpvOk } from "backend/tpv/tpvEnvelope";
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
+import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
 import { FISCAL_RUNTIME_POLICY } from "backend/internalConfig";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -24,6 +25,7 @@ const PREPARATION_MESSAGES = Object.freeze({
     TPV_SERVICE_PRICE_NOT_FIXED: "El servicio no tiene un precio fijo verificable en Bookings.",
     TPV_SERVICE_CATALOG_PAGE_INCOMPLETE: "No se ha podido consultar el catálogo completo de servicios.",
     TPV_STAFF_NOT_ALLOWED: "El profesional seleccionado no está vinculado a un miembro autorizado de Bookings.",
+    TPV_PAYMENT_METHOD_NOT_VERIFIED: "Los bonos y tarjetas regalo requieren consultar y validar su saldo antes de aceptarse como pago.",
     TPV_CATALOG_PRICE_UNAVAILABLE: "Wix no ha devuelto un precio actual verificable para esta línea.",
     TPV_CATALOG_CURRENCY_MISMATCH: "El producto o servicio no está configurado en euros.",
     TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
@@ -67,6 +69,7 @@ export const validarVentaBorrador = webMethod(
         const traceId = makeTraceId("tpv-sale-prepare");
         await requireCajero(traceId);
         try {
+            assertTpvPaymentMethodsSupported(venta?.pagos);
             const prepared = await prepareTpvSaleCatalog(venta?.lineas);
             const validated = validateSaleDraft({
                 lineas: prepared.lineas,
