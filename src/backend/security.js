@@ -555,6 +555,7 @@ export async function getMyCajeroContext(traceId = null) {
         actorId: memberId,
         operatorId: memberId,
         operatorResourceId: resourceId,
+        rolWebsite: role,
         operatorDisplayName: String(staff?.displayName || "").trim() || null,
         contactId: String(staff?.contactId || memberInfo.contactId || "").trim() || null,
     });
