@@ -183,13 +183,21 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
         condition: {
             filter: {
                 controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
-                expiresAt: { $lt: new Date("2026-11-26T00:00:00.000Z") },
+                expiresAt: { $lt: new Date("2026-11-24T00:00:00.000Z") },
             },
         },
     }));
     assert.throws(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
         condition: {
             filter: { controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN } },
+        },
+    }), /CMS_BULK_REMOVE_SCOPE_DENIED/);
+    assert.throws(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
+        condition: {
+            filter: {
+                controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
+                expiresAt: { $lt: new Date(Date.now() + 60_000) },
+            },
         },
     }), /CMS_BULK_REMOVE_SCOPE_DENIED/);
 
