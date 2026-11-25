@@ -114,20 +114,6 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
-    TPV_ORDER_CREATION_FAILED: Object.freeze({
-        message: "No se pudo crear el pedido.",
-        solution: "Consulta su estado antes de repetir la venta.",
-        recoverable: false,
-        retryable: false,
-        requiresReconciliation: true,
-    }),
-    TPV_PAYMENT_PROVIDER_NOT_CONFIGURED: Object.freeze({
-        message: "El proveedor de pago no está configurado.",
-        solution: "No se ha registrado ni confirmado la venta.",
-        recoverable: false,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
     TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: Object.freeze({
         message: "La escritura operativa del ledger TPV continúa deshabilitada.",
         solution: "No se ha creado ningún pedido; habilita el writer append-only aprobado y la idempotencia durable.",

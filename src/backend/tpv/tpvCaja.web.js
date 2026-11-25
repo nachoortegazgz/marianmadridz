@@ -259,7 +259,9 @@ export const registrarArqueoParcial = webMethod(
                     amountMinor: countedMinor,
                     paymentMethod: "EFECTIVO",
                     reason,
-                    status: "REGISTRADO_SINTETICO",
+                    // This path passed the operational-ledger gate; synthetic
+                    // markers are reserved for isolated QA fixtures.
+                    status: "REGISTRADO",
                     createdAt: new Date(),
                     payload: makeTpvPayload({
                         expectedCashMinor: expectedMinor,
