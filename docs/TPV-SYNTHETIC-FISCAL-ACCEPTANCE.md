@@ -101,6 +101,8 @@ No iniciar pruebas que escriban hasta resolver todos estos puntos:
 6. La identidad emisora no está designada inequívocamente; no se debe copiar el NIF de una fila TERCERO sin confirmar su función.
 7. La política de serie, tipos documentales, IVA y redondeo debe ser aprobada y fijada en backend.
 
+8. El runtime heredado tpvTestRuntime.web.js y sus módulos de repositorio/core siguen presentes. El controlador de la página ya no los importa, pero validation.js todavía consume funciones del core para validar payloads históricos y varias suites los cubren. No se eliminan en esta intervención: primero hay que separar la validación de compatibilidad histórica del runtime de escritura y demostrar que no quedan consumidores activos.
+
 Para cumplir “no modificar registros existentes”, la siguiente decisión arquitectónica es aislar la proyección de una nueva sesión dentro de la misma colección CajaActual sin tocar SINGLE_ITEM_ID, o limitar la aceptación online a inserciones append-only que no requieran actualizar esa proyección. No crear otra colección ni habilitar un bypass de la proyección.
 
 ## 8. Validación y criterios de aceptación
