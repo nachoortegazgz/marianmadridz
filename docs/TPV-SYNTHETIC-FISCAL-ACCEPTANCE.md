@@ -1,6 +1,6 @@
 # TPV — aceptación fiscal sintética sobre CMS actual
 
-**Estado:** diseño verificado; escrituras online bloqueadas hasta resolver la proyección de caja existente.  
+**Estado:** diseño verificado; pruebas online de desarrollo autorizadas bajo control de datos sintéticos y reset previo a producción.  
 **Sitio:** Marian Madrid Peluquería y Estética, estado Draft, Velo habilitado.  
 **Regla de ejecución:** todas las pruebas usan el mismo controlador, WebMethods, repositorio y colecciones CMS. No se crea otra colección, runtime de pruebas ni persistencia paralela.
 
@@ -8,16 +8,17 @@
 
 - Los datos de prueba deben ser inequívocamente sintéticos y no representar operaciones comerciales reales.
 - No llamar a AEAT, VeriFactu, Wix Payments, terminales físicos ni endpoints de reembolso.
-- No modificar, sobrescribir ni borrar ninguno de los registros que ya existen.
+- En la fase actual (sitio Draft/no publicado y sin actividad económica real declarada), se permite crear, actualizar y borrar registros de desarrollo para probar los flujos completos. La autorización no se extiende a producción.
+- Antes del despliegue y de iniciar actividad real se ejecutará un reset controlado de los datos de desarrollo, con inventario, backup/exportación de evidencia, criterios de selección y verificación posterior. No se limpiarán registros reales ni se hará un reset indiscriminado.
 - Las nuevas entradas de ledger, cuando se autoricen, serán append-only y se insertarán mediante el writer del backend, no mediante escrituras manuales desde la herramienta.
-- La proyección de caja es mutable por diseño, pero no se puede actualizar el registro existente de CajaActual bajo la instrucción actual. No se inicia una prueba que pueda tocarlo.
+- La proyección de caja es mutable por diseño. En desarrollo puede actualizarse el registro `CajaActual` existente para probar apertura, ventas, movimientos y cierres, siempre que se confirme que pertenece al conjunto de datos de desarrollo y que el sitio continúa sin actividad real. El estado previo debe quedar documentado para poder repetir y verificar las pruebas.
 - El modo de prueba no debe convertirse en un segundo runtime: la naturaleza sintética es metadato de los datos, no una rama de lógica ni un selector de entorno.
 
 ## 2. Inventario CMS del sitio verificado el 25-11-2026
 
-Consulta read-only de las colecciones CMS del sitio. El usuario declara que las colecciones están configuradas como Online. La API de colecciones devuelve collectionType=NATIVE. Además, Site Data Usage confirma que los registros actuales están en LIVE y que SANDBOX devuelve 0 elementos para las cuatro colecciones: MovimientosCaja LIVE=5/SANDBOX=0; CajaActual 1/0; ControlOperativo 71/0; HistoricoCierresZ 1/0. El sitio suma 227 elementos LIVE y 0 SANDBOX en la lectura realizada. La API de uso no expone el selector de activación Sandbox/Online por colección; el usuario declara que están configuradas como Online. Por tanto, la presencia de los datos en LIVE está verificada, pero el ajuste visual exacto del selector queda pendiente.
+Consulta read-only de las colecciones CMS del sitio. El usuario declara que las colecciones están configuradas como Online. La API de colecciones devuelve collectionType=NATIVE. Además, Site Data Usage confirma que los registros actuales están en LIVE y que SANDBOX devuelve 0 elementos para las cuatro colecciones: MovimientosCaja LIVE=5/SANDBOX=0; CajaActual 1/0; ControlOperativo 71/0; HistoricoCierresZ 1/0. El sitio suma 227 elementos LIVE y 0 SANDBOX en la lectura realizada. La API de uso no expone el selector de activación Sandbox/Online por colección; el usuario declara que están configuradas como Online. Por tanto, la presencia de los datos en LIVE está verificada, pero el ajuste visual exacto del selector queda pendiente. El usuario declara expresamente que el sitio está en desarrollo, no publicado, sin actividad real, que los registros actuales son datos de desarrollo y que se resetearán antes de iniciar actividad real.
 
-Según la documentación oficial de Wix, Preview utiliza Sandbox cuando esa base está habilitada; si no lo está, las colecciones nativas pueden operar sobre Live. Las colecciones de Wix Apps solo tienen versión Live, y los cambios en ellas desde Preview afectan al sitio publicado. No se harán escrituras de prueba desde Preview hasta confirmar la configuración de cada colección y el destino efectivo de la operación.
+Según la documentación oficial de Wix, Preview utiliza Sandbox cuando esa base está habilitada; si no lo está, las colecciones nativas pueden operar sobre Live. Las colecciones de Wix Apps solo tienen versión Live, y los cambios en ellas desde Preview afectan al sitio publicado. Las pruebas online pueden ejecutarse en el sitio Draft usando las colecciones Online actuales, conforme a la instrucción del usuario. Antes de cada batería se confirmará el destino efectivo de las operaciones para evitar afectar una futura instancia publicada; el estado Draft no debe confundirse con un entorno Sandbox aislado.
 
 | Colección | Tipo Wix | Registros observados | Estado relevante |
 |---|---|---:|---|
@@ -28,7 +29,7 @@ Según la documentación oficial de Wix, Preview utiliza Sandbox cuando esa base
 
 Los permisos devueltos para las cuatro colecciones son PRIVILEGED en lectura, inserción, actualización y eliminación. Esto no autoriza al frontend a escribir; la autorización seguirá en backend.
 
-El usuario declara que todos los registros TPV actuales y los que se generen en esta fase son datos sintéticos de prueba. Esa declaración se conserva como contexto de ejecución; no convierte automáticamente cada fila de ControlOperativo en un registro TPV ni acredita el origen de cada fila individual. No se modifica ningún registro para reclasificarlo.
+El usuario declara que todos los registros TPV actuales y los que se generen en esta fase son datos sintéticos de prueba. Esa declaración se conserva como contexto de ejecución; no convierte automáticamente cada fila de ControlOperativo en un registro TPV ni acredita el origen de cada fila individual. Los registros existentes pueden modificarse durante esta fase de desarrollo conforme a la instrucción del usuario. La clasificación de cada registro debe seguir basándose en su origen y contenido verificable; no se debe reclasificar como sintético un registro sin evidencia.
 
 En MovimientosCaja se encontraron tres filas con origen TPV_QA_DEVELOPMENT (dos ventas y una devolución) y otras dos filas antiguas con trazas TPV-SIM y TPV-FUNC. No se han tocado. Ninguna puede usarse como ancla de hash ni como factura original.
 
@@ -96,11 +97,11 @@ Los importes se expresan en céntimos enteros durante el cálculo y se serializa
 - previousRecordHash: hash del último registro válido de la cadena; el primer registro de una nueva cadena sintética necesita un ancla genesis explícita y documentada. Las cinco filas preexistentes no pueden ser el antecedente porque carecen de hash y secuencia.
 - hash: cubrir el contenido canónico completo del registro fiscal, las fechas, la secuencia, la huella anterior y la identificación del sistema. El SHA-256 interno actual sobre stableSerialize no acredita por sí solo conformidad VeriFactu; debe contrastarse con el algoritmo y serialización oficial de la Orden HAC/1177/2024 antes de cualquier uso real.
 
-## 7. Bloqueos de ejecución online
+## 7. Preparación y gates de ejecución online
 
-No iniciar pruebas que escriban hasta resolver todos estos puntos:
+La existencia de registros previos no bloquea por sí sola las pruebas de desarrollo: el usuario autoriza su modificación durante esta fase. Antes de ejecutar una batería de escritura, comprobar que el sitio sigue Draft/no publicado, que no hay actividad económica real y que los registros objetivo pertenecen al conjunto de desarrollo. Registrar el estado inicial y el resultado esperado para poder verificar cada flujo.
 
-1. CajaActual tiene una única proyección preexistente en estado ABIERTA y el repositorio la consulta por singletonKey; los flujos de apertura, venta y cierre pueden actualizarla.
+1. `CajaActual` tiene una única proyección preexistente en estado ABIERTA y el repositorio la consulta por `singletonKey`. En desarrollo se puede actualizar para validar el ciclo completo; incluir lectura previa, mutación controlada y read-back de apertura/venta/cierre.
 2. El repositorio TPV llama a assertTpvOperationalLedgerConfigured(), que falla cerrado; FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED está en false.
 3. registrarVenta valida catálogo e impuestos, pero devuelve TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED; no persiste.
 4. registrarDevolucion valida ahora el DTO y devuelve TPV_REFUND_PROVIDER_NOT_CONFIGURED; no persiste ni llama a un proveedor.
@@ -110,13 +111,19 @@ No iniciar pruebas que escriban hasta resolver todos estos puntos:
 
 8. El runtime heredado tpvTestRuntime.web.js y sus módulos de repositorio/core siguen presentes. El controlador de la página ya no los importa, pero validation.js todavía consume funciones del core para validar payloads históricos y varias suites los cubren. No se eliminan en esta intervención: primero hay que separar la validación de compatibilidad histórica del runtime de escritura y demostrar que no quedan consumidores activos.
 
-Para cumplir “no modificar registros existentes”, la siguiente decisión arquitectónica es aislar la proyección de una nueva sesión dentro de la misma colección CajaActual sin tocar SINGLE_ITEM_ID, o limitar la aceptación online a inserciones append-only que no requieran actualizar esa proyección. No crear otra colección ni habilitar un bypass de la proyección.
+No hace falta crear una proyección paralela ni evitar `SINGLE_ITEM_ID` por el mero hecho de existir. Debe probarse el flujo operativo real de la proyección existente. La inmutabilidad append-only sigue siendo obligatoria para los registros que constituyan el ledger fiscal/contable; no debe confundirse con las proyecciones operativas mutables como `CajaActual`.
+
+### Gate de transición a producción
+
+Antes de publicar o iniciar actividad real: detener escritores y automatizaciones TPV; exportar evidencia y snapshot del estado de desarrollo; identificar registros/colecciones y dependencias; ejecutar el reset aprobado únicamente sobre datos de desarrollo; verificar que los ledgers/proyecciones quedan en estado inicial coherente; regenerar series/secuencias/anchors de producción conforme al contrato fiscal; ejecutar pruebas de humo sin persistencia fiscal real; y documentar el resultado. No ejecutar un borrado global basado únicamente en nombres o etiquetas de QA.
 
 ## 8. Validación y criterios de aceptación
 
 - Unit tests: normalización DTO, cálculo fiscal en céntimos, tipos de factura, rectificaciones, numeración, hash, genesis, idempotencia.
 - Integration tests: mismo repositorio y WebMethods que el TPV; mocks únicamente para probar fallos, no un runtime alternativo.
-- Online tests: solo en el sitio Draft actual y con inserciones nuevas, identificadas como sintéticas. Ninguna actualización/borrado de registros existentes.
+- Online tests: en el sitio Draft actual, usando las colecciones Online y el flujo operativo real. Se permiten altas, actualizaciones y borrados de datos de desarrollo cuando el escenario lo requiera; deben quedar acotados y verificados.
+- Las pruebas de ledger fiscal deben conservar la semántica append-only dentro de cada ejecución: para corregir un evento fiscal simulado, crear su rectificación/compensación en vez de sobrescribir el propio evento. El reset global de datos de desarrollo es una operación de transición preproducción, no una corrección de un ledger fiscal activo.
+- Confirmar el reset preproducción y su read-back antes de habilitar actividad real.
 - Verificar después de cada inserción el read-back por transactionId, el hash, la secuencia y la relación con el anterior.
 - Cierre: recalcular desde movimientos, no desde valores enviados por el frontend.
 - AEAT/VeriFactu: cero llamadas externas; estado NO_ENVIADO_TEST.
