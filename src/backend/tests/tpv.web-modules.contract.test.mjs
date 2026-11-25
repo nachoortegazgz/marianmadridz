@@ -487,7 +487,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /TPV_TRANSACTION_COLLECTION_UNAVAILABLE/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
