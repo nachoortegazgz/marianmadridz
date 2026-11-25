@@ -76,6 +76,7 @@ Decisiones registradas (fecha y origen):
 | 2026-11-23 | Concurrencia, identidad, idempotencia y hooks; fiscal fail-closed; MovimientosCaja append-only | PR #587 `5983ddf`; #589 `b667bae`; #590 `63b55f1` |
 | 2026-11-24 | Retirada de nuevas escrituras TPV sintéticas y separación de históricos | PR #600 `7ffca8c`; PR #601 `46a7e01` |
 | 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
+| 2026-11-25 | Preparación de venta TPV autoritativa read-only integrada | PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`; CI offline PASS; Runtime pendiente |
 
 ## 5. RESTRICCIONES NORMATIVAS
 
@@ -90,7 +91,7 @@ Decisiones registradas (fecha y origen):
 
 | Área | Estado | Evidencia | Dependencia |
 |---|---|---|---|
-| TPV: escrituras sintéticas nuevas retiradas; históricos preservados | DONE | PR #600 merge `7ffca8c`; #601 merge `46a7e01` | — |
+| TPV: escrituras sintéticas nuevas retiradas; históricos preservados | DONE | PR #600/#601; PR #611 añade preparación de venta read-only, sin persistencia ni pagos | — |
 | Concurrencia/identidad/idempotencia/hooks en código | DONE en código; Runtime PENDING | PR #587 merge `5983ddf` | QA Preview |
 | Gate fiscal y append-only | DONE en código; datos legales PENDING | PR #589 `b667bae`; #590 `63b55f1` | Propietario + asesoría fiscal |
 | Arnés Runtime F1–F6 | DONE en código; ejecución PENDING | PR #603 merge `f42ef7f`; `tests/runtime/runtime-all.spec.js` | QA Preview |
@@ -102,7 +103,7 @@ Decisiones registradas (fecha y origen):
 | #520 Wix Automations | BLOCKED P0 | Último read-back: 7 PREINSTALLED ACTIVE; app laboral INACTIVE | Propietario + administrador Wix |
 | #523/#522 Bookings y canales de pago | PENDING P1 | Revalidación 2026-11-23 | QA + propietario; estado nativo y flags |
 | #210 Protección de main | PENDING P1 | Último estado documentado: sin ruleset/checks obligatorios | Administrador del repositorio |
-| #435 Persistencia TPV QA | PENDING P1 | PR #587 cobertura parcial; Runtime pendiente | QA Preview |
+| #435 TPV QA | PENDING P1 | PR #611 MERGED; preparación read-only + CI offline PASS; persistencia/idempotencia/aceptación Runtime pendientes | QA Preview |
 
 Detalle operativo P0/P1: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md). Estado Wix/CMS y automatizaciones basado en último read-back documentado 2026-11-23; no se presenta como lectura en tiempo real.
 
