@@ -1109,6 +1109,10 @@ body {
       toast("No se aceptan importes de prueba: verifica primero catálogo e impuestos.");
       return;
     }
+    if (state.payments.length >= 1) {
+      toast("El contrato V1 admite un único medio de pago. Quita el anterior para sustituirlo.");
+      return;
+    }
     const amount = num($("paymentAmount").value);
     if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
       toast("Introduce un importe válido con un máximo de dos decimales.");
