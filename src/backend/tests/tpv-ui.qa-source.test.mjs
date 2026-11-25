@@ -29,7 +29,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.doesNotMatch(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*,\s*countedCash/);
     assert.match(script, /call\("SALE_VALIDATE"/);
     assert.match(script, /state\.saleQuote\.totalVenta/);
-    assert.match(script, /saleReady !== true/);
+    assert.match(script, /testReady !== true/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
     assert.match(script, /addCatalogLine\(item, selected\.precioMinor, selected\.varianteId, selected\.concepto\)/);
@@ -89,7 +89,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(controller, /"SALE_VALIDATE"/);
     assert.match(controller, /async function dispatch\(message\)/);
     assert.doesNotMatch(controller, /async async function/);
-    assert.match(controller, /validarVentaBorrador/);
+    assert.match(controller, /validarVentaBorradorPrueba/);
     assert.match(controller, /quote\.saleReady !== true/);
     assert.match(controller, /TPV_SALE_NOT_READY: Object\.freeze/);
     assert.match(controller, /requiresReconciliation/);
