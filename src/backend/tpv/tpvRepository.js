@@ -348,6 +348,20 @@ function _isHistoricalTpvLedgerItem(item) {
             String(item.traceId || "") === legacyRunId);
     return (validCurrentCommon && (currentV2 || currentV1)) || (validCommon && legacy);
 }
+function _isCanonicalTpvLedgerItem(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" ? item.payloadFiscal : {};
+    return item.recordSource === TPV_LEDGER_SOURCE &&
+        Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(item.movementType) &&
+        Number.isSafeInteger(Number(item.sequenceNumber)) && Number(item.sequenceNumber) > 0 &&
+        envelope.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        envelope.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(envelope.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+        Boolean(String(envelope.sessionId || "").trim()) &&
+        /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
+        /^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""));
+}
 
 function _virtualRecord(item) {
     const envelope = item?.payloadFiscal && typeof item.payloadFiscal === "object"
