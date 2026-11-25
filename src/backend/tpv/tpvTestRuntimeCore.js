@@ -194,7 +194,10 @@ export function isValidTpvTestRunPayload(payload, { siteId, sessionId, actorId }
         payload.idempotencyIndex && typeof payload.idempotencyIndex === "object" &&
         !Array.isArray(payload.idempotencyIndex) &&
         Object.keys(payload.idempotencyIndex).length === payload.events.length &&
-        Number.isFinite(new Date(payload.activeUntil || 0).getTime()))) return false;
+        typeof payload.activeUntil === "string" &&
+        Number.isFinite(Date.parse(payload.activeUntil)) &&
+        Number.isFinite(Date.parse(payload.openedAt)) &&
+        Date.parse(payload.activeUntil) > Date.parse(payload.openedAt))) return false;
 
     let previousHash = TPV_TEST_GENESIS_HASH;
     for (let index = 0; index < payload.events.length; index += 1) {
