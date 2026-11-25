@@ -1,6 +1,6 @@
 # STATE-NOW — 2026-11-25
 
-**Main:** `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` · **PR #611:** MERGED · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
+**Main HEAD:** `d087d47316043f3109128de28fffbb41ea179314` (actualizaciones documentales posteriores) · **PR #611 merge:** `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 
