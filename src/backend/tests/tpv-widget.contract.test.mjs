@@ -61,7 +61,9 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     }
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
-    assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
+    assert.match(controller, /validarVentaBorrador/);
+    assert.match(controller, /quote\.saleReady !== true/);
+    assert.match(controller, /TPV_SALE_NOT_READY/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
         "the page controller must reject amounts outside safe integer minor units");
     assert.match(controller, /Consulta el estado y solicita conciliación antes de repetirla\.[\s\S]{0,80}false,[\s\S]{0,40}false,[\s\S]{0,40}true/,
@@ -79,7 +81,9 @@ test("TPV widget stays read-only until the canonical operational ledger is confi
     assert.match(html, /partialCount: "registerPartialCount"/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
-    assert.match(html, /paymentStatus === "NOT_PROCESSED"|gatewayCalled === false/);
+    assert.match(html, /state\.saleQuote\.saleReady !== true/);
+    assert.match(html, /result\?\.persisted !== true/);
+    assert.match(html, /call\("SALE_VALIDATE"/);
     assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);
     assert.match(html, /data\.type !== "MM_CONTEXT"/);
