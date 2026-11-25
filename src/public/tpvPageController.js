@@ -279,6 +279,7 @@ async function dispatch(message) {
 
         case "SESSION_OPEN":
             return abrirSesionCajaPrueba({
+                idempotencyKey: key,
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
