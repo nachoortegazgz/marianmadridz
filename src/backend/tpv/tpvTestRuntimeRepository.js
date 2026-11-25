@@ -18,7 +18,7 @@ import {
 
 const RUN_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const MAX_CAS_ATTEMPTS = 5;
-const RUN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RUN_TTL_MS = 24 * 60 * 60 * 1000;
 
 function duplicateKey(error) {
     const code = String(error?.code || error?.details?.applicationError?.code || error?.details?.code || "").toUpperCase();
