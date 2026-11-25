@@ -969,7 +969,7 @@ body {
       if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
       if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
-      if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario no conciliado.");
+      if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
       readiness.textContent = quote.saleReady === true
         ? "Venta preparada para validación final."
