@@ -55,6 +55,11 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
     assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);
+    assert.match(script, /response\.status === "PENDING"/);
+    assert.match(script, /error\.outcomeUnknown = true/);
+    assert.match(script, /error\.operationMayContinue = true/);
+    assert.match(script, /if \(result !== null && result !== undefined\) \{\s*sessionStorage\.removeItem\(storageKey\)/);
+
 });
 
 test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {
