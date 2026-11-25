@@ -65,6 +65,27 @@ function envelope(result) {
 }
 
 const ERROR_CATALOG = Object.freeze({
+    TPV_INVALID_INPUT: Object.freeze({
+        message: "La solicitud de venta no contiene datos válidos.",
+        solution: "Comprueba la sesión, la clave UUID v4 y las líneas de producto.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_IDEMPOTENCY_KEY: Object.freeze({
+        message: "La clave idempotente de la venta no es válida.",
+        solution: "Genera una nueva clave UUID v4 para la operación.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_PRODUCT_LINES_ONLY: Object.freeze({
+        message: "Este flujo de venta admite actualmente líneas de producto.",
+        solution: "No registres líneas de servicio en este flujo pendiente de implementación.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
     TPV_PAYMENT_PENDING: Object.freeze({
         message: "El pago está pendiente de confirmación.",
         solution: "Consulta el estado antes de repetir la operación.",
