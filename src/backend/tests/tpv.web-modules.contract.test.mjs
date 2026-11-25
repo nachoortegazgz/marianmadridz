@@ -227,6 +227,7 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /validationScope: "STRUCTURAL_ONLY"/);
     assert.match(sales, /UUID_V4/);
     assert.match(sales, /MovimientosCaja/);
     assert.doesNotMatch(sales, /TransaccionesTPV/);
