@@ -67,7 +67,7 @@ export const registrarMovimientoCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-cash-movement");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -209,7 +209,7 @@ export const exportarMovimientosCaja = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-movements-export");
         await requireCajero(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
         try {
             const sessionId = sessionIdFromInput(input);
@@ -263,7 +263,7 @@ export const exportarAuditoriaTPV = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-audit-export");
         await requireCajero(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("audit");
         const operator = await resolveTpvContext(traceId);
         try {
             const sessionId = sessionIdFromInput(input);
