@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+    assertTpvPaymentMethodsSupported,
     buildTpvTaxCalculationLines,
     mapTpvTaxCalculation,
     normalizeTpvSaleLineRequests,
@@ -63,6 +64,25 @@ test("rejects client-originated discounts until a backend discount contract exis
             { tipoLinea: "PRODUCTO", itemId: PRODUCT_ID, cantidad: 1, descuentoImporte: 2 },
         ]),
         { code: "TPV_DISCOUNT_NOT_CONFIGURED" },
+    );
+});
+
+test("rejects voucher and gift-card tenders until balance validation is integrated", () => {
+    assert.equal(assertTpvPaymentMethodsSupported([
+        { medioPago: "EFECTIVO", importe: 10 },
+        { medioPago: "TARJETA", importe: 5 },
+    ]), true);
+    assert.throws(
+        () => assertTpvPaymentMethodsSupported([
+            { medioPago: "TARJETA_REGALO", importe: 10 },
+        ]),
+        { code: "TPV_PAYMENT_METHOD_NOT_VERIFIED" },
+    );
+    assert.throws(
+        () => assertTpvPaymentMethodsSupported([
+            { medioPago: "BONO", importe: 10 },
+        ]),
+        { code: "TPV_PAYMENT_METHOD_NOT_VERIFIED" },
     );
 });
 
