@@ -1,7 +1,7 @@
 import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { productsV3 } from "@wix/stores";
-import { taxCalculation } from "@wix/ecom";
+import { taxCalculation, taxSettings } from "@wix/ecom";
 import { TPV_CATALOG_APP_IDS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listAuthorizedProfessionals } from "backend/tpv/tpvNativeDirectory";
 import {
@@ -13,6 +13,7 @@ import {
 const queryServicesElevated = auth.elevate(services.queryServices);
 const getProductElevated = auth.elevate(productsV3.getProduct);
 const calculateTaxElevated = auth.elevate(taxCalculation.calculateTax);
+const getTaxSettingsElevated = auth.elevate(taxSettings.getTaxSettings);
 
 function fail(code) {
     const error = new Error(code);
@@ -166,14 +167,22 @@ export async function prepareTpvSaleCatalog(inputLines) {
         return resolved;
     });
 
-    const taxLineItems = buildTpvTaxCalculationLines(catalogLines);
+    const taxSettingsResult = await getTaxSettingsElevated();
+    const taxIncludedInPrice = taxSettingsResult?.taxSettings?.taxIncludedInItemPrices;
+    if (typeof taxIncludedInPrice !== "boolean") fail("TPV_TAX_SETTINGS_UNAVAILABLE");
+
+    const taxLineItems = buildTpvTaxCalculationLines(catalogLines, taxIncludedInPrice);
     const taxResult = await calculateTaxElevated({
         currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
         addresses: [{ country: TPV_RUNTIME_POLICY.TAX_COUNTRY }],
         lineItems: taxLineItems,
     });
 
-    const prepared = mapTpvTaxCalculation({ catalogLines, taxResult });
+    const prepared = mapTpvTaxCalculation({
+        catalogLines,
+        taxResult,
+        taxIncludedInPrice,
+    });
     return Object.freeze({
         ...prepared,
         taxCurrency: String(taxResult.currency || ""),
