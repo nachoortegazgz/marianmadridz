@@ -185,7 +185,7 @@ test("MovimientosCaja rejects every historical TPV discriminator on new inserts"
         assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
             recordSource,
             movementType: "COBRO",
-        }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" }, recordSource);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, recordSource);
     }
 });
 
