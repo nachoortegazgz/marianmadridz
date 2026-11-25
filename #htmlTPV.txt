@@ -1075,7 +1075,7 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
       toast("No se aceptan pagos: la venta todavía no está autorizada.");
       return;
     }
@@ -1120,7 +1120,7 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
       toast("No se puede cobrar: la venta no ha superado los controles de preparación.");
       return;
     }
