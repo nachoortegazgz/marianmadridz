@@ -334,6 +334,7 @@ async function dispatch(message) {
                         ? { varianteId: optionalString(line.varianteId, 160) }
                         : {}),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
+                    profesionalId: optionalString(line.profesionalId, 160),
                 };
             });
             const pagos = (Array.isArray(payload.payments) ? payload.payments : []).map((payment) => {
