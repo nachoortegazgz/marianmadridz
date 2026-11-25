@@ -393,7 +393,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
             const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the server");
             const access = block.search(repositoryAccess);
             assert.ok(access < 0 || authorization < access, methodName + " must authorize before repository access");
@@ -461,7 +461,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const methodName of policy.guarded || []) {
             const block = getWebMethodSource(source, methodName);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the backend");
             const firstWrite = block.search(writeOperations);
             assert.ok(firstWrite < 0 || authorization < firstWrite, methodName + " must authorize before writes");
