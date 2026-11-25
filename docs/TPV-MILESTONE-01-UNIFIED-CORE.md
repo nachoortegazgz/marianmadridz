@@ -5,7 +5,7 @@
 
 ## Objetivo
 
-Entregar un único TPV desde la interfaz hasta Wix CMS: un solo controlador, contratos de dominio, WebMethods, motor de validación y repositorio. El mismo código procesa cualquier operación sin ramas que clasifiquen datos por entorno o carácter de prueba. Las pruebas automatizadas usan fixtures y dobles de infraestructura sobre la misma lógica; no existe un runtime de negocio alternativo.
+Entregar un único TPV desde la interfaz hasta Wix CMS: un solo controlador, contratos de dominio, WebMethods, motor de validación y repositorio. El mismo código procesa cualquier operación. La naturaleza de cada registro se marca en backend por timestamp del servidor frente a productionActivationAt; esta marca no selecciona un runtime ni altera el flujo. Las pruebas automatizadas usan fixtures y dobles de infraestructura sobre la misma lógica; no existe un runtime de negocio alternativo.
 
 El hito termina con código completo y probado offline, writer canónico implementado pero cerrado por los gates externos que falten, controlador conectado al flujo común y runtime heredado retirado. No implica activar cobros ni facturación en el sitio principal publicado.
 
@@ -22,7 +22,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 9. `tpvWriteV1Contract.js` admite una tasa fiscal verificable y un solo medio de pago de `EFECTIVO` o `TARJETA`; Bizum no está admitido por el contrato V1. El importe aplicado debe cuadrar con el total recalculado por Wix.
 10. `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED` sigue en `false`; la consulta CMS del 2026-11-25 no encontró el singleton `CONFIG_SISTEMA_FISCAL`. La serie, numeración y configuración fiscal no se pueden inventar desde código.
 11. La lectura Wix de catálogo/inventario documentada el 2026-11-25 encontró 30 registros con cantidad rastreada en ubicación virtual online y ninguno en la ubicación física del salón. El precio final mostrado al consumidor no está validado.
-12. El sitio Wix principal está Published, Velo habilitado, Editor, moneda EUR y zona `Europe/Madrid`; Site Context consultado el 2026-11-25. No se ha acreditado sincronización Git-Wix ni ejecución de Preview/Runtime.
+12. El último Site Context read-back (2026-11-25 17:53 CET) identifica el sitio como Draft, Velo habilitado, Editor, moneda EUR y zona Europe/Madrid. No se ha acreditado sincronización Git-Wix ni ejecución de Preview/Runtime.
 
 ## Tareas obligatorias, en orden
 
@@ -55,7 +55,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 - Alinear `MovimientosCaja_beforeInsert`, `dataAccessPolicy.js` y validadores con el único contrato físico.
 - `MovimientosCaja` append-only para todas las filas; update/remove siempre rechazados; rectificación mediante nuevo registro trazable.
 - Retirar excepciones de mutación o clasificación del runtime anterior después de inventariar y cerrar el tratamiento de registros existentes.
-- No escribir marcadores de entorno o procedencia de prueba. Se permite `sourceType: TPV` neutral si forma parte del contrato canónico; nunca debe seleccionar un modo.
+- Persistir una marca de naturaleza del registro derivada por backend: recordTimestamp UTC < productionActivationAt UTC = SYNTHETIC; recordTimestamp UTC >= productionActivationAt UTC = REAL. No aceptar la marca del cliente ni usarla para seleccionar lógica alternativa.
 - Mantener fail-closed fiscal y autorización backend.
 
 ### 5. Migrar pruebas y retirar runtime duplicado
@@ -69,13 +69,13 @@ El hito termina con código completo y probado offline, writer canónico impleme
 - Consultar `ControlOperativo` y `MovimientosCaja` de forma consistente para inventariar registros y locks del runtime anterior.
 - Entregar IDs, tipos, cantidades y referencias antes de cualquier borrado.
 - Distinguir datos técnicos de prueba de movimientos fiscales/contables reales. No tocar registros que no estén probados como datos de prueba.
-- Si se mantiene la decisión de eliminar los datos de prueba, exportar evidencia y obtener confirmación del inventario exacto antes de borrarlos. No truncar colecciones ni borrar ledgers fiscales.
+- Durante desarrollo, los registros sintéticos pueden modificarse/resetearse para repetir pruebas. Antes de productionActivationAt, inventariar y exportar evidencia, verificar que todo el conjunto es sintético y ejecutar reset controlado de los datos y proyecciones de desarrollo. Tras el corte, no modificar ni borrar registros reales; mantener append-only y rectificar con nuevos registros.
 - Verificar y documentar el resultado después de la limpieza.
 
 ### 7. Validación offline y Wix
 - Ejecutar `npm test`, `npm run test:layer1`, `npm run test:layer2`, `npm run lint` y verificaciones SDK Wix del proyecto.
 - CI completa sobre SHA exacto: cero fallos, lint y secret scan PASS.
-- Preparar un sitio Wix independiente de validación con Velo y apps/colecciones equivalentes. No escribir datos de prueba en el sitio principal publicado ni asumir que Preview aísla automáticamente CMS o apps nativas.
+- Ejecutar las pruebas online autorizadas por el propietario en el sitio y colecciones actuales, usando el mismo código y la misma ruta. Verificar antes el destino efectivo de cada colección (Online/Sandbox); no asumir que Preview aísla CMS o apps nativas. El reset sintético se realiza antes del inicio de actividad real.
 - Probar catálogo, sesión, venta, pago manual confirmado, caja, devolución, arqueos, X/Z, auditoría, idempotencia, concurrencia, permisos, hooks y recuperación.
 - Usar el mismo commit y WebMethods; la separación se realiza por sitio/datos de validación, no por ramas de negocio.
 - Validar el HTML Component real, Epson, cajón y lector si forman parte del alcance; los mocks no acreditan hardware.
