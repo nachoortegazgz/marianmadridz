@@ -107,9 +107,9 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
-    TPV_TRANSACTION_COLLECTION_UNAVAILABLE: Object.freeze({
-        message: "No existe el destino CMS requerido para registrar la venta.",
-        solution: "No se ha creado ningún pedido; habilita primero la persistencia transaccional aprobada.",
+    TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: Object.freeze({
+        message: "La escritura operativa del ledger TPV continúa deshabilitada.",
+        solution: "No se ha creado ningún pedido; habilita el writer append-only aprobado y la idempotencia durable.",
         recoverable: false,
         retryable: false,
         requiresReconciliation: false,
@@ -305,10 +305,18 @@ async function dispatch(message) {
             }
             const sessionId = optionalString(payload.sessionId, 160);
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+            if (lineas.some((line) => line.tipoLinea !== "PRODUCTO")) {
+                throw new Error("TPV_PRODUCT_LINES_ONLY");
+            }
             return registrarVenta({
-                ...salePayload,
                 sessionId,
                 idempotencyKey: key,
+                lineas: lineas.map((line) => ({
+                    productId: line.itemId,
+                    ...(line.varianteId ? { variantId: line.varianteId } : {}),
+                    cantidad: line.cantidad,
+                })),
+                ...(pagos.length === 1 ? { medioPago: pagos[0].medioPago } : {}),
             });
         }
 
