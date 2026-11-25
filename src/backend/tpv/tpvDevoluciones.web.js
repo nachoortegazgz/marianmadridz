@@ -13,8 +13,10 @@ function validateRefundRequest(input) {
     const sessionId = String(input.sessionId || "").trim();
     const reason = String(input.reason || "").trim();
     const payments = Array.isArray(input.payments) ? input.payments : [];
+    const idempotencyKey = String(input.idempotencyKey || "").trim();
     if (!saleId || saleId.length > 160 || !sessionId || sessionId.length > 160 ||
-        reason.length < 3 || reason.length > 500 || payments.length !== 1) {
+        reason.length < 3 || reason.length > 500 || payments.length !== 1 ||
+        !idempotencyKey || idempotencyKey.length > 120) {
         throw new Error("TPV_REFUND_INPUT_INVALID");
     }
     const payment = payments[0];
@@ -34,7 +36,7 @@ function validateRefundRequest(input) {
         reason,
         paymentMethod,
         amount: amountMinor / 100,
-        idempotencyKey: String(input.idempotencyKey || "").trim().slice(0, 120),
+        idempotencyKey,
     };
 }
 
@@ -62,7 +64,7 @@ export const registrarDevolucion = webMethod(
         }
         return tpvError(
             "TPV_REFUND_PROVIDER_NOT_CONFIGURED",
-            "La solicitud de devolución se ha validado, pero no se ha registrado ni ejecutado.",
+            "La estructura de la solicitud de devolución se ha validado, pero no se ha registrado ni ejecutado.",
             [
                 "El proveedor de pagos y la conciliación de devoluciones no están configurados.",
                 "No se ha modificado el ledger, no se ha emitido una factura rectificativa y no se ha ejecutado un reembolso real.",
