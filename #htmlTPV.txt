@@ -986,13 +986,15 @@ body {
   }
 
   function renderPaymentSummary() {
-    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const totalMinor = state.saleQuote && Number.isFinite(Number(state.saleQuote.totalVenta))
+      ? Math.round(Number(state.saleQuote.totalVenta) * 100)
+      : null;
     const appliedMinor = state.payments.reduce((sum, payment) =>
       sum + payment.amountMinor - payment.changeMinor, 0);
-    const pendingMinor = Math.max(0, totalMinor - appliedMinor);
+    const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
     $("applied").textContent = money(appliedMinor / 100);
-    $("pending").textContent = money(pendingMinor / 100);
+    $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
     $("change").textContent = money(changeMinor / 100);
 
     const totals = paymentTotals();
@@ -1031,7 +1033,11 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
+        if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+          toast("No hay un total autorizado para cobro.");
+          return;
+        }
+        const total = Number(state.saleQuote.totalVenta);
         $("paymentAmount").value = total.toFixed(2);
       } else {
         $("paymentAmount").value = val;
@@ -1040,6 +1046,10 @@ body {
   });
 
   $("addPayment").onclick = () => {
+    if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+      toast("No se aceptan pagos: la venta todavía no está autorizada.");
+      return;
+    }
     const amount = num($("paymentAmount").value);
     if (!Number.isFinite(amount) || amount <= 0 || Math.abs(amount * 100 - Math.round(amount * 100)) > 1e-7) {
       toast("Introduce un importe válido con un máximo de dos decimales.");
@@ -1050,7 +1060,7 @@ body {
       return;
     }
     const amountMinor = Math.round(amount * 100);
-    const totalMinor = Math.round(state.items.reduce((sum, item) => sum + item.price * item.qty, 0) * 100);
+    const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
     const appliedMinor = state.payments.reduce((sum, payment) =>
       sum + payment.amountMinor - payment.changeMinor, 0);
     const remainingMinor = totalMinor - appliedMinor;
@@ -1077,55 +1087,42 @@ body {
 
   /* ---------- Guardar venta ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
-    
     if (!state.items.length) {
       toast("El ticket está vacío.");
       return;
     }
-    const total = state.items.reduce((s, it) => s + it.price * it.qty, 0);
-    const totalMinor = Math.round(total * 100);
-    const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
-    if (appliedMinor !== totalMinor) {
-      toast("El pago no cubre el total exacto.");
+    if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+      toast("No se puede cobrar: la venta no ha superado los controles de preparación.");
       return;
     }
-    try {
-      const result = await keyedAction("SALE", "SALE_REGISTER", {
-        sessionId: state.session?.sessionId,
-        profesionalId: state.profesionalId,
-        lineItems: state.items.map((item) => ({
-          tipoLinea: item.tipoLinea,
-          itemId: item.id,
-          varianteId: item.varianteId,
-          concepto: item.name,
-          cantidad: item.qty,
-          precioUnitario: item.price,
-          descuentoImporte: 0,
-          impuestosImporte: 0,
-          profesionalId: state.profesionalId,
-          stockAfectado: false,
-        })),
-        payments: state.payments.map((payment) => ({
-          method: payment.method,
-          amount: payment.amountMinor / 100,
-          change: payment.changeMinor / 100,
-        })),
-        paymentBreakdown: paymentTotals(),
-        customerIdentityId: state.customerIdentityId,
-        subtotal: total,
-        tax: 0,
-        total,
-      }, "SALE_REGISTER_RES");
-      state.lastSale = result;
-      toast(result?.paymentStatus === "NOT_PROCESSED" || result?.gatewayCalled === false
-        ? "Venta registrada en TPV interno; el pago no se ha enviado a una pasarela externa."
-        : "Venta registrada.");
-      state.items = [];
-      state.payments = [];
-      renderTicket();
-    } catch (e) {
-      error(e.message);
+    const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
+    const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
+    if (appliedMinor !== totalMinor) {
+      toast("El pago no cubre el total fiscal exacto.");
+      return;
     }
+    const result = await keyedAction("SALE", "SALE_REGISTER", {
+      sessionId: state.session?.sessionId,
+      lineItems: state.items.map((item) => ({
+        tipoLinea: item.tipoLinea,
+        itemId: item.id,
+        varianteId: item.varianteId,
+        cantidad: item.qty,
+        profesionalId: state.profesionalId,
+      })),
+      payments: state.payments.map((payment) => ({
+        method: payment.method,
+        amount: payment.amountMinor / 100,
+        change: payment.changeMinor / 100,
+      })),
+    }, "SALE_REGISTER_RES");
+    if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
+    state.lastSale = result;
+    toast("Venta registrada.");
+    state.items = [];
+    state.payments = [];
+    state.saleQuote = null;
+    renderTicket();
   });
 
   /* ---------- Apertura de caja ---------- */
