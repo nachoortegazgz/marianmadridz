@@ -6,7 +6,7 @@ Revisión: 2026-11-25 · Base de código TPV: `PR #612 merge 239fd8207d228bde56e
 
 | Cliente | Negocio | Stack | Repo | Sitio Wix ID | Entorno actual | Última revisión |
 |---|---|---|---|---|---|---|
-| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Published; Site Context read-back 2026-11-25 | 2026-11-25 |
+| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Draft; Site Context read-back 2026-11-25 17:53 CET | 2026-11-25 |
 
 Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md) y [directriz anterior](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). La clasificación histórica de datos no gobierna el flujo TPV vigente.
 
