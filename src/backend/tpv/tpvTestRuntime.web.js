@@ -223,7 +223,6 @@ export const registrarVentaPrueba = webMethod(
         try {
             const actor = await trustedAdmin(traceId);
             const run = await getTpvTestRun(input.sessionId, actor.actorId);
-            if (run.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
             const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
             const lineas = Array.isArray(input.lineas) ? input.lineas : [];
             const pagos = Array.isArray(input.pagos) ? input.pagos : [];
@@ -382,17 +381,20 @@ export const registrarDevolucionPrueba = webMethod(
             for (const payment of saleEvent.data.payments || []) {
                 originalByMethod[payment.method] = (originalByMethod[payment.method] || 0) + Number(payment.amountAppliedMinor || 0);
             }
-            const priorByMethod = {};
-            for (const event of run.payload.events.filter((entry) =>
-                entry.eventType === "REFUND_RECORDED" && entry.data?.saleId === saleId
-            )) {
-                for (const payment of event.data.payments || []) {
-                    priorByMethod[payment.method] = (priorByMethod[payment.method] || 0) + Number(payment.amountMinor || 0);
+            const existingClaim = run.payload.idempotencyIndex?.[normalizeIdempotencyKey(input.idempotencyKey)];
+            if (!existingClaim) {
+                const priorByMethod = {};
+                for (const event of run.payload.events.filter((entry) =>
+                    entry.eventType === "REFUND_RECORDED" && entry.data?.saleId === saleId
+                )) {
+                    for (const payment of event.data.payments || []) {
+                        priorByMethod[payment.method] = (priorByMethod[payment.method] || 0) + Number(payment.amountMinor || 0);
+                    }
                 }
-            }
-            for (const payment of payments) {
-                if ((priorByMethod[payment.method] || 0) + payment.amountMinor > (originalByMethod[payment.method] || 0)) {
-                    throw new Error("TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT");
+                for (const payment of payments) {
+                    if ((priorByMethod[payment.method] || 0) + payment.amountMinor > (originalByMethod[payment.method] || 0)) {
+                        throw new Error("TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT");
+                    }
                 }
             }
             const totalMinor = payments.reduce((sum, payment) => sum + payment.amountMinor, 0);
