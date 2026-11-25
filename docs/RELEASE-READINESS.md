@@ -51,7 +51,7 @@ PR #612 incorpora cambios de código sobre el árbol probado `632c85edbd765a291a
 - Backend resuelve productos/variantes Stores Catalog V3 y servicios Bookings de precio fijo; no acepta precios/totales del navegador.
 - Wix `taxSettings.getTaxSettings` y `taxCalculation.calculateTax` calculan impuestos en backend. Configuración leída: `taxIncludedInItemPrices=false`.
 - Datos de solo lectura: 24 productos, 70 servicios, 30 registros de inventario con cantidad rastreada en ubicación virtual online; 0 registros en ubicación física del salón.
-- PR #612 formaliza la preescritura V1: una tasa fiscal verificable, un solo medio físico (EFECTIVO/TARJETA) y total aplicado igual al total Wix. `registrarVenta()` recalcula catálogo e impuestos en backend.
+- PR #612 formaliza la preescritura V1: una tasa fiscal verificable, un solo medio físico (EFECTIVO/TARJETA) y total aplicado igual al total Wix. Bizum, split tender, bonos y tarjetas regalo no están admitidos por V1. `registrarVenta()` recalcula catálogo e impuestos en backend.
 - La preparación y el contrato V1 no escriben ledger, stock, pedidos ni pagos. `saleReady=false`, `paymentVerified=false`, `persisted=false`.
 - El precio final mostrado al consumidor no está verificado; no autorizar venta mientras no se garantice precio completo con impuestos incluidos conforme al RDL 1/2007.
 - No se ha validado hardware EPSON/cajón ni confirmación manual del lector bancario externo.
