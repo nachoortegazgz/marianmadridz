@@ -76,7 +76,9 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(html, /const sequence = \+\+state\.quoteSequence/);
     assert.match(html, /if \(sequence !== state\.quoteSequence\) return/);
     assert.match(html, /paymentReady = state\.saleQuote\?\.saleReady === true/);
-    assert.match(html, /document\.querySelectorAll\("\[data-cash\], \[data-method\]"\)/);
+    assert.match(html, /document\.querySelectorAll\("\[data-cash\]"\)/);
+    assert.match(html, /document\.querySelectorAll\("\[data-method\]"\)/);
+    assert.match(html, /unsupportedTender/);
 
     const controller = await read("src/public/tpvPageController.js");
     assert.match(controller, /"SALE_VALIDATE"/);
