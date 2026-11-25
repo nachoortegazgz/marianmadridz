@@ -156,7 +156,7 @@ test("removed CMS collections are absent from the canonical registry", () => {
     assert.equal(C.TPV_IDENTITIES, undefined);
     assert.equal(C.PAQUETES_GESTORIA, undefined);
 });
-test("MovimientosCaja rejects all new TPV ledger writes and remains append-only", () => {
+test("MovimientosCaja permits current physical TPV events but remains append-only", () => {
     const item = {
         _id: "TPV_TEST_ROW",
         recordSource: "TPV_LEDGER",
@@ -165,9 +165,7 @@ test("MovimientosCaja rejects all new TPV ledger writes and remains append-only"
         sequenceNumber: 1,
         hash: "a".repeat(64),
     };
-    assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item), {
-        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
-    });
+    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
         code: "LEDGER_APPEND_ONLY",
     });
@@ -181,7 +179,7 @@ test("MovimientosCaja rejects every historical TPV discriminator on new inserts"
         assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
             recordSource: "SYNTHETIC",
             movementType,
-        }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" }, movementType);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, movementType);
     }
     for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
         assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
