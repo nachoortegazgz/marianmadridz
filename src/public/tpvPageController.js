@@ -4,13 +4,13 @@
  * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
+import { obtenerEstadoCajaPrueba, abrirSesionCajaPrueba, registrarArqueoParcialPrueba } from "backend/tpv/tpvTestRuntime.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
-import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
-import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
-import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
-import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
+import { validarVentaBorradorPrueba, registrarVentaPrueba } from "backend/tpv/tpvTestRuntime.web";
+import { registrarMovimientoCajaPrueba, exportarMovimientosCajaPrueba, exportarAuditoriaTPVPrueba } from "backend/tpv/tpvTestRuntime.web";
+import { obtenerAuditoriaTPVPrueba } from "backend/tpv/tpvTestRuntime.web";
+import { registrarDevolucionPrueba } from "backend/tpv/tpvTestRuntime.web";
+import { generarControlXPrueba, generarCierreZPrueba, obtenerResumenCajaPrueba } from "backend/tpv/tpvTestRuntime.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 // UI-only capability hints; backend WebMethods enforce authorization independently.
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
@@ -275,10 +275,10 @@ async function dispatch(message) {
 
     switch (message.type) {
         case "CASHIER_STATE":
-            return obtenerEstadoCaja();
+            return obtenerEstadoCajaPrueba();
 
         case "SESSION_OPEN":
-            return abrirSesionCaja({
+            return abrirSesionCajaPrueba({
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
@@ -347,14 +347,14 @@ async function dispatch(message) {
                 };
             });
 
-            const validation = await validarVentaBorrador({ lineas, pagos });
+            const validation = await validarVentaBorradorPrueba({ lineas, pagos });
             if (validation?.status === "ERROR") return validation;
             const quote = validation?.data;
-            if (!quote || quote.saleReady !== true || Number(quote.importePendiente || 0) > 0) {
+            if (!quote || quote.testReady !== true || Number(quote.importePendiente || 0) > 0) {
                 return errorEnvelope({ code: "TPV_SALE_NOT_READY" });
             }
 
-            return registrarVenta({
+            return registrarVentaPrueba({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
@@ -394,11 +394,11 @@ async function dispatch(message) {
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
-            return validarVentaBorrador({ lineas, pagos });
+            return validarVentaBorradorPrueba({ lineas, pagos });
         }
 
         case "CASH_MOVEMENT":
-            return registrarMovimientoCaja({
+            return registrarMovimientoCajaPrueba({
                 idempotencyKey: key,
                 sessionId: optionalString(payload.sessionId, 160) || "",
                 movementType: (optionalString(payload.movementType, 40) || "").toUpperCase(),
@@ -409,7 +409,7 @@ async function dispatch(message) {
             });
 
         case "PARTIAL_CASH_COUNT":
-            return registrarArqueoParcial({
+            return registrarArqueoParcialPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
@@ -418,7 +418,7 @@ async function dispatch(message) {
 
         case "REFUND": {
             const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            return registrarDevolucion({
+            return registrarDevolucionPrueba({
                 idempotencyKey: key,
                 sessionId: optionalString(payload.sessionId) || "",
                 saleId: optionalString(payload.saleId) || "",
@@ -432,13 +432,13 @@ async function dispatch(message) {
         }
 
         case "TICKET_X":
-            return generarControlX({
+            return generarControlXPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "TICKET_Z":
-            return generarCierreZ({
+            return generarCierreZPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
@@ -446,22 +446,22 @@ async function dispatch(message) {
             });
 
         case "SESSION_SUMMARY":
-            return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId) || "" });
+            return obtenerResumenCajaPrueba({ sessionId: optionalString(payload.sessionId) || "" });
 
         case "AUDIT_LIST":
-            return obtenerAuditoriaTPV({
+            return obtenerAuditoriaTPVPrueba({
                 sessionId: optionalString(payload.sessionId) || undefined,
                 limit: boundedInteger(payload.limit ?? 50, "AUDIT_LIMIT", 1, 100),
             });
 
         case "CASH_MOVEMENTS_EXPORT":
-            return exportarMovimientosCaja({
+            return exportarMovimientosCajaPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "AUDIT_EXPORT":
-            return exportarAuditoriaTPV({
+            return exportarAuditoriaTPVPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
@@ -512,9 +512,14 @@ export function initializeTpvPage(widget) {
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
                     capabilities,
                     permissionsStatus: permissions.status,
-                    operationalWritesAvailable: permissionsReady &&
-                        permissions.data?.operationalWritesAvailable === true,
-                    operationalWritesUnavailableReason: permissionsReady
+                    operationalWritesAvailable: false,
+                    testRuntimeAvailable: permissionsReady &&
+                        permissions.data?.testRuntimeAvailable === true,
+                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
+                    testRuntimeMode: permissionsReady ? (permissions.data?.testRuntimeMode || "UNAVAILABLE") : "UNAVAILABLE",
+                    testRuntimeUnavailableReason: permissionsReady && permissions.data?.testRuntimeAvailable !== true
+                        ? "TPV_TEST_RUNTIME_ADMIN_ONLY" : null,
+                    legacyOperationalWritesUnavailableReason: permissionsReady
                         ? (permissions.data?.operationalWritesUnavailableReason || "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED")
                         : (permissions.error?.code || "TPV_PERMISSIONS_UNAVAILABLE"),
                 },
