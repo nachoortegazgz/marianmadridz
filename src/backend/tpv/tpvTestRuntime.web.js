@@ -210,6 +210,15 @@ export const abrirSesionCajaPrueba = webMethod(
             } catch (error) {
                 if (String(error?.message || error?.code) !== "TPV_TEST_RUN_NOT_FOUND") throw error;
             }
+            if (priorSession?.status === "OPEN" &&
+                new Date(priorSession.payload.activeUntil || 0).getTime() <= Date.now()) {
+                await releaseTpvTestSessionLock({
+                    actorId: actor.actorId,
+                    sessionId,
+                    traceId,
+                });
+                priorSession = null;
+            }
             if (priorSession?.status === "CLOSED") {
                 const replay = await createTpvTestRun({
                     sessionId,
