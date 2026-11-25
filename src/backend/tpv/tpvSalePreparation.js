@@ -142,15 +142,12 @@ export async function prepareTpvSaleCatalog(inputLines) {
         serviceRequests.length > 0 ? resolveServices(serviceRequests) : Promise.resolve([]),
     ]);
 
-    const resolvedByKey = new Map();
-    for (const line of [...products, ...serviceLines]) {
-        const key = line.tipoLinea + ":" + line.itemId + ":" + String(line.varianteId || "");
-        resolvedByKey.set(key, line);
-    }
-
+    let productIndex = 0;
+    let serviceIndex = 0;
     const catalogLines = requests.map((request) => {
-        const key = request.tipoLinea + ":" + request.itemId + ":" + String(request.varianteId || "");
-        const resolved = resolvedByKey.get(key);
+        const resolved = request.tipoLinea === "PRODUCTO"
+            ? products[productIndex++]
+            : serviceLines[serviceIndex++];
         if (!resolved) fail("TPV_CATALOG_ITEM_NOT_FOUND");
         return resolved;
     });
