@@ -6,7 +6,7 @@
 
 ## Decisión arquitectónica nueva — TPV de flujo único (2026-11-25)
 
-El propietario establece un único flujo de código para operaciones con cualquier dato. No se crearán ni conservarán ramas de negocio, runtimes, flags, enums o contratos que separen Sandbox/Live, sintético/real o Preview/Published. La decisión queda desarrollada en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y prevalece sobre directrices históricas incompatibles.
+El propietario establece un único flujo de código para operaciones con cualquier dato. No se crearán ni conservarán ramas de negocio, runtimes, flags, enums o contratos que separen operaciones por entorno, procedencia de prueba o estado de publicación. La decisión queda desarrollada en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y prevalece sobre directrices históricas incompatibles.
 
 **Código aún no unificado:** `tpvPageController.js` importa `tpvTestRuntime.web.js`; `tpvPermisos.web.js` expone capacidades de ese runtime; `internalConfig.js`, `validation.js`, `data.js`, `dataAccessPolicy.js`, `tpvUtils.js` y `tpvRepository.js` conservan clasificadores/compatibilidad histórica. `insertTpvEvent()` está bloqueado y `_buildTpvLedgerItem()` no completa los campos fiscales físicos de `MovimientosCaja`. El runtime separado persiste en `ControlOperativo`. No se han eliminado módulos ni abierto escrituras.
 
