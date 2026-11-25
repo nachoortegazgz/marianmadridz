@@ -11,9 +11,7 @@
 | Evidencia, auditorías y decisiones históricas | [archive/2026-11/](archive/2026-11/) |
 | Fixtures/snapshots QA (datos de prueba, no estado vivo) | [qa/](qa/) |
 | Criterio vinculante del flujo TPV único | [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) |
-| Preparación y checklist de pruebas online TPV | [TPV-ONLINE-TEST-READINESS.md](TPV-ONLINE-TEST-READINESS.md) |
-| Contrato fiscal sintético y matriz de escenarios TPV | [TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md](TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md) |
-| Próximo hito técnico y tareas de implementación TPV | [TPV-MILESTONE-01-UNIFIED-CORE.md](TPV-MILESTONE-01-UNIFIED-CORE.md) |
+| Esquema fiscal sintético, pruebas online de desarrollo y reset previo a producción | [TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md](TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md) |
 | Contratos y estado TPV backend | [src/backend/tpv/README.md](../src/backend/tpv/README.md) |
 
 ## Reglas de mantenimiento

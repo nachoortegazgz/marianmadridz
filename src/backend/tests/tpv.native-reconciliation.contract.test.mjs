@@ -37,10 +37,10 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     // The UI selects the MapaStaff/Wix Bookings resourceId. The backend actor
     // context is independently resolved from the authenticated Wix member.
     assert.match(html, /state\.profesionalId = person \? person\.profesionalId : null/);
-    assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
+    assert.match(controller, /profesionalId: optionalString\(line\.profesionalId, 160\)/);
     const caja = await source("tpv/tpvCaja.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(controller, /obtenerEstadoCajaPrueba,[\s\S]*?registrarArqueoParcialPrueba,[\s\S]*?from "backend\/tpv\/tpvTestRuntime\.web"/);
+    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial \} from "backend\/tpv\/tpvCaja\.web"/);
     assert.match(caja, /export const obtenerEstadoCaja = webMethod/);
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
@@ -48,7 +48,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /payload: makeTpvPayload\(\{ traceId, replayed, sessionId \}\)/);
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
-    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
+    assert.match(controller, /const pagos = \(Array\.isArray\(payload\.payments\) \? payload\.payments : \[\]\)\.map/);
     assert.match(controller, /lineas,\s*pagos,/);
     assert.match(sales, /prepareTpvSaleCatalog\(venta\?\.lineas\)/);
     assert.match(sales, /validateSaleDraft\(\{[\s\S]*?lineas: prepared\.lineas/);
@@ -70,14 +70,14 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
-    assert.match(permissions, /createSale: testRuntimeAvailable/);
-    assert.match(permissions, /openSession: testRuntimeAvailable/);
-    assert.match(permissions, /registerCashMovement: testRuntimeAvailable/);
-    assert.match(permissions, /requestRefund: testRuntimeAvailable/);
-    assert.match(permissions, /closeSession: testRuntimeAvailable/);
-    assert.match(permissions, /issueTicketX: testRuntimeAvailable/);
-    assert.match(permissions, /issueTicketZ: testRuntimeAvailable/);
-    assert.match(permissions, /testRuntimeAvailable/);
+    assert.match(permissions, /createSale: false/);
+    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /registerCashMovement: false/);
+    assert.match(permissions, /requestRefund: false/);
+    assert.match(permissions, /closeSession: false/);
+    assert.match(permissions, /issueTicketX: false/);
+    assert.match(permissions, /issueTicketZ: false/);
+    assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(permissions, /operationalWritesAvailable: false/);
     assert.match(permissions, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
 
@@ -166,9 +166,9 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(audit, /data: \{[\s\S]*items,[\s\S]*count: items\.length/);
     assert.doesNotMatch(audit, /isSynthetic: true|realPayment: false/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(controller, /obtenerAuditoriaTPVPrueba,[\s\S]*?from "backend\/tpv\/tpvTestRuntime\.web"/);
-    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPVPrueba/);
-    assert.equal(controller.includes('from "backend/tpv/tpvAuditoria.web"'), false);
+    assert.match(controller, /import \{ obtenerAuditoriaTPV as obtenerAuditoriaTPVLista \} from "backend\/tpv\/tpvAuditoria\.web"/);
+    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPVLista/);
+    assert.equal(controller.includes('from "backend/tpv/tpvAuditoria.web"'), true);
     assert.match(widget, /Auditoría de operaciones/);
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
@@ -227,7 +227,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(audit, /recordSessionId === sessionId/);
     assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
     assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
-    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcialPrueba/);
+    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial\(/);
     assert.match(controller, /const sessionId = optionalString\(payload\.sessionId, 160\)/);
     assert.match(controller, /if \(!sessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
