@@ -4,13 +4,22 @@
  * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCajaPrueba, abrirSesionCajaPrueba, registrarArqueoParcialPrueba } from "backend/tpv/tpvTestRuntime.web";
+import {
+    obtenerEstadoCajaPrueba,
+    abrirSesionCajaPrueba,
+    registrarArqueoParcialPrueba,
+    validarVentaBorradorPrueba,
+    registrarVentaPrueba,
+    registrarMovimientoCajaPrueba,
+    exportarMovimientosCajaPrueba,
+    exportarAuditoriaTPVPrueba,
+    obtenerAuditoriaTPVPrueba,
+    registrarDevolucionPrueba,
+    generarControlXPrueba,
+    generarCierreZPrueba,
+    obtenerResumenCajaPrueba,
+} from "backend/tpv/tpvTestRuntime.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
-import { validarVentaBorradorPrueba, registrarVentaPrueba } from "backend/tpv/tpvTestRuntime.web";
-import { registrarMovimientoCajaPrueba, exportarMovimientosCajaPrueba, exportarAuditoriaTPVPrueba } from "backend/tpv/tpvTestRuntime.web";
-import { obtenerAuditoriaTPVPrueba } from "backend/tpv/tpvTestRuntime.web";
-import { registrarDevolucionPrueba } from "backend/tpv/tpvTestRuntime.web";
-import { generarControlXPrueba, generarCierreZPrueba, obtenerResumenCajaPrueba } from "backend/tpv/tpvTestRuntime.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 // UI-only capability hints; backend WebMethods enforce authorization independently.
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
