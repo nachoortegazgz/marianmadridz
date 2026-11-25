@@ -236,6 +236,9 @@ body {
       <span id="cashLabel">Caja no consultada</span>
     </div>
   </header>
+  <div role="note" style="margin:8px 0;padding:10px 12px;border:1px solid #d7c7a1;border-radius:8px;background:#fffaf0;color:#5b4825;font-size:12px;">
+    PRUEBA INTERNA: los registros se guardan en ControlOperativo como datos sintéticos. No se ejecutan cobros, reembolsos, movimientos fiscales, cambios de stock ni reservas.
+  </div>
 
   <!-- Barra de sesión -->
   <div class="bar session-bar">
@@ -712,7 +715,7 @@ body {
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
-      ? "ABIERTA · Integración: " + integrationStatus
+      ? "SESIÓN DE PRUEBA ABIERTA · SIN COBRO REAL"
       : (isClosed ? "SESIÓN DE PRUEBA CERRADA" : "SIN SESIÓN DE PRUEBA");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
@@ -978,8 +981,10 @@ body {
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
       readiness.textContent = quote.testReady === true
-        ? "Venta preparada para validación final."
-        : "No lista para prueba interna: " + (messages.join(" ") || "controles pendientes.");
+        ? "Venta preparada para prueba interna. No se efectuará un cobro real."
+        : quote.testCatalogReady === true
+          ? "Catálogo e impuestos verificados. Introduce un único medio de pago simulado por el total exacto."
+          : "No lista para prueba interna: " + (messages.join(" ") || "controles pendientes.");
     } else if (state.quoteLoading) {
       readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
     } else if (state.quoteError) {
@@ -1019,12 +1024,12 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.testReady === true && state.testRuntimeAvailable === true;
+    const paymentReady = state.saleQuote?.testCatalogReady === true && state.testRuntimeAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
     document.querySelectorAll("[data-method]").forEach((button) => {
-      const unsupportedTender = ["BONO", "TARJETA_REGALO"].includes(button.dataset.method);
+      const unsupportedTender = ["BONO", "TARJETA_REGALO", "OTROS"].includes(button.dataset.method);
       button.disabled = !paymentReady || unsupportedTender;
       if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
     });
@@ -1068,7 +1073,7 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
+        if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
           toast("No hay un total validado para la prueba interna.");
           return;
         }
