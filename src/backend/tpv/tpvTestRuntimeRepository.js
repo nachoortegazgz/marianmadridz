@@ -4,6 +4,7 @@ import {
     insertItem,
     getItem,
     bulkPatchItems,
+    bulkRemove,
     queryItems,
     wql,
 } from "backend/dataAccess";
@@ -17,7 +18,7 @@ import {
 
 const RUN_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const MAX_CAS_ATTEMPTS = 5;
-const RUN_TTL_MS = 12 * 60 * 60 * 1000;
+const RUN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function duplicateKey(error) {
     const code = String(error?.code || error?.details?.applicationError?.code || error?.details?.code || "").toUpperCase();
@@ -124,7 +125,7 @@ export async function getLatestTpvTestRun(actorId, { openOnly = false } = {}) {
             item.payload?.realPayment === false &&
             item.payload?.externalSideEffects === false)
         .filter((item) => openOnly
-            ? item.status === "OPEN" && new Date(item.expiresAt || 0).getTime() > now
+            ? item.status === "OPEN" && new Date(item.payload.activeUntil || 0).getTime() > now
             : true)
         .sort((a, b) => new Date(b._createdDate || 0).getTime() - new Date(a._createdDate || 0).getTime());
     if (matches.length > 1 && openOnly) throw new Error("TPV_TEST_MULTIPLE_OPEN_RUNS");
@@ -157,7 +158,7 @@ export async function appendTpvTestRunEvent({
             return { item: current, event: appended.event, replayed: true };
         }
         if (current.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
-        if (new Date(current.expiresAt || 0).getTime() <= Date.now()) {
+        if (new Date(current.payload.activeUntil || 0).getTime() <= Date.now()) {
             throw new Error("TPV_TEST_RUN_EXPIRED");
         }
         const condition = {
@@ -182,4 +183,29 @@ export async function appendTpvTestRunEvent({
         }
     }
     throw new Error("TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED");
+}
+
+export async function purgeExpiredTpvTestRuns(now = new Date()) {
+    const result = await queryItems({
+        dataCollectionId: RUN_COLLECTION,
+        filter: wql.eq("controlType", CONTROL_TYPE.TPV_TEST_RUN),
+        limit: 1000,
+        consistency: CONSISTENCY.STRONG,
+    });
+    if (result.hasNext) throw new Error("TPV_TEST_RUN_PURGE_QUERY_LIMIT_EXCEEDED");
+    const expiredIds = result.items
+        .filter((item) => item.controlType === CONTROL_TYPE.TPV_TEST_RUN &&
+            new Date(item.expiresAt || 0).getTime() < now.getTime())
+        .map((item) => item._id)
+        .filter(Boolean);
+    if (expiredIds.length === 0) return { removed: 0 };
+    const removal = await bulkRemove(RUN_COLLECTION, expiredIds, {
+        condition: {
+            filter: {
+                controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
+                expiresAt: { $lt: now },
+            },
+        },
+    });
+    return { removed: Array.isArray(removal?.removedItemIds) ? removal.removedItemIds.length : null };
 }
