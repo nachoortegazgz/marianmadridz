@@ -1,6 +1,6 @@
 # TPV — backend, contratos y validación
 
-**Estado de `main`:** PR #611 integrada en merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
+**Estado de `main`:** PR #612 integrada en merge commit `239fd8207d228bde56e9908055166980a87d4989` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
 
 ## Criterio de ejecución vigente — flujo único
 
