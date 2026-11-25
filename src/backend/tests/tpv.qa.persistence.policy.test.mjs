@@ -482,8 +482,13 @@ function getWebMethodSource(source, methodName) {
     const declaration = "export const " + methodName + " = webMethod(";
     const start = source.indexOf(declaration);
     assert.notEqual(start, -1, "Missing WebMethod " + methodName);
-    const nextExport = source.indexOf("\nexport const ", start + declaration.length);
-    return source.slice(start, nextExport < 0 ? source.length : nextExport);
+    const boundary = start + declaration.length;
+    const candidates = [
+        source.indexOf("\\nexport const ", boundary),
+        source.indexOf("\\nasync function ", boundary),
+        source.indexOf("\\nfunction ", boundary),
+    ].filter((index) => index >= 0);
+    return source.slice(start, candidates.length ? Math.min(...candidates) : source.length);
 }
 
 
