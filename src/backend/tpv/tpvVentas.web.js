@@ -92,6 +92,7 @@ export const validarVentaBorrador = webMethod(
                 saleReadinessBlockers: [
                     "FISCAL_WRITER_DISABLED",
                     "PAYMENT_NOT_VERIFIED",
+                    "WIX_TAX_REGION_EXCLUDES_TAX",
                     "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
                     "INVENTORY_POLICY_NOT_CONFIGURED",
                 ],
