@@ -789,7 +789,28 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
         return replay;
     }
 
-    const ledgerItem = _buildTpvLedgerItem(collection, key, record, fingerprint);
+    const latestPage = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+        sort: ["sequenceNumber DESC"],
+        limit: 1,
+        consistency: CONSISTENCY.STRONG,
+    });
+    const latestPhysicalRecord = latestPage.items[0] || null;
+    const previousSequence = latestPhysicalRecord ? Number(latestPhysicalRecord.sequenceNumber) : 0;
+    const previousHash = latestPhysicalRecord ? String(latestPhysicalRecord.hash || "") : TPV_GENESIS_HASH;
+    if (latestPhysicalRecord && (
+        !Number.isSafeInteger(previousSequence) || previousSequence <= 0 ||
+        !/^[a-f0-9]{64}$/i.test(previousHash)
+    )) {
+        throw new Error("TPV_PHYSICAL_LEDGER_CHAIN_BROKEN");
+    }
+    const physicalRecord = {
+        ...record,
+        sequenceNumber: previousSequence + 1,
+        previousRecordHash: previousHash,
+    };
+    const ledgerItem = _buildTpvLedgerItem(collection, key, physicalRecord, fingerprint);
     let saved;
     try {
         saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
