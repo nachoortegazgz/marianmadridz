@@ -28,6 +28,7 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     assert.match(script, /call\("SALE_VALIDATE"/);
     assert.match(script, /saleReady !== true/);
     assert.doesNotMatch(script, /testReady|testCatalogReady|testRuntimeAvailable|testPersisted/);
+    assert.doesNotMatch(script, /TPV_TEST_|sesión de prueba|venta de prueba|prueba V1/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
