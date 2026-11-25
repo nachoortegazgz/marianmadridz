@@ -7,7 +7,6 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
-import { error as tpvError } from "backend/tpv/tpvEnvelope";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
@@ -268,7 +267,7 @@ function saleUuidV4Key(value) {
     return uuid;
 }
 
-async function dispatch(message) {
+async async function dispatch(message) {
     const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
         ? message.payload
         : {};
@@ -352,15 +351,7 @@ async function dispatch(message) {
             if (validation?.status === "ERROR") return validation;
             const quote = validation?.data;
             if (!quote || quote.saleReady !== true || Number(quote.importePendiente || 0) > 0) {
-                return tpvError(
-                    "TPV_SALE_NOT_READY",
-                    "No se puede aceptar el cobro: la venta no ha superado todos los controles de catálogo, fiscalidad y escritura.",
-                    [
-                        "No se ha iniciado ningún pago ni se ha registrado ningún movimiento.",
-                        "Revisa los bloqueos de preparación devueltos por el backend.",
-                    ],
-                    { quote: quote || null, persisted: false, retryable: false }
-                );
+                return errorEnvelope({ code: "TPV_SALE_NOT_READY" });
             }
 
             return registrarVenta({
