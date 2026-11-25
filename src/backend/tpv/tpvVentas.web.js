@@ -85,13 +85,16 @@ export const validarVentaBorrador = webMethod(
                 desgloseImpuestos: prepared.lineas[index].desgloseImpuestos,
             }));
 
+            const containsProducts = prepared.lineas.some((line) => line.tipoLinea === "PRODUCTO");
             const saleReadinessBlockers = [
                 "FISCAL_CONFIG_UNVERIFIED",
                 "TPV_LEDGER_WRITER_NOT_CONFIGURED",
                 "PAYMENT_NOT_VERIFIED",
                 "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
-                "INVENTORY_POLICY_NOT_CONFIGURED",
             ];
+            if (containsProducts) {
+                saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
+            }
             if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
                 saleReadinessBlockers.push("FISCAL_WRITER_DISABLED");
             }
@@ -105,7 +108,7 @@ export const validarVentaBorrador = webMethod(
                 catalogVerified: true,
                 taxVerified: true,
                 paymentVerified: false,
-                inventoryVerified: false,
+                inventoryVerified: !containsProducts,
                 consumerPricePresentationVerified: false,
                 saleReady: saleReadinessBlockers.length === 0,
                 saleReadinessBlockers,
