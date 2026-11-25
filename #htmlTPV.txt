@@ -1013,7 +1013,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.saleReady === true;
+    const paymentReady = state.saleQuote?.saleReady === true && state.operationalWritesAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1062,7 +1062,7 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.saleReady !== true) {
+        if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
           toast("No hay un total autorizado para cobro.");
           return;
         }
