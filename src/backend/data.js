@@ -27,7 +27,7 @@ import {
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertTpvTestRunAppendOnly, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertTpvTestRunAppendOnly, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -865,6 +865,23 @@ export function readControlPayload(doc) {
     return doc.payload && typeof doc.payload === "object" && !Array.isArray(doc.payload)
         ? doc.payload
         : {};
+}
+
+export function TransaccionesTPV_beforeInsert(item) {
+    try {
+        assertTransaccionesTPVRecord(item);
+        return item;
+    } catch (error) {
+        _schemaError(error?.message || "TPV_COMMERCIAL_RECORD_INVALID");
+    }
+}
+
+export function TransaccionesTPV_beforeUpdate() {
+    _schemaError("LEDGER_APPEND_ONLY: TransaccionesTPV es append-only.");
+}
+
+export function TransaccionesTPV_beforeRemove() {
+    _schemaError("LEDGER_APPEND_ONLY: TransaccionesTPV es append-only.");
 }
 
 export function ControlOperativo_beforeInsert(item) {
