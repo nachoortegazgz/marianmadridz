@@ -10,7 +10,7 @@ assert.equal(typeof productsV3?.queryProducts, "function", "@wix/stores products
 assert.equal(typeof productsV3?.getProduct, "function", "@wix/stores productsV3.getProduct must be exported");
 assert.equal(typeof taxCalculation?.calculateTax, "function", "@wix/ecom taxCalculation.calculateTax must be exported");
 
-process.stdout.write("Wix TPV catalog SDK contracts OK: Bookings services query, Stores Catalog V3 version/query/get\n");
+process.stdout.write("Wix TPV SDK contracts OK: Bookings services, Stores Catalog V3 and eCommerce tax calculation\n");
 
 assert.equal(typeof staffMembers?.queryStaffMembers, "function", "@wix/bookings staffMembers.queryStaffMembers must be exported");
 assert.equal(typeof contactsV5?.searchContacts, "function", "@wix/crm contactsV5.searchContacts must be exported");
