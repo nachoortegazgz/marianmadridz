@@ -74,7 +74,7 @@ export function appendTpvTestEvent(payload, { eventType, idempotencyKey, actorId
     }
 
     const events = Array.isArray(payload.events) ? payload.events : [];
-    if (events.length >= 1000) throw new Error("TPV_TEST_EVENT_LIMIT_EXCEEDED");
+    if (events.length >= 100) throw new Error("TPV_TEST_EVENT_LIMIT_EXCEEDED");
     const sequence = events.length + 1;
     const previousEventHash = String(payload.eventHash || TPV_TEST_GENESIS_HASH);
     const timestamp = occurredAt instanceof Date ? occurredAt.toISOString() : new Date(occurredAt).toISOString();
@@ -104,6 +104,9 @@ export function appendTpvTestEvent(payload, { eventType, idempotencyKey, actorId
         lastEventAt: timestamp,
         traceId: String(payload.traceId || ""),
     };
+    if (stableTpvTestSerialize(nextPayload).length > 250000) {
+        throw new Error("TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED");
+    }
     return { payload: nextPayload, event, replayed: false };
 }
 
@@ -174,7 +177,7 @@ export function summarizeTpvTestRun(payload) {
 }
 
 export function isValidTpvTestRunPayload(payload, { siteId, sessionId, actorId }) {
-    return Boolean(payload && payload.sourceType === "SYNTHETIC" &&
+    if (!(payload && payload.sourceType === "SYNTHETIC" &&
         payload.processingMode === "INTERNAL" &&
         payload.reconciliationStatus === "NOT_RECONCILED" &&
         payload.isSynthetic === true &&
@@ -186,5 +189,36 @@ export function isValidTpvTestRunPayload(payload, { siteId, sessionId, actorId }
         payload.schemaVersion === 1 &&
         payload.ledgerVersion === "TPV_TEST_RUNTIME_V1" &&
         Array.isArray(payload.events) &&
-        payload.idempotencyIndex && typeof payload.idempotencyIndex === "object");
+        payload.events.length <= 100 &&
+        payload.idempotencyIndex && typeof payload.idempotencyIndex === "object" &&
+        !Array.isArray(payload.idempotencyIndex))) return false;
+
+    let previousHash = TPV_TEST_GENESIS_HASH;
+    for (let index = 0; index < payload.events.length; index += 1) {
+        const event = payload.events[index];
+        if (!event || event.sequence !== index + 1 ||
+            event.actorId !== actorId ||
+            event.previousEventHash !== previousHash ||
+            !/^[a-f0-9]{64}$/i.test(String(event.requestFingerprint || "")) ||
+            !/^[a-f0-9]{64}$/i.test(String(event.eventHash || ""))) return false;
+        const eventBody = {
+            sequence: event.sequence,
+            eventType: event.eventType,
+            idempotencyKey: event.idempotencyKey,
+            requestFingerprint: event.requestFingerprint,
+            actorId: event.actorId,
+            occurredAt: event.occurredAt,
+            previousEventHash: event.previousEventHash,
+            data: event.data,
+        };
+        const expectedHash = createHash("sha256")
+            .update(previousHash + ":" + stableTpvTestSerialize(eventBody), "utf8")
+            .digest("hex");
+        if (expectedHash !== event.eventHash) return false;
+        const indexEntry = payload.idempotencyIndex[event.idempotencyKey];
+        if (indexEntry?.sequence !== event.sequence ||
+            indexEntry?.requestFingerprint !== event.requestFingerprint) return false;
+        previousHash = event.eventHash;
+    }
+    return payload.eventHash === previousHash;
 }
