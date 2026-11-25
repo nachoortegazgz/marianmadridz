@@ -114,7 +114,6 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult, taxIncludedInPri
 
     let subtotalMinor = 0;
     let lineTaxMinor = 0;
-    let catalogFullPriceMinor = 0;
     let totalSaleMinor = 0;
 
     const lineas = catalogLines.map((line, index) => {
@@ -151,7 +150,6 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult, taxIncludedInPri
 
         subtotalMinor += taxableMinor;
         lineTaxMinor += taxMinor;
-        catalogFullPriceMinor += fullPriceMinor;
         totalSaleMinor += expectedLineTotalMinor;
 
         return Object.freeze({
