@@ -10,6 +10,7 @@
 | Ubicación de documentación histórica | [ARCHIVE-MANIFEST.md](ARCHIVE-MANIFEST.md) |
 | Evidencia, auditorías y decisiones históricas | [archive/2026-11/](archive/2026-11/) |
 | Fixtures/snapshots QA (datos de prueba, no estado vivo) | [qa/](qa/) |
+| Criterio vinculante del flujo TPV único | [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) |
 | Contratos y estado TPV backend | [src/backend/tpv/README.md](../src/backend/tpv/README.md) |
 
 ## Reglas de mantenimiento
