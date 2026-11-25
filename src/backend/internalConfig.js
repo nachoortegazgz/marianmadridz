@@ -62,6 +62,9 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
+// Wix Stores Catalog V3 application ID; used for catalog references and tax-group defaults.
+export const TPV_STORES_APP_ID = "215238eb-22a5-4c36-9e7b-e7c08025e04e";
+
 // Logical event types only; these values are NOT Wix CMS collection IDs.
 // The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
