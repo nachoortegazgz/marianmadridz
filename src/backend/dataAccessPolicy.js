@@ -221,7 +221,7 @@ function _exactClauseValue(clause, operator) {
 }
 function _isLessThanDate(clause) {
     const value = _exactClauseValue(clause, "$lt");
-    return value instanceof Date && Number.isFinite(value.getTime());
+    return value instanceof Date && Number.isFinite(value.getTime()) && value.getTime() <= Date.now();
 }
 function _hasExactKeys(value, expected) {
     return _isRecord(value) &&
