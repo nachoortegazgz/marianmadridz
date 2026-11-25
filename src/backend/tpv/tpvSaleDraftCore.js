@@ -341,6 +341,7 @@ async function recoverDraftOrder(deps, marker) {
     if (!expectedIds.length || !createdAt) return { draftOrder: null, partial: false, duplicate: false, truncated: false };
 
     let cursor = null;
+    let partial = false;
     for (let page = 0; page < MAX_RECOVERY_PAGES; page += 1) {
         const query = {
             filter: { _createdDate: { $gte: createdAt } },
@@ -394,26 +395,28 @@ async function finalizeDraft(deps, marker, draftOrder, expected, resolvedLines, 
         const draftOrderId = extractDraftId(draftOrder);
         if (draftOrderId) {
             try {
-                await deps.deleteDraftOrder(draftOrderId);
-                await updateMarker(deps, marker, "FAILED_FINAL", {
-                    errorCode: validationError.message || "TPV_DRAFT_INVALID",
-                    draftOrderId: null,
-                    reconciliationRequired: false,
-                });
-                return makeActionable(
-                    validationError.message || "TPV_DRAFT_INVALID",
-                    "Wix ha devuelto un borrador con importes o líneas que no coinciden con el cálculo del TPV.",
-                    ["El borrador inconsistente se ha eliminado.", "No se ha realizado ningún cobro.", "Revisar catálogo e impuestos antes de repetir la venta con una nueva clave idempotente."],
-                    context.traceId,
-                    { retryable: false, requiresReconciliation: false, idempotencyPersisted: true }
-                );
-            } catch (deleteError) {
-                await updateMarker(deps, marker, "PENDING_RECONCILIATION", {
+                marker = await updateMarker(deps, marker, "PENDING_RECONCILIATION", {
                     draftOrderId,
+                    errorCode: validationError.message || "TPV_DRAFT_INVALID",
                     reconciliationRequired: true,
-                    reconciliationCode: validationError.message || "TPV_DRAFT_INVALID",
-                    cleanupErrorCode: safeText(deleteError?.code || deleteError?.message, 120),
+                    draftDeleted: false,
                 });
+            } catch {
+                // The existing CREATING marker remains a no-retry guard.
+            }
+            try {
+                await deps.deleteDraftOrder(draftOrderId);
+            } catch (deleteError) {
+                try {
+                    await updateMarker(deps, marker, "PENDING_RECONCILIATION", {
+                        draftOrderId,
+                        draftDeleted: false,
+                        reconciliationRequired: true,
+                        cleanupErrorCode: safeText(deleteError?.code || deleteError?.message, 120),
+                    });
+                } catch {
+                    // Keep the no-retry marker; do not create a replacement draft.
+                }
                 return makePending("TPV_DRAFT_RECONCILIATION_REQUIRED", context, {
                     orderId: draftOrderId,
                     draftOrderId,
@@ -421,9 +424,33 @@ async function finalizeDraft(deps, marker, draftOrder, expected, resolvedLines, 
                     retryable: false,
                     persisted: true,
                     resolutionAttempts: RESOLUTION_STEPS,
-                    solution: "El borrador existe, pero sus totales no coinciden; no se ha cobrado ni se repetirá la creación.",
+                    solution: "El borrador no coincide con el cálculo fiscal y Wix no permitió eliminarlo; no se cobrará ni se repetirá su creación.",
                 });
             }
+            try {
+                await updateMarker(deps, marker, "FAILED_FINAL", {
+                    draftOrderId: null,
+                    draftDeleted: true,
+                    reconciliationRequired: false,
+                    errorCode: validationError.message || "TPV_DRAFT_INVALID",
+                });
+            } catch {
+                return makePending("TPV_DRAFT_RECONCILIATION_REQUIRED", context, {
+                    orderId: draftOrderId,
+                    draftOrderId,
+                    requiresReconciliation: true,
+                    retryable: false,
+                    persisted: true,
+                    solution: "El borrador se eliminó, pero no se pudo cerrar el estado idempotente; repetir la consulta con la misma clave.",
+                });
+            }
+            return makeActionable(
+                validationError.message || "TPV_DRAFT_INVALID",
+                "Wix ha devuelto un borrador con importes o líneas que no coinciden con el cálculo del TPV.",
+                ["El borrador inconsistente se ha eliminado.", "No se ha realizado ningún cobro.", "Revisar catálogo e impuestos antes de repetir la venta con una nueva clave idempotente."],
+                context.traceId,
+                { retryable: false, requiresReconciliation: false, idempotencyPersisted: true }
+            );
         }
         return makeActionable(
             validationError.message || "TPV_DRAFT_INVALID",
@@ -434,21 +461,39 @@ async function finalizeDraft(deps, marker, draftOrder, expected, resolvedLines, 
         );
     }
 
-    const updated = await updateMarker(
-        deps,
-        marker,
-        "PENDING_PAYMENT",
-        {
+    let updated;
+    try {
+        updated = await updateMarker(
+            deps,
+            marker,
+            "PENDING_PAYMENT",
+            {
+                draftOrderId: checked.draftOrderId,
+                subtotalNetoMinor: checked.subtotalNetMinor,
+                impuestosTotalMinor: checked.taxMinor,
+                totalVentaMinor: checked.totalMinor,
+                currency: TPV_RUNTIME_POLICY.CURRENCY,
+                reconciliationRequired: false,
+            },
+            checked.totalMinor,
+            checked.draftOrderId
+        );
+    } catch {
+        return makePending("TPV_DRAFT_CREATION_UNCERTAIN", context, {
+            orderId: checked.draftOrderId,
             draftOrderId: checked.draftOrderId,
             subtotalNetoMinor: checked.subtotalNetMinor,
             impuestosTotalMinor: checked.taxMinor,
             totalVentaMinor: checked.totalMinor,
-            currency: TPV_RUNTIME_POLICY.CURRENCY,
-            reconciliationRequired: false,
-        },
-        checked.totalMinor,
-        checked.draftOrderId
-    );
+            subtotalNeto: fromMinorUnits(checked.subtotalNetMinor),
+            impuestosTotal: fromMinorUnits(checked.taxMinor),
+            totalVenta: fromMinorUnits(checked.totalMinor),
+            requiresReconciliation: true,
+            retryable: false,
+            persisted: true,
+            solution: "El borrador existe; el vínculo idempotente se recuperará consultando el mismo Draft Order.",
+        });
+    }
     return buildPendingFromMarker(context, updated, { replayed, autoResolved });
 }
 
@@ -478,6 +523,29 @@ async function recoverExistingMarker(deps, marker, context) {
                 context.traceId,
                 { orderId: payload.draftOrderId, retryable: true, requiresReconciliation: true }
             );
+        }
+    }
+
+    if (status === "PENDING_RECONCILIATION" && payload.draftDeleted === true) {
+        try {
+            const updated = await updateMarker(deps, marker, "FAILED_FINAL", {
+                errorCode: safeText(payload.errorCode, 120) || "TPV_DRAFT_INVALID",
+                draftDeleted: true,
+                reconciliationRequired: false,
+            });
+            return makeActionable(
+                safeText(updated.payload?.errorCode, 120) || "TPV_DRAFT_INVALID",
+                "El borrador inconsistente fue eliminado y la venta no se registró.",
+                ["Corregir la clasificación fiscal o el catálogo.", "Crear una nueva operación con una clave idempotente nueva."],
+                context.traceId,
+                { idempotencyPersisted: true }
+            );
+        } catch {
+            return makePending("TPV_DRAFT_RECONCILIATION_REQUIRED", context, {
+                requiresReconciliation: true,
+                retryable: false,
+                persisted: true,
+            });
         }
     }
 
