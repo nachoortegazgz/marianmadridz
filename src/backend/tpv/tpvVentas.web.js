@@ -4,6 +4,7 @@ import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { error as tpvError, ok as tpvOk } from "backend/tpv/tpvEnvelope";
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
+import { FISCAL_RUNTIME_POLICY } from "backend/internalConfig";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -82,11 +83,15 @@ export const validarVentaBorrador = webMethod(
             }));
 
             const saleReadinessBlockers = [
-                "FISCAL_WRITER_DISABLED",
+                "FISCAL_CONFIG_UNVERIFIED",
+                "TPV_LEDGER_WRITER_NOT_CONFIGURED",
                 "PAYMENT_NOT_VERIFIED",
                 "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
                 "INVENTORY_POLICY_NOT_CONFIGURED",
             ];
+            if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
+                saleReadinessBlockers.push("FISCAL_WRITER_DISABLED");
+            }
             if (prepared.taxIncludedInPrice !== true) {
                 saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
             }
@@ -99,7 +104,7 @@ export const validarVentaBorrador = webMethod(
                 paymentVerified: false,
                 inventoryVerified: false,
                 consumerPricePresentationVerified: false,
-                saleReady: false,
+                saleReady: saleReadinessBlockers.length === 0,
                 saleReadinessBlockers,
                 taxCalculation: {
                     currency: prepared.taxCurrency,
