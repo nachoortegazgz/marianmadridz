@@ -279,7 +279,7 @@ export const registrarVenta = webMethod(
         let validated;
         try {
             prepared = await prepareTpvSaleCatalog(lineas);
-            const pagos = rawPagos || (input?.medioPago
+            const pagos = (rawPagos && rawPagos.length > 0) ? rawPagos : (input?.medioPago
                 ? [{ medioPago: String(input.medioPago).trim().toUpperCase(), importe: prepared.totalVenta, importeCambio: 0 }]
                 : []);
             assertTpvPaymentMethodsSupported(pagos);
