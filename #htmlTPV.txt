@@ -393,6 +393,27 @@ body {
 (function () {
   "use strict";
 
+  function resolveParentOrigin() {
+    const candidates = [document.referrer, window.location?.ancestorOrigins?.[0]];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      try {
+        const origin = new URL(candidate).origin;
+        if (origin && origin !== "null") return origin;
+      } catch (_) {}
+    }
+    return null;
+  }
+  const PARENT_ORIGIN = resolveParentOrigin();
+  function postToParent(message) {
+    if (!PARENT_ORIGIN) {
+      const error = new Error("TPV_PARENT_ORIGIN_UNAVAILABLE");
+      error.code = "TPV_PARENT_ORIGIN_UNAVAILABLE";
+      throw error;
+    }
+    window.parent.postMessage(message, PARENT_ORIGIN);
+  }
+
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -615,7 +636,8 @@ body {
         error.requiresReconciliation = true;
         reject(error);
       }, 15000);
-      window.parent.postMessage({ type, payload, messageId: id, version: 1 }, "*");
+      try { postToParent({ type, payload, messageId: id, version: 1 }); }
+      catch (originError) { cleanup(); reject(originError); }
     });
   }
 
@@ -726,7 +748,7 @@ body {
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
-      ? "SESIÓN ABIERTA · ESCRITURAS DESHABILITADAS"
+      ? "SESIÓN ABIERTA"
       : (isClosed ? "SESIÓN CERRADA" : "SIN SESIÓN");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
@@ -1454,11 +1476,19 @@ body {
     }
 
     handshakeAttempts += 1;
-    window.parent.postMessage({
-      type: "MM_READY",
-      version: BRIDGE_PROTOCOL_VERSION,
-      messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
-    }, "*");
+    try {
+      postToParent({
+        type: "MM_READY",
+        version: BRIDGE_PROTOCOL_VERSION,
+        messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
+      });
+    } catch (originError) {
+      handshakeTimer = null;
+      $("connStatus").className = "dot error";
+      $("connLabel").textContent = "Origen de página no disponible";
+      error(originError.code || "TPV_PARENT_ORIGIN_UNAVAILABLE");
+      return;
+    }
     handshakeTimer = setTimeout(() => {
       handshakeTimer = null;
       sendHandshake();
