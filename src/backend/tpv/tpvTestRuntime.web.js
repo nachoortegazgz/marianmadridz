@@ -235,11 +235,17 @@ export const abrirSesionCajaPrueba = webMethod(
             if (latestSession && latestSession.payload.sessionId !== sessionId) {
                 const latestExpired = new Date(latestSession.payload.activeUntil || 0).getTime() <= Date.now();
                 if (latestSession.status === "CLOSED" || latestExpired) {
-                    await releaseTpvTestSessionLock({
-                        actorId: actor.actorId,
-                        sessionId: latestSession.payload.sessionId,
-                        traceId,
-                    });
+                    try {
+                        await releaseTpvTestSessionLock({
+                            actorId: actor.actorId,
+                            sessionId: latestSession.payload.sessionId,
+                            traceId,
+                        });
+                    } catch (error) {
+                        if (String(error?.message || error?.code) !== "TPV_TEST_SESSION_LOCK_OWNERSHIP_MISMATCH") {
+                            throw error;
+                        }
+                    }
                 }
             }
             await acquireTpvTestSessionLock({
