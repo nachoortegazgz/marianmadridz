@@ -1,15 +1,15 @@
 # STATE-NOW — 2026-11-25
 
-**Main:** `67e62955d89ab5a1ff12f0a61c3ab735199e52f5` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** QA/Draft (último read-back 2026-11-23).
-**Release:** NO-GO. No publicar, operar comercialmente ni activar pagos/writers fiscales.
-**Fuente canónica:** [PROJECT-CANON.md](PROJECT-CANON.md). Detalle y criterios: [RELEASE-READINESS.md](RELEASE-READINESS.md).
+**Main:** `67e62955d89ab5a1ff12f0a61c3ab735199e52f5` · **Sitio:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** sitio publicado; lectura CMS de solo lectura.
+**Release:** NO-GO para operar comercialmente o activar writers fiscales/pagos. El código integrado no equivale a validación de Runtime.
+**Criterio de autoridad de esta revisión:** documentación oficial Wix vigente, código en `main` inspeccionado, objetivo funcional y normativa BOE vigente. Los documentos de proyecto y decisiones previas son editables si contradicen esa evidencia.
 
 ## P0 — bloqueos abiertos
 
 | Issue | Estado y evidencia | Responsable/dependencia |
 |---|---|---|
 | #416 Caja, compensaciones y pedidos POS | PR #587 integrada; compensaciones/pedidos pendientes de reconciliación; no reintentar ni mutar caja/ledgers | Propietario + QA |
-| #415/#209 Fiscal/SIF | CONFIG_SISTEMA_FISCAL real ausente; flags de escritura false; PR #589 integrada | Propietario + asesoría fiscal |
+| #415/#209 Fiscal/SIF | `CONFIG_SISTEMA_FISCAL` ausente: consulta Wix CMS a `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros (2026-11-25). `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; no se activa por código | Propietario + asesoría fiscal |
 | #525 CajaActual | CAS integrado en PR #587; evidencia de concurrencia Runtime pendiente | QA Preview |
 | #434 MovimientosCaja | Append-only reforzado por PR #590; discrepancia histórica y M4 (Activity Logs/backups) pendientes | Propietario + administrador Wix |
 | #520 Automations | Último read-back: siete PREINSTALLED ACTIVE; app laboral INACTIVE | Propietario + administrador Wix |
@@ -29,11 +29,13 @@
 - PR #604: helper de errores accionables A/B; lock fiscal con retry acotado y replay contable verificado.
 - CI offline de PR #603: 80 suites/747 tests PASS; PR #604: 81 suites/750 tests PASS; secret scanning PASS en ambas.
 - PR #606 y #607 integradas: bridge opaco rechazado (handshake HTML Component pendiente #416), envelope desconocido devuelve ERROR, export sin consumidor eliminado, envelope TPV compartido, retry genérico denegado por defecto, timeout incierto, permisos no resueltos bloquean escrituras, SALE_REGISTER transmite solo IDs/variante/cantidad/medio de pago y logs bridge saneados.
-- Diagnóstico Wix CMS 2026-11-25: `MovimientosCaja`, `ControlOperativo`, `CajaActual` y `MapaStaff` existen; `MovimientosCaja` sigue siendo el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`). `TransaccionesTPV` no debe crearse. `ControlOperativo` no devuelve índices; contiene dos registros `IDEMPOTENCY` antiguos de Bookings, ninguno TPV ni reutilizable como replay de venta.
-- P4 BLOQUEADA: `tpvRepository.assertTpvOperationalLedgerConfigured()` lanza incondicionalmente; además `dataAccessPolicy`/hook `MovimientosCaja_beforeInsert` rechazan los nuevos eventos TPV. No se puede retirar solo el guard. Wix Catalog V3 y `@wix/ecom` Draft Orders están disponibles, pero no existe ruta autorizada de persistencia idempotente TPV hasta completar contrato del writer.
-- Fiscalidad Wix: región ES (`*`) encontrada con mappings manuales de 0% y 21% por `taxGroupId`; falta verificar el `taxGroupId` de cada producto vendible y la política fiscal del negocio antes de calcular impuestos. La presencia de mappings no equivale a configuración fiscal certificada ni habilita writers.
-- `CajaActual` no acredita por sí sola una sesión TPV V3; no crear Draft Order hasta poder guardar/reproducir idempotentemente su `orderId` y mantener trazabilidad append-only.
-- Wix Preview/Runtime no ejecutado; arnés pendiente de ejecución. Ningún merge de código equivale a autorización de publicación.
+- Diagnóstico Wix CMS 2026-11-25: `MovimientosCaja`, `ControlOperativo`, `CajaActual` y `MapaStaff` existen. El repositorio adapta discriminadores lógicos TPV a `MovimientosCaja`; no crear un ledger paralelo sin rediseño probado.
+- Bloqueo real de escritura TPV: `tpvVentas.registrarVenta()` termina en `TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED`; `tpvRepository.insertTpvEvent()` llama al guard incondicional `assertTpvOperationalLedgerConfigured()`; `MovimientosCaja_beforeInsert()` rechaza todos los registros con `recordSource`/ `movementType` TPV. Retirar solo una barrera no habilita una escritura válida.
+- El builder `_buildTpvLedgerItem()` no construye el conjunto completo de campos fiscales exigidos por `assertMovimientosCajaRequiredFields()` (entre otros, número/fecha de factura, tipo impositivo y período fiscal). No es un writer comercial válido aunque se retirase el guard.
+- El writer fiscal reutilizable `registrarEventoEconomico()` también está cerrado por `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false` y exige `CONFIG_SISTEMA_FISCAL`. La consulta real de Wix CMS devolvió cero registros `recordType=CONFIG_SISTEMA`; no se debe sortear ese control.
+- Wix Stores del sitio es Catalog V3. Wix documenta `Get Product` con `taxGroupId` y `Create Draft Order`; un borrador no acredita cobro ni sustituye la factura/registro fiscal. No se creó ningún pedido ni se invocó ningún endpoint mutador.
+- Normativa: el RDL 15/2025 publicado en BOE fija adaptación antes del 01-01-2027 para contribuyentes del art. 3.1.a) y antes del 01-07-2027 para el resto del art. 3.1. La nota ministerial de 05-10-2026 que anunció una posible alineación posterior no es una modificación publicada en BOE; no se usa como plazo vigente.
+- Wix Preview/Runtime no ejecutado. No se han modificado datos CMS, configuración fiscal, secretos ni writers.
 
 ## Glosario mínimo
 
@@ -42,4 +44,3 @@
 | SSOT | Fuente única de verdad transaccional |
 | CAS | Compare-and-swap para adquisición de lock |
 | F1/F2 | Dos bookings nativos coordinados de un servicio dual |
-
