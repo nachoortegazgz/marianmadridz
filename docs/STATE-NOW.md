@@ -1,6 +1,6 @@
 # STATE-NOW — 2026-11-25
 
-**Base de código TPV:** PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` · **Documentación:** consolidada en main el 2026-11-25 · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
+**Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación:** actualización posterior en revisión · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 
@@ -28,9 +28,9 @@
 |---|---|---|
 | #523/#522 Bookings/canales | Código integrado; reconciliación nativa y aceptación Runtime pendientes | Reconciliar proyecciones, bookings y opciones de pago sin inferir estados |
 | #210 Protección de main | Ruleset/checks obligatorios no acreditados | Verificación de protección y CI requerida |
-| #435 TPV QA | Preparación read-only integrada y CI offline PASS | Persistencia, idempotencia, permisos y flujos TPV en Preview/Runtime |
+| #435 TPV QA | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS | Writer canónico, persistencia, idempotencia durable y aceptación en Wix Preview/Runtime |
 
-## 4. TPV — preparación de venta integrada por PR #611
+## 4. TPV — preparación Wix y contrato de preescritura V1 (PR #611 + PR #612)
 
 ### Código integrado
 - `src/backend/tpv/tpvSalePreparationCore.js`: normalización estricta, cantidades enteras, importes en céntimos y reconciliación fiscal por línea.
@@ -39,6 +39,13 @@
 - `src/public/tpvPageController.js` y widget TPV: solicitan cotización backend, descartan respuestas obsoletas y bloquean pago/registro si no se cumplen todos los gates.
 - Descuentos no configurados, líneas PERSONALIZADA y BONO/TARJETA_REGALO sin validación de saldo quedan bloqueados.
 - El gate de inventario solo afecta a líneas PRODUCTO; los servicios no requieren stock.
+
+### Contrato de preescritura V1 (PR #612, integrado)
+- `src/backend/tpv/tpvWriteV1Contract.js` aplica una única tasa impositiva verificable por venta; las ventas multitarifa se bloquean sin asignar un tipo representativo.
+- V1 admite un único medio de pago físico: EFECTIVO, TARJETA o BIZUM. El importe aplicado tras descontar el cambio debe igualar exactamente el total calculado por Wix.
+- `registrarVenta()` vuelve a resolver catálogo e impuestos en backend antes de devolver cualquier resultado; el navegador no aporta importes autoritativos.
+- El widget presenta los bloqueos de tasa, medio de pago y conciliación de importes.
+- `writeContractV1.eligible=true` no equivale a `saleReady=true`, pago confirmado ni persistencia.
 
 ### Lectura Wix de solo lectura (2026-11-25)
 - 24 productos Stores y 70 servicios Bookings de precio fijo EUR.
@@ -61,10 +68,12 @@
 | Elemento | Evidencia |
 |---|---|
 | PR #611 | MERGED; merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` |
+| PR #612 | MERGED; merge commit `239fd8207d228bde56e9908055166980a87d4989`; árbol `632c85edbd765a291abe7b411fe08af75da5e571` |
 | Commit de código probado | `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` |
 | Backend offline quality gates | Run `45555933654` PASS: package/lock, dependencias, npm audit, Layer 1, Layer 2, suite completa, SDK Wix, ESLint |
-| Secret scan | Gitleaks full-history run `45555933681` PASS |
+| Secret scan | PR #611 Gitleaks run `45555933681` PASS; PR #612 Gitleaks run `45592834040` PASS |
 | Commits posteriores a CI | Solo actualizaciones documentales/enlaces BOE y evidencia; no alteraron código |
+| Backend offline quality gates PR #612 | Run `45592833890` PASS: Layer 1, Layer 2, suite completa, SDK Wix, ESLint |
 | Wix Preview/Runtime | NO EJECUTADO |
 
 La evidencia CI valida el commit de código indicado; no debe atribuirse automáticamente a pruebas Runtime ni a un despliegue Wix.
@@ -87,10 +96,10 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 
 ## 8. Siguiente secuencia técnica
 
-1. Verificar read-only del estado actual de catálogo, inventario por variante/ubicación y configuración fiscal.
-2. Diseñar contrato de sesión/venta y confirmación manual de pago externo, sin simular captura bancaria.
-3. Diseñar writer append-only de `MovimientosCaja` con campos fiscales completos, idempotencia y hook compatible; no abrir escrituras hasta validar el contrato.
-4. Resolver presentación de precios finales al consumidor y configuración fiscal con asesoría competente.
+1. Verificar read-only del singleton fiscal y cerrar su contrato de campos con asesoría competente; no crear datos legales por defecto.
+2. Cerrar contrato de sesión/caja y confirmación manual del lector, incluyendo referencia y evidencia del justificante.
+3. Diseñar el writer append-only de `MovimientosCaja` reutilizando los controles del writer manual; completar campos fiscales, numeración F1/F2 separada, idempotencia durable y compatibilidad exacta de hook/DAL.
+4. Resolver precio final al consumidor y recuento/asignación de inventario físico por variante.
 5. Ejecutar pruebas Runtime de concurrencia, idempotencia, permisos, caja, impresión/hardware y conciliación antes de cualquier release.
 
 **Decisión:** NO-GO. No desplegar ni habilitar ventas reales hasta cerrar todos los gates y documentar rollback.
