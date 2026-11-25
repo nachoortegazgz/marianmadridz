@@ -1,20 +1,27 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { draftOrders } from "@wix/ecom";
+import { auth } from "@wix/essentials";
+import { getMyCajeroContext } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
-import { error as tpvError, ok as tpvOk } from "backend/tpv/tpvEnvelope";
+import { error as tpvError, ok as tpvOk, pending as tpvPending } from "backend/tpv/tpvEnvelope";
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
 import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
-import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
-import { FISCAL_RUNTIME_POLICY } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { CONSISTENCY, getItem, insertItem } from "backend/dataAccess";
+import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { toMinorUnits } from "backend/tpv/tpvUtils";
+import { createHash } from "node:crypto";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const createDraftOrderElevated = auth.elevate(draftOrders.createDraftOrder);
 
 const PREPARATION_MESSAGES = Object.freeze({
     TPV_LINES_REQUIRED_OR_LIMIT_EXCEEDED: "La venta debe contener entre 1 y 100 líneas.",
     TPV_LINE_TAX_CLASSIFICATION_UNSUPPORTED: "La línea no tiene una clasificación fiscal configurada para el TPV.",
     TPV_CATALOG_ITEM_ID_INVALID: "El identificador del producto o servicio no es válido.",
+    TPV_CATALOG_PRODUCTS_NOT_FOUND: "No se han encontrado en Catalog V3 estos productos: {ids}. Actualiza el catálogo y vuelve a intentarlo.",
     TPV_INVALID_QUANTITY: "La cantidad debe ser un número entero positivo.",
     TPV_DISCOUNT_NOT_CONFIGURED: "Los descuentos no están habilitados para el TPV hasta disponer de una regla de autorización y cálculo en backend.",
     TPV_PRODUCT_NOT_AVAILABLE_IN_POS: "El producto no está disponible en el catálogo del TPV.",
@@ -56,6 +63,7 @@ function preparationFailure(error, traceId) {
             retryable: false,
             traceId,
             technicalDetail: code,
+            invalidProductIds: Array.isArray(error?.invalidProductIds) ? error.invalidProductIds : [],
         }
     );
 }
@@ -140,17 +148,101 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
+async function createSaleDraftOrder(prepared) {
+    const productLines = prepared.lineas.filter((line) => line.tipoLinea === "PRODUCTO");
+    if (productLines.length !== prepared.lineas.length || productLines.length === 0) {
+        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_CATALOG_PRODUCTS_ONLY" };
+    }
+    try {
+        const response = await createDraftOrderElevated({
+            draftOrder: {
+                catalogLineItems: productLines.map((line) => ({
+                    catalogReference: {
+                        catalogItemId: line.itemId,
+                        appId: line.appId,
+                        ...(line.varianteId ? { options: { variantId: line.varianteId } } : {}),
+                    },
+                    quantity: line.cantidad,
+                })),
+            },
+        });
+        const draft = response?.calculatedDraftOrder?.draftOrder;
+        const orderId = String(draft?._id || draft?.id || "").trim();
+        return orderId
+            ? { orderId, requiresReconciliation: false, reason: "DRAFT_ORDER_CREATED" }
+            : { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_ID_MISSING" };
+    } catch (error) {
+        return {
+            orderId: null,
+            requiresReconciliation: true,
+            reason: String(error?.code || error?.message || "DRAFT_ORDER_UNAVAILABLE").slice(0, 120),
+        };
+    }
+}
+
+function salePendingEnvelope(record, { replayed, auditPersisted = true, traceId }) {
+    return tpvPending("TPV_PAYMENT_PROVIDER_NOT_CONFIGURED", {
+        orderId: record.orderId || null,
+        idempotencyKey: record._id,
+        totalVenta: record.totalVenta,
+        medioPago: record.medioPago || null,
+        requiresReconciliation: record.requiresReconciliation === true || !auditPersisted,
+        persisted: true,
+        replayed,
+        retryable: false,
+        solution: "Contract A",
+        sourceType: record.sourceType,
+        auditPersisted,
+        resolutionAttempts: [
+            { step: "operator-authorization", status: "VERIFIED" },
+            { step: "catalog-and-tax-recalculation", status: "VERIFIED" },
+            { step: "draft-order", status: record.orderId ? "CREATED" : "UNAVAILABLE", reason: record.orderId ? null : record.draftOrderReason },
+            { step: "commercial-transaction", status: "PERSISTED" },
+            { step: "payment-provider", status: "BLOCKED", reason: "Contract A" },
+            { step: "operational-audit", status: auditPersisted ? "PERSISTED" : "PENDING" },
+        ],
+        traceId,
+    });
+}
+
+async function appendSaleAudit(record, traceId) {
+    return appendTpvAudit({
+        idempotencyKey: record._id + ":SALE_AUDIT",
+        action: "VENTA_TPV_REGISTRADA",
+        actorId: record.operatorResourceId,
+        entityType: "TRANSACCION_TPV",
+        entityId: record._id,
+        traceId,
+        payload: {
+            sessionId: record.sessionId,
+            orderId: record.orderId || null,
+            totalVenta: record.totalVenta,
+            status: record.status,
+            sourceType: record.sourceType,
+        },
+    });
+}
+
 export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        const traceId = makeTraceId("tpv-sale-write-block");
-        await requireCajero(traceId);
+        const traceId = makeTraceId("tpv-sale-register");
+        let operator;
+        try {
+            operator = await getMyCajeroContext(traceId);
+        } catch (error) {
+            return tpvError(
+                String(error?.code || "TPV_CASHIER_NOT_AUTHORIZED"),
+                "El usuario actual no está autorizado como operador TPV.",
+                ["Accede con un miembro vinculado a un operador TPV autorizado."],
+                { persisted: false, retryable: false, traceId }
+            );
+        }
 
         const sessionId = String(input?.sessionId || "").trim();
-        const idempotencyKey = String(input?.idempotencyKey || "").trim();
+        const idempotencyKey = String(input?.idempotencyKey || "").trim().toLowerCase();
         const lineas = Array.isArray(input?.lineas) ? input.lineas : [];
         const pagos = Array.isArray(input?.pagos) ? input.pagos : [];
-
         if (!input || typeof input !== "object" || Array.isArray(input) ||
             !sessionId || !UUID_V4.test(idempotencyKey) ||
             lineas.length === 0 || lineas.length > 100 || pagos.length > 100 ||
@@ -171,7 +263,6 @@ export const registrarVenta = webMethod(
 
         let prepared;
         let validated;
-        let writeV1Blockers;
         try {
             assertTpvPaymentMethodsSupported(pagos);
             prepared = await prepareTpvSaleCatalog(lineas);
@@ -182,52 +273,143 @@ export const registrarVenta = webMethod(
                 impuestosTotal: prepared.impuestosTotal,
                 totalVenta: prepared.totalVenta,
             });
-            writeV1Blockers = getTpvWriteV1Blockers({
-                lineas: prepared.lineas,
-                pagos: validated.pagos,
-                totalVenta: validated.totalVenta,
-            });
         } catch (error) {
             return preparationFailure(error, traceId);
         }
 
-        if (writeV1Blockers.length > 0) {
+        const activeSession = await latestOpenTpvSession();
+        if (!activeSession || activeSession.sessionId !== sessionId) {
             return tpvError(
-                "TPV_WRITE_V1_CONTRACT_UNSUPPORTED",
-                "La venta no cumple el contrato mínimo de escritura TPV V1.",
-                [
-                    "Se requiere una única tasa impositiva verificable y un único medio de pago admitido que cubra el total.",
-                    "No se ha registrado ninguna venta ni se ha confirmado ningún cobro.",
-                    "Consulta writeContractBlockers y corrige la selección antes de volver a validar.",
-                ],
-                {
-                    persisted: false,
-                    retryable: false,
-                    writeContractBlockers: writeV1Blockers,
-                    traceId,
-                }
+                "TPV_SESSION_NOT_OPEN",
+                "La sesión de caja indicada no está abierta.",
+                ["Abre o selecciona la sesión de caja activa antes de registrar la venta."],
+                { persisted: false, retryable: false, traceId }
             );
         }
 
-        // Catalog and tax values are recomputed server-side. Persistence remains
-        // closed until fiscal configuration, payment evidence and the canonical
-        // MovimientosCaja writer have been independently verified.
-        return tpvError(
-            "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
-            "La venta se ha recalculado con Wix, pero no se ha registrado: el writer fiscal y el ledger operativo TPV continúan deshabilitados.",
-            [
-                "No se ha creado ningún pedido, asiento ni movimiento de caja; tampoco se ha confirmado ningún pago.",
-                "La preparación autoritativa y el contrato TPV V1 se han comprobado en backend; no equivalen a persistencia.",
-                "La escritura solo podrá habilitarse tras completar la configuración fiscal, la evidencia de pago y el writer append-only idempotente de MovimientosCaja.",
-            ],
-            {
-                persisted: false,
-                retryable: false,
-                requiresReconciliation: false,
-                writeContractBlockers: [],
-                salePreparationVersion: "TPV_SALE_PREPARATION_V1",
-                traceId,
-            }
+        const lineasBackend = validated.lineas.map((line, index) => ({
+            ...line,
+            appId: prepared.lineas[index].appId,
+            taxGroupId: prepared.lineas[index].taxGroupId || null,
+            desgloseImpuestos: prepared.lineas[index].desgloseImpuestos,
+            currency: prepared.lineas[index].currency,
+        }));
+        const subtotalNetoMinor = toMinorUnits(validated.subtotalNeto, "SALE_SUBTOTAL");
+        const impuestosTotalMinor = toMinorUnits(validated.impuestosTotal, "SALE_TAX");
+        const totalVentaMinor = toMinorUnits(validated.totalVenta, "SALE_TOTAL");
+        const medioPago = validated.pagos.length === 1
+            ? validated.pagos[0].medioPago
+            : validated.pagos.length > 1 ? "MULTIPLE" : null;
+        const requestFingerprint = createHash("sha256").update(JSON.stringify({
+            sessionId,
+            lineas: lineasBackend,
+            pagos: validated.pagos,
+            operatorResourceId: operator.operatorResourceId,
+        })).digest("hex");
+
+        const readExisting = async () => getItem(
+            BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+            idempotencyKey,
+            CONSISTENCY.STRONG
         );
+        const existing = await readExisting();
+        if (existing) {
+            if (existing.requestFingerprint !== requestFingerprint) {
+                return tpvError("TPV_IDEMPOTENCY_CONFLICT", "La clave idempotente ya pertenece a otra venta.", ["No reutilices la clave con líneas, sesión u operador diferentes."], { persisted: true, retryable: false, traceId });
+            }
+            let auditPersisted = true;
+            try { await appendSaleAudit(existing, traceId); } catch { auditPersisted = false; }
+            return salePendingEnvelope(existing, { replayed: true, auditPersisted, traceId });
+        }
+
+        try {
+            return await withTpvSessionLock(sessionId, traceId, async () => {
+                const winner = await readExisting();
+                if (winner) {
+                    if (winner.requestFingerprint !== requestFingerprint) {
+                        throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                    }
+                    let auditPersisted = true;
+                    try { await appendSaleAudit(winner, traceId); } catch { auditPersisted = false; }
+                    return salePendingEnvelope(winner, { replayed: true, auditPersisted, traceId });
+                }
+
+                const currentSession = await latestOpenTpvSession();
+                if (!currentSession || currentSession.sessionId !== sessionId) {
+                    throw new Error("TPV_SESSION_NOT_OPEN");
+                }
+
+                const draft = await createSaleDraftOrder(prepared);
+                const record = {
+                    _id: idempotencyKey,
+                    sessionId,
+                    orderId: draft.orderId,
+                    lineas: lineasBackend,
+                    subtotalNeto: validated.subtotalNeto,
+                    subtotalNetoMinor,
+                    impuestosTotal: validated.impuestosTotal,
+                    impuestosTotalMinor,
+                    totalVenta: validated.totalVenta,
+                    totalVentaMinor,
+                    medioPago,
+                    paymentSelection: validated.pagos.map((payment) => ({
+                        medioPago: payment.medioPago,
+                        importe: payment.importe,
+                        importeCambio: payment.importeCambio,
+                        importeAplicado: payment.importeAplicado,
+                        confirmed: false,
+                    })),
+                    operatorResourceId: operator.operatorResourceId,
+                    operatorId: operator.operatorId,
+                    createdAt: new Date(),
+                    status: "PENDING_PAYMENT",
+                    sourceType: "SYNTHETIC",
+                    requiresReconciliation: draft.requiresReconciliation,
+                    draftOrderReason: draft.reason,
+                    requestFingerprint,
+                    currency: TPV_RUNTIME_POLICY.CURRENCY,
+                    traceId,
+                };
+                let saved;
+                try {
+                    saved = await insertItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, record);
+                } catch (error) {
+                    const concurrentWinner = await readExisting();
+                    if (!concurrentWinner) {
+                        if (draft.orderId) {
+                            try {
+                                await appendTpvAudit({
+                                    idempotencyKey: idempotencyKey + ":DRAFT_ORPHAN",
+                                    action: "DRAFT_ORDER_WITHOUT_TPV_TRANSACTION",
+                                    actorId: operator.operatorResourceId,
+                                    entityType: "DRAFT_ORDER",
+                                    entityId: draft.orderId,
+                                    traceId,
+                                    payload: { sessionId, idempotencyKey, errorCode: String(error?.code || error?.message || "INSERT_FAILED") },
+                                });
+                            } catch { /* orphan remains explicitly traceable by the failed insert response */ }
+                        }
+                        throw error;
+                    }
+                    if (concurrentWinner.requestFingerprint !== requestFingerprint) {
+                        throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+                    }
+                    let auditPersisted = true;
+                    try { await appendSaleAudit(concurrentWinner, traceId); } catch { auditPersisted = false; }
+                    return salePendingEnvelope(concurrentWinner, { replayed: true, auditPersisted, traceId });
+                }
+
+                let auditPersisted = true;
+                try { await appendSaleAudit(saved, traceId); } catch { auditPersisted = false; }
+                return salePendingEnvelope(saved, { replayed: false, auditPersisted, traceId });
+            });
+        } catch (error) {
+            return tpvError(
+                String(error?.code || error?.message || "TPV_SALE_PERSISTENCE_FAILED"),
+                "No se ha podido completar el registro comercial de la venta.",
+                ["Conserva la clave idempotente y el traceId; consulta TransaccionesTPV antes de repetir la operación."],
+                { persisted: false, retryable: false, traceId }
+            );
+        }
     }
 );
