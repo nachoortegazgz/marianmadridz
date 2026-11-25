@@ -151,8 +151,8 @@ const ERROR_CATALOG = Object.freeze({
         requiresReconciliation: false,
     }),
     TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: Object.freeze({
-        message: "La escritura operativa del ledger TPV continúa deshabilitada.",
-        solution: "No se ha creado ningún pedido; habilita el writer append-only aprobado y la idempotencia durable.",
+        message: "La escritura del ledger fiscal continúa deshabilitada.",
+        solution: "El registro comercial y los movimientos físicos de caja son independientes; no se ha realizado ningún cobro fiscal ni emisión de factura.",
         recoverable: false,
         retryable: false,
         requiresReconciliation: false,
