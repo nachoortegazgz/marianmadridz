@@ -935,11 +935,13 @@ body {
     if (!state.items.length && state.lastSale) {
       const sale = state.lastSale;
       const methods = (sale.pagos || []).map((payment) => payment.method).filter(Boolean).join(", ");
+      const hasProducts = (sale.lineas || []).some((line) => line.tipoLinea === "PRODUCTO");
       container.innerHTML = `
         <div class="ticket-line"><strong>VENTA DE PRUEBA · SIN VALIDEZ FISCAL</strong></div>
         <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
         <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
         <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
+        ${hasProducts ? '<div class="ticket-line"><span>Stock</span><strong>No consultado ni modificado</strong></div>' : ''}
       `;
     } else if (!state.items.length) {
       container.innerHTML = '<p style="color:var(--muted);">Añade conceptos del catálogo.</p>';
