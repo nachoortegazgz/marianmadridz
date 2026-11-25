@@ -5,6 +5,7 @@ export function ok(data, extra = {}) {
         ...extra,
         status: "SUCCESS",
         data,
+        error: null,
     };
 }
 
@@ -12,6 +13,8 @@ export function pending(reason, extra = {}) {
     return {
         ...extra,
         status: "PENDING",
+        data: null,
+        error: null,
         reason: String(reason || "PENDING"),
     };
 }
