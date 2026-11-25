@@ -535,6 +535,35 @@ export async function requireAdmin(traceId = null) {
     return true;
 }
 
+export async function getMyCajeroContext(traceId = null) {
+    const memberInfo = await _getCurrentMemberInfo(traceId);
+    if (!memberInfo?.contactId) throw _createAccessDeniedError("CAJERO");
+    const staff = await _resolveStaffByIdentity(memberInfo, traceId);
+    const role = _readStaffRole(staff);
+    if (![ROL_WEBSITE.ADMIN, ROL_WEBSITE.GESTION].includes(role)) {
+        throw _createAccessDeniedError("CAJERO");
+    }
+    const memberId = String(memberInfo.memberId || "").trim();
+    const resourceId = String(staff?.resourceId || "").trim();
+    if (!memberId || !resourceId) {
+        throw createActionableError({
+            code: "TPV_OPERATOR_CONTEXT_INCOMPLETE",
+            userMessage: "El operador TPV no tiene una identidad de personal completa.",
+            technicalDetail: "Authenticated member resolved without memberId or Bookings resourceId.",
+            remediation: ["Revisar el vínculo del miembro con su ficha de personal y el resourceId de Bookings."],
+            contextSnapshot: { traceId, memberResolved: Boolean(memberId), resourceResolved: Boolean(resourceId) },
+            retryable: false,
+        });
+    }
+    return Object.freeze({
+        actorId: memberId,
+        operatorId: memberId,
+        operatorResourceId: resourceId,
+        operatorDisplayName: String(staff?.displayName || "").trim() || null,
+        contactId: String(staff?.contactId || memberInfo.contactId || "").trim() || null,
+    });
+}
+
 export async function requireCajero(traceId = null) {
     const authorized = await isCajero(traceId);
 
