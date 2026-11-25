@@ -399,11 +399,28 @@ export const registrarMovimientoCajaPrueba = webMethod(
             if (paymentMethod !== "EFECTIVO") throw new Error("TPV_CASH_MOVEMENT_REQUIRES_CASH");
             const amountMinor = toMinorUnits(input.amount, "CASH_MOVEMENT");
             if (amountMinor <= 0) throw new Error("TPV_CASH_MOVEMENT_AMOUNT_INVALID");
-            const result = await appendEvent(actor, input, "CASH_MOVEMENT", {
+            const reason = String(input.reason || "").trim().slice(0, 500);
+            const requestFingerprint = hashTpvTestValue({
                 movementType,
                 amountMinor,
-                reason: String(input.reason || "").trim().slice(0, 500),
+                reason,
                 paymentMethod: "EFECTIVO",
+            });
+            const result = await appendEvent(actor, input, "CASH_MOVEMENT", null, {
+                requestFingerprint,
+                buildData: (payload) => {
+                    const summary = summarizeTpvTestRun(payload);
+                    if (movementType !== "ENTRADA" && amountMinor > summary.expectedCashMinor) {
+                        throw new Error("TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED");
+                    }
+                    return {
+                        movementType,
+                        amountMinor,
+                        reason,
+                        paymentMethod: "EFECTIVO",
+                        requestFingerprint,
+                    };
+                },
             });
             return ok({
                 movementId: "TPV-TEST-MOV-" + result.event.sequence,
