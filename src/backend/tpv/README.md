@@ -26,6 +26,18 @@
 - No se declara venta completada ni se limpia el ticket sin confirmación de persistencia.
 - Líneas personalizadas, descuentos no autorizados y bonos/tarjetas regalo sin validación de saldo están bloqueados.
 
+## Contrato de escritura V1 (PR #612, propuesta en revisión)
+
+El módulo puro `tpvWriteV1Contract.js` delimita el primer writer sin persistir:
+- Una única tasa impositiva verificable en todas las líneas. Una venta con más de una tasa queda bloqueada; no se selecciona una tasa representativa.
+- Un único medio de pago admitido: efectivo, tarjeta o Bizum.
+- El importe aplicado (importe recibido menos cambio) debe coincidir exactamente con el total recalculado por Wix.
+- El pago en efectivo puede incluir cambio; la proyección aplica solo el importe neto recibido.
+- La elegibilidad de este contrato NO acredita que el pago bancario se haya recibido ni autoriza escritura.
+- `registrarVenta` recalcula catálogo e impuestos en backend y aplica el contrato V1 antes de devolver el bloqueo de persistencia. No confía en importes fiscales del navegador.
+
+La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
+
 ## Evidencia Wix read-only — 2026-11-25
 
 - 24 productos Stores y 70 servicios Bookings de precio fijo EUR.
