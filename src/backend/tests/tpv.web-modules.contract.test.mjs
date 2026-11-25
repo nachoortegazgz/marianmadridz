@@ -584,7 +584,7 @@ test("registrarVenta replays the same TransaccionesTPV idempotency key without d
 });
 
 test("registrarVenta reports every unavailable Catalog V3 product ID", async () => {
-    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    const sales = await source("tpv/tpvVentas.web.js");
     const preparation = await source("tpv/tpvSalePreparation.js");
     assert.match(preparation, /TPV_CATALOG_PRODUCTS_NOT_FOUND/);
     assert.match(preparation, /invalidProductIds/);
@@ -592,7 +592,7 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
 });
 
 test("registrarVenta creates an optional Draft Order and persists a pending commercial transaction", async () => {
-    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    const sales = await source("tpv/tpvVentas.web.js");
     assert.match(sales, /draftOrders\.createDraftOrder/);
     assert.match(sales, /calculatedDraftOrder\?\.draftOrder/);
     assert.match(sales, /orderId: draft\.orderId/);
