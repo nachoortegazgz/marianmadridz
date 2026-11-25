@@ -72,6 +72,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(html, /call\("SALE_VALIDATE"/);
     assert.match(html, /state\.saleQuote\.totalVenta/);
     assert.match(html, /WIX_TAX_REGION_EXCLUDES_TAX/);
+    assert.match(html, /Inventario de productos no configurado en la ubicación física del salón/);
     assert.match(html, /No se aceptan pagos: la venta todavía no está autorizada/);
     assert.match(html, /const sequence = \+\+state\.quoteSequence/);
     assert.match(html, /if \(sequence !== state\.quoteSequence\) return/);
