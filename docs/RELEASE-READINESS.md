@@ -6,7 +6,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. P1/P2/P3/P5 endurecidos en esta rama; bridge opaco rechazado y compatibilidad del handshake HTML Component pendiente (#416); P4 bloqueada: MovimientosCaja es el ledger físico canónico (TPV_LOGICAL_VENTAS → TPV_SALE, transactionId), pero su writer TPV sigue fail-closed; no crear TransaccionesTPV duplicada ni Draft Order sin idempotencia durable. |
+| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606 integrada: bridge opaco rechazado, envelope estricto, export obsoleto eliminado. Follow-up de seguridad en PR pendiente: permisos no resueltos bloquean contexto, retries no se ejecutan sin clasificador explícito, timeout informa resultado incierto y SALE_REGISTER no transmite importes. Handshake HTML Component pendiente (#416). P4 bloqueada: MovimientosCaja es el ledger canónico; writer fail-closed; sin Draft Order hasta idempotencia durable y fiscalidad resuelta. |
 | #415/#209 Fiscal/SIF | F1 singleton único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE |
 | #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
