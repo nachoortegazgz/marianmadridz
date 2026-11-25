@@ -19,7 +19,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 | #523 Bookings | Reconciliar CitasF2 con bookings nativos y ledger, sin inferir estados | PENDIENTE |
 | #522 Canales | Validar flags de pago del catálogo frente a opciones nativas Bookings | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
-| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | PENDIENTE. Preparación de catálogo/impuestos implementada en PR #611; pendiente CI final y Wix Preview/Runtime. |
+| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | CI offline PASS en commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` (Layer 1/2, suite completa, SDK y ESLint); Gitleaks PASS. Wix Preview/Runtime y persistencia real pendientes. |
 
 ## Bloques de evidencia Runtime
 
