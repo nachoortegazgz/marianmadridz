@@ -381,8 +381,15 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     assert.match(runtime, /externalSideEffects: false/);
     assert.match(runtime, /testPersisted: true/);
     assert.match(repository, /CONTROL_TYPE\.TPV_TEST_RUN/);
+    assert.match(repository, /acquireTpvTestSessionLock/);
+    assert.match(repository, /releaseTpvTestSessionLock/);
+    assert.match(repository, /makeTpvSessionLockId/);
+    assert.match(repository, /TPV_TEST_ADMIN:/);
+    assert.match(repository, /buildData/);
+    assert.match(repository, /requestFingerprint/);
     assert.match(repository, /bulkPatchItems/);
     assert.match(repository, /CONSISTENCY\.STRONG/);
+    assert.match(runtime, /PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION/);
     assert.match(core, /sourceType: "SYNTHETIC"/);
     assert.match(core, /processingMode: "INTERNAL"/);
     assert.match(core, /reconciliationStatus: "NOT_RECONCILED"/);
