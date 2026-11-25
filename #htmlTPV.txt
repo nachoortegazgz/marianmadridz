@@ -762,10 +762,8 @@ body {
       id: item.itemId,
       tipoLinea: String(item.tipoLinea).toUpperCase(),
       name: [item.concepto, variantLabel].filter(Boolean).join(" · "),
-      price: priceMinor / 100,
       qty: 1,
       varianteId,
-      stockAfectado: false,
     });
     state.payments = [];
     renderTicket();
