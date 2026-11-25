@@ -521,6 +521,60 @@ export function assertTpvTestRunAppendOnly(original, next) {
     return true;
 }
 
+export function assertTransaccionesTPVRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV item must be an object");
+    }
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(item._id || ""))) {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV._id must be the idempotency UUID");
+    }
+    for (const field of ["sessionId", "operatorResourceId", "traceId", "requestFingerprint"]) {
+        if (!String(item[field] || "").trim()) throw new Error("SCHEMA_VIOLATION: TransaccionesTPV requires " + field);
+    }
+    if (!/^[a-f0-9]{64}$/i.test(String(item.requestFingerprint))) {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV requestFingerprint must be SHA-256");
+    }
+    if (!Array.isArray(item.lineas) || item.lineas.length === 0 || item.lineas.length > 100) {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV requires 1-100 backend-priced lines");
+    }
+    for (const line of item.lineas) {
+        if (!line || !["PRODUCTO", "SERVICIO"].includes(String(line.tipoLinea || "")) ||
+            !String(line.itemId || "").trim() ||
+            !Number.isSafeInteger(Number(line.cantidad)) || Number(line.cantidad) <= 0) {
+            throw new Error("SCHEMA_VIOLATION: TransaccionesTPV line identity or quantity invalid");
+        }
+        for (const field of ["precioUnitario", "subtotalNeto", "impuestosImporte", "totalLinea"]) {
+            if (!Number.isFinite(Number(line[field])) || Number(line[field]) < 0) {
+                throw new Error("SCHEMA_VIOLATION: TransaccionesTPV line amount invalid: " + field);
+            }
+        }
+    }
+    for (const field of ["subtotalNeto", "impuestosTotal", "totalVenta"]) {
+        if (!Number.isFinite(Number(item[field])) || Number(item[field]) < 0) {
+            throw new Error("SCHEMA_VIOLATION: TransaccionesTPV amount invalid: " + field);
+        }
+    }
+    for (const field of ["subtotalNetoMinor", "impuestosTotalMinor", "totalVentaMinor"]) {
+        if (!Number.isSafeInteger(Number(item[field])) || Number(item[field]) < 0) {
+            throw new Error("SCHEMA_VIOLATION: TransaccionesTPV minor amount invalid: " + field);
+        }
+    }
+    if (item.status !== "PENDING_PAYMENT" || item.sourceType !== "SYNTHETIC" ||
+        item.requiresReconciliation !== (item.orderId == null) ||
+        !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
+        typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||
+        typeof item.currency !== "string" || item.currency !== "EUR") {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV state or metadata invalid");
+    }
+    if (item.orderId !== null && typeof item.orderId !== "string") {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV.orderId must be string or null");
+    }
+    if (item.medioPago !== null && typeof item.medioPago !== "string") {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV.medioPago must be string or null");
+    }
+    return true;
+}
+
 export function assertControlOperativo(item) {
     if (!item || typeof item !== "object") {
         throw new Error("SCHEMA_VIOLATION: ControlOperativo item must be an object");
