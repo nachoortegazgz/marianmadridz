@@ -702,7 +702,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
-    CONTROL_TYPE.TPV_TEST_RUN,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
