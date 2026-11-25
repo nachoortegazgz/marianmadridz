@@ -594,6 +594,8 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
 test("registrarVenta creates an optional Draft Order and persists a pending commercial transaction", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     assert.match(sales, /draftOrders\.createDraftOrder/);
+    assert.match(sales, /catalogLines\.map/);
+    assert.doesNotMatch(sales, /DRAFT_ORDER_CATALOG_PRODUCTS_ONLY/);
     assert.match(sales, /calculatedDraftOrder\?\.draftOrder/);
     assert.match(sales, /orderId: draft\.orderId/);
     assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
