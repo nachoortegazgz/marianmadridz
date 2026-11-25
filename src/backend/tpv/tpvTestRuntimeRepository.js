@@ -89,7 +89,10 @@ export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId })
         if (current.controlType !== CONTROL_TYPE.TPV_SESSION_LOCK ||
             current.payload?.sessionId !== scopeId ||
             current.payload?.actorId !== actorId ||
-            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID) {
+            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+            current.payload?.lockPurpose !== "TPV_TEST_SESSION" ||
+            current.payload?.sourceType !== "SYNTHETIC" ||
+            current.payload?.processingMode !== "INTERNAL") {
             throw new Error("TPV_TEST_SESSION_LOCK_ID_COLLISION");
         }
         const currentExpiry = new Date(current.expiresAt || 0);
@@ -146,7 +149,10 @@ export async function releaseTpvTestSessionLock({ actorId, sessionId, traceId })
             return { released: false };
         }
         if (current.payload?.actorId !== actorId ||
-            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID) {
+            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
+            current.payload?.lockPurpose !== "TPV_TEST_SESSION" ||
+            current.payload?.sourceType !== "SYNTHETIC" ||
+            current.payload?.processingMode !== "INTERNAL") {
             throw new Error("TPV_TEST_SESSION_LOCK_ID_COLLISION");
         }
         if (current.payload?.testSessionId !== sessionId) {
