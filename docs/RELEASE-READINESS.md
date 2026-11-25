@@ -43,8 +43,8 @@ La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIS
 | #603 | `f42ef7fb50925be7bfece15ff5391383cd33ee84` | run 45509432988 PASS (80/747) | run 45509433003 PASS |
 | #604 | `0acb60df65bba1545d3a57cfa261d1de518eb39d` | run 45511826479 PASS (81/750) | run 45511827103 PASS |
 
-## Normativa de calendario
+## Normativa
 
-El BOE publica el Real Decreto-ley 15/2025 (BOE-A-2025-24446), cuya disposición final primera fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. La nota informativa ministerial de 05-10-2026 sobre una posible extensión posterior no sustituye a la norma publicada mientras no se apruebe y publique una modificación.
+El RDL 15/2025 (BOE-A-2025-24446) fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. El RDL 1/2007, arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. El sitio devuelve `taxIncludedInItemPrices=false` y la presentación pública del precio no está verificada; se mantiene bloqueada la venta hasta resolverlo.
 
 Estado operativo: **NO-GO**. Read-back CMS de solo lectura 2026-11-25; no se ha ejecutado Preview/Runtime. No se han modificado datos CMS, configuración fiscal, secretos, ledgers ni pedidos.
