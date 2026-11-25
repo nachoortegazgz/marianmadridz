@@ -13,7 +13,7 @@ La implementación aún no cumple este criterio: el controlador importa tpvTestR
 - `MovimientosCaja` es el ledger físico canónico. No crear `TransaccionesTPV` ni otro ledger alternativo.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - Los ledgers son append-only; rectificaciones mediante nuevos registros trazables.
-- No se generan nuevas ventas, pagos, devoluciones o cierres sintéticos. Los registros sintéticos históricos se conservan intactos y solo se leen mediante compatibilidad explícita.
+- El contrato operativo único no clasifica operaciones por origen de datos. Los registros heredados quedan fuera de la nueva ruta y se conservan hasta definir su tratamiento controlado.
 - Frontend: presentación/orquestación. Backend/WebMethods: catálogo, importes, fiscalidad, permisos y reglas.
 - No activar pagos reales, writers fiscales, pedidos ni efectos externos durante QA.
 
