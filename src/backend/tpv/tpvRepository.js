@@ -869,7 +869,7 @@ export async function queryTpvRecords(collection, filter, options = {}) {
         }
         if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
         const sortSpec = Array.isArray(options.sort) && options.sort.length ? options.sort : ["createdAt ASC"];
-        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\\s+/);
+        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\s+/);
         records.sort((a, b) => {
             const av = field.split(".").reduce((value, key) => value?.[key], a);
             const bv = field.split(".").reduce((value, key) => value?.[key], b);
