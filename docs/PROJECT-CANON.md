@@ -1,6 +1,6 @@
 # PROJECT-CANON — marianmadridz
 
-Revisión: 2026-11-25 · Base: `main@62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`
+Revisión: 2026-11-25 · Base: `main@d087d47316043f3109128de28fffbb41ea179314`
 
 ## 1. IDENTIDAD
 
@@ -133,7 +133,7 @@ Detalle operativo P0/P1: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](R
 
 ## 9. ACTUALIZACIÓN VINCULANTE — 2026-11-25 (PR #611)
 
-Esta sección prevalece sobre cualquier referencia anterior de este documento que indique que la PR #611 está abierta, en Draft o no fusionada.
+Esta sección fija el estado actual de integración y prevalece sobre los registros de estado históricos anteriores.
 
 - PR [#611](https://github.com/nachoortegazgz/marianmadridz/pull/611) está **MERGED** en `main`; merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
 - Se integró preparación de venta TPV de solo lectura: backend resuelve catálogo Stores Catalog V3/Bookings, profesional autorizado y fiscalidad mediante `taxSettings.getTaxSettings` + `taxCalculation.calculateTax`. El frontend presenta importes devueltos por backend; no es autoridad de precios/impuestos.
