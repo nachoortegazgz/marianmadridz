@@ -921,7 +921,16 @@ body {
   function renderTicket() {
     const container = $("ticketLines");
     const quoteLines = Array.isArray(state.saleQuote?.lineas) ? state.saleQuote.lineas : [];
-    if (!state.items.length) {
+    if (!state.items.length && state.lastSale) {
+      const sale = state.lastSale;
+      const methods = (sale.pagos || []).map((payment) => payment.method).filter(Boolean).join(", ");
+      container.innerHTML = `
+        <div class="ticket-line"><strong>VENTA DE PRUEBA · SIN VALIDEZ FISCAL</strong></div>
+        <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
+        <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
+        <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
+      `;
+    } else if (!state.items.length) {
       container.innerHTML = '<p style="color:var(--muted);">Añade conceptos del catálogo.</p>';
     } else {
       container.innerHTML = state.items.map((item, i) => {
@@ -1105,7 +1114,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const remainingMinor = totalMinor - appliedMinor;
     if (!state.items.length || remainingMinor <= 0) {
-      toast("No hay importe pendiente de cobro.");
+      toast("No hay importe pendiente para el pago simulado.");
       return;
     }
     if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
@@ -1138,7 +1147,7 @@ body {
     const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
     const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
     if (appliedMinor !== totalMinor) {
-      toast("El pago no cubre el total fiscal exacto.");
+      toast("El importe simulado no cubre el total fiscal exacto.");
       return;
     }
     const result = await keyedAction("SALE", "SALE_REGISTER", {
@@ -1179,7 +1188,7 @@ body {
     }, "SESSION_OPEN_RES");
     renderSession(session);
     await refreshCashState();
-    toast("Sesión abierta.");
+    toast("Sesión de prueba abierta; no se ha abierto una caja real.");
   });
 
   /* ---------- Entrada / Salida de efectivo ---------- */
@@ -1206,7 +1215,7 @@ body {
           profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
         await refreshCashState();
-        toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
+        toast(type === "ENTRADA" ? "Entrada de prueba registrada." : "Salida de prueba registrada.");
       }
     );
   }
@@ -1224,7 +1233,7 @@ body {
         <option value="EFECTIVO">Efectivo</option>
         <option value="TARJETA">Tarjeta</option>
         <option value="BIZUM">Bizum</option>
-        <option value="OTROS">Otros</option>
+        <option value="OTROS" disabled>Otros (no disponible en V1)</option>
       </select>
       <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
     `, async () => {
@@ -1262,7 +1271,7 @@ body {
       reason,
     }, "PARTIAL_CASH_COUNT_RES");
     await refreshCashState();
-    toast("Arqueo parcial registrado; la sesión sigue abierta.");
+    toast("Arqueo parcial de prueba registrado; la sesión sigue abierta.");
   });
 
   /* ---------- Resumen e historial ---------- */
@@ -1380,7 +1389,7 @@ body {
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       await refreshCashState();
-      toast("Cierre Z registrado; sesión cerrada.");
+      toast("Cierre Z de prueba registrado; no se ha cerrado una caja real.");
     });
   };
 
