@@ -380,14 +380,14 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     assert.match(runtime, /realPayment: false/);
     assert.match(runtime, /externalSideEffects: false/);
     assert.match(runtime, /testPersisted: true/);
-    assert.match(repository, /CONTROL_TYPE\\.TPV_TEST_RUN/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_RUN/);
     assert.match(repository, /bulkPatchItems/);
-    assert.match(repository, /CONSISTENCY\\.STRONG/);
+    assert.match(repository, /CONSISTENCY\.STRONG/);
     assert.match(core, /sourceType: "SYNTHETIC"/);
     assert.match(core, /processingMode: "INTERNAL"/);
     assert.match(core, /reconciliationStatus: "NOT_RECONCILED"/);
     assert.match(config, /TPV_TEST_RUN: "TPV_TEST_RUN"/);
-    assert.match(config, /TPV_TEST_RUN\\]: Object\\.freeze/);
+    assert.ok(config.includes("[CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze"));
 });
 
 test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
