@@ -1000,7 +1000,7 @@ body {
     const paymentReady = state.saleQuote?.saleReady === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
-    document.querySelectorAll("[data-quick], [data-method]").forEach((button) => { button.disabled = !paymentReady; });
+    document.querySelectorAll("[data-cash], [data-method]").forEach((button) => { button.disabled = !paymentReady; });
     $("applied").textContent = money(appliedMinor / 100);
     $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
     $("change").textContent = money(changeMinor / 100);
