@@ -82,7 +82,7 @@ test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amo
     assert.match(controller, /contextStatus/);
     assert.doesNotMatch(controller, /error\?\.detail \|\| null/);
 
-    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey \|\| key\)/);
+    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
     assert.match(controller, /productId: line\.itemId/);
     assert.doesNotMatch(controller.match(/return registrarVenta\(\{[\s\S]*?\n            \}\);/)?.[0] || "", /precioUnitario|subtotalNeto|impuestosTotal|totalVenta/);
 });
