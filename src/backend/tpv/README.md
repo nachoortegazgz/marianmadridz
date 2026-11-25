@@ -26,7 +26,7 @@
 - No se declara venta completada ni se limpia el ticket sin confirmación de persistencia.
 - Líneas personalizadas, descuentos no autorizados y bonos/tarjetas regalo sin validación de saldo están bloqueados.
 
-## Contrato de escritura V1 (PR #612, propuesta en revisión)
+## Contrato de preescritura V1 (PR #612, integrado en main)
 
 El módulo puro `tpvWriteV1Contract.js` delimita el primer writer sin persistir:
 - Una única tasa impositiva verificable en todas las líneas. Una venta con más de una tasa queda bloqueada; no se selecciona una tasa representativa.
