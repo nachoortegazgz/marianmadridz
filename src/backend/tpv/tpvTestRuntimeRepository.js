@@ -146,21 +146,33 @@ export async function appendTpvTestRunEvent({
     eventType,
     idempotencyKey,
     data,
+    buildData,
+    requestFingerprint,
     traceId,
     closeRun = false,
 }) {
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
         const current = await getTpvTestRun(sessionId, actorId);
+        const claim = current.payload.idempotencyIndex?.[idempotencyKey];
+        if (claim && buildData) {
+            const prior = current.payload.events.find((event) => event.sequence === claim.sequence);
+            if (!prior || prior.eventType !== eventType ||
+                prior.data?.requestFingerprint !== requestFingerprint) {
+                throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+            }
+            return { item: current, event: prior, replayed: true };
+        }
+        if (current.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
+        const eventData = typeof buildData === "function" ? buildData(current.payload) : data;
         const appended = appendTpvTestEvent(current.payload, {
             eventType,
             idempotencyKey,
             actorId,
-            data,
+            data: eventData,
         });
         if (appended.replayed) {
             return { item: current, event: appended.event, replayed: true };
         }
-        if (current.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
         if (new Date(current.payload.activeUntil || 0).getTime() <= Date.now()) {
             throw new Error("TPV_TEST_RUN_EXPIRED");
         }
