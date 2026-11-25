@@ -28,7 +28,7 @@ Lectura de `GET /wix-data/v2/collections` en el sitio:
 - `ControlOperativo` contiene los campos físicos requeridos por el runtime: `controlType`, `dedupeKey`, `traceId` y `payload`; también `status`, `version` y `expiresAt`.
 - `MovimientosCaja` conserva su esquema fiscal y campos obligatorios; el runtime de pruebas no lo utiliza.
 - No aparece una colección física independiente de TPV ni `TransaccionesTPV`.
-- Consulta consistente de `ControlOperativo`: 0 registros `TPV_TEST_RUN` y 0 registros `TPV_SESSION_LOCK` en el momento de la comprobación. La lectura no creó sesiones ni locks.
+- Consulta consistente de `ControlOperativo`: 0 registros `TPV_TEST_RUN` y 0 registros `TPV_SESSION_LOCK` en el momento de la comprobación original. `TPV_TEST_SESSION_LOCK` se incorporó después en PR #616 y no queda cubierto por aquella lectura. La lectura original no creó sesiones ni locks.
 
 La colección física sigue siendo SSOT. `TPV_TEST_RUN` y `TPV_TEST_SESSION_LOCK` son discriminadores QA sobre la colección existente, no colecciones físicas nuevas. El tipo operativo `TPV_SESSION_LOCK` no se reutiliza.
 
@@ -71,7 +71,7 @@ En esta versión solo se admite simular un único medio de pago por venta: efect
 
 ## 6. Validación de código
 
-- CI offline: PASS en el commit de código `a23a4db1154c004c1d29fabbcc666c73845c441a` (Backend offline quality gates y Secret scanning).
+- PR #616, commit `bf60067a08a7f3db4003c489b470eb81e0294c09`: Backend offline quality gates PASS; 80 suites, 759 tests, 0 fallos; ESLint PASS; npm audit PASS; verificaciones SDK Wix Cart/Transactions/TPV PASS; Secret scanning PASS.
 - Se añadieron pruebas para el cruce `MapaStaff.staffMemberId` ↔ Wix Bookings y para bloquear medios no verificados.
 - Se corrigieron aserciones de imports agrupados que habían quedado obsoletas tras consolidar imports del controlador.
 - Se añadió prueba contractual para excluir servicios ocultos del catálogo TPV.
