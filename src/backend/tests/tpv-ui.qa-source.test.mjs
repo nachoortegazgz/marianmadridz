@@ -37,7 +37,7 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
     assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
     assert.match(controller, /case "SALE_REGISTER": \{[\s\S]*?return registrarVenta\(\{/);
-    const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "SALE_VALIDATE":/)?[1] || "";
+    const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "SALE_VALIDATE":/)?.[1] || "";
     assert.match(saleWriteBlock, /productId,/);
     assert.match(saleWriteBlock, /cantidad: numeric\(line\.cantidad/);
     assert.match(saleWriteBlock, /idempotencyKey: saleUuidV4Key\(payload\.idempotencyKey\)/);
