@@ -191,7 +191,7 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
         condition: {
             filter: { controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN } },
         },
-    }), /CMS_BULK_REMOVE_SCOPE_DENIED/);
+    }), /DATA_ACCESS_ERROR/);
     assert.throws(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
         condition: {
             filter: {
@@ -199,7 +199,7 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
                 expiresAt: { $lt: new Date(Date.now() + 60_000) },
             },
         },
-    }), /CMS_BULK_REMOVE_SCOPE_DENIED/);
+    }), /DATA_ACCESS_ERROR/);
 
     const wrongSite = { ...item, payload: { ...item.payload, siteId: "another-site" } };
     assert.throws(() => ControlOperativo_beforeInsert(wrongSite), /synthetic envelope invalid/);
