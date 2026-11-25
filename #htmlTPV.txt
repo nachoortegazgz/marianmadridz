@@ -951,6 +951,8 @@ body {
       const blockers = quote.saleReadinessBlockers || [];
       const messages = [];
       if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
+      if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
+      if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
       if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario no conciliado.");
