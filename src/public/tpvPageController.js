@@ -436,7 +436,7 @@ export function initializeTpvPage(widget) {
 
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
-        allowOpaqueOrigin: false,
+        allowOpaqueOrigin: false, // TODO(#416): Wix HTML Components may emit opaque origins; verify supported handshake/origin contract before enabling bridge traffic.
         handshakeTimeoutMs: 65000,
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
