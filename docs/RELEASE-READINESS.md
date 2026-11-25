@@ -20,9 +20,9 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
 | #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS; writer, persistencia real y Wix Preview/Runtime pendientes |
 | P1.1 Apertura de sesión | PARCIAL | `tpvCaja.web.js:148-189`: autorización ADMIN, guard physical y actualización CajaActual; falta evento de apertura en MovimientosCaja; CI offline PASS, runtime pendiente |
-| P1.2 Cierre de sesión | PENDIENTE | No existe `cerrarSesionCaja`; el cierre está modelado dentro de `generarCierreZ` (`tpvCierres.web.js:131-253`) y queda bloqueado por guard |
-| P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:431-455`: guard physical y hook físico habilitados con cadena hash; CI offline PASS, runtime no ejecutado |
-| P1.4 Registro de venta | PARCIAL | `tpvVentas.web.js:143-430`: Catalog V3/impuestos backend, idempotencia, Draft Order opcional y insert TransaccionesTPV; colección CMS creada; CI offline PASS, escritura runtime no probada |
+| P1.2 Cierre de sesión | PENDIENTE | No existe `cerrarSesionCaja`; el cierre se modela en `generarCierreZ` (`tpvCierres.web.js:131-253`); Contract C bloquea cierres Z reales |
+| P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:392-455`; `validation.js:246-280`: guard physical y hook físico habilitados con cadena hash; CI offline PASS, runtime no ejecutado |
+| P1.4 Registro de venta | PARCIAL | `tpvVentas.web.js:234-430`; `tpvSalePreparation.js:144-208`; `dataAccess.js:310-350`: Catalog V3/impuestos backend, idempotencia, Draft Order opcional y insert TransaccionesTPV; colección CMS creada; CI offline PASS, escritura runtime no probada |
 | P1.5 Devolución | BLOQUEADO | `tpvDevoluciones.web.js:43-86`: valida DTO y devuelve `TPV_REFUND_PROVIDER_NOT_CONFIGURED`; no persiste; `procesarDevolucion` ausente |
 | P1.6 Cierre Z | PARCIAL | `tpvCierres.web.js:66-253`: guard physical y persistencia física separados del ledger fiscal; Contract C mantiene cierres reales bloqueados; CI offline PASS, runtime no probado |
 | P1.7 Operador TPV | PENDIENTE | `security.js:163-187,538-545`; `tpvOperatorContext.js:1-20`; gates de autorización en código, prueba efectiva pendiente |
