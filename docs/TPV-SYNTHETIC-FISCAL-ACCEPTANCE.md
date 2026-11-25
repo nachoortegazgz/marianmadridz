@@ -15,7 +15,9 @@
 
 ## 2. Inventario CMS del sitio verificado el 25-11-2026
 
-Consulta read-only de las colecciones CMS del sitio. El usuario declara que las colecciones están configuradas como Online. La API de colecciones devuelve collectionType=NATIVE y los datos actuales; esa respuesta no expone un campo explícito que certifique el selector Sandbox/Online del CMS. Por tanto, el estado Draft del sitio está verificado, la existencia/lectura de las colecciones está verificada y el selector Online queda declarado por el usuario, pendiente de comprobación visual en el CMS.
+Consulta read-only de las colecciones CMS del sitio. El usuario declara que las colecciones están configuradas como Online. La API de colecciones devuelve collectionType=NATIVE. Además, Site Data Usage confirma que los registros actuales están en LIVE y que SANDBOX devuelve 0 elementos para las cuatro colecciones: MovimientosCaja LIVE=5/SANDBOX=0; CajaActual 1/0; ControlOperativo 71/0; HistoricoCierresZ 1/0. El sitio suma 227 elementos LIVE y 0 SANDBOX en la lectura realizada. La API de uso no expone el selector de activación Sandbox/Online por colección; el usuario declara que están configuradas como Online. Por tanto, la presencia de los datos en LIVE está verificada, pero el ajuste visual exacto del selector queda pendiente.
+
+Según la documentación oficial de Wix, Preview utiliza Sandbox cuando esa base está habilitada; si no lo está, las colecciones nativas pueden operar sobre Live. Las colecciones de Wix Apps solo tienen versión Live, y los cambios en ellas desde Preview afectan al sitio publicado. No se harán escrituras de prueba desde Preview hasta confirmar la configuración de cada colección y el destino efectivo de la operación.
 
 | Colección | Tipo Wix | Registros observados | Estado relevante |
 |---|---|---:|---|
