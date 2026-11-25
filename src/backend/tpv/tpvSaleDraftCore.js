@@ -872,7 +872,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             deps, marker, contextForResult, "TPV_PRODUCT_NOT_FOUND",
             "Uno o más productos no existen, no están visibles o no tienen una variante válida en el catálogo.",
             ["Corregir los identificadores de producto o variante.", "No se ha creado ningún pedido ni movimiento de caja."],
-            { invalidProductIds: catalog.invalidProductIds, resolutionAttempts: attempts }
+            { invalidProductIds: catalog.invalidProductIds, resolutionAttempts }
         );
     }
 
@@ -919,7 +919,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             "No se pudo guardar el cálculo fiscal previo al borrador.",
             ["No se ha llamado a Draft Orders.", "Reintentar la lectura del estado idempotente antes de iniciar otra operación."],
             traceId,
-            { requiresReconciliation: true, idempotencyPersisted: true, resolutionAttempts: attempts }
+            { requiresReconciliation: true, idempotencyPersisted: true, resolutionAttempts }
         );
     }
 
@@ -970,7 +970,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
                 deps, marker, contextForResult, "TPV_ECOM_DRAFT_REJECTED",
                 "Wix eCommerce ha rechazado la creación del pedido provisional.",
                 ["Revisar el catálogo, los permisos ECOM.DRAFT_ORDERS y los datos de destinatario.", "No se ha realizado ningún cobro."],
-                { retryable: false, resolutionAttempts: attempts }
+                { retryable: false, resolutionAttempts }
             );
         }
         return makePending("TPV_DRAFT_CREATION_UNCERTAIN", contextForResult, {
