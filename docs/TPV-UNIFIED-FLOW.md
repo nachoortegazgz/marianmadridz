@@ -31,7 +31,7 @@ La clasificación es metadato de trazabilidad. No habilita ni deshabilita por s�
 
 ## 3. Desarrollo online y datos de prueba
 
-Durante la fase de desarrollo, los registros actuales y los nuevos registros anteriores al corte oficial son sintéticos, incluso si reproducen exactamente una operación real. Pueden modificarse, corregirse o eliminarse para preparar, repetir y validar escenarios completos, siempre que se haya verificado que pertenecen al conjunto de desarrollo y no representan actividad económica real.
+Durante la fase de desarrollo, los registros actuales y los nuevos registros anteriores al corte oficial son sintéticos, incluso si reproducen exactamente una operación real. Antes del corte, el backend puede autorizar a un administrador a modificar o eliminar registros del conjunto de desarrollo para preparar, repetir y validar escenarios completos; cada intervención debe quedar auditada y acotada al ámbito TPV. No se permite esta mutación desde el frontend ni se altera el timestamp original de creación. El writer operativo sigue registrando cada operación mediante inserciones trazables para que las pruebas de append-only sean válidas.
 
 Las pruebas online deben usar el sitio, las colecciones y la ruta operativa existentes, sin crear un TPV paralelo ni una colección alternativa. El aislamiento de Wix Sandbox/Online es una propiedad de configuración de Wix, no una bifurcación del código; antes de escribir desde Preview debe comprobarse el destino efectivo de cada colección.
 
@@ -48,7 +48,7 @@ Antes de declarar actividad real se ejecutará un procedimiento de transición c
 5. Verificar colecciones vacías o en estado inicial aprobado, configuración fiscal real, series/numeración, permisos, pagos, conciliación y aceptación Runtime.
 6. Fijar de forma única productionActivationAt, iniciar la actividad real y verificar que los siguientes registros se clasifican como REAL.
 
-La limpieza preproducción es una operación administrativa excepcional sobre datos sintéticos de desarrollo, no una función del TPV ni una autorización para modificar registros reales. Después del corte, los ledgers reales son append-only e inmutables; las correcciones se realizan mediante nuevos registros rectificativos trazables. No se actualizan ni eliminan registros reales.
+La limpieza preproducción es una operación administrativa excepcional sobre todos los registros del ámbito de desarrollo previamente verificados como sintéticos; no se limita a una etiqueta ni afecta a datos ajenos al TPV. Una vez fijado productionActivationAt y declarada actividad real, queda prohibido modificar o eliminar cualquier registro TPV, incluidos posibles registros sintéticos residuales. Los ledgers reales son append-only e inmutables; las correcciones se realizan mediante nuevos registros rectificativos trazables.
 
 ## 5. Invariantes del flujo único
 
@@ -59,7 +59,7 @@ La limpieza preproducción es una operación administrativa excepcional sobre da
 - Secuencia, hash, previous hash, locks CAS, concurrencia y recuperación se ejecutan en la misma ruta.
 - Autorización backend en cada WebMethod; el frontend solo presenta y orquesta.
 - El contrato fiscal físico se satisface íntegramente antes de persistir; no usar placeholders ni tasas inventadas.
-- Los registros reales son append-only; rectificaciones mediante nuevos registros.
+- Antes del corte, las mutaciones administrativas de datos de desarrollo se autorizan exclusivamente en backend y quedan auditadas; después del corte, update/remove de cualquier registro TPV se rechaza. El writer de operaciones sigue siendo append-only en todas las fases.
 - SharePoint es repositorio de evidencia, nunca autoridad transaccional.
 - No activar pagos, hardware, comunicaciones externas o remisión fiscal por el mero hecho de que el registro sea REAL.
 
