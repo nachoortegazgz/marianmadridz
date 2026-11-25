@@ -38,6 +38,150 @@ function assertRunOwner(item, { sessionId, actorId }) {
     return item;
 }
 
+const TEST_SESSION_LOCK_TTL_MS = 12 * 60 * 60 * 1000;
+
+function testSessionLockScope(actorId) {
+    return "TPV_TEST_ADMIN:" + String(actorId || "").trim();
+}
+
+export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId }) {
+    if (!actorId || !sessionId) throw new Error("TPV_TEST_SESSION_LOCK_INVALID");
+    const scopeId = testSessionLockScope(actorId);
+    const lockId = makeTpvSessionLockId(scopeId);
+    for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + TEST_SESSION_LOCK_TTL_MS);
+        let current = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
+        if (!current) {
+            const item = {
+                _id: lockId,
+                controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
+                dedupeKey: "TPV_SESSION:" + lockId.slice(4),
+                traceId: String(traceId || ""),
+                status: "ACTIVE",
+                version: 0,
+                expiresAt,
+                payload: {
+                    sessionId: scopeId,
+                    actorId,
+                    testSessionId: sessionId,
+                    lockPurpose: "TPV_TEST_SESSION",
+                    sourceType: "SYNTHETIC",
+                    processingMode: "INTERNAL",
+                    siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                    acquiredAt: now.toISOString(),
+                },
+            };
+            try {
+                await insertItem(RUN_COLLECTION, item);
+                const persisted = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
+                if (persisted?.payload?.testSessionId !== sessionId ||
+                    persisted?.status !== "ACTIVE") {
+                    throw new Error("TPV_TEST_SESSION_LOCK_POST_INSERT_INVALID");
+                }
+                return { lockId, replayed: false };
+            } catch (error) {
+                if (!duplicateKey(error)) throw error;
+                current = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
+                if (!current) continue;
+            }
+        }
+        if (current.controlType !== CONTROL_TYPE.TPV_SESSION_LOCK ||
+            current.payload?.sessionId !== scopeId ||
+            current.payload?.actorId !== actorId ||
+            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID) {
+            throw new Error("TPV_TEST_SESSION_LOCK_ID_COLLISION");
+        }
+        const currentExpiry = new Date(current.expiresAt || 0);
+        if (current.status === "ACTIVE" && currentExpiry.getTime() > now.getTime()) {
+            if (current.payload?.testSessionId === sessionId) {
+                return { lockId, replayed: true };
+            }
+            throw new Error("TPV_TEST_SESSION_ALREADY_OPEN");
+        }
+        if (!["ACTIVE", "RELEASED"].includes(current.status)) {
+            throw new Error("TPV_TEST_SESSION_LOCK_INVALID_STATE");
+        }
+        const condition = {
+            controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
+            version: { $eq: Number(current.version) },
+            status: { $eq: current.status },
+        };
+        if (current.status === "ACTIVE") condition.expiresAt = { $eq: currentExpiry };
+        const nextPayload = {
+            ...current.payload,
+            testSessionId: sessionId,
+            lockPurpose: "TPV_TEST_SESSION",
+            sourceType: "SYNTHETIC",
+            processingMode: "INTERNAL",
+            siteId: TPV_RUNTIME_POLICY.SITE_ID,
+            acquiredAt: now.toISOString(),
+            releasedAt: null,
+        };
+        const patched = await bulkPatchItems(RUN_COLLECTION, [lockId], [[
+            { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
+            { fieldPath: "expiresAt", action: "SET_FIELD", value: expiresAt },
+            { fieldPath: "payload", action: "SET_FIELD", value: nextPayload },
+            { fieldPath: "traceId", action: "SET_FIELD", value: String(traceId || "") },
+            { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+        ]], { condition: { filter: condition }, consistency: CONSISTENCY.STRONG });
+        if (Array.isArray(patched?.updatedItemIds) && patched.updatedItemIds.includes(lockId)) {
+            const persisted = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
+            if (persisted?.payload?.testSessionId !== sessionId ||
+                persisted?.status !== "ACTIVE") {
+                throw new Error("TPV_TEST_SESSION_LOCK_POST_UPDATE_INVALID");
+            }
+            return { lockId, replayed: false };
+        }
+    }
+    throw new Error("TPV_TEST_SESSION_LOCK_CONCURRENT_RETRY_REQUIRED");
+}
+
+export async function releaseTpvTestSessionLock({ actorId, sessionId, traceId }) {
+    if (!actorId || !sessionId) return { released: false };
+    const lockId = makeTpvSessionLockId(testSessionLockScope(actorId));
+    for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
+        const current = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
+        if (!current || current.controlType !== CONTROL_TYPE.TPV_SESSION_LOCK) {
+            return { released: false };
+        }
+        if (current.payload?.actorId !== actorId ||
+            current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID) {
+            throw new Error("TPV_TEST_SESSION_LOCK_ID_COLLISION");
+        }
+        if (current.payload?.testSessionId !== sessionId) {
+            throw new Error("TPV_TEST_SESSION_LOCK_OWNERSHIP_MISMATCH");
+        }
+        if (current.status === "RELEASED") return { released: true, replayed: true };
+        if (current.status !== "ACTIVE") throw new Error("TPV_TEST_SESSION_LOCK_INVALID_STATE");
+        const now = new Date();
+        const patched = await bulkPatchItems(RUN_COLLECTION, [lockId], [[
+            { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
+            { fieldPath: "expiresAt", action: "SET_FIELD", value: now },
+            { fieldPath: "payload", action: "SET_FIELD", value: {
+                ...current.payload,
+                releasedAt: now.toISOString(),
+            } },
+            { fieldPath: "traceId", action: "SET_FIELD", value: String(traceId || "") },
+            { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
+        ]], {
+            condition: {
+                filter: {
+                    controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
+                    version: { $eq: Number(current.version) },
+                    status: { $eq: "ACTIVE" },
+                    expiresAt: { $eq: current.expiresAt },
+                },
+            },
+            consistency: CONSISTENCY.STRONG,
+        });
+        if (Array.isArray(patched?.updatedItemIds) && patched.updatedItemIds.includes(lockId)) {
+            return { released: true, replayed: false };
+        }
+    }
+    throw new Error("TPV_TEST_SESSION_LOCK_RELEASE_RETRY_REQUIRED");
+}
+
 export async function createTpvTestRun({
     sessionId,
     actorId,
