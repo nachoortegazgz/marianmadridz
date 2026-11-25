@@ -1032,7 +1032,7 @@ export async function appendTpvAudit({
     const key = normalizeIdempotencyKey(idempotencyKey);
     const eventId = "TPVAUDIT-" + createHash("sha256").update(key).digest("hex").slice(0, 32);
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-    const auditFingerprint = createHash("sha256").update(stableSerialize({ action, actorId, entityType, entityId, traceId, payload })).digest("hex");
+    const auditFingerprint = createHash("sha256").update(stableSerialize({ action, actorId, entityType, entityId, payload })).digest("hex");
     const existing = await getItem(collection, eventId, CONSISTENCY.STRONG);
     if (existing) {
         if (existing.payload?.auditFingerprint !== auditFingerprint) throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
