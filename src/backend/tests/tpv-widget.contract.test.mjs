@@ -67,7 +67,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /validarVentaBorradorPrueba/);
-    assert.match(controller, /quote\.testReady !== true/);
+    assert.match(html, /state\.saleQuote\.testReady !== true/);
     assert.match(controller, /TPV_SALE_NOT_READY/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
         "the page controller must reject amounts outside safe integer minor units");
