@@ -42,7 +42,7 @@
 - El builder `_buildTpvLedgerItem()` no construye el conjunto completo de campos fiscales exigidos por `assertMovimientosCajaRequiredFields()` (entre otros, número/fecha de factura, tipo impositivo y período fiscal). No es un writer comercial válido aunque se retirase el guard.
 - El writer fiscal reutilizable `registrarEventoEconomico()` también está cerrado por `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false` y exige `CONFIG_SISTEMA_FISCAL`. La consulta real de Wix CMS devolvió cero registros `recordType=CONFIG_SISTEMA`; no se debe sortear ese control.
 - Wix Stores del sitio es Catalog V3. Wix documenta `Get Product` con `taxGroupId` y `Create Draft Order`; un borrador no acredita cobro ni sustituye la factura/registro fiscal. No se creó ningún pedido ni se invocó ningún endpoint mutador.
-- Normativa: el RDL 15/2025 publicado en BOE fija adaptación antes del 01-01-2027 para contribuyentes del art. 3.1.a) y antes del 01-07-2027 para el resto del art. 3.1. La nota ministerial de 05-10-2026 que anunció una posible alineación posterior no es una modificación publicada en BOE; no se usa como plazo vigente.
+- Normativa: el [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija adaptación antes del 01-01-2027 para contribuyentes del art. 3.1.a) y antes del 01-07-2027 para el resto del art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige informar al consumidor del precio final completo, incluidos impuestos.
 - Wix Preview/Runtime no ejecutado. No se han modificado datos CMS, configuración fiscal, secretos ni writers.
 
 ## Glosario mínimo
