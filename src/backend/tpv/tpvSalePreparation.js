@@ -75,11 +75,18 @@ async function resolveProducts(requests) {
         });
         if (!product || getEntityId(product) !== productId ||
             product.visible !== true || product.visibleInPos !== true) {
-            fail("TPV_PRODUCT_NOT_AVAILABLE_IN_POS");
+            return { productId, product: null };
         }
-        return [productId, product];
+        return { productId, product };
     }));
-    const byId = new Map(products);
+    const invalidProductIds = products.filter((entry) => !entry.product).map((entry) => entry.productId);
+    if (invalidProductIds.length) {
+        const error = new Error("TPV_CATALOG_PRODUCTS_NOT_FOUND");
+        error.code = "TPV_CATALOG_PRODUCTS_NOT_FOUND";
+        error.invalidProductIds = invalidProductIds;
+        throw error;
+    }
+    const byId = new Map(products.map((entry) => [entry.productId, entry.product]));
     return requests.map((request) => resolveProductVariant(byId.get(request.itemId), request));
 }
 
