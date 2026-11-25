@@ -617,6 +617,7 @@ body {
     const person = state.staff.find((item) => item.profesionalId === event.target.value);
     state.profesionalId = person ? person.profesionalId : null;
     toast(person ? "Profesional: " + person.nombre : "Profesional sin asignar");
+    refreshSaleQuote();
   };
 
   function renderSelectedCustomer() {
@@ -743,20 +744,26 @@ body {
 
   /* ---------- Catálogo nativo: Bookings y Stores Catalog V3 ---------- */
   function addCatalogLine(item, priceMinor, varianteId = null, variantLabel = "") {
-    if (!Number.isSafeInteger(priceMinor) || priceMinor < 0) {
+    if (!["PRODUCTO", "SERVICIO"].includes(String(item?.tipoLinea || "").toUpperCase())) {
+      toast("Solo se admiten líneas del catálogo con clasificación fiscal Wix.");
+      return;
+    }
+    if (!Number.isSafeInteger(priceMinor) || priceMinor <= 0) {
       toast("El artículo no tiene un precio válido.");
       return;
     }
     state.items.push({
       id: item.itemId,
-      tipoLinea: item.tipoLinea || "PERSONALIZADA",
+      tipoLinea: String(item.tipoLinea).toUpperCase(),
       name: [item.concepto, variantLabel].filter(Boolean).join(" · "),
       price: priceMinor / 100,
       qty: 1,
       varianteId,
       stockAfectado: false,
     });
+    state.payments = [];
     renderTicket();
+    refreshSaleQuote();
   }
 
   async function selectCatalogItem(item) {
@@ -834,17 +841,8 @@ body {
 
   $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
   $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e.message));
-  $("tabPersonalizada").onclick = () => openModal("Tarifa personalizada", `
-    <input id="customConcept" class="field" maxlength="160" placeholder="Concepto">
-    <input id="customPrice" class="field" type="number" min="0.01" step="0.01" placeholder="Precio">
-  `, async () => {
-    const concept = $("customConcept").value.trim();
-    const price = num($("customPrice").value);
-    if (concept.length < 2 || price <= 0) throw new Error("Indica concepto e importe válidos.");
-    state.items.push({ id: null, tipoLinea: "PERSONALIZADA", name: concept, price, qty: 1, varianteId: null, stockAfectado: false });
-    renderTicket();
-  });
-  $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
+  $("tabPersonalizada").onclick = () => toast("Tarifa personalizada no disponible: falta clasificación fiscal autorizada.");
+    $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
 
   /* ---------- Ticket ---------- */
   function renderTicket() {
