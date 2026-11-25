@@ -4,13 +4,19 @@
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 
+## Decisión arquitectónica nueva — TPV de flujo único (2026-11-25)
+
+El propietario establece un único flujo de código para operaciones con cualquier dato. No se crearán ni conservarán ramas de negocio, runtimes, flags, enums o contratos que separen Sandbox/Live, sintético/real o Preview/Published. La decisión queda desarrollada en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y prevalece sobre directrices históricas incompatibles.
+
+**Avance documental realizado:** criterio incorporado al índice, canon del proyecto, README y README backend TPV. **Código aún no migrado:** tpvPageController.js continúa importando tpvTestRuntime.web.js; tpvRepository.js mantiene el guard de escritura y internalConfig.js conserva discriminadores históricos. No se han eliminado módulos ni se ha abierto el writer porque el builder aún no satisface el esquema físico obligatorio de MovimientosCaja. No se han ejecutado pruebas ni mutaciones Wix en esta intervención.
+
 ## 1. Estado ejecutivo
 
 - PR #611, `feat(tpv-authoritative-sale-preparation-v2-20261125`, fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
 - La preparación de venta TPV es autoritativa y read-only: backend resuelve catálogo y calcula impuestos mediante APIs Wix; el navegador no determina precios ni totales.
 - `saleReady=false`, `paymentVerified=false`, `persisted=false`. No hay writer operativo TPV habilitado.
 - No se creó `TransaccionesTPV`, Draft Order, pedido, movimiento, pago ni devolución. No se alteraron CMS, inventario, configuración fiscal, precios ni secretos.
-- Los históricos sintéticos existentes permanecen preservados; no se generan nuevos registros sintéticos de venta/pago/devolución/cierre.
+- Los registros históricos creados por el runtime anterior permanecen preservados y fuera del nuevo contrato operativo; la ruta única aún no está conectada a persistencia.
 
 ## 2. P0 — bloqueos abiertos
 
@@ -105,11 +111,11 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 **Decisión:** NO-GO. No desplegar ni habilitar ventas reales hasta cerrar todos los gates y documentar rollback.
 
 
-## 9. TPV — runtime aislado para pruebas online (PR #615)
+## 9. TPV — implementación heredada de runtime diferenciado (PR #615; decisión supersedida 2026-11-25)
 
-- PR #615 añade runtime sintético de pruebas en `ControlOperativo`; no habilita ventas, pagos ni escrituras fiscales reales.
-- Lectura Wix live 2026-11-25: 40 colecciones; existen `ControlOperativo`, `MapaStaff`, `MovimientosCaja` y `CajaActual`; no existe colección TPV física independiente ni `TransaccionesTPV`.
-- Catálogo live: 94 servicios Bookings (70 visibles y 24 ocultos), 3 profesionales y 24 productos Stores Catalog V3 visibles en POS.
+- PR #615 documenta el runtime anterior. Su separación por clasificación de datos queda supersedida por [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md); el código no se ha retirado todavía.
+- Lectura Wix CMS 2026-11-25: 40 colecciones; existen `ControlOperativo`, `MapaStaff`, `MovimientosCaja` y `CajaActual`; no existe colección TPV física independiente ni `TransaccionesTPV`.
+- Catálogo consultado: 94 servicios Bookings (70 visibles y 24 ocultos), 3 profesionales y 24 productos Stores Catalog V3 visibles en POS.
 - El catálogo TPV filtra `hidden=false` para excluir servicios F2 ocultos. La identidad de los 3 profesionales se valida por `resourceId` y `staffMemberId` nativos.
 - Medios de pago de prueba limitados a EFECTIVO/TARJETA; Bizum, bonos, tarjetas regalo y OTROS permanecen deshabilitados.
 - CI offline PASS en commit de código `a23a4db1154c004c1d29fabbcc666c73845c441a`. El commit de documentación se valida en su propio workflow.

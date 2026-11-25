@@ -8,7 +8,7 @@ Revisión: 2026-11-25 · Base de código TPV: `PR #611 merge 62fdcb7b560f7eab16f
 |---|---|---|---|---|---|---|
 | Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | QA/desarrollo; Site Context Draft, `published=false` (read-back 2026-11-23) | 2026-11-25 |
 
-Evidencia: [README](../README.md), [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md), [directriz del propietario](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). El propietario declara que el sitio no ha tenido actividad real y que los registros de prueba son sintéticos.
+Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md) y [directriz anterior](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). La clasificación histórica de datos no gobierna el flujo TPV vigente.
 
 ## 2. OBJETIVOS
 
@@ -30,7 +30,7 @@ Evidencia: [README](../README.md), [PROJECT-STATUS archivado](archive/2026-11/PR
 
 ### 2.3 Fuera de alcance MVP
 
-- Captura bancaria presencial propia: proveedor, credenciales y sandbox no están contratados/verificados.
+- Captura bancaria presencial propia: proveedor, contrato y credenciales no están contratados/verificados.
 - Inventario paralelo en CMS: Wix Stores Catalog V3 es la autoridad nativa del stock.
 - Emisión/remisión fiscal real: falta configuración legal validada y aceptación fiscal/runtime.
 - SharePoint como sistema transaccional: solo repositorio de evidencia; Wix CMS es SSOT.
@@ -74,9 +74,15 @@ Decisiones registradas (fecha y origen):
 | 2026-10-30 | Contrato de identificadores Bookings V2; separación SDK/REST | [ADR-002](archive/2026-11/adr/ADR-002-bookings-v2-sdk-field-names.md) |
 | 2026-11-09 | Stores Catalog V3 como catálogo del sitio; inventario nativo | PR #216 merge `7b1d48d`; PR #238 merge `fb853e3`; [ADR](archive/2026-11/adr/ADR-004-stores-catalog-v3-migration.md) |
 | 2026-11-23 | Concurrencia, identidad, idempotencia y hooks; fiscal fail-closed; MovimientosCaja append-only | PR #587 `5983ddf`; #589 `b667bae`; #590 `63b55f1` |
-| 2026-11-24 | Retirada de nuevas escrituras TPV sintéticas y separación de históricos | PR #600 `7ffca8c`; PR #601 `46a7e01` |
+| 2026-11-24 | Decisión histórica de retirar el runtime anterior; supersedida por el flujo único | PR #600 `7ffca8c`; PR #601 `46a7e01`; decisión 2026-11-25 en TPV-UNIFIED-FLOW.md |
 | 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
 | 2026-11-25 | Preparación de venta TPV autoritativa read-only integrada | PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`; CI offline PASS; Runtime pendiente |
+
+## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
+
+[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por Sandbox/Live, sintético/real, Preview/Published o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
+
+Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de origen/entorno como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
 
 ## 5. RESTRICCIONES NORMATIVAS
 
@@ -91,7 +97,7 @@ Decisiones registradas (fecha y origen):
 
 | Área | Estado | Evidencia | Dependencia |
 |---|---|---|---|
-| TPV: escrituras sintéticas nuevas retiradas; históricos preservados | DONE | PR #600/#601; PR #611 añade preparación de venta read-only, sin persistencia ni pagos | — |
+| TPV: preparación autoritativa de venta | DONE en código; persistencia PENDING | PR #611/#612; la arquitectura de flujo único está aprobada; migración de runtime y writer siguen pendientes | Contrato MovimientosCaja + pruebas Runtime |
 | Concurrencia/identidad/idempotencia/hooks en código | DONE en código; Runtime PENDING | PR #587 merge `5983ddf` | QA Preview |
 | Gate fiscal y append-only | DONE en código; datos legales PENDING | PR #589 `b667bae`; #590 `63b55f1` | Propietario + asesoría fiscal |
 | Arnés Runtime F1–F6 | DONE en código; ejecución PENDING | PR #603 merge `f42ef7f`; `tests/runtime/runtime-all.spec.js` | QA Preview |
@@ -111,7 +117,7 @@ Detalle operativo P0/P1: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](R
 
 | Contrato | Falta | PASS | Responsable |
 |---|---|---|---|
-| A — Pagos presenciales | Proveedor/terminal, credenciales y sandbox; no confundir con Wix Payments online | Captura de 0,01 € y reembolso completado en sandbox, con identificadores del proveedor y conciliación | Propietario + proveedor de pagos + QA |
+| A — Pagos presenciales | Proveedor/terminal, contrato y credenciales; no confundir con Wix Payments online | Captura de 0,01 € y reembolso completado en entorno de certificación del proveedor, con identificadores y conciliación | Propietario + proveedor de pagos + QA |
 | B — Ubicación de inventario | `locationId` de Wix Locations o confirmación documentada de la ubicación predeterminada | SKU de prueba con stock > 0 leído en la ubicación física real del salón | Propietario + administrador Wix + QA |
 | C — Fiscal | Alta de singleton `CONFIG_SISTEMA_FISCAL` con datos legales verificados | Singleton único; writers permanecen false; lectura read-only devuelve taxId válido y campos obligatorios completos | Propietario + asesoría fiscal; QA verifica lectura |
 
