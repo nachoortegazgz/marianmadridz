@@ -125,7 +125,7 @@ Detalle y gates: [docs/TPV-ONLINE-TEST-READINESS.md](TPV-ONLINE-TEST-READINESS.m
 - Corregido el helper de ID ausente en `tpvTestRuntimeRepository.js`: ahora genera un ID QA determinista SHA-256.
 - Añadidos tests para política CAS del lock QA y para impedir consumo de discriminadores QA por módulos operativos de caja, ledger, cierres, movimientos y devoluciones.
 - `allowOpaqueOrigin` continúa deshabilitado en TPV. Se documenta el opt-in existente solo en los dos flujos de reservas; no se afirma que el handshake esté validado en Runtime.
-- PR #616 abierta como Draft: https://github.com/nachoortegazgz/marianmadridz/pull/616. CI pendiente; Wix Preview/Runtime no ejecutado.
+- PR #616 abierta como Draft: https://github.com/nachoortegazgz/marianmadridz/pull/616. CI PASS en `bf60067a08a7f3db4003c489b470eb81e0294c09`: 80 suites / 759 tests / 0 fallos; ESLint, npm audit, verificaciones SDK Wix y Secret scanning PASS. Wix Preview/Runtime no ejecutado.
 - No se han tocado datos Wix, `MovimientosCaja`, `CajaActual`, pagos, pedidos, facturas, reservas ni inventario. Writers fiscales continúan bloqueados.
 
-**Estado:** correcciones implementadas en rama aislada; no fusionar ni publicar hasta CI PASS, revisión del diff y pruebas Preview controladas.
+**Estado:** CI PASS y diff revisado; mantener PR en Draft y no fusionar ni publicar hasta pruebas Wix Preview/Runtime controladas y verificación de aislamiento en CMS live.
