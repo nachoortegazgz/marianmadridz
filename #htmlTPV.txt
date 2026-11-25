@@ -445,7 +445,7 @@ body {
     customerIdentityId: null,
     customerLabel: null,
     capabilities: {},
-    operationalWritesAvailable: false,
+    testRuntimeAvailable: false,
     saleQuote: null,
     quoteLoading: false,
     quoteError: null,
@@ -713,18 +713,18 @@ body {
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
       ? "ABIERTA · Integración: " + integrationStatus
-      : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
+      : (isClosed ? "SESIÓN DE PRUEBA CERRADA" : "SIN SESIÓN DE PRUEBA");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
+      $(id).disabled = !isOpen || state.busy || !state.testRuntimeAvailable ||
         state.capabilities[capability] !== true;
     });
-    if (!state.operationalWritesAvailable) {
+    if (!state.testRuntimeAvailable) {
       $("cashLabel").textContent = isOpen
-        ? "SESIÓN ABIERTA · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS"
-        : "SIN SESIÓN · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS";
+        ? "SESIÓN ABIERTA · MODO CONSULTA · PRUEBAS NO DISPONIBLES"
+        : "SIN SESIÓN · MODO CONSULTA · PRUEBAS NO DISPONIBLES";
     }
   }
 
@@ -741,10 +741,10 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
-      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
+      if (el) el.disabled = value || !isOpen || !state.testRuntimeAvailable ||
         state.capabilities[capability] !== true;
     });
   }
@@ -977,9 +977,9 @@ body {
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
-      readiness.textContent = quote.saleReady === true
+      readiness.textContent = quote.testReady === true
         ? "Venta preparada para validación final."
-        : "No lista para cobro: " + (messages.join(" ") || "controles pendientes.");
+        : "No lista para prueba interna: " + (messages.join(" ") || "controles pendientes.");
     } else if (state.quoteLoading) {
       readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
     } else if (state.quoteError) {
@@ -1019,7 +1019,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.saleReady === true && state.operationalWritesAvailable === true;
+    const paymentReady = state.saleQuote?.testReady === true && state.testRuntimeAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1068,8 +1068,8 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-          toast("No hay un total autorizado para cobro.");
+        if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
+          toast("No hay un total validado para la prueba interna.");
           return;
         }
         const total = Number(state.saleQuote.totalVenta);
@@ -1081,8 +1081,8 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se aceptan pagos: la venta todavía no está autorizada.");
+    if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
+      toast("No se aceptan importes de prueba: valida primero la venta.");
       return;
     }
     const amount = num($("paymentAmount").value);
@@ -1126,8 +1126,8 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se puede cobrar: la venta no ha superado los controles de preparación.");
+    if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
+      toast("No se puede guardar la prueba: la venta no ha superado los controles.");
       return;
     }
     const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
@@ -1151,9 +1151,9 @@ body {
         change: payment.changeMinor / 100,
       })),
     }, "SALE_REGISTER_RES");
-    if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
+    if (result?.testPersisted !== true || result?.realPayment !== false) throw new Error("TPV_TEST_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada.");
+    toast("Venta de prueba guardada. No se ha efectuado ningún cobro.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
@@ -1453,9 +1453,9 @@ body {
       typeof context.data.capabilities === "object"
       ? context.data.capabilities
       : {};
-    state.operationalWritesAvailable = context.data?.operationalWritesAvailable === true;
+    state.testRuntimeAvailable = context.data?.testRuntimeAvailable === true;
     $("connStatus").className = "dot " + (connected ? "ok" : "error");
-    $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
+    $("connLabel").textContent = connected ? (state.testRuntimeAvailable ? "Conectado · PRUEBA INTERNA" : "Conectado · Solo lectura") : "No autorizado";
 
     if (connected) {
       initializeWidgetAfterHandshake();
