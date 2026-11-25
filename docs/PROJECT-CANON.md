@@ -1,6 +1,6 @@
 # PROJECT-CANON — marianmadridz
 
-Revisión: 2026-11-25 · Base de código TPV: `PR #611 merge 62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`
+Revisión: 2026-11-25 · Base de código TPV: `PR #612 merge 239fd8207d228bde56e9908055166980a87d4989` · flujo único documental integrado en main
 
 ## 1. IDENTIDAD
 
