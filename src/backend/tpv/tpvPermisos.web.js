@@ -10,27 +10,30 @@ export const obtenerPermisosTPV = webMethod(
         const traceId = makeTraceId("tpv-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
+        const testRuntimeAvailable = staff?.rolWebsite === "ADMIN";
         return {
             status: "SUCCESS",
             data: {
                 role: staff?.rolWebsite || "UNKNOWN",
                 capabilities: {
                     read: true,
-                    createSale: false,
-                    openSession: false,
-                    registerCashMovement: false,
-                    registerPartialCount: false,
-                    requestRefund: false,
-                    closeSession: false,
-                    issueTicketX: false,
-                    issueTicketZ: false,
-                    exportMovements: false,
-                    exportAudit: false,
+                    createSale: testRuntimeAvailable,
+                    openSession: testRuntimeAvailable,
+                    registerCashMovement: testRuntimeAvailable,
+                    registerPartialCount: testRuntimeAvailable,
+                    requestRefund: testRuntimeAvailable,
+                    closeSession: testRuntimeAvailable,
+                    issueTicketX: testRuntimeAvailable,
+                    issueTicketZ: testRuntimeAvailable,
+                    exportMovements: testRuntimeAvailable,
+                    exportAudit: testRuntimeAvailable,
                     customerNotifications: TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
                     physicalHardware: TPV_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
                 operationalWritesAvailable: false,
                 operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
+                testRuntimeAvailable,
+                testRuntimeMode: testRuntimeAvailable ? "SYNTHETIC_INTERNAL" : "UNAVAILABLE",
             },
             error: null,
             traceId,
