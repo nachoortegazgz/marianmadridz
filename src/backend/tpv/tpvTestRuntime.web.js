@@ -502,7 +502,7 @@ export const registrarDevolucionPrueba = webMethod(
                 traceId,
             }, traceId);
             if (!saleId || !payments.length || payments.some((payment) =>
-                !["EFECTIVO", "TARJETA", "BIZUM"].includes(payment.method) || payment.amountMinor <= 0
+                !["EFECTIVO", "TARJETA"].includes(payment.method) || payment.amountMinor <= 0
             )) throw new Error("TPV_TEST_REFUND_ALLOCATION_INVALID");
 
             const totalMinor = payments.reduce((sum, payment) => sum + payment.amountMinor, 0);
