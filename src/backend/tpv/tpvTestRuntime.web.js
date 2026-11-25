@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
@@ -129,10 +129,21 @@ export const abrirSesionCajaPrueba = webMethod(
         const traceId = makeTraceId("tpv-test-session-open");
         try {
             const actor = await trustedAdmin(traceId);
-            const existing = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
-            if (existing) return fail("TPV_TEST_SESSION_ALREADY_OPEN", traceId);
+            const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
-            const sessionId = randomUUID();
+            const sessionId = "TPV-SESSION-" + createHash("sha256")
+                .update(actor.actorId + ":" + idempotencyKey, "utf8")
+                .digest("hex").slice(0, 32);
+            let priorSession = null;
+            try {
+                priorSession = await getTpvTestRun(sessionId, actor.actorId);
+            } catch (error) {
+                if (String(error?.message || error?.code) !== "TPV_TEST_RUN_NOT_FOUND") throw error;
+            }
+            if (!priorSession) {
+                const existing = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
+                if (existing) return fail("TPV_TEST_SESSION_ALREADY_OPEN", traceId);
+            }
             const created = await createTpvTestRun({
                 sessionId,
                 actorId: actor.actorId,
@@ -140,6 +151,7 @@ export const abrirSesionCajaPrueba = webMethod(
                 operatorDisplayName: actor.operatorDisplayName,
                 operatorResourceId: actor.operatorResourceId,
                 openingCashMinor,
+                idempotencyKey,
                 traceId,
             });
             return ok({
