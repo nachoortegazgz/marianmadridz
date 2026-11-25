@@ -5,6 +5,7 @@ import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { error as tpvError, ok as tpvOk } from "backend/tpv/tpvEnvelope";
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
 import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
+import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
 import { FISCAL_RUNTIME_POLICY } from "backend/internalConfig";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -86,12 +87,18 @@ export const validarVentaBorrador = webMethod(
             }));
 
             const containsProducts = prepared.lineas.some((line) => line.tipoLinea === "PRODUCTO");
+            const writeV1Blockers = getTpvWriteV1Blockers({
+                lineas: prepared.lineas,
+                pagos: validated.pagos,
+                totalVenta: validated.totalVenta,
+            });
             const saleReadinessBlockers = [
                 "FISCAL_CONFIG_UNVERIFIED",
                 "TPV_LEDGER_WRITER_NOT_CONFIGURED",
                 "PAYMENT_NOT_VERIFIED",
                 "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
             ];
+            saleReadinessBlockers.push(...writeV1Blockers);
             if (containsProducts) {
                 saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
             }
@@ -112,6 +119,10 @@ export const validarVentaBorrador = webMethod(
                 consumerPricePresentationVerified: false,
                 saleReady: saleReadinessBlockers.length === 0,
                 saleReadinessBlockers,
+                writeContractV1: {
+                    eligible: writeV1Blockers.length === 0,
+                    blockers: writeV1Blockers,
+                },
                 taxCalculation: {
                     currency: prepared.taxCurrency,
                     calculatorIds: prepared.taxCalculatorIds,
@@ -158,21 +169,63 @@ export const registrarVenta = webMethod(
             );
         }
 
-        // The writer remains deliberately closed: the fiscal singleton is absent,
-        // fiscal writes are disabled, and the MovimientosCaja hook rejects TPV_*.
-        // Recompute catalog/tax values inside the eventual writer before any commit.
+        let prepared;
+        let validated;
+        let writeV1Blockers;
+        try {
+            assertTpvPaymentMethodsSupported(pagos);
+            prepared = await prepareTpvSaleCatalog(lineas);
+            validated = validateSaleDraft({
+                lineas: prepared.lineas,
+                pagos,
+                subtotalNeto: prepared.subtotalNeto,
+                impuestosTotal: prepared.impuestosTotal,
+                totalVenta: prepared.totalVenta,
+            });
+            writeV1Blockers = getTpvWriteV1Blockers({
+                lineas: prepared.lineas,
+                pagos: validated.pagos,
+                totalVenta: validated.totalVenta,
+            });
+        } catch (error) {
+            return preparationFailure(error, traceId);
+        }
+
+        if (writeV1Blockers.length > 0) {
+            return tpvError(
+                "TPV_WRITE_V1_CONTRACT_UNSUPPORTED",
+                "La venta no cumple el contrato mínimo de escritura TPV V1.",
+                [
+                    "Se requiere una única tasa impositiva verificable y un único medio de pago admitido que cubra el total.",
+                    "No se ha registrado ninguna venta ni se ha confirmado ningún cobro.",
+                    "Consulta writeContractBlockers y corrige la selección antes de volver a validar.",
+                ],
+                {
+                    persisted: false,
+                    retryable: false,
+                    writeContractBlockers: writeV1Blockers,
+                    traceId,
+                }
+            );
+        }
+
+        // Catalog and tax values are recomputed server-side. Persistence remains
+        // closed until fiscal configuration, payment evidence and the canonical
+        // MovimientosCaja writer have been independently verified.
         return tpvError(
             "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
-            "La venta no se ha registrado: el writer fiscal y el ledger operativo TPV continúan deshabilitados.",
+            "La venta se ha recalculado con Wix, pero no se ha registrado: el writer fiscal y el ledger operativo TPV continúan deshabilitados.",
             [
                 "No se ha creado ningún pedido, asiento ni movimiento de caja; tampoco se ha confirmado ningún pago.",
-                "La validación de catálogo e impuestos está disponible en SALE_VALIDATE, pero no equivale a registrar una venta.",
-                "Habilitar la escritura solo después de completar el singleton fiscal, el contrato append-only y la idempotencia durable en MovimientosCaja.",
+                "La preparación autoritativa y el contrato TPV V1 se han comprobado en backend; no equivalen a persistencia.",
+                "La escritura solo podrá habilitarse tras completar la configuración fiscal, la evidencia de pago y el writer append-only idempotente de MovimientosCaja.",
             ],
             {
                 persisted: false,
                 retryable: false,
                 requiresReconciliation: false,
+                writeContractBlockers: [],
+                salePreparationVersion: "TPV_SALE_PREPARATION_V1",
                 traceId,
             }
         );
