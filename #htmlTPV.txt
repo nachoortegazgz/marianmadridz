@@ -479,6 +479,12 @@ body {
     if (/^TPV_INVALID_FORMAT_/.test(key)) return "El importe no tiene un formato reconocible. Usa 12,50 o 12.50; para miles, 1.234,56. No uses formatos ambiguos como 1.234.";
     if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
     const messages = {
+      TPV_SALE_NOT_READY: "La venta no está autorizada para cobro. Revisa los bloqueos de preparación.",
+      TPV_SALE_NOT_PERSISTED: "El backend no ha confirmado la persistencia de la venta.",
+      TPV_CATALOG_PRICE_UNAVAILABLE: "No se ha podido recuperar un precio actual del catálogo Wix.",
+      TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
+      TPV_TAX_SETTINGS_UNAVAILABLE: "No se ha podido leer la configuración fiscal vigente de Wix.",
+      TPV_STAFF_NOT_ALLOWED: "El profesional seleccionado no está autorizado en el mapa de personal.",
       TPV_INVALID_PAYMENT_AMOUNT: "El importe del pago debe ser mayor que 0. Introduce, por ejemplo, 12,50.",
       TPV_INVALID_AMOUNT: "Introduce un importe numérico igual o superior a 0, con un máximo de dos decimales.",
       TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
