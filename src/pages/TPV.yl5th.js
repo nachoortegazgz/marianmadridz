@@ -1,8 +1,8 @@
 /**
- * Velo page code for the existing TPV page (#htmlTPV).
+ * Velo page code for the admin-only TPV QA harness (#htmlTPV).
  *
  * The HTML iframe uses the MM_READY/MM_CONTEXT/CASHIER_STATE protocol.
- * Keep protocol handling and backend access in the shared public controller.
+ * Keep protocol handling and QA backend access in the public controller.
  * This page only attaches the controller to the Wix HTML Component.
  */
 import { initializeTpvPage } from "public/tpvPageController";
