@@ -267,7 +267,7 @@ function saleUuidV4Key(value) {
     return uuid;
 }
 
-async async function dispatch(message) {
+async function dispatch(message) {
     const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
         ? message.payload
         : {};
