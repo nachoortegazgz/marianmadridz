@@ -200,6 +200,13 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
+    TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: Object.freeze({
+        message: "La salida de efectivo supera el saldo esperado de la sesión de prueba.",
+        solution: "Comprueba el importe y los movimientos de efectivo anteriores.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
     TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: Object.freeze({
         message: "La sesión está recibiendo operaciones simultáneas.",
         solution: "Consulta el estado de la sesión antes de repetir la acción con la misma clave idempotente.",
