@@ -910,6 +910,7 @@ body {
     } else {
       container.innerHTML = state.items.map((item, i) => {
         const lineTotal = quoteLines[i]?.totalLinea;
+        const displayName = quoteLines[i]?.concepto || item.name;
         const displayTotal = lineTotal !== undefined
           ? money(lineTotal)
           : (state.quoteLoading ? "Calculando…" : "No disponible");
