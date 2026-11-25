@@ -418,7 +418,7 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     assert.match(repository, /releaseTpvTestSessionLock/);
     assert.match(repository, /makeTpvTestSessionLockId/);
     assert.doesNotMatch(repository, /makeTpvSessionLockId/);
-    assert.match(repository, /CONTROL_TYPE\\.TPV_TEST_SESSION_LOCK/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
     assert.match(repository, /TPV_TEST_ADMIN:/);
     assert.match(repository, /buildData/);
     assert.match(repository, /requestFingerprint/);
