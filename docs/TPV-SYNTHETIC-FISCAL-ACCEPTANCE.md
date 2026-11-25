@@ -13,9 +13,9 @@
 - La proyección de caja es mutable por diseño, pero no se puede actualizar el registro existente de CajaActual bajo la instrucción actual. No se inicia una prueba que pueda tocarlo.
 - El modo de prueba no debe convertirse en un segundo runtime: la naturaleza sintética es metadato de los datos, no una rama de lógica ni un selector de entorno.
 
-## 2. Estado online verificado el 25-11-2026
+## 2. Inventario CMS del sitio verificado el 25-11-2026
 
-Consulta read-only de las colecciones CMS del sitio:
+Consulta read-only de las colecciones CMS del sitio. El usuario declara que las colecciones están configuradas como Online. La API de colecciones devuelve collectionType=NATIVE y los datos actuales; esa respuesta no expone un campo explícito que certifique el selector Sandbox/Online del CMS. Por tanto, el estado Draft del sitio está verificado, la existencia/lectura de las colecciones está verificada y el selector Online queda declarado por el usuario, pendiente de comprobación visual en el CMS.
 
 | Colección | Tipo Wix | Registros observados | Estado relevante |
 |---|---|---:|---|
