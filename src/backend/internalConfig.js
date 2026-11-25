@@ -195,6 +195,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
+  TRANSACCIONES_TPV: "TransaccionesTPV",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
@@ -567,6 +568,7 @@ export const CONTROL_TYPE = Object.freeze({
   TPV_SESSION_LOCK: "TPV_SESSION_LOCK",
   TPV_TEST_RUN: "TPV_TEST_RUN",
   TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK",
+  TPV_AUDIT_EVENT: "TPV_AUDIT_EVENT",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
