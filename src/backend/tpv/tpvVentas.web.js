@@ -16,7 +16,9 @@ import { createHash } from "node:crypto";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const createDraftOrderElevated = auth.elevate(draftOrders.createDraftOrder);
+const createDraftOrderElevated = typeof draftOrders?.createDraftOrder === "function"
+    ? auth.elevate(draftOrders.createDraftOrder)
+    : null;
 
 const PREPARATION_MESSAGES = Object.freeze({
     TPV_LINES_REQUIRED_OR_LIMIT_EXCEEDED: "La venta debe contener entre 1 y 100 líneas.",
@@ -153,6 +155,9 @@ export const validarVentaBorrador = webMethod(
 
 async function createSaleDraftOrder(prepared) {
     const productLines = prepared.lineas.filter((line) => line.tipoLinea === "PRODUCTO");
+    if (!createDraftOrderElevated) {
+        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_API_UNAVAILABLE" };
+    }
     if (productLines.length !== prepared.lineas.length || productLines.length === 0) {
         return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_CATALOG_PRODUCTS_ONLY" };
     }
