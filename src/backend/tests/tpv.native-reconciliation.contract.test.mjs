@@ -166,9 +166,9 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(audit, /data: \{[\s\S]*items,[\s\S]*count: items\.length/);
     assert.doesNotMatch(audit, /isSynthetic: true|realPayment: false/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    assert.match(controller, /obtenerAuditoriaTPVPrueba,[\s\S]*?from "backend\/tpv\/tpvTestRuntime\.web"/);
-    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPVPrueba/);
-    assert.equal(controller.includes('from "backend/tpv/tpvAuditoria.web"'), false);
+    assert.match(controller, /import \{ obtenerAuditoriaTPV as obtenerAuditoriaTPVLista \} from "backend\/tpv\/tpvAuditoria\.web"/);
+    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?obtenerAuditoriaTPVLista/);
+    assert.equal(controller.includes('from "backend/tpv/tpvAuditoria.web"'), true);
     assert.match(widget, /Auditoría de operaciones/);
     assert.match(widget, /item\.action/);
     assert.match(widget, /item\.actorId/);
@@ -227,7 +227,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(audit, /recordSessionId === sessionId/);
     assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
     assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
-    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcialPrueba/);
+    assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial\(/);
     assert.match(controller, /const sessionId = optionalString\(payload\.sessionId, 160\)/);
     assert.match(controller, /if \(!sessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);
     assert.match(widget, /new Intl\.DateTimeFormat\("es-ES",[\s\S]*?timeZone/);
