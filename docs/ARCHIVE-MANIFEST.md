@@ -63,3 +63,12 @@ Conteo del ciclo documental previo: 2 archivos movidos; 0 eliminados. El inventa
 ## Supersesión de directrices TPV — 2026-11-25
 
 La nueva decisión [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) sustituye cualquier instrucción histórica que ordene crear, mantener o autorizar un runtime TPV diferenciado por Sandbox/Live, sintético/real, Preview/Published o test-run. Los documentos de auditoría y handoff anteriores se conservan íntegros como evidencia fechada, pero dejan de ser instrucciones operativas. No se borran porque acreditan decisiones y observaciones anteriores; ante contradicción, prevalece el criterio de flujo único. La retirada de código se ejecutará solo después de verificar consumidores, bindings, hooks y pruebas.
+
+
+| docs/TPV-ONLINE-TEST-READINESS.md | 2026-11-25 | Instrucciones del runtime separado PR #615/#616 sustituidas por el flujo único | Copia histórica: [TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md](archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md); autoridad actual: [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md) |
+
+## Limpieza documental — 2026-11-25
+
+- Se retira del área viva el documento de preparación online del runtime separado; se conserva como evidencia histórica marcada explícitamente como supersedida.
+- Se elimina el artefacto generado `.codeviz/Untitled 1/Untitled-1.md`: no estaba indexado, duplicaba diagramas y contenía referencias/placeholder no verificados.
+- El criterio operativo vigente se limita a `PROJECT-CANON.md`, `STATE-NOW.md`, `RELEASE-READINESS.md`, `TPV-UNIFIED-FLOW.md` y `TPV-MILESTONE-01-UNIFIED-CORE.md`; los documentos archivados no son instrucciones ejecutables.
