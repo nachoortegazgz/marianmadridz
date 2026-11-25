@@ -5,9 +5,9 @@
  * DOC: https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder
  *      https://developer.mozilla.org/en-US/docs/Web/API/URL
  *
- * CONTEXTO WIX: HTML Components en iframes sandboxed → origin opaco ("", "null").
- * Solución: allowOpaqueOrigin: true (relajación mínima; origins no opacos
- * siguen validados por sufijo).
+ * CONTEXTO WIX: HTML Components sandboxed pueden emitir origin opaco ("", "null").
+ * Seguridad TPV: allowOpaqueOrigin:false rechaza esos mensajes; compatibilidad del
+ * handshake/origen queda pendiente de verificar (#416). Origins no opacos siguen allowlisted.
  */
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
