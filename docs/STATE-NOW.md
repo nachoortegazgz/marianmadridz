@@ -119,4 +119,4 @@ Las implementaciones de PR #615/#616 y el documento de preparación online descr
 La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md). **NO-GO** hasta superar sus criterios y los gates fiscales/comerciales de [RELEASE-READINESS.md](RELEASE-READINESS.md).
 ## Prioridad 1 TPV — 2026-11-25
 - Guard fiscal limitado a escrituras fiscales; MovimientosCaja físico, TransaccionesTPV comercial y ControlOperativo auditoría separados. Colección TransaccionesTPV creada en CMS con permisos ADMIN.
-- registrarVenta implementado como persistencia idempotente PENDING_PAYMENT, sin cobro; runtime y tests pendientes, por lo que no se declara escritura verificada.
+- registrarVenta implementado como persistencia idempotente PENDING_PAYMENT, sin cobro; CI offline PASS (80 suites/763 tests), runtime Wix no ejecutado, por lo que no se declara escritura verificada.
