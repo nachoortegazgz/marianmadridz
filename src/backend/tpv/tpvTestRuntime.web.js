@@ -140,8 +140,7 @@ function saleReplayResponse(event, sessionId, traceId) {
 async function appendEvent(actor, input, eventType, data, { closeRun = false } = {}) {
     const sessionId = String(input?.sessionId || "").trim();
     const idempotencyKey = normalizeIdempotencyKey(input?.idempotencyKey);
-    const run = await getTpvTestRun(sessionId, actor.actorId);
-    const result = await appendTpvTestRunEvent({
+    return appendTpvTestRunEvent({
         sessionId,
         actorId: actor.actorId,
         eventType,
@@ -150,7 +149,6 @@ async function appendEvent(actor, input, eventType, data, { closeRun = false } =
         traceId: input?.traceId,
         closeRun,
     });
-    return { ...result, run };
 }
 
 export const obtenerEstadoCajaPrueba = webMethod(
