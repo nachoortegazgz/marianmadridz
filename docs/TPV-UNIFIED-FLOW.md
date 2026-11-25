@@ -12,7 +12,7 @@ El carácter de una operación se determina por su contenido y por su estado ver
 
 1. Eliminar progresivamente del runtime operativo los nombres, flags, enums, IDs, prefijos, ramas, guards y contratos que codifiquen SANDBOX, LIVE, SYNTHETIC, SIMULATED, TEST_ONLY o equivalentes.
 2. No mantener un runtime de pruebas paralelo ni duplicar repositorios, writers, validadores, modelos, WebMethods o controladores para pruebas.
-3. No añadir sourceType, processingMode, testRunId, syntheticOnly ni marcadores equivalentes como condición para aceptar o rechazar una operación de negocio.
+3. No añadir marcadores de entorno o procedencia de prueba como condición para aceptar o rechazar una operación. Se permite `sourceType: TPV` como procedencia neutral del dominio cuando lo requiera el contrato canónico; nunca como selector de modo.
 4. No permitir que el frontend seleccione el tipo de entorno, la fuente de datos o el nivel de autorización.
 5. Mantener una única API de dominio en backend y una única ruta de persistencia. Las pruebas ejercitan esa misma ruta con fixtures y dobles de test en la suite automatizada, sin crear un segundo flujo de producción.
 6. Los datos históricos creados por runtimes anteriores quedan fuera del flujo operativo nuevo. Su tratamiento será lectura/migración/retirada controlada, sin contaminar el contrato nuevo ni alterar ledgers inmutables.
