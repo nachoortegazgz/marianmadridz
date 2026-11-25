@@ -44,10 +44,29 @@ export async function createTpvTestRun({
     operatorDisplayName,
     operatorResourceId,
     openingCashMinor,
+    idempotencyKey,
     traceId,
 }) {
     const id = tpvTestRunId(sessionId, TPV_RUNTIME_POLICY.SITE_ID);
     const now = new Date();
+    const initialPayload = createTpvTestRunPayload({
+        sessionId,
+        siteId: TPV_RUNTIME_POLICY.SITE_ID,
+        actorId,
+        operatorId,
+        operatorDisplayName,
+        operatorResourceId,
+        openingCashMinor,
+        openedAt: now,
+        traceId,
+    });
+    const opened = appendTpvTestEvent(initialPayload, {
+        eventType: "SESSION_OPENED",
+        idempotencyKey,
+        actorId,
+        data: { openingCashMinor },
+        occurredAt: now,
+    });
     const item = {
         _id: id,
         controlType: CONTROL_TYPE.TPV_TEST_RUN,
@@ -56,17 +75,7 @@ export async function createTpvTestRun({
         status: "OPEN",
         version: 0,
         expiresAt: new Date(now.getTime() + RUN_TTL_MS),
-        payload: createTpvTestRunPayload({
-            sessionId,
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            actorId,
-            operatorId,
-            operatorDisplayName,
-            operatorResourceId,
-            openingCashMinor,
-            openedAt: now,
-            traceId,
-        }),
+        payload: opened.payload,
     };
     try {
         const saved = await insertItem(RUN_COLLECTION, item);
@@ -75,6 +84,14 @@ export async function createTpvTestRun({
         if (!duplicateKey(error)) throw error;
         const existing = await getItem(RUN_COLLECTION, id, CONSISTENCY.STRONG);
         assertRunOwner(existing, { sessionId, actorId });
+        const replay = appendTpvTestEvent(existing.payload, {
+            eventType: "SESSION_OPENED",
+            idempotencyKey,
+            actorId,
+            data: { openingCashMinor },
+            occurredAt: existing.payload.openedAt,
+        });
+        if (!replay.replayed) throw new Error("TPV_IDEMPOTENCY_CONFLICT");
         return { item: existing, created: false };
     }
 }
