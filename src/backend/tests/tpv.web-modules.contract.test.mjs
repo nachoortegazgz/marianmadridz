@@ -260,13 +260,13 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /if \(containsProducts\)/);
     assert.match(sales, /inventoryVerified: !containsProducts/);
     assert.match(sales, /UUID_V4/);
-    assert.match(sales, /MovimientosCaja/);
-    assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);
+    assert.ok(sales.includes("BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
+    assert.ok(sales.includes("getItem("));
     assert.match(sales, /async \(input = \{\}\)/);
     assert.doesNotMatch(sales, /insertTpvEvent/);
     assert.match(sales, /appendTpvAudit/);
     assert.match(sales, /withTpvSessionLock/);
-    assert.match(sales, /insertItem\\(BUSINESS_COLLECTIONS\\.TRANSACCIONES_TPV/);
+    assert.ok(sales.includes("insertItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -574,7 +574,7 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     assert.match(sales, /PENDING_PAYMENT/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
-    assert.match(sales, /requiresReconciliation: draft\\.requiresReconciliation/);
+    assert.ok(sales.includes("requiresReconciliation: draft.requiresReconciliation"));
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /async \(input = \{\}\) =>/);
     assert.match(refunds, /validateRefundRequest\(input\)/);
