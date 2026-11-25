@@ -2,6 +2,12 @@
 
 **Estado de `main`:** PR #611 integrada en merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
 
+## Criterio de ejecución vigente — flujo único
+
+El TPV debe operar con un único flujo de backend, un contrato de dominio y una ruta de persistencia para cualquier dato. No se admiten ramas funcionales por etiquetas Sandbox/Live, sintético/real, Preview/Published o test-run. Las pruebas deben ejercitar la misma lógica mediante fixtures y dobles de test; no mediante un runtime paralelo. La especificación vinculante y el plan de migración están en [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md).
+
+La implementación aún no cumple este criterio: el controlador importa tpvTestRuntime.web.js, el repositorio rechaza escrituras operativas y internalConfig.js conserva marcadores históricos. No retirar guard ni runtime hasta completar el contrato físico/fiscal de MovimientosCaja y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
+
 ## Arquitectura y autoridad
 
 - `MovimientosCaja` es el ledger físico canónico. No crear `TransaccionesTPV` ni otro ledger alternativo.
