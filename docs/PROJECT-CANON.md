@@ -1,6 +1,6 @@
 # PROJECT-CANON — marianmadridz
 
-Revisión: 2026-11-25 · Base: `main@d087d47316043f3109128de28fffbb41ea179314`
+Revisión: 2026-11-25 · Base de código TPV: `PR #611 merge 62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`
 
 ## 1. IDENTIDAD
 
