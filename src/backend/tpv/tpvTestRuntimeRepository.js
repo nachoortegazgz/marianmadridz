@@ -183,8 +183,9 @@ export async function appendTpvTestRunEvent({
         if (Array.isArray(result?.updatedItemIds) && result.updatedItemIds.includes(current._id)) {
             const updated = await getItem(RUN_COLLECTION, current._id, CONSISTENCY.STRONG);
             assertRunOwner(updated, { sessionId, actorId });
-            if (Number(updated.version) !== Number(current.version) + 1 ||
-                updated.status !== (closeRun ? "CLOSED" : "OPEN")) {
+            if (Number(updated.version) < Number(current.version) + 1 ||
+                !updated.payload.events.some((entry) => entry.eventHash === appended.event.eventHash) ||
+                (closeRun && updated.status !== "CLOSED")) {
                 throw new Error("TPV_TEST_RUNTIME_POST_WRITE_INTEGRITY_FAILED");
             }
             return { item: updated, event: appended.event, replayed: false };
