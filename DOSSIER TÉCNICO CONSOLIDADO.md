@@ -13,7 +13,6 @@
 - **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`
 - **Editor:** Wix Editor clásico
 - **Velo:** habilitado
-- **Codegen:** no elegible
 - **Idioma:** español
 - **Región:** España
 - **Moneda:** EUR
