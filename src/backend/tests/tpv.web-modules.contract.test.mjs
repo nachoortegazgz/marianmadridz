@@ -214,7 +214,7 @@ test("TPV dependency manifest and npm lockfile remain synchronized", async () =>
     assert.equal(packageJson.dependencies["@wix/stores"], "1.0.997");
 });
 
-test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers", async () => {
+test("TPV WebMethods isolate synthetic test records from operational ledgers", async () => {
     const files = [
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
