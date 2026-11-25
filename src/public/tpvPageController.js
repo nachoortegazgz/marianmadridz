@@ -6,24 +6,14 @@
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import {
-    obtenerEstadoCajaPrueba,
-    abrirSesionCajaPrueba,
-    registrarArqueoParcialPrueba,
-    validarVentaBorradorPrueba,
-    registrarVentaPrueba,
-    registrarMovimientoCajaPrueba,
-    exportarMovimientosCajaPrueba,
-    exportarAuditoriaTPVPrueba,
-    obtenerAuditoriaTPVPrueba,
-    registrarDevolucionPrueba,
-    generarControlXPrueba,
-    generarCierreZPrueba,
-    obtenerResumenCajaPrueba,
-} from "backend/tpv/tpvTestRuntime.web";
+import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
+import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
+import { registrarMovimientoCaja, obtenerMovimientosCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
+import { obtenerResumenCaja, generarControlX, generarCierreZ } from "backend/tpv/tpvCierres.web";
+import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
-// UI-only capability hints; backend WebMethods enforce authorization independently.
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 
 const REQUEST_TYPES = Object.freeze([
@@ -333,20 +323,6 @@ function idempotencyKey(message, payload = {}) {
     return ("TPV_UI_" + String(message.type || "OP") + "_" + messageId).slice(0, 100);
 }
 
-function saleUuidV4Key(value) {
-    const candidate = String(value || "").split("_").pop().replace(/-/g, "");
-    if (!/^[0-9a-f]{32}$/i.test(candidate)) {
-        throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
-    }
-    const uuid = candidate.replace(
-        /^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/i,
-        "$1-$2-$3-$4-$5"
-    );
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) {
-        throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
-    }
-    return uuid;
-}
 
 async function dispatch(message) {
     const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
@@ -356,191 +332,148 @@ async function dispatch(message) {
 
     switch (message.type) {
         case "CASHIER_STATE":
-            return obtenerEstadoCajaPrueba();
-
+            return obtenerEstadoCaja();
         case "SESSION_OPEN":
-            return abrirSesionCajaPrueba({
+            return abrirSesionCaja({
                 idempotencyKey: key,
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
-
         case "CATALOG_SERVICES":
             return obtenerServicios({ limit: 100, offset: 0 });
-
         case "CATALOG_PRODUCTS":
             return obtenerProductos({
                 limit: boundedInteger(payload.limit ?? 100, "CATALOG_LIMIT", 1, 100),
                 cursor: optionalString(payload.cursor, 16000),
             });
-
-        case "CATALOG_VARIANTS":
+        case "CATALOG_VARIANTS": {
             const productId = optionalString(payload.productId);
             if (!productId) throw new Error("TPV_PRODUCT_ID_REQUIRED");
             return obtenerVariantesProducto({ productId });
-
+        }
         case "CATALOG_STAFF":
             return obtenerStaff();
-
         case "CUSTOMERS_SEARCH":
             return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
-
-        case "SALE_REGISTER": {
-            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) {
-                throw new Error("TPV_LINES_REQUIRED");
-            }
-            if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
-            if (Array.isArray(payload.payments) && payload.payments.length > 100) {
+        case "SALE_VALIDATE": {
+            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
+            if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
                 throw new Error("TPV_ARRAY_TOO_LARGE");
             }
-            const sessionId = optionalString(payload.sessionId, 160);
-            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
-
-            // Only catalog identifiers, quantities and the cashier-declared payment split cross this boundary.
-            // The backend never trusts client prices, taxes, discounts or totals.
             const lineas = payload.lineItems.map((line) => {
-                if (!line || typeof line !== "object" || Array.isArray(line)) {
-                    throw new Error("TPV_INVALID_LINE");
-                }
+                if (!line || typeof line !== "object" || Array.isArray(line)) throw new Error("TPV_INVALID_LINE");
                 const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
                 const itemId = optionalString(line.itemId, 160);
-                if (!["PRODUCTO", "SERVICIO"].includes(tipoLinea) || !itemId) {
-                    throw new Error("TPV_CATALOG_LINE_REQUIRED");
-                }
+                if (!["PRODUCTO", "SERVICIO"].includes(tipoLinea) || !itemId) throw new Error("TPV_CATALOG_LINE_REQUIRED");
                 return {
                     tipoLinea,
                     itemId,
-                    ...(optionalString(line.varianteId, 160)
-                        ? { varianteId: optionalString(line.varianteId, 160) }
-                        : {}),
+                    ...(optionalString(line.varianteId, 160) ? { varianteId: optionalString(line.varianteId, 160) } : {}),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
+                    descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
                     profesionalId: optionalString(line.profesionalId, 160),
                 };
             });
             const pagos = (Array.isArray(payload.payments) ? payload.payments : []).map((payment) => {
-                if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
-                    throw new Error("TPV_INVALID_PAYMENT");
-                }
+                if (!payment || typeof payment !== "object" || Array.isArray(payment)) throw new Error("TPV_INVALID_PAYMENT");
                 return {
                     medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
                     importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
-
-            return registrarVentaPrueba({
+            return validarVentaBorrador({ lineas, pagos });
+        }
+        case "SALE_REGISTER": {
+            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
+            if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
+                throw new Error("TPV_ARRAY_TOO_LARGE");
+            }
+            const sessionId = optionalString(payload.sessionId, 160);
+            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+            const lineas = payload.lineItems.map((line) => {
+                if (!line || typeof line !== "object" || Array.isArray(line)) throw new Error("TPV_INVALID_LINE");
+                const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
+                const itemId = optionalString(line.itemId, 160);
+                if (!["PRODUCTO", "SERVICIO"].includes(tipoLinea) || !itemId) throw new Error("TPV_CATALOG_LINE_REQUIRED");
+                return {
+                    tipoLinea,
+                    itemId,
+                    ...(optionalString(line.varianteId, 160) ? { varianteId: optionalString(line.varianteId, 160) } : {}),
+                    cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
+                    profesionalId: optionalString(line.profesionalId, 160),
+                };
+            });
+            const pagos = (Array.isArray(payload.payments) ? payload.payments : []).map((payment) => {
+                if (!payment || typeof payment !== "object" || Array.isArray(payment)) throw new Error("TPV_INVALID_PAYMENT");
+                return {
+                    medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
+                    importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
+                    importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
+                };
+            });
+            return registrarVenta({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
                 pagos,
             });
         }
-
-        case "SALE_VALIDATE": {
-            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) {
-                throw new Error("TPV_LINES_REQUIRED");
-            }
-            if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
-            if (Array.isArray(payload.payments) && payload.payments.length > 100) {
-                throw new Error("TPV_ARRAY_TOO_LARGE");
-            }
-            const lineas = payload.lineItems.map((line) => {
-                if (!line || typeof line !== "object" || Array.isArray(line)) {
-                    throw new Error("TPV_INVALID_LINE");
-                }
-                return {
-                    tipoLinea: String(line.tipoLinea || "").trim().toUpperCase(),
-                    itemId: optionalString(line.itemId, 160),
-                    varianteId: optionalString(line.varianteId, 160),
-                    cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
-                    descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
-                    profesionalId: optionalString(line.profesionalId, 160),
-                    stockAfectado: line.stockAfectado === true,
-                };
-            });
-            const pagos = (payload.payments || []).map((payment) => {
-                if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
-                    throw new Error("TPV_INVALID_PAYMENT");
-                }
-                return {
-                    medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
-                    importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
-                    importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
-                };
-            });
-            return validarVentaBorradorPrueba({ lineas, pagos });
-        }
-
         case "CASH_MOVEMENT":
-            return registrarMovimientoCajaPrueba({
+            return registrarMovimientoCaja({
                 idempotencyKey: key,
                 sessionId: optionalString(payload.sessionId, 160) || "",
                 movementType: (optionalString(payload.movementType, 40) || "").toUpperCase(),
                 paymentMethod: (optionalString(payload.paymentMethod, 40) || "EFECTIVO").toUpperCase(),
                 amount: numeric(payload.amount, "CASH_MOVEMENT", { allowZero: false }),
                 reason: optionalString(payload.reason, 500) || "",
-                profesionalId: optionalString(payload.profesionalId),
+                profesionalId: optionalString(payload.profesionalId, 160),
             });
-
         case "PARTIAL_CASH_COUNT":
-            return registrarArqueoParcialPrueba({
-                sessionId: optionalString(payload.sessionId) || "",
+            return registrarArqueoParcial({
                 idempotencyKey: key,
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
                 reason: optionalString(payload.reason, 500) || "",
             });
-
-        case "REFUND": {
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            return registrarDevolucionPrueba({
+        case "REFUND":
+            return registrarDevolucion({
                 idempotencyKey: key,
-                sessionId: optionalString(payload.sessionId) || "",
-                saleId: optionalString(payload.saleId) || "",
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                saleId: optionalString(payload.saleId, 160) || "",
                 reason: optionalString(payload.reason, 500) || "",
-                payments: payments.map((payment) => ({
-                    paymentMethod: String(payment.paymentMethod || "").toUpperCase(),
+                payments: Array.isArray(payload.payments) ? payload.payments.map((payment) => ({
+                    paymentMethod: String(payment.paymentMethod || "").trim().toUpperCase(),
                     amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
-                })),
-                profesionalId: optionalString(payload.profesionalId),
+                })) : [],
             });
-        }
-
         case "TICKET_X":
-            return generarControlXPrueba({
-                sessionId: optionalString(payload.sessionId) || "",
-                idempotencyKey: key,
-            });
-
+            return generarControlX({ sessionId: optionalString(payload.sessionId, 160) || "", idempotencyKey: key });
         case "TICKET_Z":
-            return generarCierreZPrueba({
-                sessionId: optionalString(payload.sessionId) || "",
+            return generarCierreZ({
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
                 differenceReason: optionalString(payload.differenceReason, 500) || "",
             });
-
         case "SESSION_SUMMARY":
-            return obtenerResumenCajaPrueba({ sessionId: optionalString(payload.sessionId) || "" });
-
+            return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId, 160) || "" });
         case "AUDIT_LIST":
-            return obtenerAuditoriaTPVPrueba({
-                sessionId: optionalString(payload.sessionId) || undefined,
+            return obtenerAuditoriaTPVLista({
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 limit: boundedInteger(payload.limit ?? 50, "AUDIT_LIMIT", 1, 100),
             });
-
         case "CASH_MOVEMENTS_EXPORT":
-            return exportarMovimientosCajaPrueba({
-                sessionId: optionalString(payload.sessionId) || "",
+            return exportarMovimientosCaja({
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 idempotencyKey: key,
             });
-
         case "AUDIT_EXPORT":
-            return exportarAuditoriaTPVPrueba({
-                sessionId: optionalString(payload.sessionId) || "",
+            return exportarAuditoriaTPV({
+                sessionId: optionalString(payload.sessionId, 160) || "",
                 idempotencyKey: key,
             });
-
         default:
             throw new Error("UNKNOWN_MESSAGE");
     }
@@ -588,15 +521,10 @@ export function initializeTpvPage(widget) {
                     capabilities,
                     permissionsStatus: permissions.status,
                     operationalWritesAvailable: false,
-                    testRuntimeAvailable: permissionsReady &&
-                        permissions.data?.testRuntimeAvailable === true,
-                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
-                    testRuntimeMode: permissionsReady ? (permissions.data?.testRuntimeMode || "UNAVAILABLE") : "UNAVAILABLE",
-                    testRuntimeUnavailableReason: permissionsReady && permissions.data?.testRuntimeAvailable !== true
-                        ? "TPV_TEST_RUNTIME_ADMIN_ONLY" : null,
-                    legacyOperationalWritesUnavailableReason: permissionsReady
-                        ? (permissions.data?.operationalWritesUnavailableReason || "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED")
-                        : (permissions.error?.code || "TPV_PERMISSIONS_UNAVAILABLE"),
+                    operationalWritesAvailable: permissionsReady && permissions.data?.operationalWritesAvailable === true,
+                    operationalWritesUnavailableReason: permissionsReady
+                        ? (permissions.data?.operationalWritesUnavailableReason || null)
+                        : (permissions.error?.code || "TPV_PERMISSIONS_UNAVAILABLE")
                 },
                 error: config.error || permissions.error || null,
             };
