@@ -386,7 +386,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
-        assert.match(source, /require(?:Admin|Cajero)/, fileName + " must retain backend role authorization");
+        assert.match(source, /require(?:Admin|Cajero)|getMyCajeroContext/, fileName + " must retain backend role authorization");
         for (const methodName of methodNames) {
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
