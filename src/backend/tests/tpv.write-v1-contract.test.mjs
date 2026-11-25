@@ -13,7 +13,7 @@ const validPayment = (medioPago = "TARJETA", importeAplicado = 121) => ({
 test("accepts one tender fully covering a single-rate sale", () => {
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine(), validLine("0.21")],
-        pagos: [validPayment()],
+        pagos: [validPayment("TARJETA", 242)],
         totalVenta: 242,
     }), []);
 });
