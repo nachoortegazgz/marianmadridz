@@ -48,8 +48,10 @@ const PREPARATION_MESSAGES = Object.freeze({
 
 function preparationFailure(error, traceId) {
     const code = String(error?.code || error?.message || "TPV_SALE_PREPARATION_FAILED");
-    const message = PREPARATION_MESSAGES[code] ||
-        "No se ha podido preparar la venta con los datos actuales del catálogo y la configuración fiscal de Wix.";
+    const invalidProductIds = Array.isArray(error?.invalidProductIds) ? error.invalidProductIds : [];
+    const message = (PREPARATION_MESSAGES[code] ||
+        "No se ha podido preparar la venta con los datos actuales del catálogo y la configuración fiscal de Wix.")
+        .replace("{ids}", invalidProductIds.join(", ") || "no identificados");
     return tpvError(
         code,
         message,
@@ -209,7 +211,7 @@ async function appendSaleAudit(record, traceId) {
     return appendTpvAudit({
         idempotencyKey: record._id + ":SALE_AUDIT",
         action: "VENTA_TPV_REGISTRADA",
-        actorId: record.operatorResourceId,
+        actorId: record.operatorId,
         entityType: "TRANSACCION_TPV",
         entityId: record._id,
         traceId,
