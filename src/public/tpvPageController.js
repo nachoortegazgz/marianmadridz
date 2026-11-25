@@ -1,7 +1,7 @@
 /**
  * TPV page controller — HTML Component bridge to canonical operational WebMethods.
  * Business authorization and persistence rules remain in backend.
- * Operational writes stay unavailable until the fiscal ledger contract is released.
+ * Commercial sale persistence and cash-session state are independent of fiscal-ledger availability.
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
