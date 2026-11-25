@@ -77,21 +77,23 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
-test("TPV widget exposes read-only capabilities until operational writer release gates pass", async () => {
+test("TPV widget exposes authorized physical and commercial capabilities independently of fiscal gates", async () => {
     const html = await source("%23htmlTPV.txt");
     const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
-    assert.match(permissions, /operationalWritesAvailable: false/);
-    for (const capability of ["createSale", "openSession", "registerCashMovement", "registerPartialCount", "requestRefund", "closeSession", "issueTicketX", "issueTicketZ", "exportMovements", "exportAudit"]) {
-        assert.match(permissions, new RegExp(capability + ": false"));
-    }
+    assert.match(permissions, /operationalWritesAvailable: true/);
+    assert.match(permissions, /createSale: true/);
+    assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /registerCashMovement: staff.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
+    for (const capability of ["requestRefund", "closeSession", "issueTicketX", "issueTicketZ", "exportMovements", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.match(html, /call\("SALE_VALIDATE"/);

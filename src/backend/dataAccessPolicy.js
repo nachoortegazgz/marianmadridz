@@ -14,9 +14,9 @@ import {
 function _appendOnlyError(collection, operation) {
     return createActionableError({
         code: "LEDGER_APPEND_ONLY",
-        userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.",
+        userMessage: "Los registros append-only no se modifican. Registra un nuevo evento rectificativo y trazable.",
         technicalDetail: "CMS " + operation + " denied for append-only collection: " + collection,
-        remediation: ["No intentar update/remove sobre MovimientosCaja, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como movimiento nuevo de tipo AJUSTE o ANULACION, referenciando el _id original y conforme al contrato aprobado.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
+        remediation: ["No intentar update/remove sobre colecciones append-only como MovimientosCaja, TransaccionesTPV, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como un nuevo evento rectificativo trazable, referenciando el _id original y conforme al contrato aplicable.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
         contextSnapshot: { collection, operation },
         retryable: false,
     });
@@ -86,6 +86,7 @@ function _isRecord(value) {
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
@@ -119,12 +120,8 @@ export function assertInsertAllowed(collection, item) {
         recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        (item.recordSource === TPV_LEDGER_SOURCE ||
-            recordSource.startsWith("TPV_") ||
-            movementType.startsWith("TPV_") ||
-            isHistoricalTpvMarker)) {
-        throw _policyError("CMS_TPV_LEDGER_WRITES_DISABLED");
+    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && isHistoricalTpvMarker) {
+        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);

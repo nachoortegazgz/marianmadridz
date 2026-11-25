@@ -81,9 +81,9 @@ export const obtenerEstadoCaja = webMethod(
                 data: {
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
-                    canOpenSession: false,
-                    operationalWritesAvailable: false,
-                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
+                    canOpenSession: operator.rolWebsite === "ADMIN",
+                    operationalWritesAvailable: true,
+                    operationalWritesUnavailableReason: null,
                     sessionId: null,
                     operatorId: null,
                     actorId: null,
@@ -109,8 +109,11 @@ export const obtenerEstadoCaja = webMethod(
                 sessionId: session.sessionId,
                 status,
                 operationalStatus: status,
-                canOpenSession: status === OPERATIONAL_CASH_STATUS.CLOSED &&
+                canOpenSession: operator.rolWebsite === "ADMIN" &&
+                    status === OPERATIONAL_CASH_STATUS.CLOSED &&
                     session.sessionId !== "TPV-SESSION-" + madridDayKey(),
+                operationalWritesAvailable: true,
+                operationalWritesUnavailableReason: null,
                 operatorId: session.operatorId || session.cashierMemberId || null,
                 actorId: session.actorId || session.cashierMemberId || null,
                 operatorDisplayName: session.operatorDisplayName || null,
@@ -142,7 +145,7 @@ export const abrirSesionCaja = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-session-open");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -223,7 +226,7 @@ export const registrarArqueoParcial = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-partial-count");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
 
         try {

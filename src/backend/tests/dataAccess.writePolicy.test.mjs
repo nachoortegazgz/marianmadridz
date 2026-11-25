@@ -10,6 +10,7 @@ import {
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
 import { insertItem, bulkUpdate, bulkRemove } from "backend/dataAccess";
+import { assertTransaccionesTPVRecord } from "backend/validation";
 import {
     BUSINESS_COLLECTIONS as C,
     OPERATIONAL_COLLECTIONS as O,
@@ -156,7 +157,7 @@ test("removed CMS collections are absent from the canonical registry", () => {
     assert.equal(C.TPV_IDENTITIES, undefined);
     assert.equal(C.PAQUETES_GESTORIA, undefined);
 });
-test("MovimientosCaja rejects all new TPV ledger writes and remains append-only", () => {
+test("MovimientosCaja permits current physical TPV events but remains append-only", () => {
     const item = {
         _id: "TPV_TEST_ROW",
         recordSource: "TPV_LEDGER",
@@ -165,9 +166,7 @@ test("MovimientosCaja rejects all new TPV ledger writes and remains append-only"
         sequenceNumber: 1,
         hash: "a".repeat(64),
     };
-    assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item), {
-        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
-    });
+    assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
         code: "LEDGER_APPEND_ONLY",
     });
@@ -176,18 +175,58 @@ test("MovimientosCaja rejects all new TPV ledger writes and remains append-only"
     });
 });
 
+test("TransaccionesTPV validates backend-priced commercial records and is append-only", () => {
+    const record = {
+        _id: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+        sessionId: "TPV-SESSION-20261125",
+        orderId: null,
+        lineas: [{
+            tipoLinea: "PRODUCTO",
+            itemId: "e556070a-6d6a-402e-8422-11133033ea76",
+            cantidad: 1,
+            precioUnitario: 10,
+            subtotalNeto: 10,
+            impuestosImporte: 2.1,
+            totalLinea: 12.1,
+        }],
+        subtotalNeto: 10,
+        subtotalNetoMinor: 1000,
+        impuestosTotal: 2.1,
+        impuestosTotalMinor: 210,
+        totalVenta: 12.1,
+        totalVentaMinor: 1210,
+        medioPago: null,
+        paymentSelection: [],
+        operatorResourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        operatorId: "0114748d-2806-3928-9b97-ff0d09853759",
+        createdAt: new Date("2026-11-25T10:00:00.000Z"),
+        status: "PENDING_PAYMENT",
+        sourceType: "SYNTHETIC",
+        requiresReconciliation: true,
+        draftOrderReason: "DRAFT_ORDER_API_UNAVAILABLE",
+        requestFingerprint: "a".repeat(64),
+        currency: "EUR",
+        traceId: "tpv-sale-test",
+    };
+    assert.equal(assertTransaccionesTPVRecord(record), true);
+    assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
+    assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
+});
+
 test("MovimientosCaja rejects every historical TPV discriminator on new inserts", () => {
     for (const movementType of new Set(Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
         assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
             recordSource: "SYNTHETIC",
             movementType,
-        }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" }, movementType);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, movementType);
     }
     for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
         assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
             recordSource,
             movementType: "COBRO",
-        }), { code: "CMS_TPV_LEDGER_WRITES_DISABLED" }, recordSource);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, recordSource);
     }
 });
 

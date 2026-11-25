@@ -130,12 +130,10 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
         },
     };
 
-    assert.throws(() => assertInsertAllowed("MovimientosCaja", item), {
-        code: "CMS_TPV_LEDGER_WRITES_DISABLED",
-    });
+    assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /LEDGER_APPEND_ONLY/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /LEDGER_APPEND_ONLY/);
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
@@ -386,14 +384,14 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
-        assert.match(source, /require(?:Admin|Cajero)/, fileName + " must retain backend role authorization");
+        assert.match(source, /require(?:Admin|Cajero)|getMyCajeroContext/, fileName + " must retain backend role authorization");
         for (const methodName of methodNames) {
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
             const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the server");
             const access = block.search(repositoryAccess);
             assert.ok(access < 0 || authorization < access, methodName + " must authorize before repository access");
@@ -461,7 +459,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const methodName of policy.guarded || []) {
             const block = getWebMethodSource(source, methodName);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the backend");
             const firstWrite = block.search(writeOperations);
             assert.ok(firstWrite < 0 || authorization < firstWrite, methodName + " must authorize before writes");
@@ -484,8 +482,13 @@ function getWebMethodSource(source, methodName) {
     const declaration = "export const " + methodName + " = webMethod(";
     const start = source.indexOf(declaration);
     assert.notEqual(start, -1, "Missing WebMethod " + methodName);
-    const nextExport = source.indexOf("\nexport const ", start + declaration.length);
-    return source.slice(start, nextExport < 0 ? source.length : nextExport);
+    const boundary = start + declaration.length;
+    const candidates = [
+        source.indexOf("\nexport const ", boundary),
+        source.indexOf("\nasync function ", boundary),
+        source.indexOf("\nfunction ", boundary),
+    ].filter((index) => index >= 0);
+    return source.slice(start, candidates.length ? Math.min(...candidates) : source.length);
 }
 
 

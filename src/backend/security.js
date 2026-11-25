@@ -535,6 +535,32 @@ export async function requireAdmin(traceId = null) {
     return true;
 }
 
+export async function getMyCajeroContext(traceId = null) {
+    const memberInfo = await _getCurrentMemberInfo(traceId);
+    if (!memberInfo?.contactId) throw _createAccessDeniedError("CAJERO");
+    const staff = await _resolveStaffByIdentity(memberInfo, traceId);
+    const role = _readStaffRole(staff);
+    if (![ROL_WEBSITE.ADMIN, ROL_WEBSITE.GESTION].includes(role)) {
+        throw _createAccessDeniedError("CAJERO");
+    }
+    const memberId = String(memberInfo.memberId || "").trim();
+    const resourceId = String(staff?.resourceId || "").trim();
+    if (!memberId || !resourceId) {
+        const error = new Error("TPV_OPERATOR_CONTEXT_INCOMPLETE");
+        error.code = "TPV_OPERATOR_CONTEXT_INCOMPLETE";
+        error.traceId = traceId;
+        throw error;
+    }
+    return Object.freeze({
+        actorId: memberId,
+        operatorId: memberId,
+        operatorResourceId: resourceId,
+        rolWebsite: role,
+        operatorDisplayName: String(staff?.displayName || "").trim() || null,
+        contactId: String(staff?.contactId || memberInfo.contactId || "").trim() || null,
+    });
+}
+
 export async function requireCajero(traceId = null) {
     const authorized = await isCajero(traceId);
 

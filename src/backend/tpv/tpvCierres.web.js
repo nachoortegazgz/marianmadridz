@@ -63,7 +63,7 @@ export const generarControlX = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-ticket-x");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
 
         try {
@@ -134,7 +134,7 @@ export const generarCierreZ = webMethod(
         let persisted = false;
         const traceId = makeTraceId("tpv-ticket-z");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured();
+        assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
 
         try {

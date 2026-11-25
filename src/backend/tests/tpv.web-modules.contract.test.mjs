@@ -248,7 +248,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.match(sales, /getMyCajeroContext/);
     assert.match(sales, /prepareTpvSaleCatalog/);
     assert.match(sales, /catalogVerified: true/);
     assert.match(sales, /taxVerified: true/);
@@ -258,10 +260,13 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /if \(containsProducts\)/);
     assert.match(sales, /inventoryVerified: !containsProducts/);
     assert.match(sales, /UUID_V4/);
-    assert.match(sales, /MovimientosCaja/);
-    assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);
+    assert.ok(sales.includes("BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
+    assert.ok(sales.includes("getItem("));
     assert.match(sales, /async \(input = \{\}\)/);
-    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit|withTpvSessionLock/);
+    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /appendTpvAudit/);
+    assert.match(sales, /withTpvSessionLock/);
+    assert.ok(sales.includes("insertItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     const movements = await source("tpv/tpvMovimientos.web.js");
     const cash = await source("tpv/tpvCaja.web.js");
@@ -287,7 +292,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
     assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
-    assert.match(policy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
+    assert.match(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
@@ -519,7 +524,7 @@ test("TPV public utility module exposes only the configuration contract consumed
     assert.doesNotMatch(controller, /validarImportesTPVSANDBOX/);
 });
 
-test("TPV operational ledger is neutral, write-disabled and isolated from historical reads", async () => {
+test("TPV physical, commercial and audit ledgers are separated from the fiscal guard", async () => {
     const [repository, config, utilities, movements, accessPolicy, hooks, validation] = await Promise.all([
         source("tpv/tpvRepository.js"),
         source("internalConfig.js"),
@@ -536,6 +541,8 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
+    assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
     assert.match(repository, /_isHistoricalTpvLedgerItem/);
     assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
@@ -548,11 +555,13 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.match(utilities, /export function makeTpvPayload/);
     assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds/);
     assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
-    assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
+    assert.match(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
-    assert.match(hooks, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
-    assert.match(repository, /TPV_LEDGER_SEQUENCE_OR_PREVIOUS_HASH_REQUIRED/);
+    assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
+    assert.match(repository, /sequenceNumber: previousSequence \+ 1/);
     assert.match(validation, /historicalTpvLedgerRecord/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
@@ -564,10 +573,44 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 
 
 
-test("TPV sale and refund write methods fail closed until a native payment provider is integrated", async () => {
+test("registrarVenta replays the same TransaccionesTPV idempotency key without duplicating the sale", async () => {
+    const sales = await source("tpv/tpvVentas.web.js");
+    assert.match(sales, /getItem\(\s*BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
+    assert.match(sales, /requestFingerprint/);
+    assert.match(sales, /withTpvSessionLock/);
+    assert.match(sales, /concurrentWinner/);
+    assert.match(sales, /replayed: true/);
+    assert.match(sales, /TPV_IDEMPOTENCY_CONFLICT/);
+});
+
+test("registrarVenta reports every unavailable Catalog V3 product ID", async () => {
+    const sales = await source("tpv/tpvVentas.web.js");
+    const preparation = await source("tpv/tpvSalePreparation.js");
+    assert.match(preparation, /TPV_CATALOG_PRODUCTS_NOT_FOUND/);
+    assert.match(preparation, /invalidProductIds/);
+    assert.match(sales, /invalidProductIds\.join\(", "\)/);
+});
+
+test("registrarVenta creates an optional Draft Order and persists a pending commercial transaction", async () => {
+    const sales = await source("tpv/tpvVentas.web.js");
+    assert.match(sales, /draftOrders\.createDraftOrder/);
+    assert.match(sales, /catalogLines\.map/);
+    assert.doesNotMatch(sales, /DRAFT_ORDER_CATALOG_PRODUCTS_ONLY/);
+    assert.match(sales, /calculatedDraftOrder\?\.draftOrder/);
+    assert.match(sales, /orderId: draft\.orderId/);
+    assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
+    assert.match(sales, /status: "PENDING_PAYMENT"/);
+    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /wixPay|checkout\.create|createPayment|capturePayment/);
+});
+
+test("TPV sale persists a pending commercial transaction while refunds remain provider-gated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.ok(sales.includes("requiresReconciliation: draft.requiresReconciliation"));
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /async \(input = \{\}\) =>/);
     assert.match(refunds, /validateRefundRequest\(input\)/);
@@ -578,9 +621,10 @@ test("TPV sale and refund write methods fail closed until a native payment provi
     const controller = await source("../public/tpvPageController.js");
     assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{[\s\S]*?saleId: optionalString\(payload\.saleId/);
     assert.match(controller, /idempotencyKey: key/);
-    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
+    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
-    assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit/);
+    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /appendTpvAudit/);
     assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit/);
 });
 

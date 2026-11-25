@@ -62,8 +62,8 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
-// Logical event types only; these values are NOT Wix CMS collection IDs.
-// The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
+// Logical event discriminators are not CMS collection IDs. Physical drawer events map to MovimientosCaja,
+// commercial sales to TransaccionesTPV, audit events to ControlOperativo, and sessions to CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
   VENTAS: "TPV_LOGICAL_VENTAS",
   VENTA_LINEAS: "TPV_LOGICAL_VENTA_LINEAS",
@@ -195,6 +195,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   LIBRO_ASIENTOS_CONTABLES_DETALLE: "LibroAsientosContablesDetalle",
   MAPA_STAFF: "MapaStaff",
   MOVIMIENTOS_CAJA: "MovimientosCaja",
+  TRANSACCIONES_TPV: "TransaccionesTPV",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
@@ -567,6 +568,7 @@ export const CONTROL_TYPE = Object.freeze({
   TPV_SESSION_LOCK: "TPV_SESSION_LOCK",
   TPV_TEST_RUN: "TPV_TEST_RUN",
   TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK",
+  TPV_AUDIT_EVENT: "TPV_AUDIT_EVENT",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -690,6 +692,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.MAPA_STAFF,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,

@@ -23,7 +23,8 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     const html = await read("%23htmlTPV.txt");
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
-    assert.match(script, /payments: state\.payments\.map/);
+    assert.match(script, /medioPago: state\.paymentMethod/);
+    assert.match(script, /payments: \[\]/);
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
     assert.match(script, /call\("SALE_VALIDATE"/);
     assert.match(script, /saleReady !== true/);
@@ -72,7 +73,8 @@ test("TPV fiscal quotes expose readiness blockers and keep payments disabled wit
     const sales = await read("src/backend/tpv/tpvVentas.web.js");
     const preparation = await read("src/backend/tpv/tpvSalePreparation.js");
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
-    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(sales, /PENDING_PAYMENT/);
+    assert.match(sales, /BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
     assert.match(preparation, /taxSettings\.getTaxSettings/);
     assert.match(preparation, /taxCalculation\.calculateTax/);
     assert.match(preparation, /auth\.elevate/);

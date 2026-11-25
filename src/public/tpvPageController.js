@@ -1,7 +1,7 @@
 /**
  * TPV page controller — HTML Component bridge to canonical operational WebMethods.
  * Business authorization and persistence rules remain in backend.
- * Operational writes stay unavailable until the fiscal ledger contract is released.
+ * Commercial sale persistence and cash-session state are independent of fiscal-ledger availability.
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
@@ -61,7 +61,6 @@ function envelope(result) {
     return {
         status: "ERROR",
         code: "TPV_UNEXPECTED_RESPONSE",
-        message: "Respuesta backend no reconocida",
         raw: result,
     };
 }
@@ -152,8 +151,8 @@ const ERROR_CATALOG = Object.freeze({
         requiresReconciliation: false,
     }),
     TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: Object.freeze({
-        message: "La escritura operativa del ledger TPV continúa deshabilitada.",
-        solution: "No se ha creado ningún pedido; habilita el writer append-only aprobado y la idempotencia durable.",
+        message: "La escritura del ledger fiscal continúa deshabilitada.",
+        solution: "El registro comercial y los movimientos físicos de caja son independientes; no se ha realizado ningún cobro fiscal ni emisión de factura.",
         recoverable: false,
         retryable: false,
         requiresReconciliation: false,
@@ -365,6 +364,7 @@ async function dispatch(message) {
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
                 pagos,
+                medioPago: optionalString(payload.medioPago, 40) || null,
             });
         }
         case "CASH_MOVEMENT":
@@ -438,6 +438,7 @@ export function initializeTpvPage(widget) {
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
                 obtenerConfiguracionTPV(),
+                // UI-only capability display; backend WebMethods independently authorize each operation.
                 obtenerPermisosTPV().catch((error) => ({
                     status: "ERROR",
                     data: null,

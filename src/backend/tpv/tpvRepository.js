@@ -38,11 +38,12 @@ const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
 /**
- * The current CMS contract still contains only historical QA ledger rows.
- * No canonical operational TPV writer is configured yet. Keep all writes
- * fail-closed; historical reads remain available through dedicated readers.
+ * Fiscal configuration gates fiscal-ledger writes only. Physical cash,
+ * commercial sales and operational audit records have independent stores.
  */
-export function assertTpvOperationalLedgerConfigured() {
+export function assertTpvOperationalLedgerConfigured(ledgerType = "fiscal") {
+    if (["physical", "commercial", "audit"].includes(ledgerType)) return true;
+    if (ledgerType !== "fiscal") throw new Error("TPV_LEDGER_TYPE_INVALID");
     const error = new Error("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED");
     error.code = "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED";
     throw error;
@@ -738,9 +739,23 @@ function _matchesFilter(record, filter) {
     });
 }
 
-export async function insertTpvEvent(collection, idempotencyKey, data) {
+export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType = "physical" } = {}) {
 
-    assertTpvOperationalLedgerConfigured();
+    assertTpvOperationalLedgerConfigured(ledgerType);
+    if (collection === TPV_COLLECTIONS.VENTAS) {
+        throw new Error("TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV");
+    }
+    if (collection === TPV_COLLECTIONS.AUDITORIA) {
+        return appendTpvAudit({
+            idempotencyKey,
+            action: data?.action,
+            actorId: data?.actorId,
+            entityType: data?.entityType,
+            entityId: data?.entityId,
+            traceId: data?.payload?.traceId || data?.traceId,
+            payload: data?.payload || {},
+        });
+    }
 
     _assertLogicalCollection(collection);
     const key = normalizeIdempotencyKey(idempotencyKey);
@@ -777,7 +792,28 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
         return replay;
     }
 
-    const ledgerItem = _buildTpvLedgerItem(collection, key, record, fingerprint);
+    const latestPage = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+        filter: wql.eq("recordSource", TPV_LEDGER_SOURCE),
+        sort: ["sequenceNumber DESC"],
+        limit: 1,
+        consistency: CONSISTENCY.STRONG,
+    });
+    const latestPhysicalRecord = latestPage.items[0] || null;
+    const previousSequence = latestPhysicalRecord ? Number(latestPhysicalRecord.sequenceNumber) : 0;
+    const previousHash = latestPhysicalRecord ? String(latestPhysicalRecord.hash || "") : TPV_GENESIS_HASH;
+    if (latestPhysicalRecord && (
+        !Number.isSafeInteger(previousSequence) || previousSequence <= 0 ||
+        !/^[a-f0-9]{64}$/i.test(previousHash)
+    )) {
+        throw new Error("TPV_PHYSICAL_LEDGER_CHAIN_BROKEN");
+    }
+    const physicalRecord = {
+        ...record,
+        sequenceNumber: previousSequence + 1,
+        previousRecordHash: previousHash,
+    };
+    const ledgerItem = _buildTpvLedgerItem(collection, key, physicalRecord, fingerprint);
     let saved;
     try {
         saved = await insertItem(BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, ledgerItem);
@@ -807,6 +843,73 @@ export async function insertTpvEvent(collection, idempotencyKey, data) {
 export async function queryTpvRecords(collection, filter, options = {}) {
 
     _assertLogicalCollection(collection);
+    if (collection === TPV_COLLECTIONS.VENTAS) {
+        const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
+        const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+        let page = await queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+            sort: ["createdAt ASC"],
+            limit: pageSize,
+            consistency: CONSISTENCY.STRONG,
+        });
+        const records = [];
+        const appendSalesPage = (current) => records.push(...current.items.map((item) => ({
+            ...item,
+            saleId: item._id,
+            totalMinor: item.totalVentaMinor,
+            amountMinor: item.totalVentaMinor,
+            taxMinor: item.impuestosTotalMinor,
+            discountMinor: 0,
+            paymentMethod: item.medioPago,
+            cmsMovementType: "TPV_SALE",
+            operationDescription: "Venta TPV",
+            createdAt: item.createdAt,
+        })).filter((item) => _matchesFilter(item, filter)));
+        appendSalesPage(page);
+        while (page.hasNext && records.length < maxRecords) {
+            page = await page.next();
+            appendSalesPage(page);
+        }
+        if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
+        const sortSpec = Array.isArray(options.sort) && options.sort.length ? options.sort : ["createdAt ASC"];
+        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\s+/);
+        records.sort((a, b) => {
+            const av = field.split(".").reduce((value, key) => value?.[key], a);
+            const bv = field.split(".").reduce((value, key) => value?.[key], b);
+            const comparison = av < bv ? -1 : av > bv ? 1 : 0;
+            return direction.toUpperCase() === "DESC" ? -comparison : comparison;
+        });
+        return records.slice(0, maxRecords);
+    }
+
+    if (collection === TPV_COLLECTIONS.AUDITORIA) {
+        const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
+        const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+        let page = await queryItems({
+            dataCollectionId: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+            filter: wql.eq("controlType", CONTROL_TYPE.TPV_AUDIT_EVENT),
+            sort: ["processedAt DESC"],
+            limit: pageSize,
+            consistency: CONSISTENCY.STRONG,
+        });
+        const records = [];
+        const appendAuditPage = (current) => records.push(...current.items.map((item) => ({
+            ...item,
+            action: item.payload?.action || "UNKNOWN",
+            actorId: item.payload?.actorId || null,
+            entityType: item.payload?.entityType || null,
+            entityId: item.payload?.entityId || null,
+            occurredAt: item.processedAt || null,
+            source: item.payload?.source || "TPV_WEB_METHOD",
+        })).filter((item) => _matchesFilter(item, filter)));
+        appendAuditPage(page);
+        while (page.hasNext && records.length < maxRecords) {
+            page = await page.next();
+            appendAuditPage(page);
+        }
+        if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
+        return records.slice(0, maxRecords);
+    }
     if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
         const session = _sessionFromCaja(await _getCajaActual());
         const sessions = session ? [session] : [];
@@ -929,20 +1032,48 @@ export async function appendTpvAudit({
     traceId,
     payload = {},
 }) {
-    const { item, replayed } = await insertTpvEvent(
-        TPV_COLLECTIONS.AUDITORIA,
-        idempotencyKey,
-        {
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const eventId = "TPVAUDIT-" + createHash("sha256").update(key).digest("hex").slice(0, 32);
+    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+    const auditFingerprint = createHash("sha256").update(stableSerialize({ action, actorId, entityType, entityId, payload })).digest("hex");
+    const existing = await getItem(collection, eventId, CONSISTENCY.STRONG);
+    if (existing) {
+        if (existing.payload?.auditFingerprint !== auditFingerprint) throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
+        return { item: existing, replayed: true };
+    }
+
+    const record = {
+        _id: eventId,
+        controlType: CONTROL_TYPE.TPV_AUDIT_EVENT,
+        dedupeKey: key,
+        traceId: String(traceId || "TPV_AUDIT"),
+        eventId,
+        eventType: "TPV_AUDIT",
+        processedAt: new Date(),
+        status: "COMPLETED",
+        operationDescription: String(action || "UNKNOWN").slice(0, 180),
+        payload: {
+            ...payload,
             action: String(action || "UNKNOWN").slice(0, 80),
             actorId: String(actorId || "UNKNOWN").slice(0, 100),
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
-            occurredAt: new Date(),
             source: "TPV_WEB_METHOD",
-            payload: { ...payload, traceId: String(traceId || "") },
+            traceId: String(traceId || "TPV_AUDIT"),
+            auditFingerprint,
+        },
+    };
+    try {
+        const item = await insertItem(collection, record);
+        return { item, replayed: false };
+    } catch (error) {
+        const winner = await getItem(collection, eventId, CONSISTENCY.STRONG);
+        if (!winner) throw error;
+        if (winner.dedupeKey !== key || winner.payload?.auditFingerprint !== auditFingerprint) {
+            throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
         }
-    );
-    return { item, replayed };
+        return { item: winner, replayed: true };
+    }
 }
 
 export async function latestTpvSession() {
@@ -976,24 +1107,30 @@ export async function latestOpenTpvSession() {
 }
 
 
+async function queryCommercialTpvSales(sessionId) {
+    const records = [];
+    let page = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+        filter: wql.eq("sessionId", sessionId),
+        limit: 100,
+        consistency: CONSISTENCY.STRONG,
+    });
+    records.push(...page.items);
+    while (page.hasNext && typeof page.next === "function") {
+        page = await page.next();
+        records.push(...page.items);
+    }
+    return records;
+}
+
 export async function getCommittedTpvSales(sessionId) {
-    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
-    return records.filter((item) =>
-        item.status === "CONFIRMADA" &&
-        item.payload?.sessionId === sessionId
-    );
+    const records = await queryCommercialTpvSales(sessionId);
+    return records.filter((item) => item.status === "CONFIRMED");
 }
 
 export async function getPendingTpvSales(sessionId) {
-    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
-    const committedIds = new Set(records
-        .filter((item) => item.status === "CONFIRMADA")
-        .map((item) => item.saleId));
-    return records.filter((item) =>
-        item.status === "PREPARADA" &&
-        item.payload?.sessionId === sessionId &&
-        !committedIds.has(item.saleId)
-    );
+    const records = await queryCommercialTpvSales(sessionId);
+    return records.filter((item) => item.status === "PENDING_PAYMENT");
 }
 
 export async function getTpvPayments(sessionId) {

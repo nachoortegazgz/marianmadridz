@@ -21,6 +21,7 @@ export async function resolveTpvContext(traceId = null) {
         operatorId: operator.operatorId,
         operatorDisplayName: operator.operatorDisplayName || null,
         operatorResourceId: operator.operatorResourceId || null,
+        rolWebsite: operator.rolWebsite || null,
         contactId: operator.contactId || null,
         siteId,
         sourceType,
