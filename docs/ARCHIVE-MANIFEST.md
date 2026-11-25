@@ -49,4 +49,12 @@ Reducción del corpus vivo: **156 → 3 (98,08 %)**. Reducción de documentos en
 | `docs/RUNTIME-EVIDENCE-CHECKLIST.md` | Archivado tras consolidar los seis criterios PASS y sus procedimientos | `docs/archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md` | `docs/RELEASE-READINESS.md` (bloques P1–P4, F1 y F5); `docs/PROJECT-CANON.md` (contratos y patrones) |
 | `docs/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | Archivado como revisión de sesión; referencias contractuales trasladadas al canónico | `docs/archive/2026-11/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | `docs/PROJECT-CANON.md` (TPV, inventario, pagos y estado) |
 
-Conteo de este ciclo: 2 archivos movidos; 0 eliminados; 158 Markdown archivados; 5 Markdown vivos en `docs/` raíz. Los tres JSON de `docs/qa/` permanecen como fixtures/snapshots QA.
+Conteo del ciclo documental previo: 2 archivos movidos; 0 eliminados. El inventario global debe recalcularse desde el árbol Git vigente antes de publicar nuevos contadores; los tres JSON de `docs/qa/` permanecen como fixtures/snapshots QA.
+
+
+## Revisión de vigencia — 2026-11-25
+
+- PR #611 está fusionada en `main` (merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`). El estado de TPV preparado y sus gates se mantienen en `docs/STATE-NOW.md`, `docs/RELEASE-READINESS.md` y `src/backend/tpv/README.md`.
+- Se actualizaron los documentos canónicos para retirar estados obsoletos de PR abierta/Draft y referencias antiguas a escrituras sintéticas activas.
+- No se eliminaron documentos archivados: contienen evidencia histórica, contratos y decisiones que no deben perder trazabilidad. La limpieza se realiza separando documentación viva de evidencia histórica y retirando referencias operativas obsoletas.
+- No se publican contadores de archivos nuevos en esta revisión porque el inventario anterior contenía cifras incompatibles entre sí; deben recalcularse desde el árbol Git completo antes de usarse como métrica.
