@@ -65,7 +65,7 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /validarVentaBorradorPrueba/);
-    assert.match(controller, /quote\.saleReady !== true/);
+    assert.match(controller, /quote\.testReady !== true/);
     assert.match(controller, /TPV_SALE_NOT_READY/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
         "the page controller must reject amounts outside safe integer minor units");
@@ -80,9 +80,9 @@ test("TPV widget exposes only an admin synthetic runtime; operational ledgers re
     assert.match(permissions, /operationalWritesAvailable: false/);
     assert.match(permissions, /createSale: testRuntimeAvailable/);
     assert.match(permissions, /testRuntimeAvailable/);
-    assert.match(html, /!state\\.testRuntimeAvailable/);
-    assert.match(html, /state\\.saleQuote\\.testReady !== true/);
-    assert.match(html, /result\\?\\.testPersisted !== true/);
+    assert.match(html, /!state\.testRuntimeAvailable/);
+    assert.match(html, /state\.saleQuote\.testReady !== true/);
+    assert.match(html, /result\?\.testPersisted !== true/);
     assert.match(html, /PRUEBA INTERNA/);
     assert.match(html, /SIN COBRO REAL/);
     assert.match(html, /testCatalogReady/);
@@ -93,14 +93,14 @@ test("TPV widget exposes only an admin synthetic runtime; operational ledgers re
     assert.match(runtime, /inventoryMutated: false/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
-    assert.match(html, /call\\("SALE_VALIDATE"/);
-    assert.match(html, /response\\.status === "ERROR"/);
+    assert.match(html, /call\("SALE_VALIDATE"/);
+    assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);
-    assert.match(html, /data\\.type !== "MM_CONTEXT"/);
+    assert.match(html, /data\.type !== "MM_CONTEXT"/);
     assert.match(html, /customerIdentityId/);
     assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /id="tax"[^>]*disabled/);
-    assert.doesNotMatch(html, /fetch\\s*\\(|XMLHttpRequest|wix-data|suppressAuth/i);
+    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);
 });
 
