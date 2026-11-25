@@ -573,6 +573,36 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
 
 
 
+test("registrarVenta replays the same TransaccionesTPV idempotency key without duplicating the sale", async () => {
+    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    assert.match(sales, /getItem\(\s*BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
+    assert.match(sales, /requestFingerprint/);
+    assert.match(sales, /withTpvSessionLock/);
+    assert.match(sales, /concurrentWinner/);
+    assert.match(sales, /replayed: true/);
+    assert.match(sales, /TPV_IDEMPOTENCY_CONFLICT/);
+});
+
+test("registrarVenta reports every unavailable Catalog V3 product ID", async () => {
+    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    const preparation = await source("src/backend/tpv/tpvSalePreparation.js");
+    assert.match(preparation, /TPV_CATALOG_PRODUCTS_NOT_FOUND/);
+    assert.match(preparation, /invalidProductIds/);
+    assert.match(sales, /invalidProductIds\.join\(", "\)/);
+});
+
+test("registrarVenta creates an optional Draft Order and persists a pending commercial transaction", async () => {
+    const sales = await source("src/backend/tpv/tpvVentas.web.js");
+    assert.match(sales, /draftOrders\.createDraftOrder/);
+    assert.match(sales, /calculatedDraftOrder\?\.draftOrder/);
+    assert.match(sales, /orderId: draft\.orderId/);
+    assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
+    assert.match(sales, /status: "PENDING_PAYMENT"/);
+    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /wixPay|checkout\.create|createPayment|capturePayment/);
+});
+
 test("TPV sale persists a pending commercial transaction while refunds remain provider-gated", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     const refunds = await source("tpv/tpvDevoluciones.web.js");
