@@ -9,8 +9,8 @@ export const obtenerPermisosTPV = webMethod(
         const traceId = makeTraceId("tpv-permissions");
         const staff = await getMyCajeroContext(traceId);
 
-        // A staff role is not proof that the operational ledger and payment
-        // contracts are ready. Until all release gates pass, expose read-only.
+        // Capability flags describe implemented non-fiscal writers only;
+        // refund and fiscal-close capabilities remain disabled independently.
         return {
             status: "SUCCESS",
             data: {
@@ -19,8 +19,8 @@ export const obtenerPermisosTPV = webMethod(
                     read: true,
                     createSale: true,
                     openSession: staff.rolWebsite === "ADMIN",
-                    registerCashMovement: false,
-                    registerPartialCount: false,
+                    registerCashMovement: staff.rolWebsite === "ADMIN",
+                    registerPartialCount: staff.rolWebsite === "ADMIN",
                     requestRefund: false,
                     closeSession: false,
                     issueTicketX: false,
