@@ -73,7 +73,7 @@ test("TPV fiscal quotes expose readiness blockers and keep payments disabled wit
     const preparation = await read("src/backend/tpv/tpvSalePreparation.js");
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
     assert.match(sales, /PENDING_PAYMENT/);
-    assert.match(sales, /BUSINESS_COLLECTIONS\\.TRANSACCIONES_TPV/);
+    assert.match(sales, /BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
     assert.match(preparation, /taxSettings\.getTaxSettings/);
     assert.match(preparation, /taxCalculation\.calculateTax/);
     assert.match(preparation, /auth\.elevate/);
