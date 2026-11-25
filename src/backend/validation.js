@@ -582,7 +582,8 @@ export function assertControlOperativo(item) {
         if (!/^TPVTR[a-f0-9]{31}$/i.test(String(item._id || "")) ||
             !["OPEN", "CLOSED"].includes(String(item.status || "")) ||
             !Number.isSafeInteger(Number(item.version)) || Number(item.version) < 0 ||
-            !item.expiresAt || Number.isNaN(expiresAt.getTime())) {
+            !item.expiresAt || Number.isNaN(expiresAt.getTime()) ||
+            expiresAt.getTime() <= Date.parse(payload.activeUntil || "")) {
             throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN root contract invalid");
         }
         if (payload.sourceType !== "SYNTHETIC" ||
