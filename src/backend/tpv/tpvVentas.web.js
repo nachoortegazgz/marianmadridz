@@ -27,11 +27,12 @@ const PREPARATION_MESSAGES = Object.freeze({
     TPV_CATALOG_CURRENCY_MISMATCH: "El producto o servicio no está configurado en euros.",
     TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
     TPV_TAX_RESULT_INCOMPLETE: "La respuesta fiscal de Wix está incompleta; no se puede validar la venta.",
+    TPV_TAX_SETTINGS_UNAVAILABLE: "No se ha podido leer la configuración fiscal global de Wix.",
+    TPV_TAX_PRICE_MODE_MISMATCH: "El modo de precio con o sin impuestos devuelto por Wix no coincide con la configuración global.",
     TPV_TAX_CURRENCY_MISMATCH: "El cálculo fiscal no ha devuelto la moneda EUR esperada.",
     TPV_TAX_RESULT_LINE_MISSING: "Wix no ha devuelto el cálculo fiscal de una de las líneas.",
     TPV_TAX_RESULT_LINE_INCONSISTENT: "El desglose fiscal devuelto por Wix no coincide con la línea de venta.",
     TPV_TAX_ROUNDING_MISMATCH: "Los totales fiscales de Wix no cuadran con el desglose por líneas.",
-    TPV_TAX_INCLUDED_PRICING_NOT_SUPPORTED: "La modalidad de precios con impuestos incluidos requiere una validación específica antes de continuar.",
 });
 
 function preparationFailure(error, traceId) {
