@@ -29,7 +29,7 @@
 - PR #604: helper de errores accionables A/B; lock fiscal con retry acotado y replay contable verificado.
 - CI offline de PR #603: 80 suites/747 tests PASS; PR #604: 81 suites/750 tests PASS; secret scanning PASS en ambas.
 - Rama sin merge — P1/P2/P3/P5: bridge opaco rechazado, envelope desconocido devuelve ERROR, stub de devolución sin consumidor eliminado y envelope TPV compartido.
-- P4 BLOQUEADA: CMS read-only confirma que TransaccionesTPV no existe; writer de auditoría TPV sigue fail-closed; no se crea Draft Order ni se declara venta funcional.
+- P4 BLOQUEADA: MovimientosCaja es el ledger físico canónico para TPV_LOGICAL_VENTAS/TPV_SALE y transactionId; su writer operativo sigue fail-closed. No crear TransaccionesTPV duplicada ni Draft Order sin idempotencia durable.
 - Wix Preview/Runtime no ejecutado; arnés pendiente de ejecución. Ningún merge de código equivale a autorización de publicación.
 
 ## Glosario mínimo
