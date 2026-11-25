@@ -249,6 +249,7 @@ export const validarVentaBorradorPrueba = webMethod(
                 testReady: blockers.length === 0,
                 testCatalogReady,
                 testReadinessBlockers: blockers,
+                saleReadinessBlockers: blockers,
                 saleReady: false,
                 paymentVerified: false,
                 inventoryVerified: false,
