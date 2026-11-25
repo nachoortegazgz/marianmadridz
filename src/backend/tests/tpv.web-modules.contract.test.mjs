@@ -350,6 +350,7 @@ test("TPV QA runtime uses a dedicated lock discriminator and deterministic ID he
     assert.match(repository, /return "TPVT" \+ digest/);
     assert.doesNotMatch(repository, /makeTpvSessionLockId/);
     assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
+    assert.match(repository, /const RUN_TTL_MS = 24 \* 60 \* 60 \* 1000/);
     assert.doesNotMatch(repository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
     assert.match(config, /TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK"/);
     assert.match(config, /\[CONTROL_TYPE\.TPV_TEST_SESSION_LOCK\]: Object\.freeze/);
