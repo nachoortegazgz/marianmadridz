@@ -1827,6 +1827,7 @@ $w.onReady(() => {
     try {
         bridge = createWidgetBridge(widget, {
             traceId,
+            // Booking iframe compatibility exception: opaque origin only; message types and backend booking/member checks remain enforced.
             allowOpaqueOrigin: true,
             handshakeTimeoutMs: 30000,
             contextTimeoutMs: 110000,
