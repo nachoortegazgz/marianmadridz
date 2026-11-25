@@ -51,7 +51,10 @@ Campos fiscales existentes, opcionales en CMS pero que deben completarse cuando 
 - IVA: taxBase, taxAmount, baseImponibleOImporteNoSujeto, payloadFiscal, payloadAEAT.
 - Operación: fechaOperacion, claveRegimen, calificacionOperacion, operacionExenta, inversionSujetoPasivo, surchargeRate, surchargeAmount.
 - Rectificación: tipoRectificativa, previousInvoiceId, previousInvoiceNumber, previousInvoiceIssueDate, correctionReason, correctionAmount, refundId.
-- Envío: estadoEnvioAEAT, csvAEAT, fechaEnvioAEAT.
+- Envío y evidencia técnica: estadoEnvioAEAT, payloadAEAT, csvAEAT, fechaEnvioAEAT, verificationQR, digitalSignature, hashAlgorithm, signatureAlgorithm, sistemaInformatico.
+- Numeración y relación documental: issuerInvoiceNumber, documentType, previousInvoiceId, previousInvoiceNumber, previousInvoiceIssueDate, refundId.
+- Fiscalidad especial (solo si aplica y está configurada): claveRegimen, calificacionOperacion, operacionExenta, inversionSujetoPasivo, article20Exempt, cashBasisRegime, nonSubjectReason, IRPFWithholdingRate, IRPFWithholdingAmount, surchargeRate, surchargeAmount, withholdingBase, vatAccrualStatus.
+- No existe un campo independiente llamado respuestaAEAT en el esquema leído. La respuesta simulada debe quedar dentro de payloadAEAT con un marcador explícito de simulación/no envío; estadoEnvioAEAT debe seguir indicando NO_ENVIADO_TEST, sin CSV, fecha de envío, QR ni firma.
 
 No añadir campos ni colecciones hasta comprobar que el contrato existente no puede representar el dato necesario.
 
