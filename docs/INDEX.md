@@ -11,6 +11,7 @@
 | Evidencia, auditorías y decisiones históricas | [archive/2026-11/](archive/2026-11/) |
 | Fixtures/snapshots QA (datos de prueba, no estado vivo) | [qa/](qa/) |
 | Criterio vinculante del flujo TPV único | [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) |
+| Próximo hito técnico y tareas de implementación TPV | [TPV-MILESTONE-01-UNIFIED-CORE.md](TPV-MILESTONE-01-UNIFIED-CORE.md) |
 | Contratos y estado TPV backend | [src/backend/tpv/README.md](../src/backend/tpv/README.md) |
 
 ## Reglas de mantenimiento
