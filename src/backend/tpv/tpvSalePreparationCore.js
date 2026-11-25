@@ -50,10 +50,11 @@ export function normalizeTpvSaleLineRequests(lines) {
     });
 }
 
-export function buildTpvTaxCalculationLines(catalogLines) {
+export function buildTpvTaxCalculationLines(catalogLines, taxIncludedInPrice) {
     if (!Array.isArray(catalogLines) || catalogLines.length === 0 || catalogLines.length > 100) {
         fail("TPV_TAX_LINES_INVALID");
     }
+    if (typeof taxIncludedInPrice !== "boolean") fail("TPV_TAX_SETTINGS_UNAVAILABLE");
 
     return catalogLines.map((line, index) => {
         if (!line || !GUID_RE.test(String(line.itemId || ""))) fail("TPV_CATALOG_ITEM_ID_INVALID");
@@ -79,16 +80,18 @@ export function buildTpvTaxCalculationLines(catalogLines) {
             price: fromMinorUnits(priceMinor).toFixed(2),
             appId,
             ...(taxGroupId ? { taxGroupId } : {}),
+            taxIncludedInPrice,
             addressIndex: { singleAddress: 0 },
         };
     });
 }
 
-export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
+export function mapTpvTaxCalculation({ catalogLines, taxResult, taxIncludedInPrice }) {
     if (!Array.isArray(catalogLines) || catalogLines.length === 0 ||
         !taxResult || typeof taxResult !== "object") {
         fail("TPV_TAX_RESULT_INVALID");
     }
+    if (typeof taxIncludedInPrice !== "boolean") fail("TPV_TAX_SETTINGS_UNAVAILABLE");
     if (String(taxResult.currency || "").toUpperCase() !== "EUR") {
         fail("TPV_TAX_CURRENCY_MISMATCH");
     }
@@ -102,11 +105,6 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         fail("TPV_TAX_RESULT_INCOMPLETE");
     }
 
-    const totalTaxIncludedMinor = toMinorUnits(summary.totalTaxIncludedInPrice ?? 0, "TAX_INCLUDED");
-    if (totalTaxIncludedMinor !== 0) {
-        fail("TPV_TAX_INCLUDED_PRICING_NOT_SUPPORTED");
-    }
-
     const detailById = new Map();
     for (const detail of details) {
         const id = String(detail?._id || detail?.id || "");
@@ -116,29 +114,45 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
 
     let subtotalMinor = 0;
     let lineTaxMinor = 0;
+    let catalogFullPriceMinor = 0;
+    let totalSaleMinor = 0;
 
     const lineas = catalogLines.map((line, index) => {
         const lineId = "TPV_LINE_" + String(index + 1);
         const detail = detailById.get(lineId);
         if (!detail || !detail.taxSummary) fail("TPV_TAX_RESULT_LINE_MISSING");
-        if (detail.taxIncludedInPrice !== false) fail("TPV_TAX_INCLUDED_PRICING_NOT_SUPPORTED");
+        if (detail.taxIncludedInPrice !== taxIncludedInPrice) {
+            fail("TPV_TAX_PRICE_MODE_MISMATCH");
+        }
 
         const quantity = Number(line.cantidad);
         const unitPriceMinor = toMinorUnits(line.precioUnitario, "CATALOG_PRICE");
-        const expectedBaseMinor = unitPriceMinor * quantity;
+        const expectedFullPriceMinor = unitPriceMinor * quantity;
+        const fullPriceMinor = toMinorUnits(detail.taxSummary.fullPrice, "FULL_PRICE");
         const taxableMinor = toMinorUnits(detail.taxSummary.taxableAmount, "TAXABLE_AMOUNT");
         const taxMinor = toMinorUnits(detail.taxSummary.taxAmount, "TAX_AMOUNT");
         const taxGroupId = String(detail.taxGroupId || "").trim();
         const taxBreakdown = Array.isArray(detail.taxBreakdown) ? detail.taxBreakdown : [];
 
-        if (!Number.isSafeInteger(expectedBaseMinor) || taxableMinor !== expectedBaseMinor ||
+        if (!Number.isSafeInteger(expectedFullPriceMinor) ||
+            fullPriceMinor !== expectedFullPriceMinor ||
             !GUID_RE.test(taxGroupId) || taxBreakdown.length === 0) {
             fail("TPV_TAX_RESULT_LINE_INCONSISTENT");
         }
 
-        const totalMinor = expectedBaseMinor + taxMinor;
-        subtotalMinor += expectedBaseMinor;
+        const expectedLineTotalMinor = taxIncludedInPrice
+            ? fullPriceMinor
+            : fullPriceMinor + taxMinor;
+        if (taxIncludedInPrice
+            ? taxableMinor + taxMinor !== fullPriceMinor
+            : taxableMinor !== fullPriceMinor) {
+            fail("TPV_TAX_RESULT_LINE_INCONSISTENT");
+        }
+
+        subtotalMinor += taxableMinor;
         lineTaxMinor += taxMinor;
+        catalogFullPriceMinor += fullPriceMinor;
+        totalSaleMinor += expectedLineTotalMinor;
 
         return Object.freeze({
             tipoLinea: line.tipoLinea,
@@ -148,9 +162,10 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
             cantidad: quantity,
             precioUnitario: fromMinorUnits(unitPriceMinor),
             descuentoImporte: 0,
-            subtotalNeto: fromMinorUnits(expectedBaseMinor),
+            subtotalNeto: fromMinorUnits(taxableMinor),
             impuestosImporte: fromMinorUnits(taxMinor),
-            totalLinea: fromMinorUnits(totalMinor),
+            totalLinea: fromMinorUnits(expectedLineTotalMinor),
+            taxIncludedInPrice,
             taxGroupId,
             desgloseImpuestos: taxBreakdown,
             profesionalId: line.profesionalId || null,
@@ -158,12 +173,17 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         });
     });
 
-    // Wix live responses can report totalAmount as the taxable base even though
-    // the generic REST example shows a tax-inclusive total. Use explicit taxable
-    // and tax totals; never infer the payable amount from totalAmount.
     const summaryTaxMinor = toMinorUnits(summary.totalTax, "TAX_SUMMARY");
     const summaryTaxableMinor = toMinorUnits(summary.totalTaxableAmount, "TAXABLE_SUMMARY");
-    if (summaryTaxMinor !== lineTaxMinor || summaryTaxableMinor !== subtotalMinor) {
+    const summaryIncludedTaxMinor = toMinorUnits(summary.totalTaxIncludedInPrice ?? 0, "TAX_INCLUDED");
+    const summaryCatalogAmountMinor = toMinorUnits(summary.totalAmount, "TAX_TOTAL");
+
+    // Wix's live response reports totalAmount as the sum of catalog full prices.
+    // The payable amount is derived from each line's taxIncludedInPrice mode.
+    if (summaryTaxMinor !== lineTaxMinor ||
+        summaryTaxableMinor !== subtotalMinor ||
+        summaryCatalogAmountMinor !== catalogFullPriceMinor ||
+        summaryIncludedTaxMinor !== (taxIncludedInPrice ? lineTaxMinor : 0)) {
         fail("TPV_TAX_ROUNDING_MISMATCH");
     }
 
@@ -171,11 +191,11 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         lineas: Object.freeze(lineas),
         subtotalNeto: fromMinorUnits(subtotalMinor),
         impuestosTotal: fromMinorUnits(lineTaxMinor),
-        totalVenta: fromMinorUnits(subtotalMinor + lineTaxMinor),
+        totalVenta: fromMinorUnits(totalSaleMinor),
+        taxIncludedInPrice,
         taxCalculatorIds: Object.freeze([...new Set(details
             .map((detail) => String(detail?.taxSummary?.appId || "").trim())
             .filter(Boolean))]),
-        taxIncludedInPrice: false,
-        taxIncludedInPriceAmount: fromMinorUnits(totalTaxIncludedMinor),
+        taxIncludedInPriceAmount: fromMinorUnits(summaryIncludedTaxMinor),
     });
 }
