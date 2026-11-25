@@ -145,6 +145,11 @@ export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
  * Historical synthetic markers are deliberately kept in TPV_HISTORICAL_POLICY
  * and must never be emitted by operational writers.
  */
+export const TPV_CATALOG_APP_IDS = Object.freeze({
+  WIX_STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+  WIX_BOOKINGS: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+});
+
 export const TPV_RUNTIME_POLICY = Object.freeze({
   SOURCE_TYPE: "TPV",
   CURRENCY: "EUR",
@@ -152,6 +157,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
   LEDGER_VERSION: "TPV_LEDGER_V3",
   SCHEMA_VERSION: 3,
   CURRENCY_CODE: "EUR",
+  TAX_COUNTRY: "ES",
   TIME_ZONE: "Europe/Madrid",
   CUSTOMER_NOTIFICATIONS_ENABLED: false,
   HARDWARE_ENABLED: false,
