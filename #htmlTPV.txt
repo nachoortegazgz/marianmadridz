@@ -987,6 +987,9 @@ body {
     if (hasQuote) {
       const blockers = quote.saleReadinessBlockers || [];
       const messages = [];
+      if ((quote.testWarnings || []).includes("PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION")) {
+        messages.push("Producto incluido solo para validar catálogo e impuestos; no se consulta ni se modifica el stock.");
+      }
       if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
       if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
       if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
