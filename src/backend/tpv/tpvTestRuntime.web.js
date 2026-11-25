@@ -474,19 +474,16 @@ export const registrarDevolucionPrueba = webMethod(
             const actor = await trustedAdmin(traceId);
             const run = await getTpvTestRun(input.sessionId, actor.actorId);
             const saleId = String(input.saleId || "").trim();
-            const saleEvent = run.payload.events.find((event) =>
-                event.eventType === "SALE_RECORDED" && event.data?.saleId === saleId
-            );
-            if (!saleEvent) throw new Error("TPV_TEST_REFUND_SALE_NOT_FOUND");
             const payments = (Array.isArray(input.payments) ? input.payments : []).map((payment) => ({
                 method: String(payment.paymentMethod || "").trim().toUpperCase(),
                 amountMinor: toMinorUnits(payment.amount, "REFUND_AMOUNT"),
             }));
-            const requestFingerprint = hashTpvTestValue({ saleId, payments, reason: String(input.reason || "").trim() });
+            const reason = String(input.reason || "").trim().slice(0, 500);
+            const requestFingerprint = hashTpvTestValue({ saleId, payments, reason });
             const prior = findPriorEvent(run, input.idempotencyKey, "REFUND_RECORDED", {
                 saleId,
                 payments,
-                reason: String(input.reason || "").trim(),
+                reason,
             });
             if (prior) return ok({
                 refundId: prior.data.refundId,
@@ -500,40 +497,54 @@ export const registrarDevolucionPrueba = webMethod(
                 sourceType: "SYNTHETIC",
                 traceId,
             }, traceId);
-            if (!payments.length || payments.some((payment) =>
+            if (!saleId || !payments.length || payments.some((payment) =>
                 !["EFECTIVO", "TARJETA", "BIZUM"].includes(payment.method) || payment.amountMinor <= 0
             )) throw new Error("TPV_TEST_REFUND_ALLOCATION_INVALID");
-            const originalByMethod = {};
-            for (const payment of saleEvent.data.payments || []) {
-                originalByMethod[payment.method] = (originalByMethod[payment.method] || 0) + Number(payment.amountAppliedMinor || 0);
-            }
-            const priorByMethod = {};
-            for (const event of run.payload.events.filter((entry) =>
-                entry.eventType === "REFUND_RECORDED" && entry.data?.saleId === saleId
-            )) {
-                for (const payment of event.data.payments || []) {
-                    priorByMethod[payment.method] = (priorByMethod[payment.method] || 0) + Number(payment.amountMinor || 0);
-                }
-            }
-            for (const payment of payments) {
-                if ((priorByMethod[payment.method] || 0) + payment.amountMinor > (originalByMethod[payment.method] || 0)) {
-                    throw new Error("TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT");
-                }
-            }
+
             const totalMinor = payments.reduce((sum, payment) => sum + payment.amountMinor, 0);
-            const result = await appendEvent(actor, input, "REFUND_RECORDED", {
-                refundId: "TPV-TEST-REFUND-" + resultId(input.idempotencyKey),
+            const refundId = "TPV-TEST-REFUND-" + resultId(input.idempotencyKey);
+            const result = await appendEvent(actor, input, "REFUND_RECORDED", null, {
                 requestFingerprint,
-                reason: String(input.reason || "").trim().slice(0, 500),
-                saleId,
-                totalMinor,
-                payments,
-                refundStatus: "SIMULATED",
-                realRefund: false,
-                externalSideEffects: false,
+                buildData: (payload) => {
+                    const saleEvent = payload.events.find((event) =>
+                        event.eventType === "SALE_RECORDED" && event.data?.saleId === saleId
+                    );
+                    if (!saleEvent) throw new Error("TPV_TEST_REFUND_SALE_NOT_FOUND");
+                    const originalByMethod = {};
+                    for (const payment of saleEvent.data.payments || []) {
+                        originalByMethod[payment.method] = (originalByMethod[payment.method] || 0) +
+                            Number(payment.amountAppliedMinor || 0);
+                    }
+                    const priorByMethod = {};
+                    for (const event of payload.events.filter((entry) =>
+                        entry.eventType === "REFUND_RECORDED" && entry.data?.saleId === saleId
+                    )) {
+                        for (const payment of event.data.payments || []) {
+                            priorByMethod[payment.method] = (priorByMethod[payment.method] || 0) +
+                                Number(payment.amountMinor || 0);
+                        }
+                    }
+                    for (const payment of payments) {
+                        if ((priorByMethod[payment.method] || 0) + payment.amountMinor >
+                            (originalByMethod[payment.method] || 0)) {
+                            throw new Error("TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT");
+                        }
+                    }
+                    return {
+                        refundId,
+                        requestFingerprint,
+                        reason,
+                        saleId,
+                        totalMinor,
+                        payments,
+                        refundStatus: "SIMULATED",
+                        realRefund: false,
+                        externalSideEffects: false,
+                    };
+                },
             });
             return ok({
-                refundId: "TPV-TEST-REFUND-" + resultId(input.idempotencyKey),
+                refundId,
                 saleId,
                 total: fromMinorUnits(totalMinor),
                 refundStatus: "SIMULATED",
