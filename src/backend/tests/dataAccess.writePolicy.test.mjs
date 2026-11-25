@@ -10,6 +10,7 @@ import {
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
 import { insertItem, bulkUpdate, bulkRemove } from "backend/dataAccess";
+import { assertTransaccionesTPVRecord } from "backend/validation";
 import {
     BUSINESS_COLLECTIONS as C,
     OPERATIONAL_COLLECTIONS as O,
@@ -172,6 +173,46 @@ test("MovimientosCaja permits current physical TPV events but remains append-onl
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), {
         code: "LEDGER_APPEND_ONLY",
     });
+});
+
+test("TransaccionesTPV validates backend-priced commercial records and is append-only", () => {
+    const record = {
+        _id: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+        sessionId: "TPV-SESSION-20261125",
+        orderId: null,
+        lineas: [{
+            tipoLinea: "PRODUCTO",
+            itemId: "e556070a-6d6a-402e-8422-11133033ea76",
+            cantidad: 1,
+            precioUnitario: 10,
+            subtotalNeto: 10,
+            impuestosImporte: 2.1,
+            totalLinea: 12.1,
+        }],
+        subtotalNeto: 10,
+        subtotalNetoMinor: 1000,
+        impuestosTotal: 2.1,
+        impuestosTotalMinor: 210,
+        totalVenta: 12.1,
+        totalVentaMinor: 1210,
+        medioPago: null,
+        paymentSelection: [],
+        operatorResourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+        operatorId: "0114748d-2806-3928-9b97-ff0d09853759",
+        createdAt: new Date("2026-11-25T10:00:00.000Z"),
+        status: "PENDING_PAYMENT",
+        sourceType: "SYNTHETIC",
+        requiresReconciliation: true,
+        draftOrderReason: "DRAFT_ORDER_API_UNAVAILABLE",
+        requestFingerprint: "a".repeat(64),
+        currency: "EUR",
+        traceId: "tpv-sale-test",
+    };
+    assert.equal(assertTransaccionesTPVRecord(record), true);
+    assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
+    assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
 });
 
 test("MovimientosCaja rejects every historical TPV discriminator on new inserts", () => {
