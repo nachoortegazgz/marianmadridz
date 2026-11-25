@@ -151,6 +151,10 @@ export async function appendTpvTestRunEvent({
     traceId,
     closeRun = false,
 }) {
+    if (typeof buildData === "function" &&
+        !/^[a-f0-9]{64}$/i.test(String(requestFingerprint || ""))) {
+        throw new Error("TPV_TEST_REQUEST_FINGERPRINT_REQUIRED");
+    }
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
         const current = await getTpvTestRun(sessionId, actorId);
         const claim = current.payload.idempotencyIndex?.[idempotencyKey];
