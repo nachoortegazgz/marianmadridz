@@ -6,7 +6,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, export obsoleto eliminado, permisos no resueltos bloquean escrituras, retry denegado por defecto, timeout incierto y SALE_REGISTER sin importes de cliente. Handshake HTML Component pendiente. Wix CMS read-only 2026-11-25: colecciones base presentes; `tpvVentas.registrarVenta` bloquea, `insertTpvEvent` tiene guard incondicional y `MovimientosCaja_beforeInsert` rechaza TPV_*. El builder TPV tampoco construye todos los campos exigidos por el esquema fiscal. No crear Draft Order como sustituto de venta/cobro/factura. |
+| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, permisos no resueltos bloquean escrituras, retry denegado por defecto y SALE_REGISTER sin importes de cliente. PR #611 añade cotización read-only: backend resuelve catálogo y fiscalidad Wix; widget presenta totales backend y bloquea pagos cuando `saleReady !== true`. No escribe ledger ni crea Draft Order. Hook `MovimientosCaja_beforeInsert` sigue rechazando TPV_*; guard de repository incondicional. |
 | #415/#209 Fiscal/SIF | Singleton fiscal único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE. Query CMS `MapaStaff` filtrada por `recordType=CONFIG_SISTEMA` devolvió 0 registros. `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; `registrarEventoEconomico` deniega escrituras con ese flag. |
 | #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
@@ -19,7 +19,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 | #523 Bookings | Reconciliar CitasF2 con bookings nativos y ledger, sin inferir estados | PENDIENTE |
 | #522 Canales | Validar flags de pago del catálogo frente a opciones nativas Bookings | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
-| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | PENDIENTE |
+| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | PENDIENTE. Preparación de catálogo/impuestos implementada en PR #611; pendiente CI final y Wix Preview/Runtime. |
 
 ## Bloques de evidencia Runtime
 
