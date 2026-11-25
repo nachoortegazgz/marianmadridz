@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import {
-    BUSINESS_COLLECTIONS,
+    OPERATIONAL_COLLECTIONS,
     CONTROL_TYPE,
     TPV_RUNTIME_POLICY,
     TPV_STORES_APP_ID,
@@ -13,7 +13,7 @@ import {
 } from "./tpvUtils.js";
 import { error as tpvError, pending as tpvPending } from "./tpvEnvelope.js";
 
-const CONTROL_COLLECTION = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
+const CONTROL_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const UUID_V4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CATALOG_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_LINES = 100;
@@ -710,7 +710,7 @@ async function calculateSaleTax(deps, resolvedLines) {
     ]);
     const taxRegion = extractTaxRegion(regionResponse);
     if (!taxRegion) throw new Error("TPV_TAX_REGION_UNRESOLVED");
-    if (taxRegion.taxIncludedInPrice === true) {
+    if (typeof taxRegion.taxIncludedInPrice !== "boolean" || taxRegion.taxIncludedInPrice === true) {
         throw new Error("TPV_TAX_INCLUDED_PRICE_UNSUPPORTED");
     }
     const defaultTaxGroupId = extractDefaultTaxGroup(defaultGroupsResponse);
@@ -854,8 +854,9 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
         });
     }
 
-    const attempts = [...RESOLUTION_STEPS];
+    const resolutionAttempts = ["idempotency_check"];
     let catalog;
+    resolutionAttempts.push("catalog_prices");
     try {
         catalog = await resolveCatalogLines(deps, normalized.lineas, lineItemIds);
     } catch (catalogError) {
@@ -863,7 +864,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             deps, marker, contextForResult, "TPV_CATALOG_UNAVAILABLE",
             "No se pudo consultar el catálogo de productos.",
             ["Comprobar disponibilidad de Stores Catalog V3.", "Repetir la operación con la misma clave idempotente; no se ha creado ningún borrador."],
-            { retryable: true, resolutionAttempts: attempts }
+            { retryable: true, resolutionAttempts }
         );
     }
     if (catalog.invalidProductIds.length) {
@@ -876,6 +877,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
     }
 
     let tax;
+    resolutionAttempts.push("tax_calculation");
     try {
         tax = await calculateSaleTax(deps, catalog.resolved);
     } catch (taxError) {
@@ -884,7 +886,13 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             deps, marker, contextForResult, code,
             "La configuración fiscal de Wix no permite calcular los impuestos de todos los productos de la venta.",
             ["Verificar la región fiscal española y los grupos fiscales de los productos.", "Corregir cualquier taxGroupId sin grupo o mapeo válido.", "No se ha creado ningún pedido ni movimiento de caja."],
-            { retryable: false, resolutionAttempts: attempts }
+            {
+                retryable: false,
+                resolutionAttempts,
+                invalidProductIds: /TPV_PRODUCT_TAX_GROUP_INVALID:([0-9a-f-]+)/i.test(String(taxError?.message || ""))
+                    ? [String(taxError.message).split(":")[1]]
+                    : [],
+            }
         );
     }
 
@@ -899,6 +907,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             defaultTaxGroupId: tax.defaultTaxGroupId,
             taxGroupIds: tax.taxGroupIds,
             resolvedLines: catalog.resolved,
+            phase: "DRAFT_CREATE_STARTED",
             subtotalNetoMinor: expected.subtotalNetoMinor,
             impuestosTotalMinor: expected.impuestosTotalMinor,
             totalVentaMinor: expected.totalVentaMinor,
@@ -914,6 +923,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
         );
     }
 
+    resolutionAttempts.push("ecom_draft_order");
     const catalogLineItems = catalog.resolved.map((line) => ({
         _id: line.lineItemId,
         catalogReference: {
@@ -968,7 +978,28 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
             retryable: false,
             persisted: true,
             solution: "Wix pudo crear el borrador antes del timeout; repetir la consulta con la misma clave. No se lanzará una segunda creación.",
-            resolutionAttempts: attempts,
+            resolutionAttempts,
+        });
+    }
+
+    if (!extractDraftId(draftOrder)) {
+        let recovered;
+        try {
+            recovered = await queryDraftRecovery(deps, marker);
+        } catch {
+            recovered = null;
+        }
+        if (recovered?.draftOrder) {
+            return finalizeDraft(deps, marker, recovered.draftOrder, expected, catalog.resolved, contextForResult, {
+                replayed: true,
+                autoResolved: true,
+            });
+        }
+        return makePending("TPV_DRAFT_CREATION_UNCERTAIN", contextForResult, {
+            requiresReconciliation: true,
+            retryable: false,
+            persisted: true,
+            resolutionAttempts,
         });
     }
 
