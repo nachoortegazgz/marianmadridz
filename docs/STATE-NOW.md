@@ -104,3 +104,16 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 
 **Decisión:** NO-GO. No desplegar ni habilitar ventas reales hasta cerrar todos los gates y documentar rollback.
 
+
+## 6. TPV — runtime aislado para pruebas online (PR #615)
+
+- PR #615 añade runtime sintético de pruebas en `ControlOperativo`; no habilita ventas, pagos ni escrituras fiscales reales.
+- Lectura Wix live 2026-11-25: 40 colecciones; existen `ControlOperativo`, `MapaStaff`, `MovimientosCaja` y `CajaActual`; no existe colección TPV física independiente ni `TransaccionesTPV`.
+- Catálogo live: 94 servicios Bookings (70 visibles y 24 ocultos), 3 profesionales y 24 productos Stores Catalog V3 visibles en POS.
+- El catálogo TPV filtra `hidden=false` para excluir servicios F2 ocultos. La identidad de los 3 profesionales se valida por `resourceId` y `staffMemberId` nativos.
+- Medios de pago de prueba limitados a EFECTIVO/TARJETA; Bizum, bonos, tarjetas regalo y OTROS permanecen deshabilitados.
+- CI offline PASS en commit de código `a23a4db1154c004c1d29fabbcc666c73845c441a`. El commit de documentación se valida en su propio workflow.
+- Wix Preview/Runtime sigue pendiente; por tanto, no declarar hito finalizado ni TPV operativo.
+
+Detalle y gates: [docs/TPV-ONLINE-TEST-READINESS.md](TPV-ONLINE-TEST-READINESS.md).
+
