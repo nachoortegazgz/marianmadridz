@@ -154,17 +154,17 @@ export const validarVentaBorrador = webMethod(
 );
 
 async function createSaleDraftOrder(prepared) {
-    const productLines = prepared.lineas.filter((line) => line.tipoLinea === "PRODUCTO");
+    const catalogLines = prepared.lineas;
     if (!createDraftOrderElevated) {
         return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_API_UNAVAILABLE" };
     }
-    if (productLines.length !== prepared.lineas.length || productLines.length === 0) {
-        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_CATALOG_PRODUCTS_ONLY" };
+    if (!Array.isArray(catalogLines) || catalogLines.length === 0) {
+        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_NO_CATALOG_LINES" };
     }
     try {
         const response = await createDraftOrderElevated({
             draftOrder: {
-                catalogLineItems: productLines.map((line) => ({
+                catalogLineItems: catalogLines.map((line) => ({
                     catalogReference: {
                         catalogItemId: line.itemId,
                         appId: line.appId,
