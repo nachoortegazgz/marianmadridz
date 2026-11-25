@@ -46,7 +46,9 @@ test("TPV controller imports the admin-only test runtime and Wix catalog readers
     assert.match(runtime, /requireAdmin/);
     assert.match(runtime, /realPayment: false/);
     assert.match(runtime, /externalSideEffects: false/);
-    assert.doesNotMatch(controller, /from "backend\\/tpv\\/(tpvCaja|tpvVentas|tpvMovimientos|tpvAuditoria|tpvDevoluciones|tpvCierres)\\.web"/);
+    for (const legacyWriter of ["tpvCaja.web", "tpvVentas.web", "tpvMovimientos.web", "tpvAuditoria.web", "tpvDevoluciones.web", "tpvCierres.web"]) {
+        assert.equal(controller.includes('from "backend/tpv/' + legacyWriter + '"'), false);
+    }
 });
 
 test("TPV controller dispatches the messages emitted by the POS widget", async () => {
