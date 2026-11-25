@@ -338,7 +338,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(catalog, /minPriceVariant\?\.price\?\.actualPrice/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /sessionId: String\(payload\.sessionId/);
-    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\)/);
+    assert.match(controller, /sessionId: optionalString\(payload\.sessionId, 160\) \|\| ""/);
     const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
