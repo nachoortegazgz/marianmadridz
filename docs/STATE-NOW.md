@@ -32,6 +32,7 @@
 - PR #608 integrada en main: evidencia CMS/fiscal y estado NO-GO actualizados.
 - PR #611 (Draft, no fusionada): incorpora preparación read-only con Catalog V3, Bookings, `taxSettings.getTaxSettings` y `taxCalculation.calculateTax`; el widget solicita cotización backend al cambiar líneas y presenta importes fiscales autoritativos. Los pagos y el registro permanecen bloqueados hasta superar todos los gates.
 - Lectura Wix: 70 servicios Bookings de precio fijo en EUR; 24 productos Stores; grupos predeterminados Productos/Servicios y cálculo ES al 21%. `taxIncludedInItemPrices=false`; el código soporta modalidades inclusiva/exclusiva, pero el modo actual excluye IVA del precio base.
+- Precio al consumidor: el RDL 1/2007, arts. 20.1.c y 60.2.c, exige informar el precio final completo incluidos impuestos. Con `taxIncludedInItemPrices=false` y sin verificación de la presentación pública del precio, se mantiene `CONSUMER_PRICE_PRESENTATION_UNVERIFIED`; no se autoriza cobro.
 - Líneas personalizadas, descuentos no autorizados, bonos y tarjetas regalo sin consulta de saldo bloqueados. Sin mutaciones de inventario, Draft Orders, pagos ni escrituras en `MovimientosCaja`.
 - La preparación no acredita sesión de caja abierta, confirmación del lector externo, inventario, presentación legal del precio final ni writer fiscal. `saleReady=false`, `paymentVerified=false`, `inventoryVerified=false`, `persisted=false`.
 - PR #609 (iteración anterior) y #610 (alternativa Draft Order) cerradas como supersedidas/no seleccionadas; no fusionadas ni con pedidos creados.
