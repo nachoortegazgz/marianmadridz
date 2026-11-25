@@ -62,8 +62,8 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
   ALLOW_SIMULATION_RECORDS: false,
 });
 
-// Logical event types only; these values are NOT Wix CMS collection IDs.
-// The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
+// Logical event discriminators are not CMS collection IDs. Physical drawer events map to MovimientosCaja,
+// commercial sales to TransaccionesTPV, audit events to ControlOperativo, and sessions to CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
   VENTAS: "TPV_LOGICAL_VENTAS",
   VENTA_LINEAS: "TPV_LOGICAL_VENTA_LINEAS",
