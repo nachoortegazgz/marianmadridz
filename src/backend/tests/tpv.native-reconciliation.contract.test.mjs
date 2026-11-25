@@ -31,6 +31,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
     assert.match(directory, /profesionalId: resourceId/);
     assert.match(catalog, /items: await listAuthorizedProfessionals\(\)/);
+    assert.match(catalog, /filter: \{ hidden: \{ \$eq: false \} \}/);
     assert.match(operatorContext, /operatorResourceId: String\(staff\?\.resourceId/);
 
     // The UI selects the MapaStaff/Wix Bookings resourceId. The backend actor
