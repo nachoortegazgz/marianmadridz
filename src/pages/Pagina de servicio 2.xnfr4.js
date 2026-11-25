@@ -672,6 +672,7 @@ $w.onReady(async () => {
             widget,
             {
                 traceId,
+                // Booking iframe compatibility exception: opaque origin only; backend service/member checks remain enforced.
                 allowOpaqueOrigin: true,
                 handshakeTimeoutMs: 45000,
                 contextTimeoutMs: 120000,
