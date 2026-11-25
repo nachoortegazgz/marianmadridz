@@ -34,7 +34,7 @@ Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.
 - Inventario paralelo en CMS: Wix Stores Catalog V3 es la autoridad nativa del stock.
 - Emisión/remisión fiscal real: falta configuración legal validada y aceptación fiscal/runtime.
 - SharePoint como sistema transaccional: solo repositorio de evidencia; Wix CMS es SSOT.
-- Operación comercial TPV: release NO-GO hasta completar writer, gates fiscales, pagos, inventario, precio final y aceptación Runtime; el sitio principal está Published.
+- Operación comercial TPV: release NO-GO hasta completar writer, gates fiscales, pagos, inventario, precio final y aceptación Runtime; el sitio está Draft según el último read-back Wix.
 
 ## 3. STACK Y VERSIONES
 
@@ -80,9 +80,9 @@ Decisiones registradas (fecha y origen):
 
 ## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
 
-[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
+[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas automatizadas usan fixtures/dobles y las pruebas online ejercitan la misma ruta operativa y las colecciones existentes; no existe un runtime de negocio paralelo.
 
-Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de entorno/procedencia de prueba como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
+La naturaleza del registro se marca como metadato persistido derivado por backend: recordTimestamp UTC anterior a productionActivationAt UTC = SYNTHETIC; igual o posterior = REAL. La marca no selecciona un runtime ni altera cálculos, validaciones, esquema o writer. El propietario autoriza pruebas online sobre el sitio y colecciones actuales durante desarrollo; los registros sintéticos pueden modificarse/resetearse antes de actividad real. Después del corte, los ledgers reales son append-only. El writer sigue pendiente hasta completar contrato físico/fiscal, autorización, idempotencia, secuencia, hash, concurrencia, hooks y pruebas Runtime.
 
 ## 5. RESTRICCIONES NORMATIVAS
 
