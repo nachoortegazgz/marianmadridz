@@ -135,3 +135,5 @@ test("product selection always resolves a concrete Catalog V3 variant and fails 
     assert.match(catalog, /variant\.inventoryStatus\?\.preorderEnabled === true/);
     assert.match(catalog, /toMinorUnitsStrict\(raw, "CATALOG_PRICE"\)/);
 });
+
+// Updated for the operational frontend/backend contract.
