@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Permissions, webMethod } from "wix-web-module";
-import { requireAdmin } from "backend/security";
+import { getMyStaffContext, requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
@@ -79,6 +79,15 @@ function sessionResponse(run, actor, now = new Date()) {
     };
 }
 
+async function trustedCashier(traceId) {
+    await requireCajero(traceId);
+    const [actor, staff] = await Promise.all([
+        resolveTpvContext(traceId),
+        getMyStaffContext(traceId),
+    ]);
+    return { actor, isAdmin: staff?.rolWebsite === "ADMIN" };
+}
+
 async function trustedAdmin(traceId) {
     await requireAdmin(traceId);
     return resolveTpvContext(traceId);
@@ -149,7 +158,21 @@ export const obtenerEstadoCajaPrueba = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-test-cashier-state");
         try {
-            const actor = await trustedAdmin(traceId);
+            const { actor, isAdmin } = await trustedCashier(traceId);
+            if (!isAdmin) {
+                return ok({
+                    sessionId: null,
+                    status: "SIN_SESION",
+                    operationalStatus: "SIN_SESION",
+                    canOpenSession: false,
+                    operatorId: actor.operatorId,
+                    actorId: actor.actorId,
+                    operatorDisplayName: actor.operatorDisplayName,
+                    testRuntime: false,
+                    sourceType: "SYNTHETIC",
+                    persisted: false,
+                }, traceId);
+            }
             const latest = await getLatestTpvTestRun(actor.actorId);
             const open = latest?.status === "OPEN" &&
                 new Date(latest.payload.activeUntil || 0).getTime() > Date.now()
