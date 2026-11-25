@@ -203,6 +203,7 @@ const EXPIRY_PURGE_TYPES = new Set([
     CONTROL_TYPE.DISPLAY_TOKEN,
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.TPV_TEST_RUN,
 ]);
 const UPDATED_AT_PURGE_STATUSES = Object.freeze({
     [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
@@ -220,7 +221,7 @@ function _exactClauseValue(clause, operator) {
 }
 function _isLessThanDate(clause) {
     const value = _exactClauseValue(clause, "$lt");
-    return value instanceof Date && Number.isFinite(value.getTime());
+    return value instanceof Date && Number.isFinite(value.getTime()) && value.getTime() <= Date.now();
 }
 function _hasExactKeys(value, expected) {
     return _isRecord(value) &&

@@ -214,7 +214,7 @@ test("TPV dependency manifest and npm lockfile remain synchronized", async () =>
     assert.equal(packageJson.dependencies["@wix/stores"], "1.0.997");
 });
 
-test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers", async () => {
+test("TPV WebMethods isolate synthetic test records from operational ledgers", async () => {
     const files = [
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
@@ -232,9 +232,10 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     const joined = contents.join("\n");
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
-    assert.match(joined, /registrarVenta/);
-    assert.match(joined, /registrarDevolucion/);
-    assert.match(joined, /generarCierreZ/);
+    const testRuntime = await source("tpv/tpvTestRuntime.web.js");
+    assert.match(testRuntime, /registrarVentaPrueba/);
+    assert.match(testRuntime, /registrarDevolucionPrueba/);
+    assert.match(testRuntime, /generarCierreZPrueba/);
     assert.match(joined, /TPV_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
@@ -341,37 +342,59 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
-test("TPV controller imports the exact canonical WebMethods from their owning modules", async () => {
+test("TPV controller routes mutations through the admin-only synthetic runtime", async () => {
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    const contracts = {
-        "tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
-        "tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
-        "tpvVentas.web.js": ["registrarVenta"],
-        "tpvMovimientos.web.js": ["registrarMovimientoCaja"],
-        "tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
-        "tpvDevoluciones.web.js": ["registrarDevolucion"],
-        "tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
-    };
-    for (const [fileName, names] of Object.entries(contracts)) {
-        const moduleSource = await source("tpv/" + fileName);
-        for (const name of names) {
-            assert.match(moduleSource, new RegExp("export const " + name + " = webMethod\\("), fileName + " must export " + name);
-            assert.match(controller, new RegExp("\\b" + name + "\\b"), "page controller must consume " + name);
-        }
-        const moduleName = fileName.replace(/\.web\.js$/, ".web");
-        assert.ok(controller.includes('from "backend/tpv/' + moduleName + '"'), "controller must import " + moduleName);
+    const runtime = await source("tpv/tpvTestRuntime.web.js");
+    const repository = await source("tpv/tpvTestRuntimeRepository.js");
+    const core = await source("tpv/tpvTestRuntimeCore.js");
+    const config = await source("internalConfig.js");
+    const contracts = [
+        "obtenerEstadoCajaPrueba",
+        "abrirSesionCajaPrueba",
+        "validarVentaBorradorPrueba",
+        "registrarVentaPrueba",
+        "registrarMovimientoCajaPrueba",
+        "registrarArqueoParcialPrueba",
+        "registrarDevolucionPrueba",
+        "generarControlXPrueba",
+        "generarCierreZPrueba",
+        "obtenerResumenCajaPrueba",
+        "obtenerAuditoriaTPVPrueba",
+        "exportarMovimientosCajaPrueba",
+    ];
+    for (const name of contracts) {
+        assert.match(runtime, new RegExp("export const " + name + " = webMethod\\("));
+        assert.match(controller, new RegExp("\\b" + name + "\\b"));
     }
-    const [caja, cierres, cierresCore] = await Promise.all([
-        source("tpv/tpvCaja.web.js"),
-        source("tpv/tpvCierres.web.js"),
-        source("tpv/tpvCierresCore.js"),
-    ]);
-    assert.ok(cierresCore.includes("export async function buildTpvSessionSummary("));
-    assert.ok(caja.includes('import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore"'));
-    assert.ok(cierres.includes('import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore"'));
-    assert.ok(cierres.includes("buildTpvSessionSummary(session)"));
-    assert.doesNotMatch([caja, cierres, cierresCore].join("\\n"), /buildSandboxSessionSummary/);
-
+    assert.ok(controller.includes('from "backend/tpv/tpvTestRuntime.web"'));
+    assert.ok(controller.includes('from "backend/tpv/tpvCatalogo.web"'));
+    assert.ok(controller.includes('from "backend/tpv/tpvUtils.web"'));
+    assert.ok(controller.includes('from "backend/tpv/tpvPermisos.web"'));
+    for (const legacyWriter of ["tpvCaja.web", "tpvVentas.web", "tpvMovimientos.web", "tpvAuditoria.web", "tpvDevoluciones.web", "tpvCierres.web"]) {
+        assert.equal(controller.includes('from "backend/tpv/' + legacyWriter + '"'), false);
+    }
+    assert.match(runtime, /requireAdmin/);
+    assert.match(runtime, /prepareTpvSaleCatalog/);
+    assert.match(runtime, /validateSaleDraft/);
+    assert.match(runtime, /getTpvWriteV1Blockers/);
+    assert.match(runtime, /realPayment: false/);
+    assert.match(runtime, /externalSideEffects: false/);
+    assert.match(runtime, /testPersisted: true/);
+    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_RUN/);
+    assert.match(repository, /acquireTpvTestSessionLock/);
+    assert.match(repository, /releaseTpvTestSessionLock/);
+    assert.match(repository, /makeTpvSessionLockId/);
+    assert.match(repository, /TPV_TEST_ADMIN:/);
+    assert.match(repository, /buildData/);
+    assert.match(repository, /requestFingerprint/);
+    assert.match(repository, /bulkPatchItems/);
+    assert.match(repository, /CONSISTENCY\.STRONG/);
+    assert.match(runtime, /PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION/);
+    assert.match(core, /sourceType: "SYNTHETIC"/);
+    assert.match(core, /processingMode: "INTERNAL"/);
+    assert.match(core, /reconciliationStatus: "NOT_RECONCILED"/);
+    assert.match(config, /TPV_TEST_RUN: "TPV_TEST_RUN"/);
+    assert.ok(config.includes("[CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze"));
 });
 
 test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
@@ -385,20 +408,20 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /obtenerEstadoCaja/);
-    assert.match(controller, /abrirSesionCaja/);
+    assert.match(controller, /obtenerEstadoCajaPrueba/);
+    assert.match(controller, /abrirSesionCajaPrueba/);
     assert.match(controller, /obtenerServicios/);
     assert.match(controller, /obtenerProductos/);
     assert.match(controller, /obtenerVariantesProducto/);
     assert.match(controller, /obtenerStaff/);
     assert.match(controller, /buscarClientesTPV/);
-    assert.match(controller, /registrarVenta/);
-    assert.match(controller, /registrarMovimientoCaja/);
-    assert.match(controller, /registrarDevolucion/);
-    assert.match(controller, /generarControlX/);
-    assert.match(controller, /generarCierreZ/);
-    assert.match(controller, /obtenerResumenCaja/);
-    assert.match(controller, /obtenerAuditoriaTPV/);
+    assert.match(controller, /registrarVentaPrueba/);
+    assert.match(controller, /registrarMovimientoCajaPrueba/);
+    assert.match(controller, /registrarDevolucionPrueba/);
+    assert.match(controller, /generarControlXPrueba/);
+    assert.match(controller, /generarCierreZPrueba/);
+    assert.match(controller, /obtenerResumenCajaPrueba/);
+    assert.match(controller, /obtenerAuditoriaTPVPrueba/);
     assert.match(controller, /obtenerConfiguracionTPV/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);

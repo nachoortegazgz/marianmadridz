@@ -236,6 +236,9 @@ body {
       <span id="cashLabel">Caja no consultada</span>
     </div>
   </header>
+  <div role="note" style="margin:8px 0;padding:10px 12px;border:1px solid #d7c7a1;border-radius:8px;background:#fffaf0;color:#5b4825;font-size:12px;">
+    PRUEBA INTERNA: los registros se guardan en ControlOperativo como datos sintéticos. No se ejecutan cobros, reembolsos, movimientos fiscales, cambios de stock ni reservas.
+  </div>
 
   <!-- Barra de sesión -->
   <div class="bar session-bar">
@@ -320,10 +323,10 @@ body {
         <div class="payment-methods" id="paymentMethods">
           <button class="btn active" data-method="EFECTIVO">Efectivo</button>
           <button class="btn" data-method="TARJETA">Tarjeta</button>
-          <button class="btn" data-method="BIZUM">Bizum</button>
-          <button class="btn" data-method="BONO">Bono</button>
-          <button class="btn" data-method="TARJETA_REGALO">Tarjeta regalo</button>
-          <button class="btn" data-method="OTROS">Otros</button>
+          <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
+          <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
+          <button class="btn" data-method="TARJETA_REGALO" disabled title="Saldo no verificable en esta versión">Tarjeta regalo (no verificada)</button>
+          <button class="btn" data-method="OTROS" disabled title="Medio no incluido en el contrato de prueba V1">Otros (no habilitado)</button>
         </div>
 
         <div class="payment-input">
@@ -428,7 +431,7 @@ body {
   }
   const num = (v) => v === null || v === undefined || v === "" ? 0 : (parseLocalizedAmount(v) ?? Number.NaN);
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
-  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"];
+  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA"];
 
   /* ---------- Estado local ---------- */
   const state = {
@@ -445,7 +448,7 @@ body {
     customerIdentityId: null,
     customerLabel: null,
     capabilities: {},
-    operationalWritesAvailable: false,
+    testRuntimeAvailable: false,
     saleQuote: null,
     quoteLoading: false,
     quoteError: null,
@@ -480,7 +483,18 @@ body {
     if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
     const messages = {
       TPV_SALE_NOT_READY: "La venta no está autorizada para cobro. Revisa los bloqueos de preparación.",
-      TPV_SALE_NOT_PERSISTED: "El backend no ha confirmado la persistencia de la venta.",
+      TPV_TEST_SESSION_ALREADY_OPEN: "Ya existe una sesión de prueba abierta. Continúa esa sesión o genera su cierre de prueba.",
+      TPV_SESSION_NOT_OPEN: "No hay una sesión de prueba abierta. Abre una sesión antes de continuar.",
+      TPV_TEST_RUN_EXPIRED: "La sesión de prueba ha caducado. Abre una sesión nueva.",
+      TPV_TEST_SALE_CONTRACT_INVALID: "La venta no cumple el contrato V1: una tasa verificable y un único medio de pago simulado por el total exacto.",
+      TPV_TEST_REFUND_SALE_NOT_FOUND: "No se encuentra esa venta dentro de la sesión de prueba actual.",
+      TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT: "La devolución supera el importe simulado original de ese medio de pago.",
+      TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: "La salida supera el efectivo esperado de la sesión de prueba.",
+      TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: "Hay operaciones simultáneas. Actualiza el estado antes de repetir con la misma clave.",
+      TPV_TEST_EVENT_LIMIT_EXCEEDED: "La sesión alcanzó el límite de eventos. Cierra la prueba y abre otra sesión.",
+      TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED: "El historial alcanzó el límite de almacenamiento. Cierra la prueba y abre otra sesión.",
+      TPV_TEST_RUN_NOT_FOUND: "No se encuentra la sesión de prueba o no pertenece al administrador actual.",
+      TPV_SALE_NOT_PERSISTED: "El backend no ha confirmado la persistencia de la venta de prueba.",
       TPV_CATALOG_PRICE_UNAVAILABLE: "No se ha podido recuperar un precio actual del catálogo Wix.",
       TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
       TPV_TAX_SETTINGS_UNAVAILABLE: "No se ha podido leer la configuración fiscal vigente de Wix.",
@@ -503,7 +517,7 @@ body {
       TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
       TPV_INVALID_UNIT_PRICE: "El precio unitario no es válido. Usa un importe como 25,90.",
       TPV_INVALID_CHANGE_AMOUNT: "El cambio debe ser un importe válido, por ejemplo 2,50.",
-      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago seleccionado no está admitido. Elige Efectivo, Tarjeta, Bizum, Bono, Tarjeta regalo u Otros.",
+      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago no está admitido en la prueba V1. Elige Efectivo o Tarjeta.",
       TPV_INVALID_PAYMENT_METHOD: "El medio de pago no es válido. Selecciona una de las opciones disponibles.",
 
       TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
@@ -712,19 +726,19 @@ body {
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
-      ? "ABIERTA · Integración: " + integrationStatus
-      : (isClosed ? "CERRADA · Integración: " + integrationStatus : "SIN SESIÓN");
+      ? "SESIÓN DE PRUEBA ABIERTA · SIN COBRO REAL"
+      : (isClosed ? "SESIÓN DE PRUEBA CERRADA" : "SIN SESIÓN DE PRUEBA");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
+      $(id).disabled = !isOpen || state.busy || !state.testRuntimeAvailable ||
         state.capabilities[capability] !== true;
     });
-    if (!state.operationalWritesAvailable) {
+    if (!state.testRuntimeAvailable) {
       $("cashLabel").textContent = isOpen
-        ? "SESIÓN ABIERTA · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS"
-        : "SIN SESIÓN · MODO CONSULTA · ESCRITURAS NO CONFIGURADAS";
+        ? "SESIÓN ABIERTA · MODO CONSULTA · PRUEBAS NO DISPONIBLES"
+        : "SIN SESIÓN · MODO CONSULTA · PRUEBAS NO DISPONIBLES";
     }
   }
 
@@ -741,10 +755,10 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
-      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
+      if (el) el.disabled = value || !isOpen || !state.testRuntimeAvailable ||
         state.capabilities[capability] !== true;
     });
   }
@@ -900,7 +914,7 @@ body {
     renderTicket();
 
     try {
-      const quote = await requestSaleQuote([]);
+      const quote = await requestSaleQuote(state.payments);
       if (sequence !== state.quoteSequence) return;
       state.saleQuote = quote;
     } catch (err) {
@@ -918,7 +932,18 @@ body {
   function renderTicket() {
     const container = $("ticketLines");
     const quoteLines = Array.isArray(state.saleQuote?.lineas) ? state.saleQuote.lineas : [];
-    if (!state.items.length) {
+    if (!state.items.length && state.lastSale) {
+      const sale = state.lastSale;
+      const methods = (sale.pagos || []).map((payment) => payment.method).filter(Boolean).join(", ");
+      const hasProducts = (sale.lineas || []).some((line) => line.tipoLinea === "PRODUCTO");
+      container.innerHTML = `
+        <div class="ticket-line"><strong>VENTA DE PRUEBA · SIN VALIDEZ FISCAL</strong></div>
+        <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
+        <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
+        <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
+        ${hasProducts ? '<div class="ticket-line"><span>Stock</span><strong>No consultado ni modificado</strong></div>' : ''}
+      `;
+    } else if (!state.items.length) {
       container.innerHTML = '<p style="color:var(--muted);">Añade conceptos del catálogo.</p>';
     } else {
       container.innerHTML = state.items.map((item, i) => {
@@ -964,6 +989,9 @@ body {
     if (hasQuote) {
       const blockers = quote.saleReadinessBlockers || [];
       const messages = [];
+      if ((quote.testWarnings || []).includes("PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION")) {
+        messages.push("Producto incluido solo para validar catálogo e impuestos; no se consulta ni se modifica el stock.");
+      }
       if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
       if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
       if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
@@ -977,9 +1005,11 @@ body {
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
-      readiness.textContent = quote.saleReady === true
-        ? "Venta preparada para validación final."
-        : "No lista para cobro: " + (messages.join(" ") || "controles pendientes.");
+      readiness.textContent = quote.testReady === true
+        ? "Venta preparada para prueba interna. No se efectuará un cobro real."
+        : quote.testCatalogReady === true
+          ? "Catálogo e impuestos verificados. Introduce un único medio de pago simulado por el total exacto."
+          : "No lista para prueba interna: " + (messages.join(" ") || "controles pendientes.");
     } else if (state.quoteLoading) {
       readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
     } else if (state.quoteError) {
@@ -1019,12 +1049,12 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.saleReady === true && state.operationalWritesAvailable === true;
+    const paymentReady = state.saleQuote?.testCatalogReady === true && state.testRuntimeAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
     document.querySelectorAll("[data-method]").forEach((button) => {
-      const unsupportedTender = ["BONO", "TARJETA_REGALO"].includes(button.dataset.method);
+      const unsupportedTender = ["BONO", "TARJETA_REGALO", "OTROS"].includes(button.dataset.method);
       button.disabled = !paymentReady || unsupportedTender;
       if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
     });
@@ -1051,7 +1081,7 @@ body {
     $("paymentList").querySelectorAll("[data-remove-payment]").forEach((button) => {
       button.onclick = () => {
         state.payments.splice(Number(button.dataset.removePayment), 1);
-        renderPaymentSummary();
+        refreshSaleQuote();
       };
     });
   }
@@ -1068,8 +1098,8 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-          toast("No hay un total autorizado para cobro.");
+        if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
+          toast("No hay un total validado para la prueba interna.");
           return;
         }
         const total = Number(state.saleQuote.totalVenta);
@@ -1081,8 +1111,12 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se aceptan pagos: la venta todavía no está autorizada.");
+    if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
+      toast("No se aceptan importes de prueba: verifica primero catálogo e impuestos.");
+      return;
+    }
+    if (state.payments.length >= 1) {
+      toast("El contrato V1 admite un único medio de pago. Quita el anterior para sustituirlo.");
       return;
     }
     const amount = num($("paymentAmount").value);
@@ -1100,7 +1134,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const remainingMinor = totalMinor - appliedMinor;
     if (!state.items.length || remainingMinor <= 0) {
-      toast("No hay importe pendiente de cobro.");
+      toast("No hay importe pendiente para el pago simulado.");
       return;
     }
     if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
@@ -1117,7 +1151,8 @@ body {
     });
     $("paymentAmount").value = "";
     renderPaymentSummary();
-    if (changeMinor > 0) toast("Pago añadido. Cambio: " + money(changeMinor / 100));
+    refreshSaleQuote();
+    if (changeMinor > 0) toast("Importe de prueba añadido. Cambio simulado: " + money(changeMinor / 100));
   };
 
   /* ---------- Guardar venta ---------- */
@@ -1126,14 +1161,14 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se puede cobrar: la venta no ha superado los controles de preparación.");
+    if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
+      toast("No se puede guardar la prueba: la venta no ha superado los controles.");
       return;
     }
     const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
     const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
     if (appliedMinor !== totalMinor) {
-      toast("El pago no cubre el total fiscal exacto.");
+      toast("El importe simulado no cubre el total fiscal exacto.");
       return;
     }
     const result = await keyedAction("SALE", "SALE_REGISTER", {
@@ -1151,9 +1186,9 @@ body {
         change: payment.changeMinor / 100,
       })),
     }, "SALE_REGISTER_RES");
-    if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
+    if (result?.testPersisted !== true || result?.realPayment !== false) throw new Error("TPV_TEST_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada.");
+    toast("Venta de prueba guardada. No se ha efectuado ningún cobro.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
@@ -1174,7 +1209,7 @@ body {
     }, "SESSION_OPEN_RES");
     renderSession(session);
     await refreshCashState();
-    toast("Sesión abierta.");
+    toast("Sesión de prueba abierta; no se ha abierto una caja real.");
   });
 
   /* ---------- Entrada / Salida de efectivo ---------- */
@@ -1201,7 +1236,7 @@ body {
           profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
         await refreshCashState();
-        toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
+        toast(type === "ENTRADA" ? "Entrada de prueba registrada." : "Salida de prueba registrada.");
       }
     );
   }
@@ -1218,8 +1253,8 @@ body {
       <select id="refundMethod" class="field">
         <option value="EFECTIVO">Efectivo</option>
         <option value="TARJETA">Tarjeta</option>
-        <option value="BIZUM">Bizum</option>
-        <option value="OTROS">Otros</option>
+        <option value="BIZUM" disabled>Bizum (no verificado)</option>
+        <option value="OTROS" disabled>Otros (no disponible en V1)</option>
       </select>
       <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
     `, async () => {
@@ -1257,7 +1292,7 @@ body {
       reason,
     }, "PARTIAL_CASH_COUNT_RES");
     await refreshCashState();
-    toast("Arqueo parcial registrado; la sesión sigue abierta.");
+    toast("Arqueo parcial de prueba registrado; la sesión sigue abierta.");
   });
 
   /* ---------- Resumen e historial ---------- */
@@ -1375,7 +1410,7 @@ body {
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       await refreshCashState();
-      toast("Cierre Z registrado; sesión cerrada.");
+      toast("Cierre Z de prueba registrado; no se ha cerrado una caja real.");
     });
   };
 
@@ -1453,9 +1488,9 @@ body {
       typeof context.data.capabilities === "object"
       ? context.data.capabilities
       : {};
-    state.operationalWritesAvailable = context.data?.operationalWritesAvailable === true;
+    state.testRuntimeAvailable = context.data?.testRuntimeAvailable === true;
     $("connStatus").className = "dot " + (connected ? "ok" : "error");
-    $("connLabel").textContent = connected ? "Conectado" : "No autorizado";
+    $("connLabel").textContent = connected ? (state.testRuntimeAvailable ? "Conectado · PRUEBA INTERNA" : "Conectado · Solo lectura") : "No autorizado";
 
     if (connected) {
       initializeWidgetAfterHandshake();

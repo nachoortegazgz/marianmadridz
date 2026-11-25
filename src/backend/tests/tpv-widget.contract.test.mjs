@@ -22,16 +22,17 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(bridge, /widgetElement\.postMessage/);
 });
 
-test("TPV controller imports all twelve canonical backend WebMethod names", async () => {
+test("TPV controller imports the admin-only test runtime and Wix catalog readers", async () => {
     const controller = await source("src/public/tpvPageController.js");
+    const runtime = await source("src/backend/tpv/tpvTestRuntime.web.js");
     const modules = {
-        "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja"],
         "src/backend/tpv/tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff"],
-        "src/backend/tpv/tpvVentas.web.js": ["registrarVenta"],
-        "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja"],
-        "src/backend/tpv/tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
-        "src/backend/tpv/tpvDevoluciones.web.js": ["registrarDevolucion"],
-        "src/backend/tpv/tpvCierres.web.js": ["generarControlX", "generarCierreZ", "obtenerResumenCaja"],
+        "src/backend/tpv/tpvTestRuntime.web.js": [
+            "obtenerEstadoCajaPrueba", "abrirSesionCajaPrueba", "validarVentaBorradorPrueba",
+            "registrarVentaPrueba", "registrarMovimientoCajaPrueba", "registrarArqueoParcialPrueba",
+            "registrarDevolucionPrueba", "generarControlXPrueba", "generarCierreZPrueba",
+            "obtenerResumenCajaPrueba", "obtenerAuditoriaTPVPrueba",
+        ],
     };
     for (const [path, names] of Object.entries(modules)) {
         const content = await source(path);
@@ -40,10 +41,14 @@ test("TPV controller imports all twelve canonical backend WebMethod names", asyn
             assert.ok(controller.includes(name), "controller must consume " + name);
         }
     }
-    assert.equal(Object.values(modules).flat().length, 12);
     assert.match(controller, /obtenerConfiguracionTPV/);
-    assert.match(controller, /currency: config.status === "SUCCESS"/);
-    assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:/);
+    assert.match(controller, /testRuntimeAvailable/);
+    assert.match(runtime, /requireAdmin/);
+    assert.match(runtime, /realPayment: false/);
+    assert.match(runtime, /externalSideEffects: false/);
+    for (const legacyWriter of ["tpvCaja.web", "tpvVentas.web", "tpvMovimientos.web", "tpvAuditoria.web", "tpvDevoluciones.web", "tpvCierres.web"]) {
+        assert.equal(controller.includes('from "backend/tpv/' + legacyWriter + '"'), false);
+    }
 });
 
 test("TPV controller dispatches the messages emitted by the POS widget", async () => {
@@ -61,8 +66,8 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
     }
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
-    assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /quote\.saleReady !== true/);
+    assert.match(controller, /validarVentaBorradorPrueba/);
+    assert.match(html, /state\.saleQuote\.testReady !== true/);
     assert.match(controller, /TPV_SALE_NOT_READY/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/,
         "the page controller must reject amounts outside safe integer minor units");
@@ -70,19 +75,26 @@ test("TPV controller dispatches the messages emitted by the POS widget", async (
         "unknown operation outcomes must require reconciliation, not blind retry");
 });
 
-test("TPV widget stays read-only until the canonical operational ledger is configured", async () => {
+test("TPV widget exposes only an admin synthetic runtime; operational ledgers remain disabled", async () => {
     const html = await source("%23htmlTPV.txt");
     const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
+    const runtime = await source("src/backend/tpv/tpvTestRuntime.web.js");
     assert.match(permissions, /operationalWritesAvailable: false/);
-    assert.match(permissions, /createSale: false/);
-    assert.match(permissions, /openSession: false/);
-    assert.match(permissions, /registerPartialCount: false/);
-    assert.match(html, /!state\.operationalWritesAvailable/);
-    assert.match(html, /partialCount: "registerPartialCount"/);
+    assert.match(permissions, /createSale: testRuntimeAvailable/);
+    assert.match(permissions, /testRuntimeAvailable/);
+    assert.match(html, /!state\.testRuntimeAvailable/);
+    assert.match(html, /state\.saleQuote\.testReady !== true/);
+    assert.match(html, /result\?\.testPersisted !== true/);
+    assert.match(html, /PRUEBA INTERNA/);
+    assert.match(html, /SIN COBRO REAL/);
+    assert.match(html, /testCatalogReady/);
+    assert.match(runtime, /requireAdmin/);
+    assert.match(runtime, /testPersisted: true/);
+    assert.match(runtime, /persisted: false/);
+    assert.match(runtime, /fiscalDocumentIssued: false/);
+    assert.match(runtime, /inventoryMutated: false/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
     assert.doesNotMatch(html, /simulationStatus|isSynthetic|SIMULATED_ONLY/);
-    assert.match(html, /state\.saleQuote\.saleReady !== true/);
-    assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /call\("SALE_VALIDATE"/);
     assert.match(html, /response\.status === "ERROR"/);
     assert.match(html, /type: "MM_READY"/);

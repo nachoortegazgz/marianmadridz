@@ -48,7 +48,7 @@ beforeEach(() => {
     mocks.wixData._seed("MapaStaff", [{
         _id: "mapa-staff-1",
         recordType: "STAFF",
-        staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
+        staffMemberId: STAFF_MEMBER_ID,
         resourceId: RESOURCE_ID,
         scheduleId: SCHEDULE_ID,
         displayName: "Marian",
@@ -79,7 +79,7 @@ test("TPV-NATIVE-DIRECTORY-03 rejects ambiguous MapaStaff resource mappings", as
         {
             _id: "mapa-staff-1",
             recordType: "STAFF",
-            staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
+            staffMemberId: STAFF_MEMBER_ID,
             resourceId: RESOURCE_ID,
             scheduleId: SCHEDULE_ID,
         },
@@ -97,7 +97,22 @@ test("TPV-NATIVE-DIRECTORY-03 rejects ambiguous MapaStaff resource mappings", as
     );
 });
 
-test("TPV-NATIVE-DIRECTORY-04 searches native Wix Contacts and retains the widget transport key", async () => {
+test("TPV-NATIVE-DIRECTORY-04 rejects a stale MapaStaff staffMemberId cross-link", async () => {
+    mocks.wixData._seed("MapaStaff", [{
+        _id: "mapa-staff-1",
+        recordType: "STAFF",
+        staffMemberId: STALE_MAPPED_STAFF_MEMBER_ID,
+        resourceId: RESOURCE_ID,
+        scheduleId: SCHEDULE_ID,
+        displayName: "Marian",
+    }]);
+    await assert.rejects(
+        () => listAuthorizedProfessionals(),
+        { message: "TPV_STAFF_MAPPING_NATIVE_ID_MISMATCH" }
+    );
+});
+
+test("TPV-NATIVE-DIRECTORY-05 searches native Wix Contacts and retains the widget transport key", async () => {
     const result = await searchTpvContacts("Ana");
     assert.deepEqual(result.items, [{
         identityId: CONTACT_ID,
@@ -107,7 +122,7 @@ test("TPV-NATIVE-DIRECTORY-04 searches native Wix Contacts and retains the widge
     }]);
 });
 
-test("TPV-NATIVE-DIRECTORY-05 re-resolves a selected native Contact before a sale", async () => {
+test("TPV-NATIVE-DIRECTORY-06 re-resolves a selected native Contact before a sale", async () => {
     const contact = await resolveTpvContact(CONTACT_ID);
     assert.deepEqual(contact, {
         contactId: CONTACT_ID,

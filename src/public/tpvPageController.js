@@ -4,13 +4,22 @@
  * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
+import {
+    obtenerEstadoCajaPrueba,
+    abrirSesionCajaPrueba,
+    registrarArqueoParcialPrueba,
+    validarVentaBorradorPrueba,
+    registrarVentaPrueba,
+    registrarMovimientoCajaPrueba,
+    exportarMovimientosCajaPrueba,
+    exportarAuditoriaTPVPrueba,
+    obtenerAuditoriaTPVPrueba,
+    registrarDevolucionPrueba,
+    generarControlXPrueba,
+    generarCierreZPrueba,
+    obtenerResumenCajaPrueba,
+} from "backend/tpv/tpvTestRuntime.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
-import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
-import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
-import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
-import { generarControlX, generarCierreZ, obtenerResumenCaja } from "backend/tpv/tpvCierres.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 // UI-only capability hints; backend WebMethods enforce authorization independently.
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
@@ -158,6 +167,76 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
+    TPV_TEST_SESSION_ALREADY_OPEN: Object.freeze({
+        message: "Ya existe una sesión de prueba abierta para este administrador.",
+        solution: "Continúa esa sesión o genera su cierre de prueba antes de abrir otra.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_SESSION_NOT_OPEN: Object.freeze({
+        message: "No hay una sesión de prueba abierta.",
+        solution: "Abre una sesión de prueba antes de registrar operaciones.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_RUN_EXPIRED: Object.freeze({
+        message: "La sesión de prueba ha caducado.",
+        solution: "Abre una nueva sesión; el historial anterior se conserva durante el periodo de retención.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_SALE_CONTRACT_INVALID: Object.freeze({
+        message: "La venta no cumple el contrato de prueba V1.",
+        solution: "Utiliza una sola tasa impositiva verificable y un único medio de pago simulado por el total exacto.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_REFUND_SALE_NOT_FOUND: Object.freeze({
+        message: "La venta indicada no existe en esta sesión de prueba.",
+        solution: "Copia la referencia de una venta de prueba de la sesión actual.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT: Object.freeze({
+        message: "El importe de la devolución supera el cobro simulado original.",
+        solution: "Comprueba la referencia y el medio de pago de la venta original.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: Object.freeze({
+        message: "La salida de efectivo supera el saldo esperado de la sesión de prueba.",
+        solution: "Comprueba el importe y los movimientos de efectivo anteriores.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: Object.freeze({
+        message: "La sesión está recibiendo operaciones simultáneas.",
+        solution: "Consulta el estado de la sesión antes de repetir la acción con la misma clave idempotente.",
+        recoverable: false,
+        retryable: false,
+        requiresReconciliation: true,
+    }),
+    TPV_TEST_EVENT_LIMIT_EXCEEDED: Object.freeze({
+        message: "La sesión de prueba ha alcanzado el límite de eventos.",
+        solution: "Genera el cierre de prueba y abre una sesión nueva.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED: Object.freeze({
+        message: "El historial de prueba ha alcanzado el límite de almacenamiento.",
+        solution: "Genera el cierre de prueba y abre una sesión nueva.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
 });
 
 function errorEnvelope(error, field = null) {
@@ -275,10 +354,11 @@ async function dispatch(message) {
 
     switch (message.type) {
         case "CASHIER_STATE":
-            return obtenerEstadoCaja();
+            return obtenerEstadoCajaPrueba();
 
         case "SESSION_OPEN":
-            return abrirSesionCaja({
+            return abrirSesionCajaPrueba({
+                idempotencyKey: key,
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
@@ -347,14 +427,7 @@ async function dispatch(message) {
                 };
             });
 
-            const validation = await validarVentaBorrador({ lineas, pagos });
-            if (validation?.status === "ERROR") return validation;
-            const quote = validation?.data;
-            if (!quote || quote.saleReady !== true || Number(quote.importePendiente || 0) > 0) {
-                return errorEnvelope({ code: "TPV_SALE_NOT_READY" });
-            }
-
-            return registrarVenta({
+            return registrarVentaPrueba({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
@@ -394,11 +467,11 @@ async function dispatch(message) {
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
-            return validarVentaBorrador({ lineas, pagos });
+            return validarVentaBorradorPrueba({ lineas, pagos });
         }
 
         case "CASH_MOVEMENT":
-            return registrarMovimientoCaja({
+            return registrarMovimientoCajaPrueba({
                 idempotencyKey: key,
                 sessionId: optionalString(payload.sessionId, 160) || "",
                 movementType: (optionalString(payload.movementType, 40) || "").toUpperCase(),
@@ -409,7 +482,7 @@ async function dispatch(message) {
             });
 
         case "PARTIAL_CASH_COUNT":
-            return registrarArqueoParcial({
+            return registrarArqueoParcialPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
@@ -418,7 +491,7 @@ async function dispatch(message) {
 
         case "REFUND": {
             const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            return registrarDevolucion({
+            return registrarDevolucionPrueba({
                 idempotencyKey: key,
                 sessionId: optionalString(payload.sessionId) || "",
                 saleId: optionalString(payload.saleId) || "",
@@ -432,13 +505,13 @@ async function dispatch(message) {
         }
 
         case "TICKET_X":
-            return generarControlX({
+            return generarControlXPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "TICKET_Z":
-            return generarCierreZ({
+            return generarCierreZPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
                 countedCash: numeric(payload.countedCash, "COUNTED_CASH"),
@@ -446,22 +519,22 @@ async function dispatch(message) {
             });
 
         case "SESSION_SUMMARY":
-            return obtenerResumenCaja({ sessionId: optionalString(payload.sessionId) || "" });
+            return obtenerResumenCajaPrueba({ sessionId: optionalString(payload.sessionId) || "" });
 
         case "AUDIT_LIST":
-            return obtenerAuditoriaTPV({
+            return obtenerAuditoriaTPVPrueba({
                 sessionId: optionalString(payload.sessionId) || undefined,
                 limit: boundedInteger(payload.limit ?? 50, "AUDIT_LIMIT", 1, 100),
             });
 
         case "CASH_MOVEMENTS_EXPORT":
-            return exportarMovimientosCaja({
+            return exportarMovimientosCajaPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
 
         case "AUDIT_EXPORT":
-            return exportarAuditoriaTPV({
+            return exportarAuditoriaTPVPrueba({
                 sessionId: optionalString(payload.sessionId) || "",
                 idempotencyKey: key,
             });
@@ -512,9 +585,14 @@ export function initializeTpvPage(widget) {
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
                     capabilities,
                     permissionsStatus: permissions.status,
-                    operationalWritesAvailable: permissionsReady &&
-                        permissions.data?.operationalWritesAvailable === true,
-                    operationalWritesUnavailableReason: permissionsReady
+                    operationalWritesAvailable: false,
+                    testRuntimeAvailable: permissionsReady &&
+                        permissions.data?.testRuntimeAvailable === true,
+                    operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
+                    testRuntimeMode: permissionsReady ? (permissions.data?.testRuntimeMode || "UNAVAILABLE") : "UNAVAILABLE",
+                    testRuntimeUnavailableReason: permissionsReady && permissions.data?.testRuntimeAvailable !== true
+                        ? "TPV_TEST_RUNTIME_ADMIN_ONLY" : null,
+                    legacyOperationalWritesUnavailableReason: permissionsReady
                         ? (permissions.data?.operationalWritesUnavailableReason || "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED")
                         : (permissions.error?.code || "TPV_PERMISSIONS_UNAVAILABLE"),
                 },

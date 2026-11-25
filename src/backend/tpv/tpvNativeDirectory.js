@@ -126,15 +126,21 @@ export async function listAuthorizedProfessionals() {
         nativeByResourceId.set(resourceId, person);
     }
 
-    // resourceId is the verified cross-system key. The current MapaStaff
-    // staffMemberId values do not match the native Bookings _id values, so
-    // they are not used as an authorization key or copied into the TPV DTO.
+    // resourceId is the cross-system authorization key. When a mapping
+    // resolves to a current native provider, staffMemberId must also match
+    // that provider's native Bookings _id; stale cross-links fail closed.
     const mappingsByResourceId = new Map();
     for (const mapping of mappingResult.items || []) {
         const resourceId = _cleanText(mapping?.resourceId, 64);
-        if (!nativeByResourceId.has(resourceId)) continue;
+        const native = nativeByResourceId.get(resourceId);
+        if (!native) continue;
         if (!GUID_RE.test(resourceId) || mappingsByResourceId.has(resourceId)) {
             throw new Error("TPV_STAFF_MAPPING_AMBIGUOUS");
+        }
+        const mappedStaffMemberId = _cleanText(mapping?.staffMemberId, 64);
+        if (!GUID_RE.test(mappedStaffMemberId) ||
+            mappedStaffMemberId !== _cleanText(native?._id, 64)) {
+            throw new Error("TPV_STAFF_MAPPING_NATIVE_ID_MISMATCH");
         }
         mappingsByResourceId.set(resourceId, mapping);
     }

@@ -131,7 +131,10 @@ export const obtenerServicios = webMethod(
         await requireCajero(makeTraceId("tpv-services-read"));
         try {
             const paging = normalizePage(input);
-            const result = await queryServicesElevated({ paging }, {});
+            const result = await queryServicesElevated({
+                filter: { hidden: { $eq: false } },
+                paging,
+            }, {});
             const items = (result?.services || []).map((service) => ({
                 itemId: service._id,
                 tipoLinea: "SERVICIO",
