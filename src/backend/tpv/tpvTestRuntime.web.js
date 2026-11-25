@@ -239,6 +239,7 @@ export const abrirSesionCajaPrueba = webMethod(
             try {
                 const existing = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
                 if (existing && existing.payload.sessionId !== sessionId) {
+                    await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
                     throw new Error("TPV_TEST_SESSION_ALREADY_OPEN");
                 }
                 const created = await createTpvTestRun({
@@ -263,9 +264,8 @@ export const abrirSesionCajaPrueba = webMethod(
                     externalSideEffects: false,
                 }, traceId);
             } catch (error) {
-                if (!lock.replayed) {
-                    await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
-                }
+                // Keep the actor lock on uncertain insert outcomes. A retry with the
+                // same idempotency key can recover; other sessions remain blocked.
                 throw error;
             }
         } catch (error) {
