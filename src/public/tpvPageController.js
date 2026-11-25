@@ -438,6 +438,7 @@ export function initializeTpvPage(widget) {
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
                 obtenerConfiguracionTPV(),
+                // UI-only capability display; backend WebMethods independently authorize each operation.
                 obtenerPermisosTPV().catch((error) => ({
                     status: "ERROR",
                     data: null,
