@@ -1,15 +1,15 @@
 # RELEASE-READINESS — 2026-11-25
 
-Criterio vinculante: **NO-GO** mientras los gates P0/P1 no dispongan de evidencia reproducible del entorno Wix correspondiente. CI offline no sustituye Wix Preview/Runtime, aceptación de hardware, conciliación real ni revisión fiscal. Los writers y pagos permanecen deshabilitados.
+Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan de evidencia reproducible. El propietario autoriza pruebas online en desarrollo sobre el sitio y colecciones actuales, con un único código y formato de registros. recordNature se deriva en backend de recordTimestamp UTC frente a productionActivationAt UTC. Los datos sintéticos podrán resetearse antes del corte; tras el corte los registros reales son inmutables. CI offline no sustituye Wix Runtime, aceptación de hardware, conciliación ni revisión fiscal. No se habilitan cobros reales ni remisión AEAT durante QA.
 
 ## P0
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas de caja; no alterar históricos | PENDIENTE. PR #611 integra preparación de venta read-only y PR #612 contrato de preescritura V1 (una tasa, un tender físico, total exacto). El writer canónico de `MovimientosCaja` sigue sin implementarse/configurarse; fiscal singleton, pago externo, idempotencia y aceptación Runtime pendientes. |
+| #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas online sobre datos sintéticos; reset controlado antes del corte real | PENDIENTE. PR #611 integra preparación de venta read-only y PR #612 contrato de preescritura V1 (una tasa, un tender físico, total exacto). El writer canónico de `MovimientosCaja` sigue sin implementarse/configurarse; fiscal singleton, pago externo, idempotencia y aceptación Runtime pendientes. |
 | #415/#209 Fiscal/SIF | Singleton fiscal único y válido; writer append-only; revisión legal y flags false hasta autorización | PENDIENTE. Query CMS `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros (2026-11-25); `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`. |
 | #525 CajaActual | Una sola sesión bajo llamadas concurrentes | PENDIENTE. CAS integrado en código; ninguna prueba Runtime de concurrencia ejecutada. |
-| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros originales. |
+| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros reales tras productionActivationAt; durante desarrollo se permite mantenimiento auditado de datos sintéticos. |
 | #520 Automations | Estado actual de automatizaciones y ausencia de efectos no autorizados acreditados | PENDIENTE. Último read-back documentado: siete PREINSTALLED ACTIVE y app laboral INACTIVE; requiere relectura. |
 
 ## P1
@@ -51,7 +51,7 @@ PR #612 incorpora cambios de código sobre el árbol probado `632c85edbd765a291a
 - Backend resuelve productos/variantes Stores Catalog V3 y servicios Bookings de precio fijo; no acepta precios/totales del navegador.
 - Wix `taxSettings.getTaxSettings` y `taxCalculation.calculateTax` calculan impuestos en backend. Configuración leída: `taxIncludedInItemPrices=false`.
 - Datos de solo lectura: 24 productos, 70 servicios, 30 registros de inventario con cantidad rastreada en ubicación virtual online; 0 registros en ubicación física del salón.
-- PR #612 formaliza la preescritura V1: una tasa fiscal verificable, un solo medio físico (EFECTIVO/TARJETA/BIZUM) y total aplicado igual al total Wix. `registrarVenta()` recalcula catálogo e impuestos en backend.
+- PR #612 formaliza la preescritura V1: una tasa fiscal verificable, un solo medio físico (EFECTIVO/TARJETA) y total aplicado igual al total Wix. Bizum, split tender, bonos y tarjetas regalo no están admitidos por V1. `registrarVenta()` recalcula catálogo e impuestos en backend.
 - La preparación y el contrato V1 no escriben ledger, stock, pedidos ni pagos. `saleReady=false`, `paymentVerified=false`, `persisted=false`.
 - El precio final mostrado al consumidor no está verificado; no autorizar venta mientras no se garantice precio completo con impuestos incluidos conforme al RDL 1/2007.
 - No se ha validado hardware EPSON/cajón ni confirmación manual del lector bancario externo.

@@ -1,12 +1,12 @@
 # PROJECT-CANON — marianmadridz
 
-Revisión: 2026-11-25 · Base de código TPV: `PR #611 merge 62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`
+Revisión: 2026-11-25 · Base de código TPV: `PR #612 merge 239fd8207d228bde56e9908055166980a87d4989` · flujo único documental integrado en main
 
 ## 1. IDENTIDAD
 
 | Cliente | Negocio | Stack | Repo | Sitio Wix ID | Entorno actual | Última revisión |
 |---|---|---|---|---|---|---|
-| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | QA/desarrollo; Site Context Draft, `published=false` (read-back 2026-11-23) | 2026-11-25 |
+| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Draft; Site Context read-back 2026-11-25 17:53 CET | 2026-11-25 |
 
 Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md) y [directriz anterior](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). La clasificación histórica de datos no gobierna el flujo TPV vigente.
 
@@ -34,7 +34,7 @@ Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.
 - Inventario paralelo en CMS: Wix Stores Catalog V3 es la autoridad nativa del stock.
 - Emisión/remisión fiscal real: falta configuración legal validada y aceptación fiscal/runtime.
 - SharePoint como sistema transaccional: solo repositorio de evidencia; Wix CMS es SSOT.
-- Publicación y operación comercial: entorno QA/Draft y release NO-GO.
+- Operación comercial TPV: release NO-GO hasta completar writer, gates fiscales, pagos, inventario, precio final y aceptación Runtime; el sitio está Draft según el último read-back Wix.
 
 ## 3. STACK Y VERSIONES
 
@@ -63,7 +63,7 @@ Nota Payments: la deprecación afecta a métodos/eventos de Transactions y Card 
 | Lock con compare-and-swap (CAS), expiración y recuperación acotada | Caja, fiscalidad y procesos concurrentes | PR #587; `fiscalLedgerLock.js` | Exclusión mutua verificable sin forzar locks |
 | Hooks `beforeInsert` para validar/normalizar el sobre y rechazar datos inválidos | Wix Data/CMS | [Wix beforeInsert](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert) · PR #587 | Validación server-side antes de persistir |
 | Errores accionables A/B | Operaciones y gates legales | PR [#604](https://github.com/nachoortegazgz/marianmadridz/pull/604), merge `0acb60d` | A: retry/replay acotado y observable; B: remediation humana sin quitar el gate |
-| Ledgers append-only; rectificación mediante nuevo registro trazable | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | TEC-038; PR [#589](https://github.com/nachoortegazgz/marianmadridz/pull/589), [#590](https://github.com/nachoortegazgz/marianmadridz/pull/590) | Preservar evidencia y trazabilidad |
+| Writer operativo append-only; rectificación mediante nuevo registro trazable. Mantenimiento de datos de desarrollo solo antes del corte y autorizado en backend | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | TEC-038; PR #589/#590; TPV-UNIFIED-FLOW.md | Preservar evidencia y trazabilidad; congelación total tras inicio de actividad real |
 | Wix CMS es SSOT; SharePoint solo evidencia; Capa 3 no gobierna Capa 1 | Todo el ecosistema | [Directriz](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md), [dossier de flujos](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Una autoridad transaccional |
 | Backend/WebMethods contiene lógica y permisos; frontend no decide negocio ni autorización | Todo el sitio | [README](../README.md), directriz del propietario | Seguridad y separación de responsabilidades |
 
@@ -76,13 +76,13 @@ Decisiones registradas (fecha y origen):
 | 2026-11-23 | Concurrencia, identidad, idempotencia y hooks; fiscal fail-closed; MovimientosCaja append-only | PR #587 `5983ddf`; #589 `b667bae`; #590 `63b55f1` |
 | 2026-11-24 | Decisión histórica de retirar el runtime anterior; supersedida por el flujo único | PR #600 `7ffca8c`; PR #601 `46a7e01`; decisión 2026-11-25 en TPV-UNIFIED-FLOW.md |
 | 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
-| 2026-11-25 | Preparación de venta TPV autoritativa read-only integrada | PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`; CI offline PASS; Runtime pendiente |
+| 2026-11-25 | Preparación de venta y contrato previo V1 integrados; decisión de flujo único consolidada | PR #611/#612; commit de documentación `19378e00f6568afaf68df6550d7fbb7844e221ab` está en la historia de main; Runtime pendiente |
 
 ## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
 
-[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por Sandbox/Live, sintético/real, Preview/Published o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
+[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas automatizadas usan fixtures/dobles y las pruebas online ejercitan la misma ruta operativa y las colecciones existentes; no existe un runtime de negocio paralelo.
 
-Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de origen/entorno como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
+La naturaleza del registro se marca como metadato persistido derivado por backend: recordTimestamp UTC anterior a productionActivationAt UTC = SYNTHETIC; igual o posterior = REAL. La marca no selecciona un runtime ni altera cálculos, validaciones, esquema o writer. El propietario autoriza pruebas online sobre el sitio y colecciones actuales durante desarrollo; los registros sintéticos pueden modificarse/resetearse antes de actividad real. Después del corte, los ledgers reales son append-only. El writer sigue pendiente hasta completar contrato físico/fiscal, autorización, idempotencia, secuencia, hash, concurrencia, hooks y pruebas Runtime.
 
 ## 5. RESTRICCIONES NORMATIVAS
 
@@ -102,9 +102,9 @@ Esta decisión sustituye directrices anteriores que ordenaban crear o mantener r
 | Gate fiscal y append-only | DONE en código; datos legales PENDING | PR #589 `b667bae`; #590 `63b55f1` | Propietario + asesoría fiscal |
 | Arnés Runtime F1–F6 | DONE en código; ejecución PENDING | PR #603 merge `f42ef7f`; `tests/runtime/runtime-all.spec.js` | QA Preview |
 | Errores accionables A/B | DONE en código; Runtime PENDING | PR #604 merge `0acb60d`; CI 81 suites/750 tests | QA Preview |
-| #416 Caja, compensaciones y pedidos POS | BLOCKED P0 | [STATE-NOW histórico](archive/2026-11/PROJECT-STATUS.md); [RELEASE-READINESS](RELEASE-READINESS.md) | Propietario + QA; reconciliación documentada sin mutar registros |
+| #416 Caja, compensaciones y pedidos POS | BLOCKED P0 | [STATE-NOW histórico](archive/2026-11/PROJECT-STATUS.md); [RELEASE-READINESS](RELEASE-READINESS.md) | Propietario + QA; reconciliación y pruebas sobre datos de desarrollo, reset preproducción |
 | #415/#209 Configuración fiscal y SIF | BLOCKED P0 | F1 pendiente; PR #589/#604 | Propietario + asesoría fiscal; CONFIG_SISTEMA_FISCAL legalmente verificado |
-| #525 Concurrencia CajaActual | BLOCKED P0 Runtime | PR #587; P1 pendiente | QA Preview |
+| #525 Concurrencia CajaActual | BLOCKED P0 Runtime | PR #587; P1 pendiente | QA online sobre el sitio/colecciones actuales |
 | #434 Discrepancia MovimientosCaja | BLOCKED P0 | PR #590; M4 pendiente | Propietario + administrador Wix; Activity Logs/backups |
 | #520 Wix Automations | BLOCKED P0 | Último read-back: 7 PREINSTALLED ACTIVE; app laboral INACTIVE | Propietario + administrador Wix |
 | #523/#522 Bookings y canales de pago | PENDING P1 | Revalidación 2026-11-23 | QA + propietario; estado nativo y flags |
@@ -147,7 +147,7 @@ Esta sección fija el estado actual de integración y prevalece sobre los regist
 - PR #611 CI offline PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f`: run `45555933654`; Gitleaks run `45555933681` PASS.
 - PR #612 CI offline PASS sobre árbol `632c85edbd765a291abe7b411fe08af75da5e571`: run `45592833890`; Gitleaks run `45592834040` PASS. Wix Preview/Runtime no ejecutado.
 - Evidencia Wix read-only 2026-11-25: 24 productos, 70 servicios de precio fijo EUR, 30 registros de inventario en ubicación virtual online y 0 en ubicación física; `taxIncludedInItemPrices=false`.
-- PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA/BIZUM) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
+- PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
 - `saleReady=false`, `paymentVerified=false`, `persisted=false`. El contrato V1 no habilita persistencia. No se crean pedidos, Draft Orders, movimientos, pagos ni devoluciones. El guard de repository y el hook `MovimientosCaja_beforeInsert` siguen cerrados.
 - No crear `TransaccionesTPV`: `MovimientosCaja` sigue siendo el ledger físico canónico. No inicializar ni transferir inventario sin recuento físico.
 - Precio final al consumidor no verificado; la venta continúa bloqueada por el requisito de precio completo con impuestos incluidos (RDL 1/2007, arts. 20.1.c y 60.2.c).

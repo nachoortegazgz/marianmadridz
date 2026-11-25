@@ -1,21 +1,21 @@
 # TPV — backend, contratos y validación
 
-**Estado de `main`:** PR #611 integrada en merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
+**Estado de `main`:** PR #612 integrada en merge commit `239fd8207d228bde56e9908055166980a87d4989` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
 
 ## Criterio de ejecución vigente — flujo único
 
-El TPV debe operar con un único flujo de backend, un contrato de dominio y una ruta de persistencia para cualquier dato. No se admiten ramas funcionales por etiquetas Sandbox/Live, sintético/real, Preview/Published o test-run. Las pruebas deben ejercitar la misma lógica mediante fixtures y dobles de test; no mediante un runtime paralelo. La especificación vinculante y el plan de migración están en [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md).
+El TPV debe operar con un único flujo de backend, un contrato de dominio y una ruta de persistencia para cualquier dato. No se admiten ramas funcionales ni runtimes distintos por etiquetas Sandbox/Live, sintético/real, Preview/Published o test-run. Cada registro lleva una naturaleza derivada en backend comparando recordTimestamp UTC con productionActivationAt UTC: anterior = SYNTHETIC; igual o posterior = REAL. Es metadato de trazabilidad, no selector de flujo. Las pruebas online y automatizadas ejercitan la misma lógica y el mismo writer. La especificación vinculante y el plan de migración están en [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md).
 
-La implementación aún no cumple este criterio: el controlador importa tpvTestRuntime.web.js, el repositorio rechaza escrituras operativas y internalConfig.js conserva marcadores históricos. No retirar guard ni runtime hasta completar el contrato físico/fiscal de MovimientosCaja y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
+La implementación aún no cumple este criterio: el controlador importa `tpvTestRuntime.web.js`, permisos y configuración conservan referencias del runtime anterior, y el repositorio rechaza escrituras operativas. La retirada del runtime y sus discriminadores forma parte del Hito TPV-01; no retirar el guard hasta completar el contrato físico/fiscal de `MovimientosCaja` y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
 
 ## Arquitectura y autoridad
 
 - `MovimientosCaja` es el ledger físico canónico. No crear `TransaccionesTPV` ni otro ledger alternativo.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
-- Los ledgers son append-only; rectificaciones mediante nuevos registros trazables.
+- Durante desarrollo, los registros sintéticos pueden modificarse/resetearse mediante mantenimiento controlado antes del corte. Tras productionActivationAt, los ledgers reales son append-only; rectificaciones mediante nuevos registros trazables.
 - El contrato operativo único no clasifica operaciones por origen de datos. Los registros heredados quedan fuera de la nueva ruta y se conservan hasta definir su tratamiento controlado.
 - Frontend: presentación/orquestación. Backend/WebMethods: catálogo, importes, fiscalidad, permisos y reglas.
-- No activar pagos reales, writers fiscales, pedidos ni efectos externos durante QA.
+- No activar pagos reales, terminales ni remisión AEAT durante QA. La persistencia de registros sintéticos online solo se habilitará tras completar el contrato físico, la clasificación temporal y los controles de integridad.
 
 ## Preparación de venta (PR #611)
 
@@ -36,13 +36,13 @@ La implementación aún no cumple este criterio: el controlador importa tpvTestR
 
 El módulo puro `tpvWriteV1Contract.js` delimita el primer writer sin persistir:
 - Una única tasa impositiva verificable en todas las líneas. Una venta con más de una tasa queda bloqueada; no se selecciona una tasa representativa.
-- Un único medio de pago admitido: efectivo, tarjeta o Bizum.
+- Un único medio de pago admitido por el contrato de escritura V1: EFECTIVO o TARJETA. Bizum no está incluido en `SUPPORTED_WRITE_V1_PAYMENT_METHODS` y debe rechazarse hasta ampliar el contrato con pruebas.
 - El importe aplicado (importe recibido menos cambio) debe coincidir exactamente con el total recalculado por Wix.
 - El pago en efectivo puede incluir cambio; la proyección aplica solo el importe neto recibido.
 - La elegibilidad de este contrato NO acredita que el pago bancario se haya recibido ni autoriza escritura.
 - `registrarVenta` recalcula catálogo e impuestos en backend y aplica el contrato V1 antes de devolver el bloqueo de persistencia. No confía en importes fiscales del navegador.
 
-La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
+La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. El runtime separado y su cableado son deuda de migración del Hito TPV-01, no una arquitectura que deba mantenerse. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
 
 ## Evidencia Wix read-only — 2026-11-25
 

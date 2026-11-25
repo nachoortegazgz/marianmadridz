@@ -1,50 +1,85 @@
-# TPV — criterio canónico de flujo único
+# TPV — flujo único y clasificación temporal de registros
 
-**Decisión del propietario: 2026-11-25.** Este documento sustituye cualquier directriz anterior que exija separar la lógica TPV por etiquetas de entorno, por condición de datos de prueba o por nombres como Sandbox/Live.
+**Decisión vinculante del propietario: 2026-11-25.** Este documento sustituye directrices anteriores incompatibles sobre runtimes separados, datos sintéticos y mutabilidad durante desarrollo.
 
-## Decisión vinculante
+## 1. Código y flujo únicos
 
-El TPV tendrá **un solo flujo de código, un solo contrato de dominio y un solo conjunto de reglas de negocio** para cualquier dato que procese. El mismo backend prepara, valida, autoriza, registra, concilia y proyecta operaciones. No existirán ramas funcionales que cambien el comportamiento por detectar Preview/Published, Sandbox/Live, sintético/real, test-run o un flag equivalente.
+El TPV utiliza **un único código, un único contrato de dominio, las mismas validaciones y una única ruta de persistencia** en desarrollo y tras la activación de actividad real. No se mantienen versiones funcionales distintas ni motores alternativos por Preview/Published, Sandbox/Online, sintético/real o test-run.
 
-El carácter de una operación se determina por su contenido y por su estado verificable en el dominio (por ejemplo, pago confirmado, venta autorizada, referencia fiscal válida); nunca por una etiqueta declarada por el navegador ni por una variable de entorno que seleccione otro motor.
+Los registros de prueba deben tener el mismo formato físico y contractual que los registros reales: mismos campos, tipos, cálculos monetarios y fiscales, numeración de prueba, secuencia, hash, idempotencia, locks, hooks y proyecciones. La marca de naturaleza del registro es metadato trazable; no selecciona otro motor ni modifica las reglas de negocio.
 
-## Consecuencias de implementación
+El frontend no elige la naturaleza del registro, la fecha de registro, el origen de datos ni las autorizaciones. El backend genera el instante de registro y determina la clasificación.
 
-1. Eliminar progresivamente del runtime operativo los nombres, flags, enums, IDs, prefijos, ramas, guards y contratos que codifiquen SANDBOX, LIVE, SYNTHETIC, SIMULATED, TEST_ONLY o equivalentes.
-2. No mantener un runtime de pruebas paralelo ni duplicar repositorios, writers, validadores, modelos, WebMethods o controladores para pruebas.
-3. No añadir sourceType, processingMode, testRunId, syntheticOnly ni marcadores equivalentes como condición para aceptar o rechazar una operación de negocio.
-4. No permitir que el frontend seleccione el tipo de entorno, la fuente de datos o el nivel de autorización.
-5. Mantener una única API de dominio en backend y una única ruta de persistencia. Las pruebas ejercitan esa misma ruta con fixtures y dobles de test en la suite automatizada, sin crear un segundo flujo de producción.
-6. Los datos históricos creados por runtimes anteriores quedan fuera del flujo operativo nuevo. Su tratamiento será lectura/migración/retirada controlada, sin contaminar el contrato nuevo ni alterar ledgers inmutables.
-7. La separación que Wix aplique internamente entre sus almacenes no se modela en el dominio TPV ni justifica bifurcaciones de código. No asumir que una función de Wix aísla colecciones de aplicaciones nativas o proveedores externos.
-8. La ausencia de una etiqueta de entorno no es autorización. Permisos, validaciones, límites de operación y controles de integridad se aplican siempre en backend.
+## 2. Clasificación temporal obligatoria
 
-## Invariantes que permanecen
+La naturaleza de cada registro se determina comparando su instante de registro del servidor con el instante oficial de activación de actividad real:
 
-- Wix CMS continúa siendo la fuente de verdad transaccional propia.
-- MovimientosCaja es el ledger físico canónico; no crear TransaccionesTPV ni un ledger alternativo.
-- Los ledgers fiscales, contables, laborales y cierres conservan append-only e inmutabilidad; las correcciones se representan mediante nuevos registros trazables.
-- Idempotencia durable, fingerprint de petición, secuencia, hash, locks CAS, control de concurrencia y recuperación forman parte del único flujo.
-- Autorización backend en cada WebMethod; no confiar en UI, modo de vista, etiquetas de cliente ni secretos presentes.
-- El contrato fiscal y los campos obligatorios de CMS deben satisfacerse íntegramente antes de persistir.
-- No activar pagos externos, emisión fiscal, comunicaciones o hardware hasta disponer de sus contratos, configuración y pruebas específicas. Esto es un control de capacidad real, no un segundo flujo TPV.
+- recordTimestamp < productionActivationAt → SYNTHETIC.
+- recordTimestamp >= productionActivationAt → REAL.
 
-## Migración segura
+Ambos instantes se almacenan/comparan en UTC. La interfaz puede presentar la hora en Europe/Madrid. No se usa la fecha del navegador, la fecha de operación, la fecha de expedición de factura ni el periodo fiscal para clasificar el registro.
 
-1. Identificar todos los imports, llamadas, bindings Wix, hooks, tests, automatizaciones y consumidores externos.
+### Contrato de datos
+
+- recordTimestamp: instante UTC generado exclusivamente por backend al aceptar la operación.
+- productionActivationAt: instante UTC único, persistido en configuración canónica controlada por backend y fijado en el procedimiento formal de activación. Mientras no exista (null), el sistema permanece sin corte de actividad real y los registros válidos se clasifican como SYNTHETIC; no se autoriza actividad real. No equivale al estado técnico Published/Draft de Wix.
+- recordNature: marca persistida e inmutable SYNTHETIC o REAL, derivada en backend de la comparación anterior. No se acepta desde el cliente.
+- Si recordTimestamp falta/no es válido, o la configuración de corte es inconsistente, el backend rechaza la persistencia y no inventa una clasificación. La marca y el timestamp se conservan en cada registro; no se reclasifican históricos al cambiar la configuración.
+- El campo físico definitivo para la marca y la ubicación canónica del corte quedan pendientes de auditoría del esquema CMS y de internalConfig.js. No crear una colección ni un campo duplicado antes de comprobar los existentes.
+
+La clasificación es metadato de trazabilidad. No habilita ni deshabilita por sí sola la ruta de venta, el cálculo, la validación, el writer o los permisos. Los efectos externos (cobro real, terminal, emisión/remisión fiscal, AEAT, automatizaciones) requieren sus propias confirmaciones y gates permanentes. Un registro sintético nunca se remite a AEAT ni se usa para liquidar un pago real.
+
+## 3. Desarrollo online y datos de prueba
+
+Durante la fase de desarrollo, los registros actuales y los nuevos registros anteriores al corte oficial son sintéticos, incluso si reproducen exactamente una operación real. Antes del corte, el backend puede autorizar a un administrador a modificar o eliminar registros del conjunto de desarrollo para preparar, repetir y validar escenarios completos; cada intervención debe quedar auditada y acotada al ámbito TPV. No se permite esta mutación desde el frontend ni se altera el timestamp original de creación. El writer operativo sigue registrando cada operación mediante inserciones trazables para que las pruebas de append-only sean válidas.
+
+Las pruebas online deben usar el sitio, las colecciones y la ruta operativa existentes, sin crear un TPV paralelo ni una colección alternativa. El aislamiento de Wix Sandbox/Online es una propiedad de configuración de Wix, no una bifurcación del código; antes de escribir desde Preview debe comprobarse el destino efectivo de cada colección.
+
+Los casos de prueba deben cubrir apertura/cierre de caja, ventas, movimientos, devoluciones, arqueos, numeración, importes, hash, encadenamiento, idempotencia, concurrencia, permisos, hooks, recuperación y proyecciones. Los datos de prueba deben tener contenido sintético identificable y una marca persistida diferenciadora, manteniendo el mismo esquema que los registros reales.
+
+## 4. Corte y limpieza antes de actividad real
+
+Antes de declarar actividad real se ejecutará un procedimiento de transición controlado:
+
+1. Congelar escrituras de desarrollo y registrar el instante previsto de activación.
+2. Inventariar los registros del ámbito TPV, sus relaciones, secuencias, hashes, locks y proyecciones.
+3. Verificar que todos los registros que se van a limpiar son SYNTHETIC y anteriores al corte; preservar una exportación de evidencia y el resultado de pruebas.
+4. Resetear los datos sintéticos de desarrollo en las colecciones existentes y reconstruir las proyecciones/contadores necesarios, sin conservar secuencias o hashes de prueba como antecedentes de registros reales.
+5. Verificar colecciones vacías o en estado inicial aprobado, configuración fiscal real, series/numeración, permisos, pagos, conciliación y aceptación Runtime.
+6. Fijar de forma única productionActivationAt, iniciar la actividad real y verificar que los siguientes registros se clasifican como REAL.
+
+La limpieza preproducción es una operación administrativa excepcional sobre todos los registros del ámbito de desarrollo previamente verificados como sintéticos; no se limita a una etiqueta ni afecta a datos ajenos al TPV. Una vez fijado productionActivationAt y declarada actividad real, queda prohibido modificar o eliminar cualquier registro TPV, incluidos posibles registros sintéticos residuales. Los ledgers reales son append-only e inmutables; las correcciones se realizan mediante nuevos registros rectificativos trazables.
+
+## 5. Invariantes del flujo único
+
+- Wix CMS es la fuente de verdad transaccional; MovimientosCaja es el ledger físico canónico. No crear TransaccionesTPV ni otro ledger.
+- Los registros de prueba y reales comparten el mismo esquema y el mismo writer.
+- La clasificación temporal se genera y valida en backend; no se confía en valores enviados por el navegador.
+- Idempotencia durable con fingerprint; replay idéntico devuelve el resultado previo y payload distinto con la misma clave es conflicto.
+- Secuencia, hash, previous hash, locks CAS, concurrencia y recuperación se ejecutan en la misma ruta.
+- Autorización backend en cada WebMethod; el frontend solo presenta y orquesta.
+- El contrato fiscal físico se satisface íntegramente antes de persistir; no usar placeholders ni tasas inventadas.
+- Antes del corte, las mutaciones administrativas de datos de desarrollo se autorizan exclusivamente en backend y quedan auditadas; después del corte, update/remove de cualquier registro TPV se rechaza. El writer de operaciones sigue siendo append-only en todas las fases.
+- SharePoint es repositorio de evidencia, nunca autoridad transaccional.
+- No activar pagos, hardware, comunicaciones externas o remisión fiscal por el mero hecho de que el registro sea REAL.
+
+## 6. Migración de implementación
+
+1. Inventariar todos los imports, llamadas, bindings Wix, hooks, tests, automatizaciones y consumidores externos.
 2. Implementar y probar el contrato único completo sobre tpvRepository.js y el writer canónico de MovimientosCaja.
-3. Migrar el controlador de página al API único y verificar los bindings de Wix.
-4. Retirar tpvTestRuntime.web.js, tpvTestRuntimeRepository.js, tpvTestRuntimeCore.js y contratos/constantes de clasificación anterior únicamente cuando no tengan consumidores y la ruta única supere las pruebas.
-5. Retirar compatibilidad histórica solo después de demostrar que no quedan registros/consumidores que la necesiten. No borrar ni sobrescribir ledgers.
-6. Ejecutar CI, pruebas de contrato, integración, concurrencia, idempotencia, seguridad y Wix Runtime; revisar diff y estrategia de reversión.
+3. Conectar el controlador al API único y verificar el HTML Component real y sus orígenes.
+4. Implementar la clasificación temporal y persistencia de recordNature una vez auditados los campos CMS y la ubicación de productionActivationAt.
+5. Retirar tpvTestRuntime.web.js, tpvTestRuntimeRepository.js, tpvTestRuntimeCore.js y clasificadores históricos solo cuando no tengan consumidores y la ruta única supere pruebas.
+6. Ejecutar CI, pruebas de contrato, integración, concurrencia, idempotencia, seguridad y aceptación Wix Runtime con el mismo código y las colecciones existentes.
+7. Preparar y ensayar el reset de datos sintéticos antes de producción; revisar diff y estrategia de reversión.
 
-## Estado verificado a 2026-11-25
+## 7. Estado verificado — 2026-11-25
 
-- La rama de trabajo existe, pero antes de esta actualización era idéntica a main.
-- tpvPageController.js todavía importa tpvTestRuntime.web.js; por tanto, el flujo único no está implementado.
-- tpvRepository.js contiene un guard que rechaza toda escritura operativa TPV.
-- El builder de movimientos aún no completa el contrato físico obligatorio de MovimientosCaja; desbloquear el guard no sería seguro.
-- internalConfig.js mantiene constantes y discriminadores históricos relacionados con la clasificación anterior.
-- No se han ejecutado pruebas Wix Preview/Runtime en esta intervención ni se han cambiado datos o configuración Wix.
+- El Site Context read-back actual identifica el sitio Marian Madrid como Draft, Velo habilitado, Wix Editor, EUR y zona Europe/Madrid; Wix Stores Catalog V3, Bookings, Payments e Invoices V1 están instalados.
+- El estado Published que aparece en documentación/PR anteriores queda supersedido por este read-back más reciente. El estado técnico Published/Draft no determina productionActivationAt.
+- El usuario declara que las colecciones actuales están configuradas Online y que los registros actuales son de desarrollo/sintéticos. La lectura técnica anterior encontró datos en LIVE y cero en SANDBOX; no se ha podido verificar por API el selector Online/Sandbox individual de cada colección.
+- El propietario autoriza pruebas online completas sobre el sitio y colecciones actuales durante desarrollo, con reseteo controlado de los registros sintéticos antes del inicio de actividad real.
+- El runtime heredado sigue presente en main; el controlador y el writer único no están completamente migrados.
+- El writer fiscal permanece cerrado; no se ha ejecutado aceptación Wix Preview/Runtime en esta intervención. No se han realizado escrituras CMS ni efectos externos.
 
-**Estado:** decisión arquitectónica consolidada; implementación pendiente. **Release: NO-GO** hasta completar writer, contrato fiscal, permisos, idempotencia, concurrencia, hooks y pruebas Runtime. Esta decisión sustituye las instrucciones anteriores de crear, marcar, persistir o autorizar un runtime TPV separado por entorno o por tipo de dato.
+**Estado:** decisión de código único y clasificación temporal consolidada; implementación y aceptación online pendientes. **Release comercial: NO-GO** hasta completar los gates fiscales, pagos, inventario, precio final, writer, pruebas y transición preproducción.

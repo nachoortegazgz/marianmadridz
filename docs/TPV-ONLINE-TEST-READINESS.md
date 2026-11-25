@@ -1,114 +1,92 @@
-# TPV — preparación para pruebas online finales en Wix
+# TPV — preparación para pruebas online con flujo único
 
-**Fecha de verificación:** 2026-11-25  
-**Rama:** `feat/tpv-online-test-runtime-20261125`  
-**PR:** [#615 — TPV isolated online test runtime](https://github.com/nachoortegazgz/marianmadridz/pull/615)  
-**Sitio:** Marian Madrid · `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Entorno:** lecturas Wix/CMS de solo lectura + CI offline. Wix Preview/Runtime no ejecutado.
+**Estado:** PREPARACIÓN · No se han ejecutado escrituras online en esta revisión.  
+**Fecha de consolidación:** 2026-11-25 · **Sitio:** Marian Madrid · **Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e  
+**Autoridad:** [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) · [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md) · [STATE-NOW](STATE-NOW.md)
 
-## 1. Resultado
+## 1. Decisiones del propietario
 
-El código deja disponible un runtime de pruebas online aislado, no un TPV operativo fiscal ni un cobro real.
+1. Desarrollo y producción utilizan exactamente el mismo código, contratos, validaciones, writer y formato físico de registros. No se crea un runtime TPV paralelo.
+2. La naturaleza del registro se determina temporalmente en backend: recordTimestamp UTC anterior a productionActivationAt UTC = SYNTHETIC; igual o posterior = REAL.
+3. recordTimestamp lo genera el servidor; el navegador no puede elegir ni timestamp ni marca.
+4. recordNature es una marca persistida de trazabilidad, derivada y no editable desde frontend. No cambia cálculos, validaciones, numeración, hash, idempotencia, locks ni ruta de persistencia.
+5. El propietario declara que los registros actuales son datos de desarrollo y que las colecciones TPV están configuradas Online. Esta configuración debe comprobarse antes de la primera escritura online.
+6. Durante desarrollo se permite modificar/resetear los datos sintéticos para preparar y repetir escenarios. Antes del inicio de actividad real se ejecutará un reset controlado y documentado.
+7. Después de productionActivationAt no se modifican ni eliminan registros reales; los ledgers reales son append-only y las correcciones se hacen con nuevos registros rectificativos.
+8. No se realizarán cobros reales, reembolsos bancarios, comunicaciones AEAT/VeriFactu ni efectos externos durante las pruebas sintéticas.
 
-- Las operaciones de prueba se guardan como eventos sintéticos dentro de un registro `TPV_TEST_RUN` en la colección física existente `ControlOperativo`. Es persistencia auxiliar real de QA, no persistencia inexistente ni ledger comercial.
-- La persistencia se conserva porque las invocaciones WebMethod son solicitudes backend independientes: la sesión, idempotencia, CAS y cierres deben sobrevivir entre llamadas. Una variable en memoria no ofrece continuidad fiable entre invocaciones.
-- El lock QA usa el discriminador exclusivo `TPV_TEST_SESSION_LOCK` y `_id` con prefijo `TPVT`; el lock operativo conserva `TPV_SESSION_LOCK` y prefijo `TPVS`. No comparten namespace, dedupeKey ni ciclo de vida.
-- El runtime exige administrador autenticado, una sesión activa por administrador, control de concurrencia CAS, idempotencia, hash-chain SHA-256 y validación append-only del historial.
-- El runtime declara `sourceType=SYNTHETIC`, `processingMode=INTERNAL`, `reconciliationStatus=NOT_RECONCILED`, `realPayment=false` y `externalSideEffects=false`.
-- No escribe `MovimientosCaja`, `CajaActual`, pedidos, Wix Payments, Wix Invoices, Wix Bookings ni inventario.
-- No crea colecciones TPV nuevas ni una colección `TransaccionesTPV`.
-- Los registros `TPV_TEST_RUN` llevan `expiresAt` a 24 horas y la purga solo permite ese tipo exacto con filtro de expiración. La purga es oportunista al abrir una nueva sesión; no es un cron ni garantiza eliminación automática en el instante de caducidad. Los locks QA tienen lease de 12 horas y se liberan por CAS; no se purgan con la política de runs.
+## 2. Estado Wix verificado
 
-## 2. Verificación del CMS live
+Read-back directo de Site Context el 2026-11-25 a las 17:53 CET:
 
-Lectura de `GET /wix-data/v2/collections` en el sitio:
+- Sitio: Draft; Velo habilitado; Wix Editor; Premium.
+- Zona: Europe/Madrid; moneda: EUR; país: ES.
+- Apps: Wix Bookings, Wix Forms & Payments, Wix Gift Cards, Wix Payments, Wix Invoices V1 y Wix Stores Catalog V3.
+- Sincronización Git-Wix: no verificada.
+- Preview/Runtime: no ejecutado en esta revisión.
 
-- 40 colecciones físicas.
-- Colecciones relevantes: `ControlOperativo`, `MapaStaff`, `MovimientosCaja` y `CajaActual`.
-- `ControlOperativo` contiene los campos físicos requeridos por el runtime: `controlType`, `dedupeKey`, `traceId` y `payload`; también `status`, `version` y `expiresAt`.
-- `MovimientosCaja` conserva su esquema fiscal y campos obligatorios; el runtime de pruebas no lo utiliza.
-- No aparece una colección física independiente de TPV ni `TransaccionesTPV`.
-- Consulta consistente de `ControlOperativo`: 0 registros `TPV_TEST_RUN` y 0 registros `TPV_SESSION_LOCK` en el momento de la comprobación original. `TPV_TEST_SESSION_LOCK` se incorporó después en PR #616 y no queda cubierto por aquella lectura. La lectura original no creó sesiones ni locks.
+El estado Draft/Published es un estado técnico de Wix y no determina el instante de activación de actividad real. La configuración Online de las colecciones es una declaración del propietario; el selector individual por colección no está expuesto en la lectura API consultada. Antes de escribir, confirmar en CMS el destino efectivo de MovimientosCaja, CajaActual, ControlOperativo, HistoricoCierresZ y MapaStaff.
 
-La colección física sigue siendo SSOT. `TPV_TEST_RUN` y `TPV_TEST_SESSION_LOCK` son discriminadores QA sobre la colección existente, no colecciones físicas nuevas. El tipo operativo `TPV_SESSION_LOCK` no se reutiliza.
+## 3. Estado del código y gates actuales
 
-## 3. Verificación del catálogo Wix
+- main contiene la preparación de venta autoritativa read-only y el contrato de preescritura V1.
+- El controlador principal y el runtime heredado todavía requieren migración al API operativo único; no asumir que el bridge de una PR abierta ya está integrado en main o sincronizado con Wix.
+- tpvRepository.insertTpvEvent() y el writer físico siguen cerrados por guard/configuración.
+- El builder no completa aún todos los campos físicos/fiscales obligatorios de MovimientosCaja.
+- No se ha acreditado configuración fiscal canónica del emisor, series y numeración.
+- El contrato V1 admite un único medio físico por venta: EFECTIVO o TARJETA; no se considera confirmación de cobro bancario.
+- El ledger MovimientosCaja es la fuente canónica; no crear TransaccionesTPV.
+- No se ha ejecutado prueba de escritura en Wix Runtime ni de concurrencia/idempotencia online.
 
-Lecturas de las APIs oficiales del sitio:
+**Resultado actual:** preparación de venta read-only; saleReady=false, paymentVerified=false, persisted=false. Release comercial NO-GO.
 
-| Fuente nativa | Resultado |
-|---|---:|
-| Wix Bookings — servicios totales | 94 |
-| Wix Bookings — servicios visibles | 70 |
-| Wix Bookings — servicios ocultos | 24 |
-| Wix Bookings — proveedores de servicio | 3 |
-| Wix Stores Catalog V3 — productos | 24 |
-| Productos visibles | 24 |
-| Productos visibles en POS | 24 |
+## 4. Contrato temporal pendiente de implementación
 
-Los 24 servicios ocultos incluyen servicios auxiliares F2. El widget TPV no debe presentarlos como servicios vendibles independientes. Se corrigió `tpvCatalogo.web.js` para consultar Bookings con `hidden = false`, conforme al filtro documentado por Wix.
+Antes de activar persistencia sintética online, auditar esquema CMS, hooks y configuración para definir dónde se guardan los siguientes valores, reutilizando campos existentes cuando proceda:
 
-Los 24 productos consultados están marcados como visibles y disponibles en POS. Esto acredita visibilidad de catálogo, no disponibilidad física de inventario ni autorización para descontar stock. El runtime de pruebas no modifica existencias.
+| Valor | Regla |
+|---|---|
+| recordTimestamp | UTC generado en backend al aceptar la operación |
+| productionActivationAt | UTC único, server-side, fijado en el corte formal de actividad real; null significa que aún no existe corte y no se admite actividad real |
+| recordNature | SYNTHETIC si recordTimestamp < productionActivationAt; REAL en caso contrario |
+| operación/expedición/periodo fiscal | Fechas independientes; no determinan recordNature |
 
-## 4. Identidad de profesionales
+No aceptar recordTimestamp, productionActivationAt ni recordNature desde el navegador. Si el corte es null, clasificar registros válidos como SYNTHETIC; si timestamp o configuración son inválidos, rechazar la escritura. No derivar la marca del estado Published/Draft ni de un parámetro de entorno. No añadir colección nueva. La ubicación física final del campo recordNature y del corte queda PENDIENTE de auditoría del esquema actual.
 
-Se compararon los tres registros `MapaStaff` de tipo `STAFF` con los tres proveedores nativos de Wix Bookings:
+Los registros sintéticos deben completar el mismo contrato físico que los reales, incluidos emisor de prueba, serie/número de prueba, fechas, base, tipo impositivo, cuota, total, staffResourceId, transactionId idempotente, secuencia, hash y previous hash. Los valores ficticios deben estar claramente identificados y nunca confundirse con identidad fiscal real. No remitirlos a AEAT ni utilizarlos para cobros reales.
 
-- Los tres `resourceId` coinciden.
-- Los tres `staffMemberId` coinciden con el `_id` nativo de Bookings.
-- Se corrigió el código para rechazar un `staffMemberId` obsoleto cuando el `resourceId` resuelve a un proveedor nativo.
-- El frontend selecciona el `resourceId`; el backend vuelve a resolver al operador desde el miembro Wix autenticado. No se aceptan IDs de operador enviados por el navegador como prueba de identidad.
+## 5. Secuencia de pruebas online
 
-## 5. Medios de pago del runtime de prueba
+No comenzar hasta que el controlador consuma el API único y el writer haya completado todos los campos requeridos. Ejecutar por lotes pequeños y comprobar persistencia después de cada etapa.
 
-En esta versión solo se admite simular un único medio de pago por venta: efectivo o tarjeta.
+1. **Preflight read-only:** confirmar siteId, estado Wix, versión desplegada, Git-Wix sync, permisos, destino Online/Sandbox por colección, configuración de moneda/zona y ausencia de actividad real declarada.
+2. **Contrato común:** verificar que frontend solo envía IDs, cantidades, método y contexto mínimo; backend resuelve catálogo, staff, importes, impuestos, fecha y marca.
+3. **Caja:** apertura, sesión única, CAS, replay idempotente y rechazo de apertura concurrente.
+4. **Venta sintética:** catálogo de servicio/producto habilitado, cálculo Wix, base/IVA/total, un medio EFECTIVO o TARJETA como dato de prueba, transactionId, sequenceNumber, hash y previousRecordHash.
+5. **Movimientos:** entradas/salidas, arqueo, saldo y proyección CajaActual, verificando consistencia con MovimientosCaja.
+6. **Devolución sintética:** relación obligatoria con venta original, importe acumulado no superior al original, motivo, idempotencia y asiento rectificativo trazable; no invocar proveedor bancario.
+7. **Cierres:** cierre X/Z, conciliación de efectivo/tarjeta, totales por profesional y verificación de que los cierres enlazan con la sesión correcta.
+8. **Fallos y recuperación:** doble envío, misma clave con payload distinto, timeout después de insert, error de proyección, lock expirado y reintento; demostrar que no hay duplicados ni pérdida de trazabilidad.
+9. **Seguridad:** usuario no autorizado, staffResourceId ajeno, payload alterado, importes/tasas del cliente manipulados y llamada directa a WebMethod.
+10. **Reset de desarrollo:** inventariar y exportar evidencia, confirmar naturaleza sintética de cada registro, limpiar datos y proyecciones de prueba, reinicializar secuencias/cadenas y comprobar estado inicial antes de la activación real.
 
-- Bizum: deshabilitado hasta acreditar configuración y flujo.
-- Bono y tarjeta regalo: deshabilitados porque no hay verificación de saldo en backend.
-- Otros: deshabilitado por no estar incluido en el contrato V1.
-- Split tender: bloqueado por el contrato V1.
-- Ningún medio de pago simulado confirma una transacción bancaria.
+## 6. Condiciones para empezar la primera escritura
 
-## 6. Validación de código
+- [ ] Controlador y HTML Component usan el API único operativo y se verifica el origen real del iframe.
+- [ ] No queda ningún consumidor operativo del runtime separado; tests históricos migrados o aislados.
+- [ ] Esquema físico de MovimientosCaja y hooks contrastados campo a campo.
+- [ ] Configuración de emisor sintético y serie de prueba completa, válida para pruebas y claramente no real.
+- [ ] Clasificación temporal backend implementada, persistida e inmutable.
+- [ ] Writer completo con idempotencia durable, lock CAS, secuencia y hash-chain.
+- [ ] Capacidad de cobro real y remisión AEAT permanecen desactivadas durante QA.
+- [ ] Destino efectivo Online/Sandbox verificado para cada colección que se escribirá.
+- [ ] CI offline y pruebas de contrato pasan en el SHA exacto.
+- [ ] Plan de reset y exportación de evidencia probado en datos sintéticos.
 
-- PR #616, commit `bf60067a08a7f3db4003c489b470eb81e0294c09`: Backend offline quality gates PASS; 80 suites, 759 tests, 0 fallos; ESLint PASS; npm audit PASS; verificaciones SDK Wix Cart/Transactions/TPV PASS; Secret scanning PASS.
-- Se añadieron pruebas para el cruce `MapaStaff.staffMemberId` ↔ Wix Bookings y para bloquear medios no verificados.
-- Se corrigieron aserciones de imports agrupados que habían quedado obsoletas tras consolidar imports del controlador.
-- Se añadió prueba contractual para excluir servicios ocultos del catálogo TPV.
+## 7. Criterio de cierre
 
-CI offline no equivale a ejecución de los WebMethods en Wix Preview/Runtime.
+Una prueba se considera PASS solo con evidencia del registro persistido y su lectura posterior, el hash recalculado, la secuencia, la relación de devolución, la idempotencia y las proyecciones. Los logs del navegador o una respuesta WebMethod sin read-back CMS no acreditan persistencia.
 
-## 7. Pendiente para cerrar pruebas online
+La aceptación online no equivale a autorización de actividad comercial. Antes de productionActivationAt se exporta la evidencia, se verifica que todo el conjunto es sintético y se resetea. Tras el corte, cualquier modificación o eliminación de registros reales queda prohibida.
 
-1. Abrir Wix Preview con un administrador autorizado y confirmar que el catálogo muestra solo los 70 servicios visibles y los 24 productos POS.
-2. Confirmar que los tres profesionales se resuelven y que el contexto de miembro autenticado corresponde al profesional seleccionado.
-3. Abrir sesión sintética, registrar operaciones de prueba y verificar persistencia en `ControlOperativo`, hash-chain, idempotencia, concurrencia y cierre X/Z.
-4. Confirmar que no aparecen escrituras en `MovimientosCaja`, `CajaActual`, pedidos, pagos, facturas, reservas o inventario.
-5. Verificar comportamiento en el sitio publicado solo mediante pruebas negativas/read-only autorizadas; no ejecutar cobros reales.
-
-## 8. Revisión arquitectónica de persistencia QA (PR #616)
-
-La auditoría posterior a PR #615 identificó que el runtime persiste sesiones/eventos de prueba en `ControlOperativo`. Se confirma el hecho y se evita describirlo como runtime sin persistencia.
-
-Decisión de diseño:
-- Mantener una única fila `TPV_TEST_RUN` por sesión para permitir continuidad entre WebMethods, reintentos idempotentes, CAS, verificación hash-chain y cierre X/Z durante pruebas online.
-- No trasladar estado crítico a memoria del proceso ni al navegador: no proporciona persistencia/consistencia entre invocaciones y no sería una prueba de concurrencia durable.
-- Separar el lock QA del lock operativo con `TPV_TEST_SESSION_LOCK` y prefijo de ID `TPVT`; el writer operativo sigue usando su tipo/prefijo propios.
-- Mantener las escrituras QA solo en `ControlOperativo`; no se escribe `MovimientosCaja`, `CajaActual`, pedidos, pagos, facturas, reservas ni inventario.
-- Eliminar los registros expirados únicamente mediante el filtro exacto `controlType=TPV_TEST_RUN` + `expiresAt < now`; no se aplica la purga a otros controles.
-
-La búsqueda estática del repositorio y los contratos añadidos comprueban que los módulos operativos de caja, ledger, cierres, movimientos y devoluciones no consumen `TPV_TEST_RUN` ni `TPV_TEST_SESSION_LOCK`. Esta comprobación es estática; no sustituye una prueba Wix Runtime.
-
-La retención de 24 horas es una ventana de elegibilidad para purga oportunista al abrir otra sesión, no una garantía de borrado programado. No se ha añadido un cron de limpieza porque no hay requisito de negocio para ello.
-## 9. Bloqueos operativos y fiscales
-
-El hito de pruebas online no habilita el writer fiscal operativo. Permanecen bloqueados:
-
-- Configuración fiscal/SIF no acreditada.
-- Clasificación fiscal por artículo/servicio y series de factura no aprobadas.
-- Integración real con lector de tarjetas, cajón monedero y Epson.
-- Confirmación bancaria/conciliación de pagos.
-- Política de inventario físico de la ubicación del salón.
-- Facturación real, Veri*Factu y escrituras append-only en `MovimientosCaja`.
-
-**Estado:** código preparado para iniciar pruebas online controladas; no declarar TPV operativo ni cierre del hito hasta ejecutar y documentar Wix Preview/Runtime.
+**Estado final de esta revisión:** preparado documentalmente para ejecutar el plan, pero NO preparado aún para la primera escritura online porque el writer, el contrato fiscal y el puente operativo único siguen pendientes de implementación y validación.
