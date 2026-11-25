@@ -21,6 +21,7 @@ import {
     assertHistoricoCierresZ,
     assertMovimientosCajaRequiredFields,
     assertAccountingLedgerRecord,
+    assertTransaccionesTPVRecord,
 } from "backend/validation";
 import {
     assertBulkPatchAllowed,
@@ -339,6 +340,8 @@ export function insertItem(collection, item) {
         assertCajaActualRecord(item);
     } else if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA) {
         assertMovimientosCajaRequiredFields(item);
+    } else if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        assertTransaccionesTPVRecord(item);
     } else if (collection === BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z) {
         assertHistoricoCierresZ(item);
     } else if (collection === BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE) {
