@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import {
     OPERATIONAL_COLLECTIONS,
     CONTROL_TYPE,
@@ -784,9 +785,10 @@ async function queryDraftRecovery(deps, marker) {
 }
 
 export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) {
+    const rawInput = input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const traceId = safeText(context.traceId, 100);
-    const sessionId = safeText(input.sessionId, 160);
-    const idempotencyKey = safeText(input.idempotencyKey, 100);
+    const sessionId = safeText(rawInput.sessionId, 160);
+    const idempotencyKey = safeText(rawInput.idempotencyKey, 100);
     const operatorResourceId = safeText(context.operatorResourceId, 160);
     if (!sessionId) {
         return makeActionable("TPV_SESSION_REQUIRED", "La sesión TPV es obligatoria.", ["Abrir o seleccionar una sesión TPV válida antes de registrar la venta."], traceId);
@@ -798,7 +800,7 @@ export async function registerTpvSaleDraft(input = {}, context = {}, deps = {}) 
         return makeActionable("TPV_OPERATOR_RESOURCE_REQUIRED", "No se pudo identificar al profesional que registra la venta.", ["Resolver la identidad del empleado en MapaStaff antes de operar el TPV."], traceId);
     }
 
-    const contextValue = { ...input, sessionId, idempotencyKey, lineas: input.lineas };
+    const contextValue = { ...rawInput, sessionId, idempotencyKey, lineas: rawInput.lineas };
     const fingerprint = fingerprintInput(contextValue, sessionId);
     const id = markerId(idempotencyKey);
     let marker;
