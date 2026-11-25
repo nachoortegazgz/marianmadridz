@@ -7,6 +7,7 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
+import { error as tpvError } from "backend/tpv/tpvEnvelope";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { obtenerAuditoriaTPV } from "backend/tpv/tpvAuditoria.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
@@ -70,6 +71,13 @@ const ERROR_CATALOG = Object.freeze({
     TPV_INVALID_INPUT: Object.freeze({
         message: "La solicitud de venta no contiene datos válidos.",
         solution: "Comprueba la sesión, la clave UUID v4 y las líneas de producto.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_SALE_NOT_READY: Object.freeze({
+        message: "La venta todavía no está autorizada para cobrar.",
+        solution: "Revisa el desglose fiscal, la configuración de precios, la confirmación del pago y el estado del writer TPV.",
         recoverable: true,
         retryable: false,
         requiresReconciliation: false,
@@ -338,6 +346,21 @@ async function dispatch(message) {
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
+
+            const validation = await validarVentaBorrador({ lineas, pagos });
+            if (validation?.status === "ERROR") return validation;
+            const quote = validation?.data;
+            if (!quote || quote.saleReady !== true || Number(quote.importePendiente || 0) > 0) {
+                return tpvError(
+                    "TPV_SALE_NOT_READY",
+                    "No se puede aceptar el cobro: la venta no ha superado todos los controles de catálogo, fiscalidad y escritura.",
+                    [
+                        "No se ha iniciado ningún pago ni se ha registrado ningún movimiento.",
+                        "Revisa los bloqueos de preparación devueltos por el backend.",
+                    ],
+                    { quote: quote || null, persisted: false, retryable: false }
+                );
+            }
 
             return registrarVenta({
                 sessionId,
