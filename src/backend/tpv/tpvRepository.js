@@ -742,44 +742,6 @@ function _matchesFilter(record, filter) {
 export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType = "physical" } = {}) {
 
     assertTpvOperationalLedgerConfigured(ledgerType);
-    if (collection === TPV_COLLECTIONS.VENTAS) {
-        const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
-        const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
-        let page = await queryItems({
-            dataCollectionId: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
-            sort: ["createdAt ASC"],
-            limit: pageSize,
-            consistency: CONSISTENCY.STRONG,
-        });
-        const records = [];
-        const appendSalesPage = (current) => records.push(...current.items.map((item) => ({
-            ...item,
-            saleId: item._id,
-            totalMinor: item.totalVentaMinor,
-            amountMinor: item.totalVentaMinor,
-            taxMinor: item.impuestosTotalMinor,
-            discountMinor: 0,
-            paymentMethod: item.medioPago,
-            cmsMovementType: "TPV_SALE",
-            operationDescription: "Venta TPV",
-            createdAt: item.createdAt,
-        })).filter((item) => _matchesFilter(item, filter)));
-        appendSalesPage(page);
-        while (page.hasNext && records.length < maxRecords) {
-            page = await page.next();
-            appendSalesPage(page);
-        }
-        if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
-        const sortSpec = Array.isArray(options.sort) && options.sort.length ? options.sort : ["createdAt ASC"];
-        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\\s+/);
-        records.sort((a, b) => {
-            const av = field.split(".").reduce((value, key) => value?.[key], a);
-            const bv = field.split(".").reduce((value, key) => value?.[key], b);
-            const comparison = av < bv ? -1 : av > bv ? 1 : 0;
-            return direction.toUpperCase() === "DESC" ? -comparison : comparison;
-        });
-        return records.slice(0, maxRecords);
-    }
     if (collection === TPV_COLLECTIONS.AUDITORIA) {
         return appendTpvAudit({
             idempotencyKey,
@@ -857,6 +819,45 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
 export async function queryTpvRecords(collection, filter, options = {}) {
 
     _assertLogicalCollection(collection);
+    if (collection === TPV_COLLECTIONS.VENTAS) {
+        const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
+        const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+        let page = await queryItems({
+            dataCollectionId: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+            sort: ["createdAt ASC"],
+            limit: pageSize,
+            consistency: CONSISTENCY.STRONG,
+        });
+        const records = [];
+        const appendSalesPage = (current) => records.push(...current.items.map((item) => ({
+            ...item,
+            saleId: item._id,
+            totalMinor: item.totalVentaMinor,
+            amountMinor: item.totalVentaMinor,
+            taxMinor: item.impuestosTotalMinor,
+            discountMinor: 0,
+            paymentMethod: item.medioPago,
+            cmsMovementType: "TPV_SALE",
+            operationDescription: "Venta TPV",
+            createdAt: item.createdAt,
+        })).filter((item) => _matchesFilter(item, filter)));
+        appendSalesPage(page);
+        while (page.hasNext && records.length < maxRecords) {
+            page = await page.next();
+            appendSalesPage(page);
+        }
+        if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
+        const sortSpec = Array.isArray(options.sort) && options.sort.length ? options.sort : ["createdAt ASC"];
+        const [field, direction = "ASC"] = String(sortSpec[0]).split(/\\s+/);
+        records.sort((a, b) => {
+            const av = field.split(".").reduce((value, key) => value?.[key], a);
+            const bv = field.split(".").reduce((value, key) => value?.[key], b);
+            const comparison = av < bv ? -1 : av > bv ? 1 : 0;
+            return direction.toUpperCase() === "DESC" ? -comparison : comparison;
+        });
+        return records.slice(0, maxRecords);
+    }
+
     if (collection === TPV_COLLECTIONS.AUDITORIA) {
         const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
         const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
