@@ -751,9 +751,13 @@ async function calculateSaleTax(deps, resolvedLines) {
     const taxSummary = response?.taxSummary || {};
     const subtotalNetoMinor = moneyMinor(taxSummary.totalTaxableAmount, "TAXABLE_SUBTOTAL");
     const impuestosTotalMinor = moneyMinor(taxSummary.totalTax, "TAX_TOTAL");
-    const totalVentaMinor = moneyMinor(taxSummary.totalAmount, "TAX_TOTAL_AMOUNT");
-    if (subtotalNetoMinor !== resolvedLines.reduce((sum, line) => sum + line.lineSubtotalMinor, 0) ||
-        subtotalNetoMinor + impuestosTotalMinor !== totalVentaMinor) {
+    const totalTaxIncludedMinor = moneyMinor(taxSummary.totalTaxIncludedInPrice, "TAX_INCLUDED", 0);
+    const reportedTotalMinor = moneyMinor(taxSummary.totalAmount, "TAX_REPORTED_TOTAL");
+    const totalVentaMinor = subtotalNetoMinor + impuestosTotalMinor;
+    const expectedCatalogSubtotal = resolvedLines.reduce((sum, line) => sum + line.lineSubtotalMinor, 0);
+    if (subtotalNetoMinor !== expectedCatalogSubtotal ||
+        totalTaxIncludedMinor !== 0 ||
+        ![subtotalNetoMinor, totalVentaMinor].includes(reportedTotalMinor)) {
         throw new Error("TPV_TAX_TOTAL_MISMATCH");
     }
     const taxDetails = Array.isArray(response?.lineItemTaxDetails) ? response.lineItemTaxDetails : [];
