@@ -543,7 +543,6 @@ export const generarControlXPrueba = webMethod(
         try {
             const actor = await trustedAdmin(traceId);
             const run = await getTpvTestRun(input.sessionId, actor.actorId);
-            if (run.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
             const requestFingerprint = hashTpvTestValue({ sessionId: input.sessionId });
             const prior = findPriorEvent(run, input.idempotencyKey, "TICKET_X_ISSUED", { sessionId: input.sessionId });
             if (prior) return ok({
@@ -558,6 +557,7 @@ export const generarControlXPrueba = webMethod(
                 sourceType: "SYNTHETIC",
                 traceId,
             }, traceId);
+            if (run.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
             const totals = summarizeTpvTestRun(run.payload);
             const reportId = "TPV-TEST-X-" + resultId(input.idempotencyKey);
             const result = await appendEvent(actor, input, "TICKET_X_ISSUED", {
