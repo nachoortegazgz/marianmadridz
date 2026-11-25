@@ -916,7 +916,7 @@ body {
           : (state.quoteLoading ? "Calculando…" : "No disponible");
         return `
           <div class="ticket-line">
-            <span>${esc(item.name)}</span>
+            <span>${esc(displayName)}</span>
             <span class="qty">
               <button data-action="minus" data-idx="${i}">−</button>
               <span>${item.qty}</span>
