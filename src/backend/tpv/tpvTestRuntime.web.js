@@ -137,7 +137,11 @@ function saleReplayResponse(event, sessionId, traceId) {
     }, traceId);
 }
 
-async function appendEvent(actor, input, eventType, data, { closeRun = false } = {}) {
+async function appendEvent(actor, input, eventType, data, {
+    closeRun = false,
+    buildData,
+    requestFingerprint,
+} = {}) {
     const sessionId = String(input?.sessionId || "").trim();
     const idempotencyKey = normalizeIdempotencyKey(input?.idempotencyKey);
     return appendTpvTestRunEvent({
@@ -146,6 +150,8 @@ async function appendEvent(actor, input, eventType, data, { closeRun = false } =
         eventType,
         idempotencyKey,
         data,
+        buildData,
+        requestFingerprint,
         traceId: input?.traceId,
         closeRun,
     });
