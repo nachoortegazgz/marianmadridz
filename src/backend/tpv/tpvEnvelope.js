@@ -27,8 +27,14 @@ export function error(code, userMessage, remediation, extra = {}) {
         contextSnapshot: extra.contextSnapshot || {},
         technicalDetail: extra.technicalDetail || "",
     });
+    const publicExtra = { ...extra };
+    delete publicExtra.contextSnapshot;
+    delete publicExtra.technicalDetail;
+    delete publicExtra.status;
+    delete publicExtra.data;
+    delete publicExtra.error;
     return {
-        ...extra,
+        ...publicExtra,
         status: "ERROR",
         data: null,
         error: toPublicShape(actionable),
