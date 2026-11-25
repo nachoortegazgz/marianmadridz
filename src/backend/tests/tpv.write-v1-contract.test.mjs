@@ -42,6 +42,14 @@ test("requires exactly one payment method in V1", () => {
     }), ["TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED"]);
 });
 
+test("blocks Bizum until PAYMENTS configuration is verified", () => {
+    assert.deepEqual(getTpvWriteV1Blockers({
+        lineas: [validLine()],
+        pagos: [validPayment("BIZUM", 121)],
+        totalVenta: 121,
+    }), ["TPV_WRITE_V1_PAYMENT_METHOD_UNSUPPORTED"]);
+});
+
 test("requires a supported physical tender and exact applied amount", () => {
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine()],
