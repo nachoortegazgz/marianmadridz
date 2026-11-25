@@ -58,3 +58,8 @@ Conteo del ciclo documental previo: 2 archivos movidos; 0 eliminados. El inventa
 - Se actualizaron los documentos canónicos para retirar estados obsoletos de PR abierta/Draft y referencias antiguas a escrituras sintéticas activas.
 - No se eliminaron documentos archivados: contienen evidencia histórica, contratos y decisiones que no deben perder trazabilidad. La limpieza se realiza separando documentación viva de evidencia histórica y retirando referencias operativas obsoletas.
 - No se publican contadores de archivos nuevos en esta revisión porque el inventario anterior contenía cifras incompatibles entre sí; deben recalcularse desde el árbol Git completo antes de usarse como métrica.
+
+
+## Supersesión de directrices TPV — 2026-11-25
+
+La nueva decisión [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) sustituye cualquier instrucción histórica que ordene crear, mantener o autorizar un runtime TPV diferenciado por Sandbox/Live, sintético/real, Preview/Published o test-run. Los documentos de auditoría y handoff anteriores se conservan íntegros como evidencia fechada, pero dejan de ser instrucciones operativas. No se borran porque acreditan decisiones y observaciones anteriores; ante contradicción, prevalece el criterio de flujo único. La retirada de código se ejecutará solo después de verificar consumidores, bindings, hooks y pruebas.
