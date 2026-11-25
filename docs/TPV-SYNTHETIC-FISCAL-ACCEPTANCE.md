@@ -65,9 +65,9 @@ Los fixtures deben usar datos manifiestamente ficticios, por ejemplo:
 - Emisor: EMISOR SINTÉTICO TPV.
 - Identificador fiscal: TEST-NIF-NO-VALIDO (no apto para facturar ni enviar).
 - Series exclusivas de prueba: SIM-F1-2026, SIM-F2-2026, SIM-R5-2026 y SIM-INT-2026.
-- Estado de envío: NO_ENVIADO_TEST; sin CSV, sin fecha de envío y sin llamada externa.
-- Naturaleza/origen de prueba: marcarla explícitamente en recordSource y en el sobre payloadFiscal; no reutilizar TPV_LEDGER como si fuera una factura real.
-- La serie interna SIM-INT-2026 es para eventos no facturables (movimientos de efectivo y controles). NO_FISCAL sería un valor interno, no una clave AEAT, y nunca debe transmitirse como tipo de factura.
+- Estado de envío candidato: NO_ENVIADO_TEST; sin CSV, sin fecha de envío y sin llamada externa. Debe validarse contra las reglas actuales de validation.js antes de persistirlo.
+- Naturaleza/origen de prueba: marcarla explícitamente en recordSource y en el sobre payloadFiscal; no reutilizar TPV_LEDGER como si fuera una factura real. TPV_SYNTHETIC_TEST es solo un valor candidato: antes de persistirlo hay que comprobar enums, hooks y dataAccessPolicy; no se ha declarado todavía como valor canónico.
+- La serie interna SIM-INT-2026 es para eventos no facturables (movimientos de efectivo y controles). NO_FISCAL sería un valor interno, no una clave AEAT, y nunca debe transmitirse como tipo de factura; tanto el valor como su tratamiento requieren validación contra los enums y hooks actuales.
 
 Los importes se expresan en céntimos enteros durante el cálculo y se serializan a euros solo al persistir. Base, cuota, tipo y total deben reconciliarse: base + cuota + recargos - descuentos = total, con reglas de redondeo documentadas y coherentes con el cálculo fiscal del catálogo Wix. No usar ceros como sustituto de una configuración desconocida.
 
