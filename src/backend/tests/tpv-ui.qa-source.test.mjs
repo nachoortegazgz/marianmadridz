@@ -79,8 +79,8 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(html, /No se aceptan importes de prueba: valida primero la venta/);
     assert.match(html, /const sequence = \+\+state\.quoteSequence/);
     assert.match(html, /if \(sequence !== state\.quoteSequence\) return/);
-    assert.match(html, /paymentReady = state\.saleQuote\?\.saleReady === true && state\.operationalWritesAvailable === true/);
-    assert.match(html, /state\.operationalWritesAvailable !== true/);
+    assert.match(html, /paymentReady = state\.saleQuote\?\.testCatalogReady === true && state\.testRuntimeAvailable === true/);
+    assert.match(html, /state\.testRuntimeAvailable !== true/);
     assert.match(html, /document\.querySelectorAll\("\[data-cash\]"\)/);
     assert.match(html, /document\.querySelectorAll\("\[data-method\]"\)/);
     assert.match(html, /unsupportedTender/);
@@ -90,7 +90,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(controller, /async function dispatch\(message\)/);
     assert.doesNotMatch(controller, /async async function/);
     assert.match(controller, /validarVentaBorradorPrueba/);
-    assert.match(controller, /quote\.saleReady !== true/);
+    assert.match(controller, /quote\.testReady !== true/);
     assert.match(controller, /TPV_SALE_NOT_READY: Object\.freeze/);
     assert.match(controller, /requiresReconciliation/);
     assert.match(controller, /hasOwnProperty\.call\(result, "data"\)/);
