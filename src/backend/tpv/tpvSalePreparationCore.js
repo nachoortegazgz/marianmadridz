@@ -50,6 +50,17 @@ export function normalizeTpvSaleLineRequests(lines) {
     });
 }
 
+export function assertTpvPaymentMethodsSupported(payments) {
+    if (payments === undefined || payments === null) return true;
+    if (!Array.isArray(payments)) fail("TPV_INVALID_PAYMENTS");
+    if (payments.some((payment) =>
+        ["BONO", "TARJETA_REGALO"].includes(String(payment?.medioPago || "").trim().toUpperCase())
+    )) {
+        fail("TPV_PAYMENT_METHOD_NOT_VERIFIED");
+    }
+    return true;
+}
+
 export function buildTpvTaxCalculationLines(catalogLines, taxIncludedInPrice) {
     if (!Array.isArray(catalogLines) || catalogLines.length === 0 || catalogLines.length > 100) {
         fail("TPV_TAX_LINES_INVALID");
