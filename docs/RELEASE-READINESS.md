@@ -6,7 +6,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, export obsoleto eliminado, permisos no resueltos bloquean escrituras, retry denegado por defecto, timeout incierto y SALE_REGISTER sin importes de cliente. Handshake HTML Component pendiente. Wix CMS read-only 2026-11-25: colecciones base presentes; `tpvVentas.registrarVenta` bloquea, `insertTpvEvent` tiene guard incondicional y `MovimientosCaja_beforeInsert` rechaza TPV_*. El builder TPV tampoco construye todos los campos exigidos por el esquema fiscal. No crear Draft Order como sustituto de venta/cobro/factura. |
+| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, permisos no resueltos bloquean escrituras, retry denegado por defecto y SALE_REGISTER sin importes de cliente. PR #611 añade cotización read-only: backend resuelve catálogo y fiscalidad Wix; widget presenta totales backend y bloquea pagos cuando `saleReady !== true`. Inventario read-only: 30 ítems rastreados en ubicación virtual online; la ubicación física del salón no tiene ítems asignados. El gate de stock solo se aplica a líneas de producto, no a servicios. No escribe ledger, stock ni crea Draft Order. Hook `MovimientosCaja_beforeInsert` sigue rechazando TPV_*; guard de repository incondicional. |
 | #415/#209 Fiscal/SIF | Singleton fiscal único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE. Query CMS `MapaStaff` filtrada por `recordType=CONFIG_SISTEMA` devolvió 0 registros. `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; `registrarEventoEconomico` deniega escrituras con ese flag. |
 | #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
@@ -19,7 +19,7 @@ Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de ev
 | #523 Bookings | Reconciliar CitasF2 con bookings nativos y ledger, sin inferir estados | PENDIENTE |
 | #522 Canales | Validar flags de pago del catálogo frente a opciones nativas Bookings | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
-| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | PENDIENTE |
+| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | CI offline PASS en commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` (Layer 1/2, suite completa, SDK y ESLint); Gitleaks PASS. Wix Preview/Runtime y persistencia real pendientes. |
 
 ## Bloques de evidencia Runtime
 
@@ -43,8 +43,8 @@ La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIS
 | #603 | `f42ef7fb50925be7bfece15ff5391383cd33ee84` | run 45509432988 PASS (80/747) | run 45509433003 PASS |
 | #604 | `0acb60df65bba1545d3a57cfa261d1de518eb39d` | run 45511826479 PASS (81/750) | run 45511827103 PASS |
 
-## Normativa de calendario
+## Normativa
 
-El BOE publica el Real Decreto-ley 15/2025 (BOE-A-2025-24446), cuya disposición final primera fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. La nota informativa ministerial de 05-10-2026 sobre una posible extensión posterior no sustituye a la norma publicada mientras no se apruebe y publique una modificación.
+El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. El sitio devuelve `taxIncludedInItemPrices=false` y la presentación pública del precio no está verificada; se mantiene bloqueada la venta hasta resolverlo.
 
 Estado operativo: **NO-GO**. Read-back CMS de solo lectura 2026-11-25; no se ha ejecutado Preview/Runtime. No se han modificado datos CMS, configuración fiscal, secretos, ledgers ni pedidos.

@@ -27,21 +27,24 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
     assert.match(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
     assert.doesNotMatch(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*,\s*countedCash/);
-    assert.match(script, /impuestosImporte: 0/);
+    assert.match(script, /call\("SALE_VALIDATE"/);
+    assert.match(script, /state\.saleQuote\.totalVenta/);
+    assert.match(script, /saleReady !== true/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
     assert.match(script, /addCatalogLine\(item, selected\.precioMinor, selected\.varianteId, selected\.concepto\)/);
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
-    assert.match(script, /customerIdentityId: state\.customerIdentityId/);
+    assert.doesNotMatch(script.match(/keyedAction\("SALE", "SALE_REGISTER", \{[\s\S]*?\}, "SALE_REGISTER_RES"\)/)?.[0] || "", /customerIdentityId|precioUnitario|impuestosImporte|subtotal:|tax:|total,/);
     assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
     assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
     assert.match(controller, /case "SALE_REGISTER": \{[\s\S]*?return registrarVenta\(\{/);
     const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "SALE_VALIDATE":/)?.[1] || "";
-    assert.match(saleWriteBlock, /productId,/);
+    assert.match(saleWriteBlock, /itemId,/);
+    assert.match(saleWriteBlock, /tipoLinea,/);
     assert.match(saleWriteBlock, /cantidad: numeric\(line\.cantidad/);
     assert.match(saleWriteBlock, /idempotencyKey: saleUuidV4Key\(payload\.idempotencyKey\)/);
-    assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta|importe:/);
+    assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta/);
     assert.match(controller, /importeCambio:/);
     assert.match(controller, /differenceReason:/);
     assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
@@ -62,32 +65,43 @@ test("POS buttons send backend-compatible DTOs and do not discard failed sales",
 
 });
 
-test("taxes remain locked until Wix POS tax rules are mapped to per-line tax amounts", async () => {
+test("TPV tax quotes use live Wix tax settings and block unready sales", async () => {
     const html = await read("%23htmlTPV.txt");
     assert.match(html, /id="tax"[^>]*disabled/);
-    assert.match(html, /Impuestos \(reglas Wix pendientes\)/);
+    assert.match(html, /Impuestos \(cálculo fiscal Wix\)/);
+    assert.match(html, /call\("SALE_VALIDATE"/);
+    assert.match(html, /state\.saleQuote\.totalVenta/);
+    assert.match(html, /WIX_TAX_REGION_EXCLUDES_TAX/);
+    assert.match(html, /Inventario de productos no configurado en la ubicación física del salón/);
+    assert.match(html, /No se aceptan pagos: la venta todavía no está autorizada/);
+    assert.match(html, /const sequence = \+\+state\.quoteSequence/);
+    assert.match(html, /if \(sequence !== state\.quoteSequence\) return/);
+    assert.match(html, /paymentReady = state\.saleQuote\?\.saleReady === true && state\.operationalWritesAvailable === true/);
+    assert.match(html, /state\.operationalWritesAvailable !== true/);
+    assert.match(html, /document\.querySelectorAll\("\[data-cash\]"\)/);
+    assert.match(html, /document\.querySelectorAll\("\[data-method\]"\)/);
+    assert.match(html, /unsupportedTender/);
+
     const controller = await read("src/public/tpvPageController.js");
-    assert.match(controller, /lineTaxMinor !== declaredTaxMinor/);
     assert.match(controller, /"SALE_VALIDATE"/);
+    assert.match(controller, /async function dispatch\(message\)/);
+    assert.doesNotMatch(controller, /async async function/);
     assert.match(controller, /validarVentaBorrador/);
-    assert.match(controller, /"PENDING"/);
+    assert.match(controller, /quote\.saleReady !== true/);
+    assert.match(controller, /TPV_SALE_NOT_READY: Object\.freeze/);
     assert.match(controller, /requiresReconciliation/);
-    assert.match(controller, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.match(controller, /TPV_INVALID_IDEMPOTENCY_KEY: Object\.freeze/);
-    assert.match(controller, /TPV_PRODUCT_LINES_ONLY: Object\.freeze/);
     assert.match(controller, /hasOwnProperty\.call\(result, "data"\)/);
     assert.match(controller, /hasOwnProperty\.call\(result, "error"\)/);
-    assert.match(controller, /permissionsReady/);
-    assert.match(controller, /permissionsStatus: permissions\.status/);
-    assert.match(controller, /contextStatus/);
-    assert.doesNotMatch(controller, /error\?\.detail \|\| null/);
 
-    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
-    assert.match(controller, /const productId = optionalString\(line\.itemId, 160\)/);
-    assert.doesNotMatch(controller.match(/return registrarVenta\(\{[\s\S]*?\n            \}\);/)?.[0] || "", /precioUnitario|subtotalNeto|impuestosTotal|totalVenta/);
+    const sales = await read("src/backend/tpv/tpvVentas.web.js");
+    const preparation = await read("src/backend/tpv/tpvSalePreparation.js");
+    assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
+    assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(preparation, /taxSettings\.getTaxSettings/);
+    assert.match(preparation, /taxCalculation\.calculateTax/);
+    assert.match(preparation, /auth\.elevate/);
 });
-
-
+ 
 test("TPV controller parses localized amounts without guessing ambiguous separators", async () => {
     const controller = await read("src/public/tpvPageController.js");
     const numericSource = controller.match(/function numeric\([\s\S]*?\n}\n/)?.[0];

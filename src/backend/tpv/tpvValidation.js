@@ -19,20 +19,36 @@ function normalizeLine(line, index) {
     const quantity = normalizeQuantity(line.cantidad);
     const unitMinor = toMinorUnits(line.precioUnitario, "UNIT_PRICE");
     const discountMinor = toMinorUnits(line.descuentoImporte || 0, "DISCOUNT");
-    const grossMinor = quantity * unitMinor;
+    const catalogFullPriceMinor = quantity * unitMinor;
+    const taxIncludedInPrice = line.taxIncludedInPrice === true;
 
-    if (!Number.isInteger(grossMinor) || grossMinor <= 0 || discountMinor > grossMinor) {
+    if (!Number.isSafeInteger(catalogFullPriceMinor) ||
+        catalogFullPriceMinor <= 0 || discountMinor > catalogFullPriceMinor) {
         throw new Error("TPV_INVALID_LINE_AMOUNT");
     }
 
-    const subtotalMinor = grossMinor - discountMinor;
     const taxMinor = toMinorUnits(line.impuestosImporte || 0, "TAX");
-    const totalMinor = subtotalMinor + taxMinor;
+    let subtotalMinor;
+    let totalMinor;
 
-    if (line.subtotalNeto !== undefined &&
-        toMinorUnits(line.subtotalNeto, "SUBTOTAL") !== subtotalMinor) {
-        throw new Error("TPV_LINE_SUBTOTAL_MISMATCH");
+    if (taxIncludedInPrice) {
+        if (line.subtotalNeto === undefined) {
+            throw new Error("TPV_LINE_SUBTOTAL_REQUIRED_FOR_TAX_INCLUDED");
+        }
+        subtotalMinor = toMinorUnits(line.subtotalNeto, "SUBTOTAL");
+        totalMinor = catalogFullPriceMinor - discountMinor;
+        if (subtotalMinor + taxMinor !== totalMinor) {
+            throw new Error("TPV_LINE_TOTAL_MISMATCH");
+        }
+    } else {
+        subtotalMinor = catalogFullPriceMinor - discountMinor;
+        totalMinor = subtotalMinor + taxMinor;
+        if (line.subtotalNeto !== undefined &&
+            toMinorUnits(line.subtotalNeto, "SUBTOTAL") !== subtotalMinor) {
+            throw new Error("TPV_LINE_SUBTOTAL_MISMATCH");
+        }
     }
+
     if (line.totalLinea !== undefined &&
         toMinorUnits(line.totalLinea, "LINE_TOTAL") !== totalMinor) {
         throw new Error("TPV_LINE_TOTAL_MISMATCH");
@@ -64,6 +80,7 @@ function normalizeLine(line, index) {
         subtotalNeto: subtotalMinor / 100,
         impuestosImporte: taxMinor / 100,
         totalLinea: totalMinor / 100,
+        taxIncludedInPrice,
         profesionalId: line.profesionalId ? String(line.profesionalId) : null,
         stockAfectado: tipoLinea === "PRODUCTO" && line.stockAfectado === true,
         totalMinor,

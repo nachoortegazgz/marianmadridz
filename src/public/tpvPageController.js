@@ -74,6 +74,13 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
+    TPV_SALE_NOT_READY: Object.freeze({
+        message: "La venta todavía no está autorizada para cobrar.",
+        solution: "Revisa el desglose fiscal, la configuración de precios, la confirmación del pago y el estado del writer TPV.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
     TPV_INVALID_IDEMPOTENCY_KEY: Object.freeze({
         message: "La clave idempotente de la venta no es válida.",
         solution: "Genera una nueva clave UUID v4 para la operación.",
@@ -81,9 +88,37 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
-    TPV_PRODUCT_LINES_ONLY: Object.freeze({
-        message: "Este flujo de venta admite actualmente líneas de producto.",
-        solution: "No registres líneas de servicio en este flujo pendiente de implementación.",
+    TPV_CATALOG_LINE_REQUIRED: Object.freeze({
+        message: "La línea no identifica un producto o servicio válido.",
+        solution: "Selecciona una línea existente del catálogo Wix.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_LINE: Object.freeze({
+        message: "Una de las líneas de venta no tiene un formato válido.",
+        solution: "Elimina la línea incorrecta y vuelve a seleccionarla desde el catálogo.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_PAYMENT: Object.freeze({
+        message: "El desglose de medios de pago contiene una línea no válida.",
+        solution: "Revisa los importes y medios de pago declarados.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_QUANTITY: Object.freeze({
+        message: "La cantidad de una línea no es válida.",
+        solution: "Introduce una cantidad entera positiva.",
+        recoverable: true,
+        retryable: false,
+        requiresReconciliation: false,
+    }),
+    TPV_INVALID_DISCOUNT: Object.freeze({
+        message: "El descuento indicado no es válido.",
+        solution: "Retira el descuento; todavía no existe una política de descuentos autorizada en backend.",
         recoverable: true,
         retryable: false,
         requiresReconciliation: false,
@@ -274,37 +309,56 @@ async function dispatch(message) {
                 throw new Error("TPV_LINES_REQUIRED");
             }
             if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
+            if (Array.isArray(payload.payments) && payload.payments.length > 100) {
+                throw new Error("TPV_ARRAY_TOO_LARGE");
+            }
             const sessionId = optionalString(payload.sessionId, 160);
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
 
-            // Only transport identifiers and quantities cross the write boundary; backend resolves every economic value.
+            // Only catalog identifiers, quantities and the cashier-declared payment split cross this boundary.
+            // The backend never trusts client prices, taxes, discounts or totals.
             const lineas = payload.lineItems.map((line) => {
                 if (!line || typeof line !== "object" || Array.isArray(line)) {
                     throw new Error("TPV_INVALID_LINE");
                 }
                 const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
-                const productId = optionalString(line.itemId, 160);
-                if (tipoLinea !== "PRODUCTO" || !productId) {
-                    throw new Error("TPV_PRODUCT_LINES_ONLY");
+                const itemId = optionalString(line.itemId, 160);
+                if (!["PRODUCTO", "SERVICIO"].includes(tipoLinea) || !itemId) {
+                    throw new Error("TPV_CATALOG_LINE_REQUIRED");
                 }
                 return {
-                    productId,
+                    tipoLinea,
+                    itemId,
                     ...(optionalString(line.varianteId, 160)
-                        ? { variantId: optionalString(line.varianteId, 160) }
+                        ? { varianteId: optionalString(line.varianteId, 160) }
                         : {}),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
+                    profesionalId: optionalString(line.profesionalId, 160),
                 };
             });
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            const medioPago = payments.length === 1
-                ? optionalString(payments[0]?.method || payments[0]?.medioPago, 40)?.toUpperCase()
-                : null;
+            const pagos = (Array.isArray(payload.payments) ? payload.payments : []).map((payment) => {
+                if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
+                    throw new Error("TPV_INVALID_PAYMENT");
+                }
+                return {
+                    medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
+                    importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
+                    importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
+                };
+            });
+
+            const validation = await validarVentaBorrador({ lineas, pagos });
+            if (validation?.status === "ERROR") return validation;
+            const quote = validation?.data;
+            if (!quote || quote.saleReady !== true || Number(quote.importePendiente || 0) > 0) {
+                return errorEnvelope({ code: "TPV_SALE_NOT_READY" });
+            }
 
             return registrarVenta({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
-                ...(medioPago ? { medioPago } : {}),
+                pagos,
             });
         }
 
@@ -324,11 +378,8 @@ async function dispatch(message) {
                     tipoLinea: String(line.tipoLinea || "").trim().toUpperCase(),
                     itemId: optionalString(line.itemId, 160),
                     varianteId: optionalString(line.varianteId, 160),
-                    concepto: optionalString(line.concepto, 400) || "",
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
-                    precioUnitario: numeric(line.precioUnitario, "UNIT_PRICE"),
                     descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
-                    impuestosImporte: numeric(line.impuestosImporte ?? 0, "LINE_TAX"),
                     profesionalId: optionalString(line.profesionalId, 160),
                     stockAfectado: line.stockAfectado === true,
                 };
@@ -343,21 +394,7 @@ async function dispatch(message) {
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
-            const impuestosTotal = numeric(payload.tax, "TAX");
-            const lineTaxMinor = lineas.reduce((sum, line) => sum + Math.round(line.impuestosImporte * 100), 0);
-            const declaredTaxMinor = Math.round(impuestosTotal * 100);
-            if (lineTaxMinor !== declaredTaxMinor) {
-                throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
-            }
-            return validarVentaBorrador({
-                lineas,
-                pagos,
-                subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
-                impuestosTotal,
-                totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: optionalString(payload.profesionalId, 160),
-                customerIdentityId: optionalString(payload.customerIdentityId, 160),
-            });
+            return validarVentaBorrador({ lineas, pagos });
         }
 
         case "CASH_MOVEMENT":

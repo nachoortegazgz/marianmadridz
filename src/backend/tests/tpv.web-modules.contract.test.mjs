@@ -38,6 +38,27 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.realPayment, undefined);
 });
 
+test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT twice", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "PRODUCTO",
+            itemId: "product-1",
+            concepto: "Producto con IVA incluido",
+            cantidad: 1,
+            precioUnitario: 22.90,
+            subtotalNeto: 18.93,
+            impuestosImporte: 3.97,
+            totalLinea: 22.90,
+            taxIncludedInPrice: true,
+        }],
+        pagos: [{ medioPago: "EFECTIVO", importe: 22.90 }],
+    });
+    assert.equal(result.subtotalNeto, 18.93);
+    assert.equal(result.impuestosTotal, 3.97);
+    assert.equal(result.totalVenta, 22.90);
+    assert.equal(result.lineas[0].taxIncludedInPrice, true);
+});
+
 test("TPV custom tariff lines remain explicitly typed and validated", () => {
     const result = validateSaleDraft({
         lineas: [{
@@ -227,7 +248,14 @@ test("TPV WebMethods isolate synthetic SANDBOX writes from operational ledgers",
     assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.match(sales, /validationScope: "STRUCTURAL_ONLY"/);
+    assert.match(sales, /prepareTpvSaleCatalog/);
+    assert.match(sales, /catalogVerified: true/);
+    assert.match(sales, /taxVerified: true/);
+    assert.match(sales, /paymentVerified: false/);
+    assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
+    assert.match(sales, /const containsProducts = prepared\.lineas\.some/);
+    assert.match(sales, /if \(containsProducts\)/);
+    assert.match(sales, /inventoryVerified: !containsProducts/);
     assert.match(sales, /UUID_V4/);
     assert.match(sales, /MovimientosCaja/);
     assert.doesNotMatch(sales, /wixData\.get\(["\x27]TransaccionesTPV/);

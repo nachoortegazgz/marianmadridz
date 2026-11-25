@@ -49,7 +49,10 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
     assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
     assert.match(controller, /lineas,\s*pagos,/);
-    assert.match(sales, /validateSaleDraft\(venta\)/);
+    assert.match(sales, /prepareTpvSaleCatalog\(venta\?\.lineas\)/);
+    assert.match(sales, /validateSaleDraft\(\{[\s\S]*?lineas: prepared\.lineas/);
+    assert.match(sales, /catalogVerified: true/);
+    assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
 });
 
 test("TPV role guards and session lifecycle are explicit backend contracts", async () => {
