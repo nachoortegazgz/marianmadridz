@@ -124,3 +124,6 @@ Para cumplir “no modificar registros existentes”, la siguiente decisión arq
 - RD 1007/2023, artículos 8, 9 y 12: integridad, inalterabilidad, trazabilidad, encadenamiento y huella: https://www.boe.es/eli/es/rd/2023/12/05/1007
 - Orden HAC/1177/2024: especificaciones técnicas y funcionales de los registros de facturación: https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-22138
 - AEAT, FAQ de procedimientos de facturación (actualizada 21-10-2026): tipos F1/F2/F3 y R1-R5, y reglas de rectificación: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/procedimientos-facturacion.html?faqId=bdbd20022fe06910VgnVCM100000dc381e0aRCRD
+
+- Wix, comportamiento de colecciones en Preview y diferencias LIVE/SANDBOX: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/testing-monitoring/testing-troubleshooting/about-testing-your-code-in-preview-mode
+- Wix, Site Data Usage API y métricas separadas LIVE/SANDBOX: https://dev.wix.com/docs/api-reference/business-solutions/cms/operations/site-data-usage/get-site-data-usage
