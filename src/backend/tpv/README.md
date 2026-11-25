@@ -6,7 +6,7 @@
 
 El TPV debe operar con un único flujo de backend, un contrato de dominio y una ruta de persistencia para cualquier dato. No se admiten ramas funcionales por etiquetas Sandbox/Live, sintético/real, Preview/Published o test-run. Las pruebas deben ejercitar la misma lógica mediante fixtures y dobles de test; no mediante un runtime paralelo. La especificación vinculante y el plan de migración están en [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md).
 
-La implementación aún no cumple este criterio: el controlador importa tpvTestRuntime.web.js, el repositorio rechaza escrituras operativas y internalConfig.js conserva marcadores históricos. No retirar guard ni runtime hasta completar el contrato físico/fiscal de MovimientosCaja y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
+La implementación aún no cumple este criterio: el controlador importa `tpvTestRuntime.web.js`, permisos y configuración conservan referencias del runtime anterior, y el repositorio rechaza escrituras operativas. La retirada del runtime y sus discriminadores forma parte del Hito TPV-01; no retirar el guard hasta completar el contrato físico/fiscal de `MovimientosCaja` y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
 
 ## Arquitectura y autoridad
 
