@@ -274,37 +274,48 @@ async function dispatch(message) {
                 throw new Error("TPV_LINES_REQUIRED");
             }
             if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
+            if (Array.isArray(payload.payments) && payload.payments.length > 100) {
+                throw new Error("TPV_ARRAY_TOO_LARGE");
+            }
             const sessionId = optionalString(payload.sessionId, 160);
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
 
-            // Only transport identifiers and quantities cross the write boundary; backend resolves every economic value.
+            // Only catalog identifiers, quantities and the cashier-declared payment split cross this boundary.
+            // The backend never trusts client prices, taxes, discounts or totals.
             const lineas = payload.lineItems.map((line) => {
                 if (!line || typeof line !== "object" || Array.isArray(line)) {
                     throw new Error("TPV_INVALID_LINE");
                 }
                 const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
-                const productId = optionalString(line.itemId, 160);
-                if (tipoLinea !== "PRODUCTO" || !productId) {
-                    throw new Error("TPV_PRODUCT_LINES_ONLY");
+                const itemId = optionalString(line.itemId, 160);
+                if (!["PRODUCTO", "SERVICIO"].includes(tipoLinea) || !itemId) {
+                    throw new Error("TPV_CATALOG_LINE_REQUIRED");
                 }
                 return {
-                    productId,
+                    tipoLinea,
+                    itemId,
                     ...(optionalString(line.varianteId, 160)
-                        ? { variantId: optionalString(line.varianteId, 160) }
+                        ? { varianteId: optionalString(line.varianteId, 160) }
                         : {}),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
                 };
             });
-            const payments = Array.isArray(payload.payments) ? payload.payments : [];
-            const medioPago = payments.length === 1
-                ? optionalString(payments[0]?.method || payments[0]?.medioPago, 40)?.toUpperCase()
-                : null;
+            const pagos = (Array.isArray(payload.payments) ? payload.payments : []).map((payment) => {
+                if (!payment || typeof payment !== "object" || Array.isArray(payment)) {
+                    throw new Error("TPV_INVALID_PAYMENT");
+                }
+                return {
+                    medioPago: String(payment.method || payment.medioPago || "").trim().toUpperCase(),
+                    importe: numeric(payment.amount ?? payment.importe, "PAYMENT_AMOUNT", { allowZero: false }),
+                    importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
+                };
+            });
 
             return registrarVenta({
                 sessionId,
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
-                ...(medioPago ? { medioPago } : {}),
+                pagos,
             });
         }
 
@@ -324,11 +335,8 @@ async function dispatch(message) {
                     tipoLinea: String(line.tipoLinea || "").trim().toUpperCase(),
                     itemId: optionalString(line.itemId, 160),
                     varianteId: optionalString(line.varianteId, 160),
-                    concepto: optionalString(line.concepto, 400) || "",
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
-                    precioUnitario: numeric(line.precioUnitario, "UNIT_PRICE"),
                     descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
-                    impuestosImporte: numeric(line.impuestosImporte ?? 0, "LINE_TAX"),
                     profesionalId: optionalString(line.profesionalId, 160),
                     stockAfectado: line.stockAfectado === true,
                 };
@@ -343,21 +351,7 @@ async function dispatch(message) {
                     importeCambio: numeric(payment.change ?? payment.importeCambio ?? 0, "CHANGE_AMOUNT"),
                 };
             });
-            const impuestosTotal = numeric(payload.tax, "TAX");
-            const lineTaxMinor = lineas.reduce((sum, line) => sum + Math.round(line.impuestosImporte * 100), 0);
-            const declaredTaxMinor = Math.round(impuestosTotal * 100);
-            if (lineTaxMinor !== declaredTaxMinor) {
-                throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
-            }
-            return validarVentaBorrador({
-                lineas,
-                pagos,
-                subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
-                impuestosTotal,
-                totalVenta: numeric(payload.total, "TOTAL"),
-                profesionalId: optionalString(payload.profesionalId, 160),
-                customerIdentityId: optionalString(payload.customerIdentityId, 160),
-            });
+            return validarVentaBorrador({ lineas, pagos });
         }
 
         case "CASH_MOVEMENT":
