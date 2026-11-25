@@ -177,7 +177,7 @@ test("ControlOperativo test-run writes are isolated and CAS-only", () => {
         item._id,
         CONTROL_TYPE.TPV_TEST_RUN,
         item
-    ), /CMS_REMOVE_SCOPE_DENIED/);
+    ), /DATA_ACCESS_ERROR/);
     assert.doesNotThrow(() => assertBulkRemoveAllowed("ControlOperativo", [item._id], {
         condition: {
             filter: {
