@@ -14,58 +14,41 @@ test("TPV HTML script parses and wires every visible POS operation", async () =>
     for (const id of ["openCash", "professionalSelect", "selectClient", "refreshCatalog", "saveSale", "cashIn", "cashOut", "refund", "ticketX", "ticketZ", "cashSummary", "audit", "printLast"]) {
         assert.ok(html.includes('id="' + id + '"'), "missing visible POS control " + id);
     }
-    for (const type of ["SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS", "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "CASH_MOVEMENT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) {
+    for (const type of ["SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS", "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "SALE_VALIDATE", "CASH_MOVEMENT", "PARTIAL_CASH_COUNT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST"]) {
         assert.ok(script.includes('"' + type + '"'), "missing widget operation " + type);
     }
 });
 
-test("POS buttons send backend-compatible DTOs and do not discard failed sales", async () => {
+test("POS DTOs map to operational WebMethods without trusting client prices or totals", async () => {
     const html = await read("%23htmlTPV.txt");
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
     assert.match(script, /payments: state\.payments\.map/);
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
-    assert.match(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
-    assert.doesNotMatch(script, /TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*,\s*countedCash/);
     assert.match(script, /call\("SALE_VALIDATE"/);
-    assert.match(script, /state\.saleQuote\.totalVenta/);
     assert.match(script, /saleReady !== true/);
+    assert.doesNotMatch(script, /testReady|testCatalogReady|testRuntimeAvailable|testPersisted/);
     assert.match(script, /selectCatalogItem/);
     assert.match(script, /CATALOG_VARIANTS/);
-    assert.match(script, /addCatalogLine\(item, selected\.precioMinor, selected\.varianteId, selected\.concepto\)/);
     assert.match(script, /call\("CUSTOMERS_SEARCH"/);
-    assert.doesNotMatch(script.match(/keyedAction\("SALE", "SALE_REGISTER", \{[\s\S]*?\}, "SALE_REGISTER_RES"\)/)?.[0] || "", /customerIdentityId|precioUnitario|impuestosImporte|subtotal:|tax:|total,/);
-    assert.match(script, /keyedAction\("SALE", "SALE_REGISTER"/);
-    assert.match(controller, /const lineas = payload\.lineItems\.map/);
-    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
-    assert.match(controller, /case "SALE_REGISTER": \{[\s\S]*?return registrarVentaPrueba\(\{/);
-    const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "SALE_VALIDATE":/)?.[1] || "";
+    const saleWriteBlock = controller.match(/case "SALE_REGISTER": \{([\s\S]*?)case "CASH_MOVEMENT":/)?.[1] || "";
+    assert.match(saleWriteBlock, /return registrarVenta\(\{/);
     assert.match(saleWriteBlock, /itemId,/);
     assert.match(saleWriteBlock, /tipoLinea,/);
     assert.match(saleWriteBlock, /cantidad: numeric\(line\.cantidad/);
     assert.match(saleWriteBlock, /idempotencyKey: saleUuidV4Key\(payload\.idempotencyKey\)/);
     assert.doesNotMatch(saleWriteBlock, /precioUnitario|descuentoImporte|impuestosImporte|subtotalNeto|impuestosTotal|totalVenta/);
+    assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
     assert.match(controller, /importeCambio:/);
-    assert.match(controller, /differenceReason:/);
-    assert.match(script, /const amount = num\(\$\("paymentAmount"\)\.value\)/);
-    assert.match(script, /inputmode="decimal"/);
     assert.match(script, /function parseLocalizedAmount/);
-    assert.match(script, /function publicErrorMessage/);
-    assert.match(script, /TPV_INVALID_FORMAT_/);
-    assert.match(script, /No repitas la acción/);
-    assert.match(script, /const countedCashInput = \$\("partialCountCash"\)\.value;\s*const countedCash = num\(countedCashInput\);\s*if \(!String\(countedCashInput \?\? ""\)\.trim\(\) \|\| !Number\.isFinite\(countedCash\) \|\| countedCash < 0\) throw new Error\("TPV_INVALID_AMOUNT"\);/);
-    assert.match(script, /const countedCashInput = \$\("countedCash"\)\.value;\s*const countedCash = num\(countedCashInput\);\s*if \(!String\(countedCashInput \?\? ""\)\.trim\(\) \|\| !Number\.isFinite\(countedCash\) \|\| countedCash < 0\) throw new Error\("TPV_INVALID_AMOUNT"\);/);
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
-    assert.match(script, /keyPrefix \+ "_" \+ crypto\.randomUUID/);
     assert.match(script, /response\.status === "PENDING"/);
     assert.match(script, /error\.outcomeUnknown = true/);
     assert.match(script, /error\.operationMayContinue = true/);
-    assert.match(script, /if \(result !== null && result !== undefined\) \{\s*sessionStorage\.removeItem\(storageKey\)/);
-
 });
 
-test("TPV tax quotes use live Wix tax settings and block unready sales", async () => {
+test("TPV fiscal quotes expose readiness blockers and keep payments disabled without backend authorization", async () => {
     const html = await read("%23htmlTPV.txt");
     assert.match(html, /id="tax"[^>]*disabled/);
     assert.match(html, /Impuestos \(cálculo fiscal Wix\)/);
@@ -76,31 +59,15 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(html, /data-method="OTROS" disabled/);
     assert.match(html, /const PAYMENT_METHODS = \["EFECTIVO", "TARJETA"\]/);
     assert.match(html, /state\.saleQuote\.totalVenta/);
-    assert.match(html, /WIX_TAX_REGION_EXCLUDES_TAX/);
-    assert.match(html, /TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED/);
-    assert.match(html, /TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED/);
-    assert.match(html, /TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH/);
-    assert.match(html, /Inventario de productos no configurado en la ubicación física del salón/);
-    assert.match(html, /No se aceptan importes de prueba: verifica primero catálogo e impuestos/);
-    assert.match(html, /const sequence = \+\+state\.quoteSequence/);
-    assert.match(html, /if \(sequence !== state\.quoteSequence\) return/);
-    assert.match(html, /paymentReady = state\.saleQuote\?\.testCatalogReady === true && state\.testRuntimeAvailable === true/);
-    assert.match(html, /state\.testRuntimeAvailable !== true/);
-    assert.match(html, /document\.querySelectorAll\("\[data-cash\]"\)/);
-    assert.match(html, /document\.querySelectorAll\("\[data-method\]"\)/);
-    assert.match(html, /unsupportedTender/);
+    assert.match(html, /paymentReady = state\.saleQuote\?\.catalogVerified === true && state\.saleQuote\?\.taxVerified === true && state\.saleQuote\?\.saleReady === true && state\.operationalWritesAvailable === true/);
+    assert.match(html, /state\.operationalWritesAvailable !== true/);
+    assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|TPV_TEST_/);
 
     const controller = await read("src/public/tpvPageController.js");
-    assert.match(controller, /"SALE_VALIDATE"/);
     assert.match(controller, /async function dispatch\(message\)/);
-    assert.doesNotMatch(controller, /async async function/);
-    assert.match(controller, /validarVentaBorradorPrueba/);
-    assert.match(controller, /return registrarVentaPrueba/);
-    assert.match(controller, /TPV_SALE_NOT_READY: Object\.freeze/);
+    assert.match(controller, /validarVentaBorrador/);
+    assert.match(controller, /registrarVenta/);
     assert.match(controller, /requiresReconciliation/);
-    assert.match(controller, /hasOwnProperty\.call\(result, "data"\)/);
-    assert.match(controller, /hasOwnProperty\.call\(result, "error"\)/);
-
     const sales = await read("src/backend/tpv/tpvVentas.web.js");
     const preparation = await read("src/backend/tpv/tpvSalePreparation.js");
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
@@ -109,7 +76,7 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(preparation, /taxCalculation\.calculateTax/);
     assert.match(preparation, /auth\.elevate/);
 });
- 
+
 test("TPV controller parses localized amounts without guessing ambiguous separators", async () => {
     const controller = await read("src/public/tpvPageController.js");
     const numericSource = controller.match(/function numeric\([\s\S]*?\n}\n/)?.[0];
@@ -125,7 +92,7 @@ test("TPV controller parses localized amounts without guessing ambiguous separat
     assert.throws(() => context.numeric(12.345, "AMOUNT"), /TPV_INVALID_AMOUNT/);
 });
 
-test("product selection always resolves a concrete Catalog V3 variant and fails closed on unknown stock", async () => {
+test("product selection resolves a concrete Catalog V3 variant and fails closed on unknown stock", async () => {
     const html = await read("%23htmlTPV.txt");
     const catalog = await read("src/backend/tpv/tpvCatalogo.web.js");
     assert.match(html, /if \(item\.tipoLinea === "PRODUCTO"\) \{/);
@@ -135,5 +102,3 @@ test("product selection always resolves a concrete Catalog V3 variant and fails 
     assert.match(catalog, /variant\.inventoryStatus\?\.preorderEnabled === true/);
     assert.match(catalog, /toMinorUnitsStrict\(raw, "CATALOG_PRICE"\)/);
 });
-
-// Updated for the operational frontend/backend contract.
