@@ -121,6 +121,7 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         const lineId = "TPV_LINE_" + String(index + 1);
         const detail = detailById.get(lineId);
         if (!detail || !detail.taxSummary) fail("TPV_TAX_RESULT_LINE_MISSING");
+        if (detail.taxIncludedInPrice !== false) fail("TPV_TAX_INCLUDED_PRICING_NOT_SUPPORTED");
 
         const quantity = Number(line.cantidad);
         const unitPriceMinor = toMinorUnits(line.precioUnitario, "CATALOG_PRICE");
@@ -158,9 +159,8 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
     });
 
     const summaryTaxMinor = toMinorUnits(summary.totalTax, "TAX_SUMMARY");
-    const summaryTotalMinor = toMinorUnits(summary.totalAmount, "TAX_TOTAL");
-    if (summaryTaxMinor !== lineTaxMinor ||
-        summaryTotalMinor !== subtotalMinor + lineTaxMinor) {
+    const summaryTaxableMinor = toMinorUnits(summary.totalTaxableAmount, "TAXABLE_SUMMARY");
+    if (summaryTaxMinor !== lineTaxMinor || summaryTaxableMinor !== subtotalMinor) {
         fail("TPV_TAX_ROUNDING_MISMATCH");
     }
 
@@ -168,7 +168,7 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult }) {
         lineas: Object.freeze(lineas),
         subtotalNeto: fromMinorUnits(subtotalMinor),
         impuestosTotal: fromMinorUnits(lineTaxMinor),
-        totalVenta: fromMinorUnits(summaryTotalMinor),
+        totalVenta: fromMinorUnits(subtotalMinor + lineTaxMinor),
         taxCalculatorIds: Object.freeze([...new Set(details
             .map((detail) => String(detail?.taxSummary?.appId || "").trim())
             .filter(Boolean))]),
