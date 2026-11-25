@@ -105,7 +105,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 **Decisión:** NO-GO. No desplegar ni habilitar ventas reales hasta cerrar todos los gates y documentar rollback.
 
 
-## 6. TPV — runtime aislado para pruebas online (PR #615)
+## 9. TPV — runtime aislado para pruebas online (PR #615)
 
 - PR #615 añade runtime sintético de pruebas en `ControlOperativo`; no habilita ventas, pagos ni escrituras fiscales reales.
 - Lectura Wix live 2026-11-25: 40 colecciones; existen `ControlOperativo`, `MapaStaff`, `MovimientosCaja` y `CajaActual`; no existe colección TPV física independiente ni `TransaccionesTPV`.
