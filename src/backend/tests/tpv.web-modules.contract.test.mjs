@@ -541,6 +541,8 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.match(repository, /assertTpvOperationalLedgerConfigured\\(ledgerType = "fiscal"\\)/);
+    assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
     assert.match(repository, /_isHistoricalTpvLedgerItem/);
     assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
@@ -553,7 +555,7 @@ test("TPV operational ledger is neutral, write-disabled and isolated from histor
     assert.match(utilities, /export function makeTpvPayload/);
     assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds/);
     assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
-    assert.match(accessPolicy, /CMS_TPV_LEDGER_WRITES_DISABLED/);
+    assert.match(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
     assert.match(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
