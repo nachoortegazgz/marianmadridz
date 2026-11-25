@@ -819,6 +819,34 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
 export async function queryTpvRecords(collection, filter, options = {}) {
 
     _assertLogicalCollection(collection);
+    if (collection === TPV_COLLECTIONS.AUDITORIA) {
+        const pageSize = Math.min(1000, Math.max(1, Math.floor(Number(options.limit || 1000))));
+        const maxRecords = Math.max(pageSize, Math.floor(Number(options.maxRecords || 10000)));
+        let page = await queryItems({
+            dataCollectionId: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+            filter: wql.eq("controlType", CONTROL_TYPE.TPV_AUDIT_EVENT),
+            sort: ["processedAt DESC"],
+            limit: pageSize,
+            consistency: CONSISTENCY.STRONG,
+        });
+        const records = [];
+        const appendAuditPage = (current) => records.push(...current.items.map((item) => ({
+            ...item,
+            action: item.payload?.action || "UNKNOWN",
+            actorId: item.payload?.actorId || null,
+            entityType: item.payload?.entityType || null,
+            entityId: item.payload?.entityId || null,
+            occurredAt: item.processedAt || null,
+            source: item.payload?.source || "TPV_WEB_METHOD",
+        })).filter((item) => _matchesFilter(item, filter)));
+        appendAuditPage(page);
+        while (page.hasNext && records.length < maxRecords) {
+            page = await page.next();
+            appendAuditPage(page);
+        }
+        if (page.hasNext && options.allowTruncated !== true) throw new Error("TPV_QUERY_LIMIT_EXCEEDED");
+        return records.slice(0, maxRecords);
+    }
     if (collection === TPV_COLLECTIONS.SESIONES_CAJA) {
         const session = _sessionFromCaja(await _getCajaActual());
         const sessions = session ? [session] : [];
