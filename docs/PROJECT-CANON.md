@@ -15,8 +15,8 @@ Evidencia: [README](../README.md), [PROJECT-STATUS archivado](archive/2026-11/PR
 ### 2.1 Negocio
 
 - Publicar catálogo de servicios y permitir reservas online mediante Wix Bookings.
-- Gestionar servicios duales con dos reservas nativas F1/F2 y un intervalo de exposición entre fases.
-- Gestionar ventas presenciales, caja, movimientos y cierres X/Z mediante TPV.
+- Gestionar servicios duales con dos bookings nativos independientes F1/F2, mismo resourceId y gap de exposición no reservado; F2 usa OFFLINE, importe 0 y noFee.
+- Gestionar ventas presenciales, cobros por medio de pago, caja física, movimientos y cierres X/Z mediante TPV; el terminal bancario presencial aún carece de contrato integrado.
 - Vender productos online y presencialmente con Wix Stores como autoridad de inventario.
 - Registrar facturación y jornada laboral conforme a los requisitos legales aplicables.
 
@@ -44,7 +44,7 @@ Versiones instaladas según [package.json](../package.json). “Versión oficial
 |---|---|---|---|
 | Wix | Editor clásico; plataforma SaaS sin semver de sitio | RECOMENDADA | [Wix APIs y rutas de desarrollo](https://dev.wix.com/docs/overview/platform-overview/about-wix-apis) |
 | Velo | Velo habilitado; APIs versionadas por módulo, no existe versión global V2/V3 | RECOMENDADA con SDK-first | [Versionado por módulo](https://dev.wix.com/docs/velo/articles/api-overview/api-versions) |
-| JavaScript SDK | `@wix/sdk 1.21.17` instalado; `@wix/bookings 1.0.1704`, `@wix/data 1.0.527`, `@wix/ecom 1.0.2539`, `@wix/stores 1.0.997` | RECOMENDADA; comparar pins con releases oficiales | [Wix SDK](https://dev.wix.com/docs/overview/platform-overview/about-wix-apis) |
+| JavaScript SDK | `@wix/sdk 1.21.17` instalado; `@wix/bookings 1.0.1704`, `@wix/data 1.0.527`,  `@wix/ecom 1.0.2539` (docs Cart V2: 1.0.2693), `@wix/stores 1.0.997` | RECOMENDADA; comparar pins con releases oficiales | [Wix SDK](https://dev.wix.com/docs/overview/platform-overview/about-wix-apis) |
 | Bookings | API Bookings V2; `@wix/bookings 1.0.1704` instalado; docs oficiales muestran 1.0.1803 | RECOMENDADA; pin pendiente de actualización/evaluación | [Bookings SDK](https://dev.wix.com/docs/api-reference/business-solutions/bookings/resources/resources-v2/introduction?apiView=SDK) |
 | Stores Catalog | Catalog V3; `@wix/stores 1.0.997` instalado | RECOMENDADA | [Catalog V3](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/introduction) |
 | Payments | Wix Payments para pagos online; no hay proveedor/terminal presencial verificado | DEPRECADA solo la API Transactions/Card Tokens legacy desde 2026-09-30 | [Changelog Wix](https://dev.wix.com/docs/changelog/) · [Payments API](https://dev.wix.com/docs/api-reference/business-management/payments/introduction) |
