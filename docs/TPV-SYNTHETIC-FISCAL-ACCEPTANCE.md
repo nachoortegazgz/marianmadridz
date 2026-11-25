@@ -2,17 +2,22 @@
 
 **Estado:** diseño verificado; pruebas online de desarrollo autorizadas bajo control de datos sintéticos y reset previo a producción.  
 **Sitio:** Marian Madrid Peluquería y Estética, estado Draft, Velo habilitado.  
-**Regla de ejecución:** todas las pruebas usan el mismo controlador, WebMethods, repositorio y colecciones CMS. No se crea otra colección, runtime de pruebas ni persistencia paralela.
+**Regla de ejecución:** un único código y un único flujo operativo antes y después del despliegue. No se permiten ramas de negocio, controladores, WebMethods, repositorios, writers ni colecciones alternativos por entorno. Las diferencias entre datos sintéticos y reales se determinan por el instante de uso/registro respecto al hito oficial de puesta en producción, no por un runtime distinto.
 
 ## 1. Límites de seguridad
 
-- Los datos de prueba deben ser inequívocamente sintéticos y no representar operaciones comerciales reales.
+- Los datos generados antes del hito oficial de puesta en producción son sintéticos por su instante de registro, aunque reproduzcan exactamente el formato y contenido estructural de operaciones reales. Para pruebas fiables deben usar los mismos contratos, campos, cálculos, validaciones y secuencias que se usarán en producción; únicamente incorporan el marcador de clasificación y el instante de registro verificable.
 - No llamar a AEAT, VeriFactu, Wix Payments, terminales físicos ni endpoints de reembolso.
 - En la fase actual (sitio Draft/no publicado y sin actividad económica real declarada), se permite crear, actualizar y borrar registros de desarrollo para probar los flujos completos. La autorización no se extiende a producción.
 - Antes del despliegue y de iniciar actividad real se ejecutará un reset controlado de los datos de desarrollo, con inventario, backup/exportación de evidencia, criterios de selección y verificación posterior. No se limpiarán registros reales ni se hará un reset indiscriminado.
 - Las nuevas entradas de ledger, cuando se autoricen, serán append-only y se insertarán mediante el writer del backend, no mediante escrituras manuales desde la herramienta.
 - La proyección de caja es mutable por diseño. En desarrollo puede actualizarse el registro `CajaActual` existente para probar apertura, ventas, movimientos y cierres, siempre que se confirme que pertenece al conjunto de datos de desarrollo y que el sitio continúa sin actividad real. El estado previo debe quedar documentado para poder repetir y verificar las pruebas.
-- El modo de prueba no debe convertirse en un segundo runtime: la naturaleza sintética es metadato de los datos, no una rama de lógica ni un selector de entorno.
+- Prohibido mantener código distinto para desarrollo y producción. El mismo código, contratos, validaciones, writer, secuenciación, hashing, permisos y flujo CMS deben ejecutarse en ambos momentos. No introducir flags de entorno que cambien reglas de negocio o salten validaciones.
+- La naturaleza sintética/real es una clasificación del registro, no una ruta de ejecución. Un registro generado durante el periodo previo al hito oficial de despliegue/activación se clasifica como sintético, aunque tenga exactamente el mismo formato, campos, cálculos, secuencias y estructura que un registro real. Desde el hito oficial, los nuevos registros se clasifican como reales.
+- La clasificación debe basarse en un instante de uso/registro generado por servidor y no manipulable desde el navegador, comparado con un único hito oficial de puesta en producción, documentado y verificable. La fecha de operación comercial puede ser anterior o distinta y no debe sustituir silenciosamente al instante técnico de registro. Conservar ambos conceptos separados.
+- Mantener un marcador diferenciador explícito en los metadatos ya disponibles (por ejemplo, recordSource/sourceType o el sobre de trazabilidad existente), sin alterar el formato funcional/fiscal del registro. Los valores canónicos y el campo exacto deben verificarse en enums, validation.js y el esquema antes de usarlos. No inventar un segundo esquema.
+- El hito de corte de producción debe registrarse una sola vez, con zona horaria Europe/Madrid y precisión temporal suficiente. No inferirlo del estado Draft/Published solamente ni usar una fecha editable por el cliente. El procedimiento de despliegue debe fijar y auditar ese instante.
+- Si el mismo código se ejecuta después del hito con registros históricos de desarrollo, la clasificación histórica no cambia: el criterio es el instante inmutable en que cada registro fue generado/registrado. El reset previo a actividad real sigue siendo obligatorio como limpieza operativa, pero no es el mecanismo que determina la naturaleza de cada registro.
 
 ## 2. Inventario CMS del sitio verificado el 25-11-2026
 
@@ -67,7 +72,7 @@ Los fixtures deben usar datos manifiestamente ficticios, por ejemplo:
 - Identificador fiscal: TEST-NIF-NO-VALIDO (no apto para facturar ni enviar).
 - Series exclusivas de prueba: SIM-F1-2026, SIM-F2-2026, SIM-R5-2026 y SIM-INT-2026.
 - Estado de envío candidato: NO_ENVIADO_TEST; sin CSV, sin fecha de envío y sin llamada externa. Debe validarse contra las reglas actuales de validation.js antes de persistirlo.
-- Naturaleza/origen de prueba: marcarla explícitamente en recordSource y en el sobre payloadFiscal; no reutilizar TPV_LEDGER como si fuera una factura real. TPV_SYNTHETIC_TEST es solo un valor candidato: antes de persistirlo hay que comprobar enums, hooks y dataAccessPolicy; no se ha declarado todavía como valor canónico.
+- Naturaleza/origen: se determina por el instante de registro frente al hito oficial de producción y se refleja mediante el marcador diferenciador disponible en metadatos (recordSource/sourceType o sobre de trazabilidad). TPV_SYNTHETIC_TEST es solo un valor candidato: antes de persistirlo hay que comprobar enums, hooks y dataAccessPolicy; no se ha declarado todavía como valor canónico. El marcador no debe cambiar el esquema fiscal funcional ni alterar los cálculos.
 - La serie interna SIM-INT-2026 es para eventos no facturables (movimientos de efectivo y controles). NO_FISCAL sería un valor interno, no una clave AEAT, y nunca debe transmitirse como tipo de factura; tanto el valor como su tratamiento requieren validación contra los enums y hooks actuales.
 
 Los importes se expresan en céntimos enteros durante el cálculo y se serializan a euros solo al persistir. Base, cuota, tipo y total deben reconciliarse: base + cuota + recargos - descuentos = total, con reglas de redondeo documentadas y coherentes con el cálculo fiscal del catálogo Wix. No usar ceros como sustituto de una configuración desconocida.
@@ -115,13 +120,15 @@ No hace falta crear una proyección paralela ni evitar `SINGLE_ITEM_ID` por el m
 
 ### Gate de transición a producción
 
-Antes de publicar o iniciar actividad real: detener escritores y automatizaciones TPV; exportar evidencia y snapshot del estado de desarrollo; identificar registros/colecciones y dependencias; ejecutar el reset aprobado únicamente sobre datos de desarrollo; verificar que los ledgers/proyecciones quedan en estado inicial coherente; regenerar series/secuencias/anchors de producción conforme al contrato fiscal; ejecutar pruebas de humo sin persistencia fiscal real; y documentar el resultado. No ejecutar un borrado global basado únicamente en nombres o etiquetas de QA.
+Antes de publicar o iniciar actividad real: detener escritores y automatizaciones TPV; exportar evidencia y snapshot del estado de desarrollo; identificar registros/colecciones y dependencias; fijar y registrar el instante oficial de corte; ejecutar el reset aprobado únicamente sobre datos de desarrollo; verificar que los ledgers/proyecciones quedan en estado inicial coherente; inicializar series/secuencias/anchors de producción conforme al contrato fiscal; ejecutar pruebas de humo controladas; y documentar el resultado. No ejecutar un borrado global basado únicamente en nombres o etiquetas de QA. El reset limpia datos, pero no cambia el código ni redefine retrospectivamente la clasificación temporal de los registros.
 
 ## 8. Validación y criterios de aceptación
 
 - Unit tests: normalización DTO, cálculo fiscal en céntimos, tipos de factura, rectificaciones, numeración, hash, genesis, idempotencia.
 - Integration tests: mismo repositorio y WebMethods que el TPV; mocks únicamente para probar fallos, no un runtime alternativo.
-- Online tests: en el sitio Draft actual, usando las colecciones Online y el flujo operativo real. Se permiten altas, actualizaciones y borrados de datos de desarrollo cuando el escenario lo requiera; deben quedar acotados y verificados.
+- Online tests: en el sitio Draft actual, usando las colecciones Online y exactamente el mismo flujo operativo que quedará desplegado. Se permiten altas, actualizaciones y borrados de datos de desarrollo cuando el escenario lo requiera; deben quedar acotados y verificados.
+- No se aceptan mocks o runtimes alternativos como sustituto de la ruta principal para la aceptación end-to-end. Los mocks pueden probar fallos unitarios aislados, pero la prueba online debe atravesar frontend, WebMethods, validaciones, writer y CMS reales.
+- La aceptación debe comprobar que un registro previo al hito de producción queda marcado como sintético, y que tras fijar el hito los nuevos registros se clasifican como reales sin cambiar una sola línea del código de negocio.
 - Las pruebas de ledger fiscal deben conservar la semántica append-only dentro de cada ejecución: para corregir un evento fiscal simulado, crear su rectificación/compensación en vez de sobrescribir el propio evento. El reset global de datos de desarrollo es una operación de transición preproducción, no una corrección de un ledger fiscal activo.
 - Confirmar el reset preproducción y su read-back antes de habilitar actividad real.
 - Verificar después de cada inserción el read-back por transactionId, el hash, la secuencia y la relación con el anterior.
