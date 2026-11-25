@@ -565,6 +565,7 @@ export const CONTROL_TYPE = Object.freeze({
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
   TPV_REFUND_LOCK: "TPV_REFUND_LOCK",
   TPV_SESSION_LOCK: "TPV_SESSION_LOCK",
+  TPV_TEST_RUN: "TPV_TEST_RUN",
 });
 
 export const WEBHOOK_CLAIM_STATUS = Object.freeze({
@@ -650,6 +651,16 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
+    [CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
+      anyConditionFields: Object.freeze([]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        payload: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["INCREMENT_FIELD"]),
+      }),
+    }),
   }),
 });
 
@@ -691,6 +702,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
+    CONTROL_TYPE.TPV_TEST_RUN,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
