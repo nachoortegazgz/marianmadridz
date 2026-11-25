@@ -65,6 +65,20 @@ export const FISCAL_RUNTIME_POLICY = Object.freeze({
 // Wix Stores Catalog V3 application ID; used for catalog references and tax-group defaults.
 export const TPV_STORES_APP_ID = "215238eb-22a5-4c36-9e7b-e7c08025e04e";
 
+// Wix Locations API ID (not Stores Locations V3 _id). Read-only verified physical salon location.
+export const TPV_WIX_BUSINESS_LOCATION = Object.freeze({
+  id: "7a12abfd-bf30-4847-bcdf-00dc573d4802",
+  name: "Marian Madrid Peluquería y Estética",
+});
+
+// Taxable origin returned by the active Wix physical business location.
+export const TPV_TAX_ADDRESS = Object.freeze({
+  country: "ES",
+  subdivision: "AR",
+  city: "Zaragoza",
+  postalCode: "50012",
+});
+
 // Logical event types only; these values are NOT Wix CMS collection IDs.
 // The repository adapter persists them in MovimientosCaja; sessions use CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
