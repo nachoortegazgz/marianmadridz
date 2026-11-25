@@ -3,7 +3,6 @@ import { toMinorUnits } from "backend/tpv/tpvUtils";
 const SUPPORTED_WRITE_V1_PAYMENT_METHODS = new Set([
     "EFECTIVO",
     "TARJETA",
-    "BIZUM",
 ]);
 
 function normalizeRate(value) {
