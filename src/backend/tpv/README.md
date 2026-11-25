@@ -36,13 +36,13 @@ La implementación aún no cumple este criterio: el controlador importa tpvTestR
 
 El módulo puro `tpvWriteV1Contract.js` delimita el primer writer sin persistir:
 - Una única tasa impositiva verificable en todas las líneas. Una venta con más de una tasa queda bloqueada; no se selecciona una tasa representativa.
-- Un único medio de pago admitido: efectivo, tarjeta o Bizum.
+- Un único medio de pago admitido por el contrato de escritura V1: EFECTIVO o TARJETA. Bizum no está incluido en `SUPPORTED_WRITE_V1_PAYMENT_METHODS` y debe rechazarse hasta ampliar el contrato con pruebas.
 - El importe aplicado (importe recibido menos cambio) debe coincidir exactamente con el total recalculado por Wix.
 - El pago en efectivo puede incluir cambio; la proyección aplica solo el importe neto recibido.
 - La elegibilidad de este contrato NO acredita que el pago bancario se haya recibido ni autoriza escritura.
 - `registrarVenta` recalcula catálogo e impuestos en backend y aplica el contrato V1 antes de devolver el bloqueo de persistencia. No confía en importes fiscales del navegador.
 
-La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
+La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. El runtime separado y su cableado son deuda de migración del Hito TPV-01, no una arquitectura que deba mantenerse. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
 
 ## Evidencia Wix read-only — 2026-11-25
 
