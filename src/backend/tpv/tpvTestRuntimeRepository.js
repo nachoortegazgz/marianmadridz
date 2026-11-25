@@ -308,6 +308,9 @@ export async function appendTpvTestRunEvent({
                 prior.data?.requestFingerprint !== requestFingerprint) {
                 throw new Error("TPV_IDEMPOTENCY_CONFLICT");
             }
+            if (closeRun) {
+                await releaseTpvTestSessionLock({ actorId, sessionId, traceId });
+            }
             return { item: current, event: prior, replayed: true };
         }
         if (claim) {
@@ -317,7 +320,10 @@ export async function appendTpvTestRunEvent({
                 actorId,
                 data,
             });
-            if (replay.replayed) return { item: current, event: replay.event, replayed: true };
+            if (replay.replayed) {
+                if (closeRun) await releaseTpvTestSessionLock({ actorId, sessionId, traceId });
+                return { item: current, event: replay.event, replayed: true };
+            }
         }
         if (current.status !== "OPEN") throw new Error("TPV_SESSION_CLOSED");
         const eventData = typeof buildData === "function" ? buildData(current.payload) : data;
@@ -328,6 +334,7 @@ export async function appendTpvTestRunEvent({
             data: eventData,
         });
         if (appended.replayed) {
+            if (closeRun) await releaseTpvTestSessionLock({ actorId, sessionId, traceId });
             return { item: current, event: appended.event, replayed: true };
         }
         if (new Date(current.payload.activeUntil || 0).getTime() <= Date.now()) {
@@ -357,6 +364,7 @@ export async function appendTpvTestRunEvent({
                 (closeRun && updated.status !== "CLOSED")) {
                 throw new Error("TPV_TEST_RUNTIME_POST_WRITE_INTEGRITY_FAILED");
             }
+            if (closeRun) await releaseTpvTestSessionLock({ actorId, sessionId, traceId });
             return { item: updated, event: appended.event, replayed: false };
         }
     }
