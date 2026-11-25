@@ -1,38 +1,37 @@
 # RELEASE-READINESS — 2026-11-25
 
-Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de evidencia Runtime PASS, fecha, ejecutor y JSON íntegro. CI offline no sustituye Wix Preview/Runtime. Los writers fiscales permanecen deshabilitados hasta disponer de configuración legal verificada y superar la validación técnica y normativa.
+Criterio vinculante: **NO-GO** mientras los gates P0/P1 no dispongan de evidencia reproducible del entorno Wix correspondiente. CI offline no sustituye Wix Preview/Runtime, aceptación de hardware, conciliación real ni revisión fiscal. Los writers y pagos permanecen deshabilitados.
 
 ## P0
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, permisos no resueltos bloquean escrituras, retry denegado por defecto y SALE_REGISTER sin importes de cliente. PR #611 añade cotización read-only: backend resuelve catálogo y fiscalidad Wix; widget presenta totales backend y bloquea pagos cuando `saleReady !== true`. Inventario read-only: 30 ítems rastreados en ubicación virtual online; la ubicación física del salón no tiene ítems asignados. El gate de stock solo se aplica a líneas de producto, no a servicios. No escribe ledger, stock ni crea Draft Order. Hook `MovimientosCaja_beforeInsert` sigue rechazando TPV_*; guard de repository incondicional. |
-| #415/#209 Fiscal/SIF | Singleton fiscal único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE. Query CMS `MapaStaff` filtrada por `recordType=CONFIG_SISTEMA` devolvió 0 registros. `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; `registrarEventoEconomico` deniega escrituras con ese flag. |
-| #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
-| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
-| #520 Automations | Siete PREINSTALLED en estado PAUSED y sin ejecuciones/efectos externos no autorizados; app laboral permanece INACTIVE | PENDIENTE |
+| #416 Caja/POS | Contrato de sesión/venta, conciliación/recovery trazable y pruebas de caja; no alterar históricos | PENDIENTE. PR #611 integra preparación de venta read-only; pagos y persistencia siguen bloqueados. Guard de `tpvRepository` y hook `MovimientosCaja_beforeInsert` rechazan TPV_*; el builder no completa todos los campos fiscales obligatorios. |
+| #415/#209 Fiscal/SIF | Singleton fiscal único y válido; writer append-only; revisión legal y flags false hasta autorización | PENDIENTE. Query CMS `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros (2026-11-25); `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`. |
+| #525 CajaActual | Una sola sesión bajo llamadas concurrentes | PENDIENTE. CAS integrado en código; ninguna prueba Runtime de concurrencia ejecutada. |
+| #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE. No alterar ni borrar registros originales. |
+| #520 Automations | Estado actual de automatizaciones y ausencia de efectos no autorizados acreditados | PENDIENTE. Último read-back documentado: siete PREINSTALLED ACTIVE y app laboral INACTIVE; requiere relectura. |
 
 ## P1
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #523 Bookings | Reconciliar CitasF2 con bookings nativos y ledger, sin inferir estados | PENDIENTE |
-| #522 Canales | Validar flags de pago del catálogo frente a opciones nativas Bookings | PENDIENTE |
+| #523/#522 Bookings | Reconciliar CitasF2 con bookings nativos y opciones de pago, sin inferir estados | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
-| #435 TPV QA | Aislamiento y persistencia QA validados en Wix Runtime | CI offline PASS en commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` (Layer 1/2, suite completa, SDK y ESLint); Gitleaks PASS. Wix Preview/Runtime y persistencia real pendientes. |
+| #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | Código de preparación integrado por PR #611; CI offline PASS; Wix Preview/Runtime y persistencia real pendientes |
 
 ## Bloques de evidencia Runtime
 
-| ID | Prueba | PASS |
+| ID | Prueba | Criterio PASS |
 |---|---|---|
 | P1 | Concurrencia CajaActual | Una sesión creada; segundo intento rechazado o replay idéntico |
 | P2 | Identidad Bookings | memberId vinculado autorizado; identidad distinta denegada |
-| P3 | Idempotencia TPV | Mismo ID, un solo registro, replay sin pago nativo |
+| P3 | Idempotencia TPV | Mismo ID, un solo registro, replay sin segundo efecto |
 | P4 | Hook beforeInsert | Sobre válido normalizado; sobres sin siteId o con externalSideEffects rechazados |
 | F5 | Append-only HistoricoCierresZ | update rechazado y lectura strong sin cambios |
-| F1 | CONFIG_SISTEMA_FISCAL | Singleton único, campos completos, taxId válido; writers false |
+| F1 | CONFIG_SISTEMA_FISCAL | Singleton único, campos completos, taxId válido; writers permanecen false |
 
-La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md](archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md). Ningún bloque consta como ejecutado en Wix Preview/Runtime a 2026-11-25.
+Procedimientos históricos: [RUNTIME-EVIDENCE-CHECKLIST.md](archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md). Ninguno de estos bloques se declara ejecutado en Wix Preview/Runtime a 2026-11-25.
 
 ## Evidencia CI de código integrado
 
@@ -40,11 +39,23 @@ La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIS
 |---|---|---|---|
 | #600 | `7ffca8c4ceeea2af9be5bf0a697af15283ab214b` | run 45443104056 PASS | run 45443104106 PASS |
 | #601 | `46a7e01e9c6bb328405da12a8423b735f934866f` | run 45448196443 PASS | run 45448196393 PASS |
-| #603 | `f42ef7fb50925be7bfece15ff5391383cd33ee84` | run 45509432988 PASS (80/747) | run 45509433003 PASS |
-| #604 | `0acb60df65bba1545d3a57cfa261d1de518eb39d` | run 45511826479 PASS (81/750) | run 45511827103 PASS |
+| #603 | `f42ef7fb50925be7bfece15ff5391383cd33ee84` | run 45509432988 PASS (80 suites/747 tests) | run 45509433003 PASS |
+| #604 | `0acb60df65bba1545d3a57cfa261d1de518eb39d` | run 45511826479 PASS (81 suites/750 tests) | run 45511827103 PASS |
+| #611 | `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` | run 45555933654 PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` | run 45555933681 PASS |
+
+Los commits posteriores al commit de código de PR #611 fueron documentales. No hubo cambios de código después de la ejecución CI indicada.
+
+## TPV — estado de preparación
+
+- Backend resuelve productos/variantes Stores Catalog V3 y servicios Bookings de precio fijo; no acepta precios/totales del navegador.
+- Wix `taxSettings.getTaxSettings` y `taxCalculation.calculateTax` calculan impuestos en backend. Configuración leída: `taxIncludedInItemPrices=false`.
+- Datos de solo lectura: 24 productos, 70 servicios, 30 registros de inventario con cantidad rastreada en ubicación virtual online; 0 registros en ubicación física del salón.
+- La preparación no escribe ledger, stock, pedidos ni pagos. `saleReady=false`, `paymentVerified=false`, `persisted=false`.
+- El precio final mostrado al consumidor no está verificado; no autorizar venta mientras no se garantice precio completo con impuestos incluidos conforme al RDL 1/2007.
+- No se ha validado hardware EPSON/cajón ni confirmación manual del lector bancario externo.
 
 ## Normativa
 
-El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. El sitio devuelve `taxIncludedInItemPrices=false` y la presentación pública del precio no está verificada; se mantiene bloqueada la venta hasta resolverlo.
+El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija los plazos de adaptación RRSIF indicados en su art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. Confirmar siempre la norma consolidada vigente antes de tomar decisiones fiscales.
 
-Estado operativo: **NO-GO**. Read-back CMS de solo lectura 2026-11-25; no se ha ejecutado Preview/Runtime. No se han modificado datos CMS, configuración fiscal, secretos, ledgers ni pedidos.
+**Estado operativo: NO-GO.** Read-back CMS de solo lectura 2026-11-25; Wix Preview/Runtime no ejecutado. No se han modificado datos CMS, configuración fiscal, secretos, ledgers, pedidos, pagos ni inventario.
