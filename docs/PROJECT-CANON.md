@@ -78,6 +78,12 @@ Decisiones registradas (fecha y origen):
 | 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
 | 2026-11-25 | Preparación de venta TPV autoritativa read-only integrada | PR #611 merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`; CI offline PASS; Runtime pendiente |
 
+## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
+
+[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por Sandbox/Live, sintético/real, Preview/Published o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
+
+Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de origen/entorno como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
+
 ## 5. RESTRICCIONES NORMATIVAS
 
 | Norma | Ámbito | Qué exige al código | Estado |
