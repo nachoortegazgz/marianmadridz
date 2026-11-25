@@ -78,9 +78,12 @@ export async function createTpvTestRun({
         expiresAt: new Date(now.getTime() + RUN_TTL_MS),
         payload: opened.payload,
     };
+    assertRunOwner(item, { sessionId, actorId });
     try {
-        const saved = await insertItem(RUN_COLLECTION, item);
-        return { item: saved || item, created: true };
+        await insertItem(RUN_COLLECTION, item);
+        const persisted = await getItem(RUN_COLLECTION, id, CONSISTENCY.STRONG);
+        assertRunOwner(persisted, { sessionId, actorId });
+        return { item: persisted, created: true };
     } catch (error) {
         if (!duplicateKey(error)) throw error;
         const existing = await getItem(RUN_COLLECTION, id, CONSISTENCY.STRONG);
@@ -179,6 +182,11 @@ export async function appendTpvTestRunEvent({
         );
         if (Array.isArray(result?.updatedItemIds) && result.updatedItemIds.includes(current._id)) {
             const updated = await getItem(RUN_COLLECTION, current._id, CONSISTENCY.STRONG);
+            assertRunOwner(updated, { sessionId, actorId });
+            if (Number(updated.version) !== Number(current.version) + 1 ||
+                updated.status !== (closeRun ? "CLOSED" : "OPEN")) {
+                throw new Error("TPV_TEST_RUNTIME_POST_WRITE_INTEGRITY_FAILED");
+            }
             return { item: updated, event: appended.event, replayed: false };
         }
     }
