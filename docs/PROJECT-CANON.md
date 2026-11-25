@@ -82,7 +82,7 @@ Decisiones registradas (fecha y origen):
 
 [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas utilizan fixtures/dobles en la suite automatizada y ejercitan la misma lógica; no existe un runtime de negocio paralelo.
 
-Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de origen/entorno como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
+Esta decisión sustituye directrices anteriores que ordenaban crear o mantener runtimes separados, añadir marcadores de entorno/procedencia de prueba como condición de negocio o bloquear escrituras por una etiqueta. No autoriza por sí sola la persistencia: el writer sigue bloqueado hasta completar el contrato físico/fiscal de MovimientosCaja, autorización, idempotencia, secuencia, hash, concurrencia, hooks y aceptación Runtime. Los históricos se tratan separadamente sin modificar ledgers inmutables.
 
 ## 5. RESTRICCIONES NORMATIVAS
 
@@ -147,7 +147,7 @@ Esta sección fija el estado actual de integración y prevalece sobre los regist
 - PR #611 CI offline PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f`: run `45555933654`; Gitleaks run `45555933681` PASS.
 - PR #612 CI offline PASS sobre árbol `632c85edbd765a291abe7b411fe08af75da5e571`: run `45592833890`; Gitleaks run `45592834040` PASS. Wix Preview/Runtime no ejecutado.
 - Evidencia Wix read-only 2026-11-25: 24 productos, 70 servicios de precio fijo EUR, 30 registros de inventario en ubicación virtual online y 0 en ubicación física; `taxIncludedInItemPrices=false`.
-- PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA/BIZUM) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
+- PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
 - `saleReady=false`, `paymentVerified=false`, `persisted=false`. El contrato V1 no habilita persistencia. No se crean pedidos, Draft Orders, movimientos, pagos ni devoluciones. El guard de repository y el hook `MovimientosCaja_beforeInsert` siguen cerrados.
 - No crear `TransaccionesTPV`: `MovimientosCaja` sigue siendo el ledger físico canónico. No inicializar ni transferir inventario sin recuento físico.
 - Precio final al consumidor no verificado; la venta continúa bloqueada por el requisito de precio completo con impuestos incluidos (RDL 1/2007, arts. 20.1.c y 60.2.c).
