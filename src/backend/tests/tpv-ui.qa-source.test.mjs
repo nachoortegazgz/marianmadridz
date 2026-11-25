@@ -70,6 +70,11 @@ test("TPV tax quotes use live Wix tax settings and block unready sales", async (
     assert.match(html, /id="tax"[^>]*disabled/);
     assert.match(html, /Impuestos \(cálculo fiscal Wix\)/);
     assert.match(html, /call\("SALE_VALIDATE"/);
+    assert.match(html, /data-method="BIZUM" disabled/);
+    assert.match(html, /data-method="BONO" disabled/);
+    assert.match(html, /data-method="TARJETA_REGALO" disabled/);
+    assert.match(html, /data-method="OTROS" disabled/);
+    assert.match(html, /const PAYMENT_METHODS = \["EFECTIVO", "TARJETA"\]/);
     assert.match(html, /state\.saleQuote\.totalVenta/);
     assert.match(html, /WIX_TAX_REGION_EXCLUDES_TAX/);
     assert.match(html, /TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED/);
