@@ -61,8 +61,8 @@ El propietario establece un único código, contrato, validación y writer para 
 - La ubicación física de Stores y el Wix Location ID son identificadores distintos; no intercambiarlos.
 
 ### Bloqueos funcionales y legales
-- Falta writer operativo válido para `MovimientosCaja`; no crear ledger alternativo `TransaccionesTPV`.
-- El hook y el guard de repository continúan cerrados. Retirar una sola barrera no constituiría un writer válido: faltan campos fiscales y contrato de sesión/venta.
+- `MovimientosCaja` es ledger físico de cajón; `TransaccionesTPV` es ledger comercial; `ControlOperativo` es auditoría. Son hechos distintos y colecciones separadas.
+- El guard de configuración fiscal permanece fail-closed exclusivamente para escrituras fiscales; los writers físicos y comerciales usan sus propias validaciones, permisos, idempotencia y persistencia.
 - No se ha acreditado confirmación manual del lector bancario externo, evidencia de justificante, pagos mixtos ni conciliación de caja en Runtime.
 - No se ha validado inventario por variante en la ubicación física.
 - No se ha verificado que los precios mostrados al consumidor sean finales con impuestos incluidos, exigencia de RDL 1/2007 arts. 20.1.c y 60.2.c.
@@ -92,7 +92,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 
 ## 7. Decisiones e invariantes
 
-- `MovimientosCaja` es el ledger físico canónico; no crear `TransaccionesTPV`.
+- Los ledgers son independientes: `MovimientosCaja` físico, `TransaccionesTPV` comercial, `eventLog` fiscal y `ControlOperativo` auditoría.
 - Ledgers append-only: no actualizar ni borrar históricos; rectificaciones mediante nuevos registros trazables.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - El frontend no contiene lógica de negocio ni autoridad de permisos.
@@ -104,7 +104,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 
 1. Verificar read-only del singleton fiscal y cerrar su contrato de campos con asesoría competente; no crear datos legales por defecto.
 2. Cerrar contrato de sesión/caja y confirmación manual del lector, incluyendo referencia y evidencia del justificante.
-3. Diseñar el writer append-only de `MovimientosCaja` reutilizando los controles del writer manual; completar campos fiscales, numeración F1/F2 separada, idempotencia durable y compatibilidad exacta de hook/DAL.
+3. Completar y probar el registro físico de apertura en `MovimientosCaja`; mantener su cadena hash/sequence y no mezclarlo con venta comercial ni ledger fiscal.
 4. Resolver precio final al consumidor y recuento/asignación de inventario físico por variante.
 5. Ejecutar pruebas online/Runtime de concurrencia, idempotencia, permisos, caja, movimientos, devoluciones y cierres sobre las colecciones actuales; verificar destino efectivo de escritura y reset sintético preproducción. Hardware y efectos externos permanecen separados.
 
@@ -117,6 +117,6 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 Las implementaciones de PR #615/#616 y el documento de preparación online describen un runtime separado que persiste en `ControlOperativo`. Esa arquitectura queda sustituida y no debe recrearse. Se conserva como evidencia en [archivo histórico](archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md). El código, sus imports y sus discriminadores aún están presentes y forman parte del Hito TPV-01. No se ha verificado el número actual de registros de ese runtime en CMS tras los cambios de PR #616.
 
 La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md). **NO-GO** hasta superar sus criterios y los gates fiscales/comerciales de [RELEASE-READINESS.md](RELEASE-READINESS.md).
-## Prioridad 1 TPV — verificación estática 2026-11-25
-- Resultado global por proceso: 0 VERIFICADOS, 0 PARCIALES, 2 PENDIENTES (P1.2/P1.7) y 5 BLOQUEADOS (P1.1/P1.3/P1.4/P1.5/P1.6); pruebas de ejecución no disponibles en esta sesión.
-- F1 ya aplicado; F2 normalizado; F3 ausente; F4 documentado UI-only; F5 DIFERIDO por conflicto con ledger canónico y gates fiscales; F6 ya usa objetos. npm install/test pendientes por checkout local no disponible.
+## Prioridad 1 TPV — 2026-11-25
+- Guard fiscal limitado a escrituras fiscales; MovimientosCaja físico, TransaccionesTPV comercial y ControlOperativo auditoría separados. Colección TransaccionesTPV creada en CMS con permisos ADMIN.
+- registrarVenta implementado como persistencia idempotente PENDING_PAYMENT, sin cobro; runtime y tests pendientes, por lo que no se declara escritura verificada.
