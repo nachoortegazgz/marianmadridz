@@ -1058,7 +1058,7 @@ body {
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
-    document.querySelectorAll("[data-method]").forEach((button) => {
+    $("paymentMethods").querySelectorAll("button[data-method]").forEach((button) => {
       const unsupportedTender = ["BONO", "TARJETA_REGALO", "OTROS"].includes(button.dataset.method);
       button.disabled = !paymentReady || unsupportedTender;
       if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
