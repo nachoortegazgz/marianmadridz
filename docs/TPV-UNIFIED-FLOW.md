@@ -38,13 +38,16 @@ El carácter de una operación se determina por su contenido y por su estado ver
 5. Retirar compatibilidad histórica solo después de demostrar que no quedan registros/consumidores que la necesiten. No borrar ni sobrescribir ledgers.
 6. Ejecutar CI, pruebas de contrato, integración, concurrencia, idempotencia, seguridad y Wix Runtime; revisar diff y estrategia de reversión.
 
-## Estado verificado a 2026-11-25
+## Estado verificado en main — 2026-11-25
 
-- La rama de trabajo existe, pero antes de esta actualización era idéntica a main.
-- tpvPageController.js todavía importa tpvTestRuntime.web.js; por tanto, el flujo único no está implementado.
-- tpvRepository.js contiene un guard que rechaza toda escritura operativa TPV.
-- El builder de movimientos aún no completa el contrato físico obligatorio de MovimientosCaja; desbloquear el guard no sería seguro.
-- internalConfig.js mantiene constantes y discriminadores históricos relacionados con la clasificación anterior.
-- No se han ejecutado pruebas Wix Preview/Runtime en esta intervención ni se han cambiado datos o configuración Wix.
+- La decisión documental de flujo único está integrada en la historia de `main`; no existe una rama de implementación activa separada.
+- `tpvPageController.js` sigue importando `tpvTestRuntime.web.js`.
+- `tpvPermisos.web.js` aún devuelve `testRuntimeAvailable` y `testRuntimeMode`.
+- `tpvTestRuntime.web.js` y su repositorio persisten eventos/sesiones en `ControlOperativo` con discriminadores específicos.
+- `internalConfig.js`, `validation.js`, `data.js`, `dataAccessPolicy.js`, `tpvUtils.js` y `tpvRepository.js` conservan referencias históricas/clasificadores.
+- `tpvRepository.insertTpvEvent()` falla cerrado; el builder no genera todos los campos obligatorios del ledger físico.
+- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; la consulta CMS del 2026-11-25 no encontró el singleton fiscal esperado.
+- El sitio principal está Published según Site Context 2026-11-25; la sincronización Git-Wix y la ejecución Wix Preview/Runtime no están acreditadas.
+- La lectura CMS anterior encontró 0 `TPV_TEST_RUN` antes de la incorporación del lock separado; no existe una lectura posterior que permita afirmar el recuento actual de `TPV_TEST_RUN`/`TPV_TEST_SESSION_LOCK`.
 
-**Estado:** decisión arquitectónica consolidada; implementación pendiente. **Release: NO-GO** hasta completar writer, contrato fiscal, permisos, idempotencia, concurrencia, hooks y pruebas Runtime. Esta decisión sustituye las instrucciones anteriores de crear, marcar, persistir o autorizar un runtime TPV separado por entorno o por tipo de dato.
+**Estado:** decisión arquitectónica consolidada; implementación pendiente. **Release: NO-GO** hasta completar writer, contrato fiscal, permisos, idempotencia, concurrencia, hooks y pruebas Runtime. La ejecución online deberá realizarse en un sitio Wix independiente de validación o en una configuración de datos cuya separación esté demostrada, nunca escribiendo registros de prueba en el sitio principal publicado.
