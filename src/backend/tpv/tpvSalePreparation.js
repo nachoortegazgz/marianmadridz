@@ -177,6 +177,7 @@ export async function prepareTpvSaleCatalog(inputLines) {
     return Object.freeze({
         ...prepared,
         taxCurrency: String(taxResult.currency || ""),
+        taxIncludedInPrice: prepared.taxIncludedInPrice,
         taxIncludedInPriceAmount: prepared.taxIncludedInPriceAmount,
         taxCalculatorIds: prepared.taxCalculatorIds,
         taxSummary: {
