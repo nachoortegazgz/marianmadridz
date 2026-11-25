@@ -61,7 +61,6 @@ function envelope(result) {
     return {
         status: "ERROR",
         code: "TPV_UNEXPECTED_RESPONSE",
-        message: "Respuesta backend no reconocida",
         raw: result,
     };
 }
