@@ -1,9 +1,21 @@
-# DOSSIER TÉCNICO CONSOLIDADO  
+# DOSSIER TÉCNICO CONSOLIDADO
 ## Marian Madrid Peluquería y Estética
 
-> **AVISO IMPORTANTE:Para acceder a API de cuenta WIX usar llave CLI_API_KEY y la ID: ab7708e9-6471-441e-b5f9-93a9e02bf4b3**
-> **AVISO IMPORTANTE:el sitio web está en fase de desarrollo y pruebas. Se creo como base de pruebas y no tiene ninguna actividad real.Todos sus registros son sintéticos y serán eliminados cuando se despliegue para uso real.** . El usuario autoriza pruebas completas con registros para comprobar funcionalidad de procesos y depuración de errores. Los registros generados en estas pruebas se usaran solo como comprobacion de funcionalidad y se eliminaran antes del despliegue real del sitio desarrollado. Realizar simulacros completos con registros como ensayo previo a uso real. Ten como prioridad y avanza siempre enfocado en lista breve de objetivos finales que junto con fuentes oficiales son la unica SSOT, todo lo demás es editable: funcionalidades que debe cumplir el sitio web por peticion de Marian Madrid para su negocio ( SDK v2 o version actual recomendada, mínimo código para que sea funcional evitando entropía y código innecesario, 100% según directrices de documentación oficial, cero deprecated, directrices de calidad para el código implementado, normativas definidas por ley vigente, etc.
+> **Estado documental:** referencia histórica/técnica de apoyo. Revisión operativa vigente: 2026-11-25.
+>
+> **No seguir instrucciones obsoletas de este dossier** cuando contradigan el código de `main`, la documentación canónica o el estado Wix verificado. En particular:
+> - No se deben publicar, copiar ni solicitar claves API en documentación. Los secretos se gestionan exclusivamente mediante Wix Secrets Manager/entorno seguro; nunca incluir valores en Git.
+> - Los registros TPV históricos sintéticos deben conservarse intactos. No se borran ni sobrescriben; cualquier corrección debe ser trazable y append-only.
+> - No generar nuevas ventas/pagos/devoluciones sintéticas ni habilitar operaciones reales para probar.
+> - Wix CMS es la SSOT transaccional; SharePoint es solo repositorio documental de evidencia.
+> - La PR #611 está fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`. La preparación TPV integrada es read-only; `saleReady=false`, `paymentVerified=false`, `persisted=false`.
+> - El release continúa **NO-GO**. CI offline no acredita Preview/Runtime ni despliegue Wix.
+>
+> **Fuentes operativas obligatorias:** [PROJECT-CANON](docs/PROJECT-CANON.md), [STATE-NOW](docs/STATE-NOW.md), [RELEASE-READINESS](docs/RELEASE-READINESS.md) y [TPV backend README](src/backend/tpv/README.md). Si existe contradicción, prevalecen estas fuentes y el código probado del commit indicado.
 
+---
+
+**Documento de referencia para contexto de desarrollo, auditoría y migración.** Las secciones históricas que siguen describen decisiones y contratos en su momento; no constituyen por sí solas evidencia de que una capacidad siga activa ni autorización para ejecutar operaciones.
 ---
 
 **Documento de referencia para DESARROLLO, AUDITORÍA, DEBUG y MIGRACIÓN asistidos por IA**
