@@ -237,7 +237,7 @@ body {
     </div>
   </header>
   <div role="note" style="margin:8px 0;padding:10px 12px;border:1px solid #d7c7a1;border-radius:8px;background:#fffaf0;color:#5b4825;font-size:12px;">
-    PRUEBA INTERNA: los registros se guardan en ControlOperativo como datos sintéticos. No se ejecutan cobros, reembolsos, movimientos fiscales, cambios de stock ni reservas.
+    MODO CONSULTA: se consulta el backend operativo y se calcula la preparación fiscal. Las escrituras, cobros, devoluciones y cierres permanecen deshabilitados hasta superar sus gates de autorización y persistencia.
   </div>
 
   <!-- Barra de sesión -->
@@ -326,7 +326,7 @@ body {
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
           <button class="btn" data-method="TARJETA_REGALO" disabled title="Saldo no verificable en esta versión">Tarjeta regalo (no verificada)</button>
-          <button class="btn" data-method="OTROS" disabled title="Medio no incluido en el contrato de prueba V1">Otros (no habilitado)</button>
+          <button class="btn" data-method="OTROS" disabled title="Medio no incluido en el contrato de escritura V1">Otros (no habilitado)</button>
         </div>
 
         <div class="payment-input">
@@ -448,7 +448,7 @@ body {
     customerIdentityId: null,
     customerLabel: null,
     capabilities: {},
-    testRuntimeAvailable: false,
+    operationalWritesAvailable: false,
     saleQuote: null,
     quoteLoading: false,
     quoteError: null,
@@ -483,17 +483,17 @@ body {
     if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
     const messages = {
       TPV_SALE_NOT_READY: "La venta no está autorizada para cobro. Revisa los bloqueos de preparación.",
-      TPV_TEST_SESSION_ALREADY_OPEN: "Ya existe una sesión de prueba abierta. Continúa esa sesión o genera su cierre de prueba.",
+      TPV_SESSION_ALREADY_OPEN: "Ya existe una sesión de prueba abierta. Continúa esa sesión o genera su cierre de prueba.",
       TPV_SESSION_NOT_OPEN: "No hay una sesión de prueba abierta. Abre una sesión antes de continuar.",
-      TPV_TEST_RUN_EXPIRED: "La sesión de prueba ha caducado. Abre una sesión nueva.",
-      TPV_TEST_SALE_CONTRACT_INVALID: "La venta no cumple el contrato V1: una tasa verificable y un único medio de pago simulado por el total exacto.",
-      TPV_TEST_REFUND_SALE_NOT_FOUND: "No se encuentra esa venta dentro de la sesión de prueba actual.",
-      TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT: "La devolución supera el importe simulado original de ese medio de pago.",
-      TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: "La salida supera el efectivo esperado de la sesión de prueba.",
-      TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: "Hay operaciones simultáneas. Actualiza el estado antes de repetir con la misma clave.",
-      TPV_TEST_EVENT_LIMIT_EXCEEDED: "La sesión alcanzó el límite de eventos. Cierra la prueba y abre otra sesión.",
-      TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED: "El historial alcanzó el límite de almacenamiento. Cierra la prueba y abre otra sesión.",
-      TPV_TEST_RUN_NOT_FOUND: "No se encuentra la sesión de prueba o no pertenece al administrador actual.",
+      TPV_RUN_EXPIRED: "La sesión de prueba ha caducado. Abre una sesión nueva.",
+      TPV_SALE_CONTRACT_INVALID: "La venta no cumple el contrato V1: una tasa verificable y un único medio de pago simulado por el total exacto.",
+      TPV_REFUND_SALE_NOT_FOUND: "No se encuentra esa venta dentro de la sesión de prueba actual.",
+      TPV_REFUND_EXCEEDS_ORIGINAL_PAYMENT: "La devolución supera el importe simulado original de ese medio de pago.",
+      TPV_CASH_OUT_EXCEEDS_EXPECTED: "La salida supera el efectivo esperado de la sesión de prueba.",
+      TPV_RUNTIME_CONCURRENT_RETRY_REQUIRED: "Hay operaciones simultáneas. Actualiza el estado antes de repetir con la misma clave.",
+      TPV_EVENT_LIMIT_EXCEEDED: "La sesión alcanzó el límite de eventos. Cierra la prueba y abre otra sesión.",
+      TPV_RUN_PAYLOAD_LIMIT_EXCEEDED: "El historial alcanzó el límite de almacenamiento. Cierra la prueba y abre otra sesión.",
+      TPV_RUN_NOT_FOUND: "No se encuentra la sesión de prueba o no pertenece al administrador actual.",
       TPV_SALE_NOT_PERSISTED: "El backend no ha confirmado la persistencia de la venta de prueba.",
       TPV_CATALOG_PRICE_UNAVAILABLE: "No se ha podido recuperar un precio actual del catálogo Wix.",
       TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
@@ -726,19 +726,19 @@ body {
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
     const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
     $("cashLabel").textContent = isOpen
-      ? "SESIÓN DE PRUEBA ABIERTA · SIN COBRO REAL"
-      : (isClosed ? "SESIÓN DE PRUEBA CERRADA" : "SIN SESIÓN DE PRUEBA");
+      ? "SESIÓN ABIERTA · ESCRITURAS DESHABILITADAS"
+      : (isClosed ? "SESIÓN CERRADA" : "SIN SESIÓN");
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
-      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      $(id).disabled = !isOpen || state.busy || !state.testRuntimeAvailable ||
+      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
         state.capabilities[capability] !== true;
     });
-    if (!state.testRuntimeAvailable) {
+    if (!state.operationalWritesAvailable) {
       $("cashLabel").textContent = isOpen
-        ? "SESIÓN ABIERTA · MODO CONSULTA · PRUEBAS NO DISPONIBLES"
-        : "SIN SESIÓN · MODO CONSULTA · PRUEBAS NO DISPONIBLES";
+        ? "SESIÓN ABIERTA · MODO CONSULTA · ESCRITURAS NO AUTORIZADAS"
+        : "SIN SESIÓN · MODO CONSULTA · ESCRITURAS NO AUTORIZADAS";
     }
   }
 
@@ -755,10 +755,10 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
     $("openCash").disabled = value || isOpen || !canOpenSession ||
-      !state.testRuntimeAvailable || state.capabilities.openSession !== true;
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
     Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
       const el = $(id);
-      if (el) el.disabled = value || !isOpen || !state.testRuntimeAvailable ||
+      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
         state.capabilities[capability] !== true;
     });
   }
@@ -937,7 +937,7 @@ body {
       const methods = (sale.pagos || []).map((payment) => payment.method).filter(Boolean).join(", ");
       const hasProducts = (sale.lineas || []).some((line) => line.tipoLinea === "PRODUCTO");
       container.innerHTML = `
-        <div class="ticket-line"><strong>VENTA DE PRUEBA · SIN VALIDEZ FISCAL</strong></div>
+        <div class="ticket-line"><strong>VENTA</strong></div>
         <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
         <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
         <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
@@ -989,10 +989,7 @@ body {
     if (hasQuote) {
       const blockers = quote.saleReadinessBlockers || [];
       const messages = [];
-      if ((quote.testWarnings || []).includes("PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION")) {
-        messages.push("Producto incluido solo para validar catálogo e impuestos; no se consulta ni se modifica el stock.");
-      }
-      if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
+            if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
       if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
       if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
       if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
@@ -1005,11 +1002,9 @@ body {
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
-      readiness.textContent = quote.testReady === true
-        ? "Venta preparada para prueba interna. No se efectuará un cobro real."
-        : quote.testCatalogReady === true
-          ? "Catálogo e impuestos verificados. Introduce un único medio de pago simulado por el total exacto."
-          : "No lista para prueba interna: " + (messages.join(" ") || "controles pendientes.");
+      readiness.textContent = quote.saleReady === true && state.operationalWritesAvailable === true
+        ? "Venta autorizada para continuar."
+        : "No autorizada para cobro: " + (messages.join(" ") || "faltan requisitos operativos.");
     } else if (state.quoteLoading) {
       readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
     } else if (state.quoteError) {
@@ -1049,7 +1044,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.testCatalogReady === true && state.testRuntimeAvailable === true;
+    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.saleReady === true && state.operationalWritesAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1098,8 +1093,8 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
-          toast("No hay un total validado para la prueba interna.");
+        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
+          toast("No hay una cotización fiscal válida para la venta.");
           return;
         }
         const total = Number(state.saleQuote.totalVenta);
@@ -1111,8 +1106,8 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.testCatalogReady !== true || state.testRuntimeAvailable !== true) {
-      toast("No se aceptan importes de prueba: verifica primero catálogo e impuestos.");
+    if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
+      toast("No se aceptan pagos: el backend no ha autorizado la venta.");
       return;
     }
     if (state.payments.length >= 1) {
@@ -1161,8 +1156,8 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.testReady !== true || state.testRuntimeAvailable !== true) {
-      toast("No se puede guardar la prueba: la venta no ha superado los controles.");
+    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
+      toast("No se puede registrar la venta: el backend no la ha autorizado.");
       return;
     }
     const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
@@ -1186,9 +1181,9 @@ body {
         change: payment.changeMinor / 100,
       })),
     }, "SALE_REGISTER_RES");
-    if (result?.testPersisted !== true || result?.realPayment !== false) throw new Error("TPV_TEST_SALE_NOT_PERSISTED");
+    if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta de prueba guardada. No se ha efectuado ningún cobro.");
+    toast("Venta registrada y confirmada por el backend.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
@@ -1209,7 +1204,7 @@ body {
     }, "SESSION_OPEN_RES");
     renderSession(session);
     await refreshCashState();
-    toast("Sesión de prueba abierta; no se ha abierto una caja real.");
+    toast("Sesión abierta.");
   });
 
   /* ---------- Entrada / Salida de efectivo ---------- */
@@ -1236,7 +1231,7 @@ body {
           profesionalId: state.profesionalId,
         }, "CASH_MOVEMENT_RES");
         await refreshCashState();
-        toast(type === "ENTRADA" ? "Entrada de prueba registrada." : "Salida de prueba registrada.");
+        toast(type === "ENTRADA" ? "Entrada registrada." : "Salida registrada.");
       }
     );
   }
@@ -1292,7 +1287,7 @@ body {
       reason,
     }, "PARTIAL_CASH_COUNT_RES");
     await refreshCashState();
-    toast("Arqueo parcial de prueba registrado; la sesión sigue abierta.");
+    toast("Arqueo parcial registrado; la sesión sigue abierta.");
   });
 
   /* ---------- Resumen e historial ---------- */
@@ -1410,7 +1405,7 @@ body {
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       await refreshCashState();
-      toast("Cierre Z de prueba registrado; no se ha cerrado una caja real.");
+      toast("Cierre Z registrado.");
     });
   };
 
@@ -1488,9 +1483,9 @@ body {
       typeof context.data.capabilities === "object"
       ? context.data.capabilities
       : {};
-    state.testRuntimeAvailable = context.data?.testRuntimeAvailable === true;
+    state.operationalWritesAvailable = context.data?.operationalWritesAvailable === true;
     $("connStatus").className = "dot " + (connected ? "ok" : "error");
-    $("connLabel").textContent = connected ? (state.testRuntimeAvailable ? "Conectado · PRUEBA INTERNA" : "Conectado · Solo lectura") : "No autorizado";
+    $("connLabel").textContent = connected ? (state.operationalWritesAvailable ? "Conectado · Operaciones autorizadas" : "Conectado · Solo lectura") : "No autorizado";
 
     if (connected) {
       initializeWidgetAfterHandshake();

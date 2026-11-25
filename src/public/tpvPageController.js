@@ -8,7 +8,7 @@
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
-import { registrarMovimientoCaja, obtenerMovimientosCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { obtenerResumenCaja, generarControlX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
@@ -323,6 +323,18 @@ function idempotencyKey(message, payload = {}) {
     return ("TPV_UI_" + String(message.type || "OP") + "_" + messageId).slice(0, 100);
 }
 
+function saleUuidV4Key(value) {
+    const candidate = String(value || "").split("_").pop().replace(/-/g, "");
+    if (!/^[0-9a-f]{32}$/i.test(candidate)) throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
+    const uuid = candidate.replace(
+        /^([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/i,
+        "$1-$2-$3-$4-$5"
+    );
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) {
+        throw new Error("TPV_INVALID_IDEMPOTENCY_KEY");
+    }
+    return uuid;
+}
 
 async function dispatch(message) {
     const payload = message.payload && typeof message.payload === "object" && !Array.isArray(message.payload)
@@ -520,7 +532,6 @@ export function initializeTpvPage(widget) {
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
                     capabilities,
                     permissionsStatus: permissions.status,
-                    operationalWritesAvailable: false,
                     operationalWritesAvailable: permissionsReady && permissions.data?.operationalWritesAvailable === true,
                     operationalWritesUnavailableReason: permissionsReady
                         ? (permissions.data?.operationalWritesUnavailableReason || null)

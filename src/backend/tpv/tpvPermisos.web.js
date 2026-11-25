@@ -6,34 +6,33 @@ import { TPV_RUNTIME_POLICY } from "backend/internalConfig";
 export const obtenerPermisosTPV = webMethod(
     Permissions.SiteMember,
     async () => {
-
         const traceId = makeTraceId("tpv-permissions");
         await requireCajero(traceId);
         const staff = await getMyStaffContext(traceId);
-        const testRuntimeAvailable = staff?.rolWebsite === "ADMIN";
+
+        // A staff role is not proof that the operational ledger and payment
+        // contracts are ready. Until all release gates pass, expose read-only.
         return {
             status: "SUCCESS",
             data: {
                 role: staff?.rolWebsite || "UNKNOWN",
                 capabilities: {
                     read: true,
-                    createSale: testRuntimeAvailable,
-                    openSession: testRuntimeAvailable,
-                    registerCashMovement: testRuntimeAvailable,
-                    registerPartialCount: testRuntimeAvailable,
-                    requestRefund: testRuntimeAvailable,
-                    closeSession: testRuntimeAvailable,
-                    issueTicketX: testRuntimeAvailable,
-                    issueTicketZ: testRuntimeAvailable,
-                    exportMovements: testRuntimeAvailable,
-                    exportAudit: testRuntimeAvailable,
+                    createSale: false,
+                    openSession: false,
+                    registerCashMovement: false,
+                    registerPartialCount: false,
+                    requestRefund: false,
+                    closeSession: false,
+                    issueTicketX: false,
+                    issueTicketZ: false,
+                    exportMovements: false,
+                    exportAudit: false,
                     customerNotifications: TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
                     physicalHardware: TPV_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
                 operationalWritesAvailable: false,
                 operationalWritesUnavailableReason: "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
-                testRuntimeAvailable,
-                testRuntimeMode: testRuntimeAvailable ? "SYNTHETIC_INTERNAL" : "UNAVAILABLE",
             },
             error: null,
             traceId,
