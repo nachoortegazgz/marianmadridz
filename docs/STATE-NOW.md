@@ -1,6 +1,6 @@
 # STATE-NOW — 2026-11-25
 
-**Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación:** actualización posterior en revisión · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
+**Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación:** consolidada en main mediante PR #613 · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Entorno:** lectura CMS/Wix de solo lectura; Preview/Runtime no ejecutado.
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 

@@ -44,7 +44,7 @@ Procedimientos históricos: [RUNTIME-EVIDENCE-CHECKLIST.md](archive/2026-11/RUNT
 | #611 | `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf` | run 45555933654 PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f` | run 45555933681 PASS |
 | #612 | `239fd8207d228bde56e9908055166980a87d4989` | run 45592833890 PASS sobre árbol `632c85edbd765a291abe7b411fe08af75da5e571` | run 45592834040 PASS |
 
-Los commits posteriores al commit de código de PR #611 fueron documentales. No hubo cambios de código después de la ejecución CI indicada.
+PR #612 incorpora cambios de código sobre el árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`; su merge commit conserva ese mismo árbol. PR #613 contiene solo consolidación documental. Wix Preview/Runtime continúa pendiente.
 
 ## TPV — estado de preparación
 
