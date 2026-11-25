@@ -14,6 +14,7 @@ export async function getTpvOperatorContext(traceId = null) {
         operatorId: memberId,
         operatorDisplayName: String(staff?.displayName || "").trim() || null,
         operatorResourceId: String(staff?.resourceId || "").trim() || null,
+        rolWebsite: staff.rolWebsite || null,
         contactId: String(staff?.contactId || "").trim() || null,
     });
 }
