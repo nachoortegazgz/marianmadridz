@@ -338,7 +338,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(catalog, /minPriceVariant\?\.price\?\.actualPrice/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /sessionId: String\(payload\.sessionId/);
-    assert.match(controller, /sessionId: optionalString\(payload\.sessionId\)/);
+    assert.match(controller, /sessionId: optionalString\(payload\.sessionId, 160\) \|\| ""/);
     const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
@@ -376,8 +376,7 @@ test("synthetic QA records are not consumed by operational ledgers, closures or 
     assert.match(repository, /wql\.eq\("controlType", CONTROL_TYPE\.TPV_TEST_RUN\)/);
 });
 
-test("TPV controller routes mutations through the admin-only synthetic runtime", async () => {
-    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+test("legacy TPV QA runtime remains isolated pending its controlled retirement", async () => {
     const runtime = await source("tpv/tpvTestRuntime.web.js");
     const repository = await source("tpv/tpvTestRuntimeRepository.js");
     const core = await source("tpv/tpvTestRuntimeCore.js");
@@ -398,14 +397,6 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     ];
     for (const name of contracts) {
         assert.match(runtime, new RegExp("export const " + name + " = webMethod\\("));
-        assert.match(controller, new RegExp("\\b" + name + "\\b"));
-    }
-    assert.ok(controller.includes('from "backend/tpv/tpvTestRuntime.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvCatalogo.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvUtils.web"'));
-    assert.ok(controller.includes('from "backend/tpv/tpvPermisos.web"'));
-    for (const legacyWriter of ["tpvCaja.web", "tpvVentas.web", "tpvMovimientos.web", "tpvAuditoria.web", "tpvDevoluciones.web", "tpvCierres.web"]) {
-        assert.equal(controller.includes('from "backend/tpv/' + legacyWriter + '"'), false);
     }
     assert.match(runtime, /requireAdmin/);
     assert.match(runtime, /prepareTpvSaleCatalog/);
@@ -433,7 +424,7 @@ test("TPV controller routes mutations through the admin-only synthetic runtime",
     assert.ok(config.includes("[CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze"));
 });
 
-test("TPV page is wired to the native POS widget bridge and canonical backend exports", async () => {
+test("TPV page is wired to the native POS widget bridge and operational backend exports", async () => {
     const [page, controller, html, bridge] = await Promise.all([
         source("../pages/TPV.yl5th.js"),
         source("../public/tpvPageController.js"),
@@ -444,23 +435,21 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
     assert.match(controller, /MESSAGE_TYPES\.READY/);
-    assert.match(controller, /obtenerEstadoCajaPrueba/);
-    assert.match(controller, /abrirSesionCajaPrueba/);
-    assert.match(controller, /obtenerServicios/);
-    assert.match(controller, /obtenerProductos/);
-    assert.match(controller, /obtenerVariantesProducto/);
-    assert.match(controller, /obtenerStaff/);
-    assert.match(controller, /buscarClientesTPV/);
-    assert.match(controller, /registrarVentaPrueba/);
-    assert.match(controller, /registrarMovimientoCajaPrueba/);
-    assert.match(controller, /registrarDevolucionPrueba/);
-    assert.match(controller, /generarControlXPrueba/);
-    assert.match(controller, /generarCierreZPrueba/);
-    assert.match(controller, /obtenerResumenCajaPrueba/);
-    assert.match(controller, /obtenerAuditoriaTPVPrueba/);
-    assert.match(controller, /obtenerConfiguracionTPV/);
+    for (const method of [
+        "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial",
+        "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja",
+        "registrarDevolucion", "generarControlX", "generarCierreZ",
+        "obtenerResumenCaja", "obtenerAuditoriaTPVLista", "obtenerConfiguracionTPV",
+        "obtenerServicios", "obtenerProductos", "obtenerVariantesProducto",
+        "obtenerStaff", "buscarClientesTPV", "obtenerPermisosTPV",
+    ]) assert.ok(controller.includes(method), "controller must consume " + method);
+    assert.doesNotMatch(controller, /tpvTestRuntime\.web|obtenerEstadoCajaPrueba|abrirSesionCajaPrueba|registrarVentaPrueba|registrarMovimientoCajaPrueba|registrarDevolucionPrueba|generarControlXPrueba|generarCierreZPrueba|testRuntimeAvailable/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
+    assert.match(html, /function resolveParentOrigin/);
+    assert.match(html, /window\.parent\.postMessage\(message, PARENT_ORIGIN\)/);
+    assert.match(html, /event\.origin !== PARENT_ORIGIN/);
+    assert.doesNotMatch(html, /window\.parent\.postMessage\([^;]*,\s*["']\*["']/);
     assert.match(html, /type: "MM_READY"/);
     assert.match(html, /data\.type !== "MM_CONTEXT"/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled/);
@@ -468,7 +457,6 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /call\("CASHIER_STATE"/);
     assert.match(html, /call\("CUSTOMERS_SEARCH"/);
     assert.match(html, /customerIdentityId/);
-    assert.match(html, /call\("CUSTOMERS_SEARCH"/);
     assert.doesNotMatch(html, /customerContactId/);
     assert.match(html, /call\("CATALOG_VARIANTS"/);
     assert.match(html, /keyedAction\("SALE",\s*"SALE_REGISTER"/);
@@ -479,7 +467,7 @@ test("TPV page is wired to the native POS widget bridge and canonical backend ex
     assert.match(html, /call\("TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
     assert.match(html, /keyedAction\("TICKET_Z",\s*"TICKET_Z"/);
 });
- 
+
 test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
     const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
@@ -581,6 +569,15 @@ test("TPV sale and refund write methods fail closed until a native payment provi
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+    assert.match(refunds, /async \(input = \{\}\) =>/);
+    assert.match(refunds, /validateRefundRequest\(input\)/);
+    assert.match(refunds, /payments\.length !== 1/);
+    assert.match(refunds, /!idempotencyKey \|\| idempotencyKey\.length > 120/);
+    assert.match(refunds, /SUPPORTED_REFUND_METHODS/);
+    assert.match(refunds, /originalSaleId: request\.saleId/);
+    const controller = await source("../public/tpvPageController.js");
+    assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{[\s\S]*?saleId: optionalString\(payload\.saleId/);
+    assert.match(controller, /idempotencyKey: key/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit/);
