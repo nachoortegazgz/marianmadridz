@@ -47,11 +47,11 @@ Antes de activar persistencia sintética online, auditar esquema CMS, hooks y co
 | Valor | Regla |
 |---|---|
 | recordTimestamp | UTC generado en backend al aceptar la operación |
-| productionActivationAt | UTC único, server-side, fijado en el corte formal de actividad real |
+| productionActivationAt | UTC único, server-side, fijado en el corte formal de actividad real; null significa que aún no existe corte y no se admite actividad real |
 | recordNature | SYNTHETIC si recordTimestamp < productionActivationAt; REAL en caso contrario |
 | operación/expedición/periodo fiscal | Fechas independientes; no determinan recordNature |
 
-No aceptar recordTimestamp, productionActivationAt ni recordNature desde el navegador. No derivar la marca del estado Published/Draft ni de un parámetro de entorno. No añadir colección nueva. La ubicación física final del campo recordNature y del corte queda PENDIENTE de auditoría del esquema actual.
+No aceptar recordTimestamp, productionActivationAt ni recordNature desde el navegador. Si el corte es null, clasificar registros válidos como SYNTHETIC; si timestamp o configuración son inválidos, rechazar la escritura. No derivar la marca del estado Published/Draft ni de un parámetro de entorno. No añadir colección nueva. La ubicación física final del campo recordNature y del corte queda PENDIENTE de auditoría del esquema actual.
 
 Los registros sintéticos deben completar el mismo contrato físico que los reales, incluidos emisor de prueba, serie/número de prueba, fechas, base, tipo impositivo, cuota, total, staffResourceId, transactionId idempotente, secuencia, hash y previous hash. Los valores ficticios deben estar claramente identificados y nunca confundirse con identidad fiscal real. No remitirlos a AEAT ni utilizarlos para cobros reales.
 
