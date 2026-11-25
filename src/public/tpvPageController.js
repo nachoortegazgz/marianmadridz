@@ -1,7 +1,9 @@
 /**
- * TPV page controller — native Wix POS catalogue + Marian Madrid extensions.
+ * TPV QA page controller — admin-only synthetic acceptance harness.
+ * This is not the operational TPV writer. QA sessions/events use dedicated
+ * ControlOperativo discriminators and never share the operational session lock,
+ * CajaActual projection or MovimientosCaja fiscal ledger.
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
- * All business rules and persistence remain in authenticated backend WebMethods.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
 import {
@@ -550,7 +552,7 @@ export function initializeTpvPage(widget) {
 
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
-        allowOpaqueOrigin: false, // TODO(#416): Wix HTML Components may emit opaque origins; verify supported handshake/origin contract before enabling bridge traffic.
+        allowOpaqueOrigin: false, // TPV carries admin QA operations; opaque origins stay rejected until Wix Preview proves a safe origin contract.
         handshakeTimeoutMs: 65000,
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([

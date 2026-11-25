@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
     insertItem,
@@ -17,7 +18,7 @@ import {
 
 const RUN_COLLECTION = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
 const MAX_CAS_ATTEMPTS = 5;
-const RUN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RUN_TTL_MS = 24 * 60 * 60 * 1000;
 
 function duplicateKey(error) {
     const code = String(error?.code || error?.details?.applicationError?.code || error?.details?.code || "").toUpperCase();
@@ -43,10 +44,17 @@ function testSessionLockScope(actorId) {
     return "TPV_TEST_ADMIN:" + String(actorId || "").trim();
 }
 
+function makeTpvTestSessionLockId(actorId) {
+    const scope = testSessionLockScope(actorId);
+    if (scope === "TPV_TEST_ADMIN:") throw new Error("TPV_TEST_SESSION_LOCK_INVALID");
+    const digest = createHash("sha256").update(scope, "utf8").digest("hex").slice(0, 32);
+    return "TPVT" + digest;
+}
+
 export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId }) {
     if (!actorId || !sessionId) throw new Error("TPV_TEST_SESSION_LOCK_INVALID");
     const scopeId = testSessionLockScope(actorId);
-    const lockId = makeTpvSessionLockId(scopeId);
+    const lockId = makeTpvTestSessionLockId(actorId);
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
         const now = new Date();
         const expiresAt = new Date(now.getTime() + TEST_SESSION_LOCK_TTL_MS);
@@ -54,8 +62,8 @@ export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId })
         if (!current) {
             const item = {
                 _id: lockId,
-                controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
-                dedupeKey: "TPV_SESSION:" + lockId.slice(4),
+                controlType: CONTROL_TYPE.TPV_TEST_SESSION_LOCK,
+                dedupeKey: "TPV_TEST_SESSION:" + lockId.slice(4),
                 traceId: String(traceId || ""),
                 status: "ACTIVE",
                 version: 0,
@@ -85,7 +93,7 @@ export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId })
                 if (!current) continue;
             }
         }
-        if (current.controlType !== CONTROL_TYPE.TPV_SESSION_LOCK ||
+        if (current.controlType !== CONTROL_TYPE.TPV_TEST_SESSION_LOCK ||
             current.payload?.sessionId !== scopeId ||
             current.payload?.actorId !== actorId ||
             current.payload?.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
@@ -105,7 +113,7 @@ export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId })
             throw new Error("TPV_TEST_SESSION_LOCK_INVALID_STATE");
         }
         const condition = {
-            controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
+            controlType: { $eq: CONTROL_TYPE.TPV_TEST_SESSION_LOCK },
             version: { $eq: Number(current.version) },
             status: { $eq: current.status },
         };
@@ -141,10 +149,10 @@ export async function acquireTpvTestSessionLock({ actorId, sessionId, traceId })
 
 export async function releaseTpvTestSessionLock({ actorId, sessionId, traceId }) {
     if (!actorId || !sessionId) return { released: false };
-    const lockId = makeTpvSessionLockId(testSessionLockScope(actorId));
+    const lockId = makeTpvTestSessionLockId(actorId);
     for (let attempt = 0; attempt < MAX_CAS_ATTEMPTS; attempt += 1) {
         const current = await getItem(RUN_COLLECTION, lockId, CONSISTENCY.STRONG);
-        if (!current || current.controlType !== CONTROL_TYPE.TPV_SESSION_LOCK) {
+        if (!current || current.controlType !== CONTROL_TYPE.TPV_TEST_SESSION_LOCK) {
             return { released: false };
         }
         if (current.payload?.actorId !== actorId ||
@@ -172,7 +180,7 @@ export async function releaseTpvTestSessionLock({ actorId, sessionId, traceId })
         ]], {
             condition: {
                 filter: {
-                    controlType: { $eq: CONTROL_TYPE.TPV_SESSION_LOCK },
+                    controlType: { $eq: CONTROL_TYPE.TPV_TEST_SESSION_LOCK },
                     version: { $eq: Number(current.version) },
                     status: { $eq: "ACTIVE" },
                     expiresAt: { $eq: current.expiresAt },
