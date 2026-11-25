@@ -997,6 +997,10 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
+    const paymentReady = state.saleQuote?.saleReady === true;
+    $("paymentAmount").disabled = !paymentReady;
+    $("addPayment").disabled = !paymentReady;
+    document.querySelectorAll("[data-quick], [data-method]").forEach((button) => { button.disabled = !paymentReady; });
     $("applied").textContent = money(appliedMinor / 100);
     $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
     $("change").textContent = money(changeMinor / 100);
