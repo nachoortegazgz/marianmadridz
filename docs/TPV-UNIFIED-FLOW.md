@@ -22,9 +22,9 @@ Ambos instantes se almacenan/comparan en UTC. La interfaz puede presentar la hor
 ### Contrato de datos
 
 - recordTimestamp: instante UTC generado exclusivamente por backend al aceptar la operación.
-- productionActivationAt: instante UTC único, persistido en configuración canónica controlada por backend y fijado en el procedimiento formal de activación. No equivale al estado técnico Published/Draft de Wix.
+- productionActivationAt: instante UTC único, persistido en configuración canónica controlada por backend y fijado en el procedimiento formal de activación. Mientras no exista (null), el sistema permanece sin corte de actividad real y los registros válidos se clasifican como SYNTHETIC; no se autoriza actividad real. No equivale al estado técnico Published/Draft de Wix.
 - recordNature: marca persistida e inmutable SYNTHETIC o REAL, derivada en backend de la comparación anterior. No se acepta desde el cliente.
-- La marca y el timestamp se conservan en cada registro; no se reclasifican históricos al cambiar la configuración.
+- Si recordTimestamp falta/no es válido, o la configuración de corte es inconsistente, el backend rechaza la persistencia y no inventa una clasificación. La marca y el timestamp se conservan en cada registro; no se reclasifican históricos al cambiar la configuración.
 - El campo físico definitivo para la marca y la ubicación canónica del corte quedan pendientes de auditoría del esquema CMS y de internalConfig.js. No crear una colección ni un campo duplicado antes de comprobar los existentes.
 
 La clasificación es metadato de trazabilidad. No habilita ni deshabilita por sí sola la ruta de venta, el cálculo, la validación, el writer o los permisos. Los efectos externos (cobro real, terminal, emisión/remisión fiscal, AEAT, automatizaciones) requieren sus propias confirmaciones y gates permanentes. Un registro sintético nunca se remite a AEAT ni se usa para liquidar un pago real.
