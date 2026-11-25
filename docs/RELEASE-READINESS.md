@@ -19,6 +19,13 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #523/#522 Bookings | Reconciliar CitasF2 con bookings nativos y opciones de pago, sin inferir estados | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
 | #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS; writer, persistencia real y Wix Preview/Runtime pendientes |
+| P1.1 Apertura de sesión | BLOQUEADO | `tpvCaja.web.js:139-159`: `requireAdmin` y guard global fallan antes del insert; tests no ejecutados |
+| P1.2 Cierre de sesión | PENDIENTE | No existe `cerrarSesionCaja`; el cierre está modelado dentro de `generarCierreZ` (`tpvCierres.web.js:131-253`) y queda bloqueado por guard |
+| P1.3 Movimiento de caja | BLOQUEADO | `tpvMovimientos.web.js:64-100`: validación/lock definidos; guard impide persistencia |
+| P1.4 Registro de venta | PENDIENTE | `tpvVentas.web.js:143-234`: catálogo/impuestos backend; no writer ni Draft Order; `persisted=false` |
+| P1.5 Devolución | PENDIENTE | `tpvDevoluciones.web.js:43-86`: valida DTO y devuelve `TPV_REFUND_PROVIDER_NOT_CONFIGURED`; no persiste; `procesarDevolucion` ausente |
+| P1.6 Cierre Z | BLOQUEADO | `tpvCierres.web.js:131-138,224-253`: writer definido, bloqueado antes de persistir por guard; sin ledger fiscal |
+| P1.7 Operador TPV | PENDIENTE | `security.js:163-187,538-545`; `tpvOperatorContext.js:1-20`; gates de autorización en código, prueba efectiva pendiente |
 
 ## Bloques de evidencia Runtime
 
