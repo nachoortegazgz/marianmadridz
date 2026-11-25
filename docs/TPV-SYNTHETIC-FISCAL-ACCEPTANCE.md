@@ -26,6 +26,8 @@ Consulta read-only de las colecciones CMS del sitio. El usuario declara que las 
 
 Los permisos devueltos para las cuatro colecciones son PRIVILEGED en lectura, inserción, actualización y eliminación. Esto no autoriza al frontend a escribir; la autorización seguirá en backend.
 
+El usuario declara que todos los registros TPV actuales y los que se generen en esta fase son datos sintéticos de prueba. Esa declaración se conserva como contexto de ejecución; no convierte automáticamente cada fila de ControlOperativo en un registro TPV ni acredita el origen de cada fila individual. No se modifica ningún registro para reclasificarlo.
+
 En MovimientosCaja se encontraron tres filas con origen TPV_QA_DEVELOPMENT (dos ventas y una devolución) y otras dos filas antiguas con trazas TPV-SIM y TPV-FUNC. No se han tocado. Ninguna puede usarse como ancla de hash ni como factura original.
 
 En MapaStaff hay cinco filas. Tres filas de tipo STAFF contienen resourceId, staffMemberId y memberId; los tres resourceId coinciden con IDs existentes en Bookings/Staff. Las otras dos filas no son asignaciones de personal. El writer debe resolver el ID desde el mapeo autorizado, no aceptar un ID libre del navegador.
