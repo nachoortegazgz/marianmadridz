@@ -38,11 +38,12 @@ const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
 /**
- * The current CMS contract still contains only historical QA ledger rows.
- * No canonical operational TPV writer is configured yet. Keep all writes
- * fail-closed; historical reads remain available through dedicated readers.
+ * Fiscal configuration gates fiscal-ledger writes only. Physical cash,
+ * commercial sales and operational audit records have independent stores.
  */
-export function assertTpvOperationalLedgerConfigured() {
+export function assertTpvOperationalLedgerConfigured(ledgerType = "fiscal") {
+    if (["physical", "commercial", "audit"].includes(ledgerType)) return true;
+    if (ledgerType !== "fiscal") throw new Error("TPV_LEDGER_TYPE_INVALID");
     const error = new Error("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED");
     error.code = "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED";
     throw error;
@@ -738,9 +739,20 @@ function _matchesFilter(record, filter) {
     });
 }
 
-export async function insertTpvEvent(collection, idempotencyKey, data) {
+export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType = "physical" } = {}) {
 
-    assertTpvOperationalLedgerConfigured();
+    assertTpvOperationalLedgerConfigured(ledgerType);
+    if (collection === TPV_COLLECTIONS.AUDITORIA) {
+        return appendTpvAudit({
+            idempotencyKey,
+            action: data?.action,
+            actorId: data?.actorId,
+            entityType: data?.entityType,
+            entityId: data?.entityId,
+            traceId: data?.payload?.traceId || data?.traceId,
+            payload: data?.payload || {},
+        });
+    }
 
     _assertLogicalCollection(collection);
     const key = normalizeIdempotencyKey(idempotencyKey);
@@ -929,20 +941,40 @@ export async function appendTpvAudit({
     traceId,
     payload = {},
 }) {
-    const { item, replayed } = await insertTpvEvent(
-        TPV_COLLECTIONS.AUDITORIA,
-        idempotencyKey,
-        {
+    const key = normalizeIdempotencyKey(idempotencyKey);
+    const eventId = "TPVAUDIT-" + createHash("sha256").update(key).digest("hex").slice(0, 32);
+    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+    const existing = await getItem(collection, eventId, CONSISTENCY.STRONG);
+    if (existing) return { item: existing, replayed: true };
+
+    const record = {
+        _id: eventId,
+        controlType: CONTROL_TYPE.TPV_AUDIT_EVENT,
+        dedupeKey: key,
+        traceId: String(traceId || "TPV_AUDIT"),
+        eventId,
+        eventType: "TPV_AUDIT",
+        processedAt: new Date(),
+        status: "COMPLETED",
+        operationDescription: String(action || "UNKNOWN").slice(0, 180),
+        payload: {
             action: String(action || "UNKNOWN").slice(0, 80),
             actorId: String(actorId || "UNKNOWN").slice(0, 100),
             entityType: String(entityType || "TPV").slice(0, 80),
             entityId: String(entityId || "").slice(0, 120),
-            occurredAt: new Date(),
             source: "TPV_WEB_METHOD",
-            payload: { ...payload, traceId: String(traceId || "") },
-        }
-    );
-    return { item, replayed };
+            ...payload,
+        },
+    };
+    try {
+        const item = await insertItem(collection, record);
+        return { item, replayed: false };
+    } catch (error) {
+        const winner = await getItem(collection, eventId, CONSISTENCY.STRONG);
+        if (!winner) throw error;
+        if (winner.dedupeKey !== key) throw new Error("TPV_AUDIT_IDEMPOTENCY_CONFLICT");
+        return { item: winner, replayed: true };
+    }
 }
 
 export async function latestTpvSession() {
@@ -976,24 +1008,30 @@ export async function latestOpenTpvSession() {
 }
 
 
+async function queryCommercialTpvSales(sessionId) {
+    const records = [];
+    let page = await queryItems({
+        dataCollectionId: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+        filter: wql.eq("sessionId", sessionId),
+        limit: 100,
+        consistency: CONSISTENCY.STRONG,
+    });
+    records.push(...page.items);
+    while (page.hasNext && typeof page.next === "function") {
+        page = await page.next();
+        records.push(...page.items);
+    }
+    return records;
+}
+
 export async function getCommittedTpvSales(sessionId) {
-    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
-    return records.filter((item) =>
-        item.status === "CONFIRMADA" &&
-        item.payload?.sessionId === sessionId
-    );
+    const records = await queryCommercialTpvSales(sessionId);
+    return records.filter((item) => item.status === "CONFIRMED");
 }
 
 export async function getPendingTpvSales(sessionId) {
-    const records = await queryTpvRecords(TPV_COLLECTIONS.VENTAS, undefined);
-    const committedIds = new Set(records
-        .filter((item) => item.status === "CONFIRMADA")
-        .map((item) => item.saleId));
-    return records.filter((item) =>
-        item.status === "PREPARADA" &&
-        item.payload?.sessionId === sessionId &&
-        !committedIds.has(item.saleId)
-    );
+    const records = await queryCommercialTpvSales(sessionId);
+    return records.filter((item) => item.status === "PENDING_PAYMENT");
 }
 
 export async function getTpvPayments(sessionId) {
