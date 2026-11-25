@@ -1003,7 +1003,12 @@ body {
     const paymentReady = state.saleQuote?.saleReady === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
-    document.querySelectorAll("[data-cash], [data-method]").forEach((button) => { button.disabled = !paymentReady; });
+    document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
+    document.querySelectorAll("[data-method]").forEach((button) => {
+      const unsupportedTender = ["BONO", "TARJETA_REGALO"].includes(button.dataset.method);
+      button.disabled = !paymentReady || unsupportedTender;
+      if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
+    });
     $("applied").textContent = money(appliedMinor / 100);
     $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
     $("change").textContent = money(changeMinor / 100);
