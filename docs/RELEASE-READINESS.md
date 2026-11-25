@@ -1,13 +1,13 @@
 # RELEASE-READINESS — 2026-11-25
 
-Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de evidencia Runtime PASS, fecha, ejecutor y JSON íntegro. CI offline no sustituye Wix Preview/Runtime. CONFIG_SISTEMA_FISCAL debe existir con datos legales verificados; los writers permanecen false hasta certificación.
+Criterio vinculante: **NO-GO** mientras cualquiera de los cinco P0 carezca de evidencia Runtime PASS, fecha, ejecutor y JSON íntegro. CI offline no sustituye Wix Preview/Runtime. Los writers fiscales permanecen deshabilitados hasta disponer de configuración legal verificada y superar la validación técnica y normativa.
 
 ## P0
 
 | Issue | Gate de aceptación | Evidencia actual |
 |---|---|---|
-| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, export obsoleto eliminado, permisos no resueltos bloquean escrituras, retry denegado por defecto, timeout incierto y SALE_REGISTER sin importes de cliente. Handshake HTML Component pendiente. Read-back CMS 2026-11-25: MovimientosCaja/ControlOperativo/CajaActual/MapaStaff existen; ControlOperativo sin índices y solo dos IDEMPOTENCY históricos de Bookings, sin registros TPV. `assertTpvOperationalLedgerConfigured()` lanza siempre y policy/hook bloquean nuevos TPV_* en MovimientosCaja. Región fiscal ES tiene mappings 0%/21% por taxGroupId; falta verificar grupo por producto y certificación fiscal. Draft Orders SDK disponible, no invocado. P4 no puede avanzar a creación DRAFT hasta habilitar contrato idempotente y writer append-only de forma coherente. |
-| #415/#209 Fiscal/SIF | F1 singleton único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE |
+| #416 Caja/POS | P3/P4 PASS y conciliación/recovery trazable de #10032–#10034; no alterar registros originales | PENDIENTE. PR #606/#607 integradas: bridge opaco rechazado, envelope estricto, export obsoleto eliminado, permisos no resueltos bloquean escrituras, retry denegado por defecto, timeout incierto y SALE_REGISTER sin importes de cliente. Handshake HTML Component pendiente. Wix CMS read-only 2026-11-25: colecciones base presentes; `tpvVentas.registrarVenta` bloquea, `insertTpvEvent` tiene guard incondicional y `MovimientosCaja_beforeInsert` rechaza TPV_*. El builder TPV tampoco construye todos los campos exigidos por el esquema fiscal. No crear Draft Order como sustituto de venta/cobro/factura. |
+| #415/#209 Fiscal/SIF | Singleton fiscal único y válido; F5 append-only PASS; revisión legal; flags false hasta certificación | PENDIENTE. Query CMS `MapaStaff` filtrada por `recordType=CONFIG_SISTEMA` devolvió 0 registros. `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`; `registrarEventoEconomico` deniega escrituras con ese flag. |
 | #525 CajaActual | P1 concurrencia: una sola sesión bajo llamadas concurrentes | PENDIENTE. Envelope del controlador endurecido; ninguna prueba Runtime de concurrencia ejecutada. |
 | #434 MovimientosCaja | M1–M3/M5 código; M4 Activity Logs/backups y discrepancia histórica explicada | PENDIENTE |
 | #520 Automations | Siete PREINSTALLED en estado PAUSED y sin ejecuciones/efectos externos no autorizados; app laboral permanece INACTIVE | PENDIENTE |
@@ -43,4 +43,8 @@ La checklist detallada se conserva en [archive/2026-11/RUNTIME-EVIDENCE-CHECKLIS
 | #603 | `f42ef7fb50925be7bfece15ff5391383cd33ee84` | run 45509432988 PASS (80/747) | run 45509433003 PASS |
 | #604 | `0acb60df65bba1545d3a57cfa261d1de518eb39d` | run 45511826479 PASS (81/750) | run 45511827103 PASS |
 
-Estado operativo: **NO-GO**. Read-back CMS de solo lectura actualizado 2026-11-25; no se ha ejecutado Preview/Runtime ni verificado sincronización Git-Wix posterior. No se han modificado datos CMS ni configuraciones fiscales.
+## Normativa de calendario
+
+El BOE publica el Real Decreto-ley 15/2025 (BOE-A-2025-24446), cuya disposición final primera fija los plazos del RRSIF en 01-01-2027 para contribuyentes del art. 3.1.a) y 01-07-2027 para el resto del art. 3.1. La nota informativa ministerial de 05-10-2026 sobre una posible extensión posterior no sustituye a la norma publicada mientras no se apruebe y publique una modificación.
+
+Estado operativo: **NO-GO**. Read-back CMS de solo lectura 2026-11-25; no se ha ejecutado Preview/Runtime. No se han modificado datos CMS, configuración fiscal, secretos, ledgers ni pedidos.
