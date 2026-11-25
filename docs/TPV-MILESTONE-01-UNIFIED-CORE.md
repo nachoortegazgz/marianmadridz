@@ -109,7 +109,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 | Precio final | Configuración Wix consultada excluye impuestos del precio de catálogo; presentación final no verificada | Propietario + QA |
 | Inventario físico | 0 registros asignados a ubicación física en consulta 2026-11-25 | Propietario + recuento físico |
 | Hardware | Epson/cajón/lector no probados | Propietario + QA |
-| Sitio de validación | Sitio principal Published; aislamiento de escritura de Preview no verificado | Administrador Wix |
+| Sitio/colecciones de pruebas online | Sitio Draft según Site Context 2026-11-25 17:53 CET; propietario declara colecciones Online; destino efectivo de Preview/Runtime pendiente de verificación | Administrador Wix + QA |
 
 ## Decisión
 
