@@ -45,6 +45,7 @@ export function createTpvTestRunPayload({ sessionId, siteId, actorId, operatorId
         operatorResourceId: operatorResourceId || null,
         currency: "EUR",
         openedAt: openedAt instanceof Date ? openedAt.toISOString() : new Date(openedAt).toISOString(),
+        activeUntil: new Date(new Date(openedAt).getTime() + 12 * 60 * 60 * 1000).toISOString(),
         openingCashMinor,
         events: [],
         idempotencyIndex: {},
