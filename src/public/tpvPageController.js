@@ -1,8 +1,7 @@
 /**
- * TPV QA page controller — admin-only synthetic acceptance harness.
- * This is not the operational TPV writer. QA sessions/events use dedicated
- * ControlOperativo discriminators and never share the operational session lock,
- * CajaActual projection or MovimientosCaja fiscal ledger.
+ * TPV page controller — HTML Component bridge to canonical operational WebMethods.
+ * Business authorization and persistence rules remain in backend.
+ * Operational writes stay unavailable until the fiscal ledger contract is released.
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
@@ -386,7 +385,17 @@ async function dispatch(message) {
                 reason: optionalString(payload.reason, 500) || "",
             });
         case "REFUND":
-            return registrarDevolucion();
+            return registrarDevolucion({
+                saleId: optionalString(payload.saleId, 160) || "",
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                reason: optionalString(payload.reason, 500) || "",
+                profesionalId: optionalString(payload.profesionalId, 160),
+                payments: Array.isArray(payload.payments) ? payload.payments.map((payment) => ({
+                    paymentMethod: String(payment?.paymentMethod || "").trim().toUpperCase(),
+                    amount: numeric(payment?.amount, "REFUND_AMOUNT", { allowZero: false }),
+                })) : [],
+                idempotencyKey: key,
+            });
         case "TICKET_X":
             return generarControlX({ sessionId: optionalString(payload.sessionId, 160) || "", idempotencyKey: key });
         case "TICKET_Z":
