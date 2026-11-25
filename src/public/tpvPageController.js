@@ -55,7 +55,9 @@ function boundedInteger(value, field, min, max) {
 }
 
 function envelope(result) {
-    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status)) return result;
+    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status) &&
+        Object.prototype.hasOwnProperty.call(result, "data") &&
+        Object.prototype.hasOwnProperty.call(result, "error")) return result;
     return {
         status: "ERROR",
         code: "TPV_UNEXPECTED_RESPONSE",
@@ -281,16 +283,50 @@ async function dispatch(message) {
         case "CUSTOMERS_SEARCH":
             return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
 
-        case "SALE_VALIDATE":
         case "SALE_REGISTER": {
             if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) {
                 throw new Error("TPV_LINES_REQUIRED");
             }
             if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
-            if (message.type === "SALE_REGISTER" &&
-                (!Array.isArray(payload.payments) || payload.payments.length === 0)) {
-                throw new Error("TPV_PAYMENTS_REQUIRED");
+            const sessionId = optionalString(payload.sessionId, 160);
+            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+
+            // Only transport identifiers and quantities cross the write boundary; backend resolves every economic value.
+            const lineas = payload.lineItems.map((line) => {
+                if (!line || typeof line !== "object" || Array.isArray(line)) {
+                    throw new Error("TPV_INVALID_LINE");
+                }
+                const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
+                const productId = optionalString(line.itemId, 160);
+                if (tipoLinea !== "PRODUCTO" || !productId) {
+                    throw new Error("TPV_PRODUCT_LINES_ONLY");
+                }
+                return {
+                    productId,
+                    ...(optionalString(line.varianteId, 160)
+                        ? { variantId: optionalString(line.varianteId, 160) }
+                        : {}),
+                    cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
+                };
+            });
+            const payments = Array.isArray(payload.payments) ? payload.payments : [];
+            const medioPago = payments.length === 1
+                ? optionalString(payments[0]?.method || payments[0]?.medioPago, 40)?.toUpperCase()
+                : null;
+
+            return registrarVenta({
+                sessionId,
+                idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
+                lineas,
+                ...(medioPago ? { medioPago } : {}),
+            });
+        }
+
+        case "SALE_VALIDATE": {
+            if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) {
+                throw new Error("TPV_LINES_REQUIRED");
             }
+            if (payload.lineItems.length > 100) throw new Error("TPV_ARRAY_TOO_LARGE");
             if (Array.isArray(payload.payments) && payload.payments.length > 100) {
                 throw new Error("TPV_ARRAY_TOO_LARGE");
             }
@@ -327,7 +363,7 @@ async function dispatch(message) {
             if (lineTaxMinor !== declaredTaxMinor) {
                 throw new Error("TPV_LINE_TAX_TOTAL_MISMATCH");
             }
-            const salePayload = {
+            return validarVentaBorrador({
                 lineas,
                 pagos,
                 subtotalNeto: numeric(payload.subtotal, "SUBTOTAL"),
@@ -335,24 +371,6 @@ async function dispatch(message) {
                 totalVenta: numeric(payload.total, "TOTAL"),
                 profesionalId: optionalString(payload.profesionalId, 160),
                 customerIdentityId: optionalString(payload.customerIdentityId, 160),
-            };
-            if (message.type === "SALE_VALIDATE") {
-                return validarVentaBorrador(salePayload);
-            }
-            const sessionId = optionalString(payload.sessionId, 160);
-            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
-            if (lineas.some((line) => line.tipoLinea !== "PRODUCTO")) {
-                throw new Error("TPV_PRODUCT_LINES_ONLY");
-            }
-            return registrarVenta({
-                sessionId,
-                idempotencyKey: saleUuidV4Key(payload.idempotencyKey || key),
-                lineas: lineas.map((line) => ({
-                    productId: line.itemId,
-                    ...(line.varianteId ? { variantId: line.varianteId } : {}),
-                    cantidad: line.cantidad,
-                })),
-                ...(pagos.length === 1 ? { medioPago: pagos[0].medioPago } : {}),
             });
         }
 
@@ -441,33 +459,43 @@ export function initializeTpvPage(widget) {
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
                 obtenerConfiguracionTPV(),
-                obtenerPermisosTPV().catch(() => ({
+                obtenerPermisosTPV().catch((error) => ({
                     status: "ERROR",
                     data: null,
-                    error: { code: "TPV_PERMISSIONS_UNAVAILABLE" },
+                    error: {
+                        code: "TPV_PERMISSIONS_UNAVAILABLE",
+                        message: "No se pudieron resolver los permisos de TPV.",
+                        reasonCode: String(error?.code || error?.message || "UNKNOWN"),
+                    },
                 })),
             ]);
             const config = envelope(configResult);
             const permissions = envelope(permissionsResult);
-            const capabilities = permissions.status === "SUCCESS" &&
+            const permissionsReady = permissions.status === "SUCCESS";
+            const capabilities = permissionsReady &&
                 permissions.data?.capabilities &&
                 typeof permissions.data.capabilities === "object"
                 ? permissions.data.capabilities
                 : {};
+            const contextStatus = config.status === "SUCCESS" && permissionsReady
+                ? "SUCCESS"
+                : "ERROR";
             return {
-                status: config.status,
+                status: contextStatus,
                 data: {
                     component: "htmlTPV",
                     protocolVersion: PROTOCOL_VERSION,
                     currency: config.status === "SUCCESS" ? config.data?.currency : null,
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
                     capabilities,
-                    operationalWritesAvailable: permissions.status === "SUCCESS" &&
+                    permissionsStatus: permissions.status,
+                    operationalWritesAvailable: permissionsReady &&
                         permissions.data?.operationalWritesAvailable === true,
-                    operationalWritesUnavailableReason: permissions.data?.operationalWritesUnavailableReason ||
-                        "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED",
+                    operationalWritesUnavailableReason: permissionsReady
+                        ? (permissions.data?.operationalWritesUnavailableReason || "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED")
+                        : (permissions.error?.code || "TPV_PERMISSIONS_UNAVAILABLE"),
                 },
-                error: config.error || null,
+                error: config.error || permissions.error || null,
             };
         },
         onWidgetMessage: async (message, reply) => {
@@ -480,7 +508,10 @@ export function initializeTpvPage(widget) {
             }
         },
         onError: (error) => {
-            console.error("[TPV] Widget bridge error", error?.code || error?.message || error, error?.detail || null);
+            console.error("[TPV] Widget bridge error", {
+                code: String(error?.code || "WIDGET_BRIDGE_ERROR"),
+                bridgeId: String(error?.bridgeId || ""),
+            });
         },
     });
 
