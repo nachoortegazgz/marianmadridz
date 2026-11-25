@@ -316,6 +316,8 @@ export const validarVentaBorradorPrueba = webMethod(
                 pagos: validated.pagos,
                 totalVenta: validated.totalVenta,
             });
+            const containsProducts = prepared.lineas.some((line) => line.tipoLinea === "PRODUCTO");
+            const testWarnings = containsProducts ? ["PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION"] : [];
             const testCatalogReady = prepared.lineas.length > 0 &&
                 !blockers.some((code) => [
                     "TPV_WRITE_V1_LINES_REQUIRED",
@@ -335,6 +337,7 @@ export const validarVentaBorradorPrueba = webMethod(
                 testReady: blockers.length === 0,
                 testCatalogReady,
                 testReadinessBlockers: blockers,
+                testWarnings,
                 saleReadinessBlockers: blockers,
                 saleReady: false,
                 paymentVerified: false,
