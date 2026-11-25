@@ -1002,7 +1002,6 @@ body {
       const messages = [];
             if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
       if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
-      if (blockers.includes("TPV_LEDGER_WRITER_NOT_CONFIGURED")) messages.push("Writer TPV no configurado.");
       if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
       if (blockers.includes("TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE")) messages.push("La tasa impositiva de alguna línea no puede verificarse.");
@@ -1013,9 +1012,9 @@ body {
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
       if (blockers.includes("INVENTORY_POLICY_NOT_CONFIGURED")) messages.push("Inventario de productos no configurado en la ubicación física del salón.");
       if (blockers.includes("CONSUMER_PRICE_PRESENTATION_UNVERIFIED")) messages.push("Presentación del precio final al consumidor pendiente de validación.");
-      readiness.textContent = quote.saleReady === true && state.operationalWritesAvailable === true
-        ? "Venta autorizada para continuar."
-        : "No autorizada para cobro: " + (messages.join(" ") || "faltan requisitos operativos.");
+      readiness.textContent = quote.commercialRecordReady === true && state.operationalWritesAvailable === true
+        ? "Registro comercial disponible; se guardará pendiente de cobro. " + messages.join(" ")
+        : "No se puede registrar la venta: " + (messages.join(" ") || "faltan requisitos de catálogo o sesión.");
     } else if (state.quoteLoading) {
       readiness.textContent = "Consultando catálogo y cálculo fiscal de Wix…";
     } else if (state.quoteError) {
@@ -1167,14 +1166,8 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se puede registrar la venta: el backend no la ha autorizado.");
-      return;
-    }
-    const totalMinor = Math.round(Number(state.saleQuote.totalVenta) * 100);
-    const appliedMinor = state.payments.reduce((sum, payment) => sum + payment.amountMinor - payment.changeMinor, 0);
-    if (appliedMinor !== totalMinor) {
-      toast("El importe simulado no cubre el total fiscal exacto.");
+    if (!state.saleQuote || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
+      toast("No se puede registrar la venta: faltan catálogo, cálculo fiscal o permiso de escritura.");
       return;
     }
     const result = await keyedAction("SALE", "SALE_REGISTER", {
@@ -1186,15 +1179,12 @@ body {
         cantidad: item.qty,
         profesionalId: state.profesionalId,
       })),
-      payments: state.payments.map((payment) => ({
-        method: payment.method,
-        amount: payment.amountMinor / 100,
-        change: payment.changeMinor / 100,
-      })),
+      medioPago: state.paymentMethod || null,
+      payments: [],
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada y confirmada por el backend.");
+    toast("Venta registrada como pendiente de cobro. No se ha realizado ningún pago.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
