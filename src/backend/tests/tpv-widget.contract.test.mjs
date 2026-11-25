@@ -148,6 +148,28 @@ test("widget bridge reports the rejected type and active allowlist", () => {
 });
 
 
+test("widget bridge rejects a non-allowlisted origin before parsing the message", () => {
+    let receive;
+    let reported;
+    const widget = {
+        onMessage(handler) { receive = handler; return () => { receive = null; }; },
+        postMessage() {},
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        allowedOrigin: "https://tpv.example.test",
+        allowOpaqueOrigin: false,
+        onError: (error) => { reported = error; },
+    });
+    receive({
+        origin: "https://evil.example.test",
+        data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "bad-origin-123456" },
+    });
+    assert.equal(reported?.code, "WIDGET_ORIGIN_REJECTED");
+    assert.equal(bridge.handshakeCompleted, false);
+    bridge.destroy();
+});
+
 test("widget bridge rejects opaque origins when strict TPV origin policy is active", () => {
     let receive;
     let reported;
