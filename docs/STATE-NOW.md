@@ -29,7 +29,7 @@
 - PR #604: helper de errores accionables A/B; lock fiscal con retry acotado y replay contable verificado.
 - CI offline de PR #603: 80 suites/747 tests PASS; PR #604: 81 suites/750 tests PASS; secret scanning PASS en ambas.
 - PR #606 integrada (`7387937`): bridge opaco rechazado (handshake HTML Component pendiente #416), envelope desconocido devuelve ERROR, export sin consumidor eliminado y envelope TPV compartido.
-- P4 BLOQUEADA: `MovimientosCaja` es el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`); writer fail-closed. No crear `TransaccionesTPV` ni Draft Order sin idempotencia durable y fiscalidad resuelta.
+- P4 BLOQUEADA: `MovimientosCaja` es el ledger físico canónico (`TPV_LOGICAL_VENTAS` → `TPV_SALE`/`transactionId`); writer fail-closed. No crear `TransaccionesTPV`. Catalog V3 `getProduct/queryProducts` y `@wix/ecom draftOrders.createDraftOrder` están disponibles en SDK; no invocar Draft Order sin idempotencia durable y fiscalidad resuelta.
 - Follow-up TPV: retry genérico ahora deniega por defecto; timeout marca resultado incierto; permisos no resueltos bloquean contexto/escrituras; SALE_REGISTER envía solo IDs, variante, cantidad y medio de pago; logs bridge saneados.
 - Wix Preview/Runtime no ejecutado; arnés pendiente de ejecución. Ningún merge de código equivale a autorización de publicación.
 
