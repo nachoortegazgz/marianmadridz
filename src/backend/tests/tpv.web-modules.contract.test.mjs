@@ -569,6 +569,14 @@ test("TPV sale and refund write methods fail closed until a native payment provi
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
+    assert.match(refunds, /async \(input = \{\}\) =>/);
+    assert.match(refunds, /validateRefundRequest\(input\)/);
+    assert.match(refunds, /payments\.length !== 1/);
+    assert.match(refunds, /SUPPORTED_REFUND_METHODS/);
+    assert.match(refunds, /originalSaleId: request\.saleId/);
+    const controller = await source("../public/tpvPageController.js");
+    assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{[\s\S]*?saleId: optionalString\(payload\.saleId/);
+    assert.match(controller, /idempotencyKey: key/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(sales, /insertTpvEvent|appendTpvAudit/);
