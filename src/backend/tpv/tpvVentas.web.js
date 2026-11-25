@@ -249,8 +249,14 @@ export const registrarVenta = webMethod(
 
         const sessionId = String(input?.sessionId || "").trim();
         const idempotencyKey = String(input?.idempotencyKey || "").trim().toLowerCase();
-        const lineas = Array.isArray(input?.lineas) ? input.lineas : [];
-        const pagos = Array.isArray(input?.pagos) ? input.pagos : [];
+        const rawLineas = Array.isArray(input?.lineas) ? input.lineas : [];
+        const lineas = rawLineas.map((line) => ({
+            ...line,
+            tipoLinea: String(line?.tipoLinea || (line?.productId ? "PRODUCTO" : "")).trim().toUpperCase(),
+            itemId: String(line?.itemId || line?.productId || "").trim(),
+            ...(line?.varianteId || line?.variantId ? { varianteId: String(line.varianteId || line.variantId).trim() } : {}),
+        }));
+        const rawPagos = Array.isArray(input?.pagos) ? input.pagos : null;
         if (!input || typeof input !== "object" || Array.isArray(input) ||
             !sessionId || !UUID_V4.test(idempotencyKey) ||
             lineas.length === 0 || lineas.length > 100 || pagos.length > 100 ||
@@ -272,8 +278,11 @@ export const registrarVenta = webMethod(
         let prepared;
         let validated;
         try {
-            assertTpvPaymentMethodsSupported(pagos);
             prepared = await prepareTpvSaleCatalog(lineas);
+            const pagos = rawPagos || (input?.medioPago
+                ? [{ medioPago: String(input.medioPago).trim().toUpperCase(), importe: prepared.totalVenta, importeCambio: 0 }]
+                : []);
+            assertTpvPaymentMethodsSupported(pagos);
             validated = validateSaleDraft({
                 lineas: prepared.lineas,
                 pagos,
