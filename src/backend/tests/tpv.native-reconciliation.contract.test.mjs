@@ -37,10 +37,10 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     // The UI selects the MapaStaff/Wix Bookings resourceId. The backend actor
     // context is independently resolved from the authenticated Wix member.
     assert.match(html, /state\.profesionalId = person \? person\.profesionalId : null/);
-    assert.match(controller, /profesionalId: optionalString\(payload\.profesionalId/);
+    assert.match(controller, /profesionalId: optionalString\(line\.profesionalId, 160\)/);
     const caja = await source("tpv/tpvCaja.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(controller, /obtenerEstadoCajaPrueba,[\s\S]*?registrarArqueoParcialPrueba,[\s\S]*?from "backend\/tpv\/tpvTestRuntime\.web"/);
+    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial \} from "backend\/tpv\/tpvCaja\.web"/);
     assert.match(caja, /export const obtenerEstadoCaja = webMethod/);
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
@@ -48,7 +48,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /payload: makeTpvPayload\(\{ traceId, replayed, sessionId \}\)/);
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
-    assert.match(controller, /const pagos = \(payload\.payments \|\| \[\]\)\.map/);
+    assert.match(controller, /const pagos = \(Array\.isArray\(payload\.payments\) \? payload\.payments : \[\]\)\.map/);
     assert.match(controller, /lineas,\s*pagos,/);
     assert.match(sales, /prepareTpvSaleCatalog\(venta\?\.lineas\)/);
     assert.match(sales, /validateSaleDraft\(\{[\s\S]*?lineas: prepared\.lineas/);
@@ -70,14 +70,14 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 
     assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
-    assert.match(permissions, /createSale: testRuntimeAvailable/);
-    assert.match(permissions, /openSession: testRuntimeAvailable/);
-    assert.match(permissions, /registerCashMovement: testRuntimeAvailable/);
-    assert.match(permissions, /requestRefund: testRuntimeAvailable/);
-    assert.match(permissions, /closeSession: testRuntimeAvailable/);
-    assert.match(permissions, /issueTicketX: testRuntimeAvailable/);
-    assert.match(permissions, /issueTicketZ: testRuntimeAvailable/);
-    assert.match(permissions, /testRuntimeAvailable/);
+    assert.match(permissions, /createSale: false/);
+    assert.match(permissions, /openSession: false/);
+    assert.match(permissions, /registerCashMovement: false/);
+    assert.match(permissions, /requestRefund: false/);
+    assert.match(permissions, /closeSession: false/);
+    assert.match(permissions, /issueTicketX: false/);
+    assert.match(permissions, /issueTicketZ: false/);
+    assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(permissions, /operationalWritesAvailable: false/);
     assert.match(permissions, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
 

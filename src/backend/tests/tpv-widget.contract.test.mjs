@@ -11,14 +11,14 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     const page = await source("src/pages/TPV.yl5th.js");
     const controller = await source("src/public/tpvPageController.js");
     const bridge = await source("src/public/widgetBridge.js");
-    assert.match(page, /\\$w\\("#htmlTPV"\\)/);
-    assert.match(page, /initializeTpvPage\\(widget\\)/);
-    assert.match(controller, /export function initializeTpvPage\\(widget\\)/);
+    assert.match(page, /\$w\("#htmlTPV"\)/);
+    assert.match(page, /initializeTpvPage\(widget\)/);
+    assert.match(controller, /export function initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
     assert.match(controller, /allowOpaqueOrigin: false/);
-    assert.doesNotMatch(controller, /ALLOWED_ORIGIN\\s*=\\s*["']\\*["']/);
-    assert.match(bridge, /widgetElement\\.onMessage/);
-    assert.match(bridge, /widgetElement\\.postMessage/);
+    assert.doesNotMatch(controller, /ALLOWED_ORIGIN\s*=\s*["']\*["']/);
+    assert.match(bridge, /widgetElement\.onMessage/);
+    assert.match(bridge, /widgetElement\.postMessage/);
 });
 
 test("TPV controller imports operational WebMethods and no longer imports the separate test runtime", async () => {
@@ -43,7 +43,7 @@ test("TPV controller imports operational WebMethods and no longer imports the se
             assert.ok(controller.includes(name), "controller must consume " + name);
         }
     }
-    assert.doesNotMatch(controller, /tpvTestRuntime\\.web|registrarVentaPrueba|testRuntimeAvailable/);
+    assert.doesNotMatch(controller, /tpvTestRuntime\.web|registrarVentaPrueba|testRuntimeAvailable/);
 });
 
 test("TPV controller dispatches widget requests to canonical backend methods", async () => {
@@ -61,16 +61,16 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
         assert.ok(html.includes(type + "_RES") || html.includes('const responseType = type + "_RES"'),
             "HTML widget must receive " + type + "_RES");
     }
-    assert.match(controller, /case "CASHIER_STATE":[\\s\\S]*?return obtenerEstadoCaja\\(\\)/);
-    assert.match(controller, /case "SALE_VALIDATE":[\\s\\S]*?return validarVentaBorrador\\(\\{ lineas, pagos \\}\\)/);
-    assert.match(controller, /case "SALE_REGISTER":[\\s\\S]*?return registrarVenta\\(\\{/);
-    assert.match(controller, /case "AUDIT_LIST":[\\s\\S]*?return obtenerAuditoriaTPVLista\\(/);
-    assert.match(controller, /reply\\(message\\.type \\+ "_RES", result, message\\)/);
-    assert.match(controller, /idempotencyKey\\(message, payload\\)/);
-    assert.match(controller, /saleUuidV4Key\\(payload\\.idempotencyKey\\)/);
-    assert.doesNotMatch(controller, /tpvTestRuntime\\.web|registrarVentaPrueba/);
-    assert.match(html, /state\\.saleQuote\\.saleReady !== true/);
-    assert.match(controller, /!Number\\.isSafeInteger\\(minor\\)/);
+    assert.match(controller, /case "CASHIER_STATE":[\s\S]*?return obtenerEstadoCaja\(\)/);
+    assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
+    assert.match(controller, /case "SALE_REGISTER":[\s\S]*?return registrarVenta\(\{/);
+    assert.match(controller, /case "AUDIT_LIST":[\s\S]*?return obtenerAuditoriaTPVLista\(/);
+    assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
+    assert.match(controller, /idempotencyKey\(message, payload\)/);
+    assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
+    assert.doesNotMatch(controller, /tpvTestRuntime\.web|registrarVentaPrueba/);
+    assert.match(html, /state\.saleQuote\.saleReady !== true/);
+    assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
 test("TPV widget exposes read-only capabilities until operational writer release gates pass", async () => {
@@ -82,18 +82,18 @@ test("TPV widget exposes read-only capabilities until operational writer release
         assert.match(permissions, new RegExp(capability + ": false"));
     }
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
-    assert.match(html, /!state\\.operationalWritesAvailable/);
-    assert.match(html, /state\\.saleQuote\\.saleReady !== true/);
-    assert.match(html, /result\\?\\.persisted !== true/);
+    assert.match(html, /!state\.operationalWritesAvailable/);
+    assert.match(html, /state\.saleQuote\.saleReady !== true/);
+    assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
     assert.match(sales, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.match(sales, /saleReady: saleReadinessBlockers\\.length === 0/);
+    assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
     assert.doesNotMatch(html, /environment|previewOnly|syntheticOnly|realPaymentsEnabled|fiscalWritesEnabled|SANDBOX|PRODUCTION|LIVE/);
-    assert.match(html, /call\\("SALE_VALIDATE"/);
+    assert.match(html, /call\("SALE_VALIDATE"/);
     assert.match(html, /type: "MM_READY"/);
-    assert.match(html, /data\\.type !== "MM_CONTEXT"/);
-    assert.doesNotMatch(html, /fetch\\s*\\(|XMLHttpRequest|wix-data|suppressAuth/i);
+    assert.match(html, /data\.type !== "MM_CONTEXT"/);
+    assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|wix-data|suppressAuth/i);
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);
 });
 
