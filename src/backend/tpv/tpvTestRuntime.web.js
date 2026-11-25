@@ -12,6 +12,7 @@ import {
     appendTpvTestRunEvent,
     createTpvTestRun,
     getLatestTpvTestRun,
+    purgeExpiredTpvTestRuns,
     getTpvTestRun,
 } from "backend/tpv/tpvTestRuntimeRepository";
 import { hashTpvTestValue, summarizeTpvTestRun } from "backend/tpv/tpvTestRuntimeCore";
@@ -39,7 +40,7 @@ function saleIdFor(sessionId, idempotencyKey) {
 }
 
 function sessionResponse(run, actor, now = new Date()) {
-    if (!run || run.status !== "OPEN" || new Date(run.expiresAt || 0).getTime() <= now.getTime()) {
+    if (!run || run.status !== "OPEN" || new Date(run.payload.activeUntil || 0).getTime() <= now.getTime()) {
         return {
             sessionId: run?.payload?.sessionId || null,
             status: run?.status === "CLOSED" ? "CERRADA" : "SIN_SESION",
@@ -151,7 +152,7 @@ export const obtenerEstadoCajaPrueba = webMethod(
             const actor = await trustedAdmin(traceId);
             const latest = await getLatestTpvTestRun(actor.actorId);
             const open = latest?.status === "OPEN" &&
-                new Date(latest.expiresAt || 0).getTime() > Date.now()
+                new Date(latest.payload.activeUntil || 0).getTime() > Date.now()
                 ? latest
                 : null;
             return ok(sessionResponse(open || latest, actor), traceId);
@@ -167,6 +168,7 @@ export const abrirSesionCajaPrueba = webMethod(
         const traceId = makeTraceId("tpv-test-session-open");
         try {
             const actor = await trustedAdmin(traceId);
+            await purgeExpiredTpvTestRuns();
             const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey);
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const sessionId = "TPV-SESSION-" + createHash("sha256")
