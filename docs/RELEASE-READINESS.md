@@ -19,12 +19,12 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #523/#522 Bookings | Reconciliar CitasF2 con bookings nativos y opciones de pago, sin inferir estados | PENDIENTE |
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
 | #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS; writer, persistencia real y Wix Preview/Runtime pendientes |
-| P1.1 Apertura de sesión | BLOQUEADO | `tpvCaja.web.js:139-159`: `requireAdmin` y guard global fallan antes del insert; tests no ejecutados |
+| P1.1 Apertura de sesión | PARCIAL | `tpvCaja.web.js:148-189`: autorización ADMIN, guard physical y actualización CajaActual; falta evento de apertura en MovimientosCaja y prueba runtime |
 | P1.2 Cierre de sesión | PENDIENTE | No existe `cerrarSesionCaja`; el cierre está modelado dentro de `generarCierreZ` (`tpvCierres.web.js:131-253`) y queda bloqueado por guard |
-| P1.3 Movimiento de caja | BLOQUEADO | `tpvMovimientos.web.js:64-100`: validación/lock definidos; guard impide persistencia |
-| P1.4 Registro de venta | BLOQUEADO | `tpvVentas.web.js:143-234`: catálogo/impuestos backend; no writer ni Draft Order; `persisted=false` |
+| P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:431-455`: guard physical y hook físico habilitados con cadena hash; tests/runtime no ejecutados |
+| P1.4 Registro de venta | PARCIAL | `tpvVentas.web.js:143-430`: Catalog V3/impuestos backend, idempotencia, Draft Order opcional y insert TransaccionesTPV; colección CMS creada; escritura runtime no probada |
 | P1.5 Devolución | BLOQUEADO | `tpvDevoluciones.web.js:43-86`: valida DTO y devuelve `TPV_REFUND_PROVIDER_NOT_CONFIGURED`; no persiste; `procesarDevolucion` ausente |
-| P1.6 Cierre Z | BLOQUEADO | `tpvCierres.web.js:131-138,224-253`: writer definido, bloqueado antes de persistir por guard; sin ledger fiscal |
+| P1.6 Cierre Z | PARCIAL | `tpvCierres.web.js:66-253`: guard physical y persistencia física separados del ledger fiscal; Contract C mantiene cierres reales bloqueados; runtime no probado |
 | P1.7 Operador TPV | PENDIENTE | `security.js:163-187,538-545`; `tpvOperatorContext.js:1-20`; gates de autorización en código, prueba efectiva pendiente |
 
 ## Bloques de evidencia Runtime
