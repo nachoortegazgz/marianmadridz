@@ -120,12 +120,8 @@ export function assertInsertAllowed(collection, item) {
         recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
         recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        (item.recordSource === TPV_LEDGER_SOURCE ||
-            recordSource.startsWith("TPV_") ||
-            movementType.startsWith("TPV_") ||
-            isHistoricalTpvMarker)) {
-        throw _policyError("CMS_TPV_LEDGER_WRITES_DISABLED");
+    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && isHistoricalTpvMarker) {
+        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
