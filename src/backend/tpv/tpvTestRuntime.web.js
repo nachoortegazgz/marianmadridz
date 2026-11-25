@@ -231,43 +231,37 @@ export const abrirSesionCajaPrueba = webMethod(
                 }, traceId);
             }
 
-            const lock = await acquireTpvTestSessionLock({
+            await acquireTpvTestSessionLock({
                 actorId: actor.actorId,
                 sessionId,
                 traceId,
             });
-            try {
-                const existing = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
-                if (existing && existing.payload.sessionId !== sessionId) {
-                    await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
-                    throw new Error("TPV_TEST_SESSION_ALREADY_OPEN");
-                }
-                const created = await createTpvTestRun({
-                    sessionId,
-                    actorId: actor.actorId,
-                    operatorId: actor.operatorId,
-                    operatorDisplayName: actor.operatorDisplayName,
-                    operatorResourceId: actor.operatorResourceId,
-                    openingCashMinor,
-                    idempotencyKey,
-                    traceId,
-                });
-                if (created.item.status === "CLOSED") {
-                    await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
-                }
-                return ok({
-                    ...sessionResponse(created.item, actor),
-                    replayed: created.created !== true,
-                    testPersisted: true,
-                    persisted: false,
-                    realPayment: false,
-                    externalSideEffects: false,
-                }, traceId);
-            } catch (error) {
-                // Keep the actor lock on uncertain insert outcomes. A retry with the
-                // same idempotency key can recover; other sessions remain blocked.
-                throw error;
+            const existing = await getLatestTpvTestRun(actor.actorId, { openOnly: true });
+            if (existing && existing.payload.sessionId !== sessionId) {
+                await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
+                throw new Error("TPV_TEST_SESSION_ALREADY_OPEN");
             }
+            const created = await createTpvTestRun({
+                sessionId,
+                actorId: actor.actorId,
+                operatorId: actor.operatorId,
+                operatorDisplayName: actor.operatorDisplayName,
+                operatorResourceId: actor.operatorResourceId,
+                openingCashMinor,
+                idempotencyKey,
+                traceId,
+            });
+            if (created.item.status === "CLOSED") {
+                await releaseTpvTestSessionLock({ actorId: actor.actorId, sessionId, traceId });
+            }
+            return ok({
+                ...sessionResponse(created.item, actor),
+                replayed: created.created !== true,
+                testPersisted: true,
+                persisted: false,
+                realPayment: false,
+                externalSideEffects: false,
+            }, traceId);
         } catch (error) {
             return fail(error?.code || error?.message, traceId);
         }
