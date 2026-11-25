@@ -4,6 +4,12 @@
 **Release:** **NO-GO** para ventas reales, pagos, devoluciones o activación de writers fiscales.
 **Autoridad:** código integrado en `main` + CI ejecutada sobre el commit indicado + lectura Wix fechada. La fusión GitHub no acredita sincronización Git-Wix ni validación Runtime.
 
+## Decisión arquitectónica nueva — TPV de flujo único (2026-11-25)
+
+El propietario establece un único flujo de código para operaciones con cualquier dato. No se crearán ni conservarán ramas de negocio, runtimes, flags, enums o contratos que separen Sandbox/Live, sintético/real o Preview/Published. La decisión queda desarrollada en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y prevalece sobre directrices históricas incompatibles.
+
+**Avance documental realizado:** criterio incorporado al índice, canon del proyecto, README y README backend TPV. **Código aún no migrado:** tpvPageController.js continúa importando tpvTestRuntime.web.js; tpvRepository.js mantiene el guard de escritura y internalConfig.js conserva discriminadores históricos. No se han eliminado módulos ni se ha abierto el writer porque el builder aún no satisface el esquema físico obligatorio de MovimientosCaja. No se han ejecutado pruebas ni mutaciones Wix en esta intervención.
+
 ## 1. Estado ejecutivo
 
 - PR #611, `feat(tpv-authoritative-sale-preparation-v2-20261125`, fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
