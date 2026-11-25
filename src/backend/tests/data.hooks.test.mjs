@@ -252,6 +252,44 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
+test('HOOK-TPV-SALE-01 validates and protects TransaccionesTPV as append-only', () => {
+  const item = {
+    _id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    sessionId: 'TPV-SESSION-20261125',
+    orderId: null,
+    lineas: [{
+      tipoLinea: 'PRODUCTO',
+      itemId: 'e556070a-6d6a-402e-8422-11133033ea76',
+      cantidad: 1,
+      precioUnitario: 10,
+      subtotalNeto: 10,
+      impuestosImporte: 2.1,
+      totalLinea: 12.1,
+    }],
+    subtotalNeto: 10,
+    subtotalNetoMinor: 1000,
+    impuestosTotal: 2.1,
+    impuestosTotalMinor: 210,
+    totalVenta: 12.1,
+    totalVentaMinor: 1210,
+    medioPago: null,
+    paymentSelection: [],
+    operatorResourceId: 'e556070a-6d6a-402e-8422-11133033ea76',
+    operatorId: '0114748d-2806-3928-9b97-ff0d09853759',
+    createdAt: new Date('2026-11-25T10:00:00.000Z'),
+    status: 'PENDING_PAYMENT',
+    sourceType: 'SYNTHETIC',
+    requiresReconciliation: true,
+    draftOrderReason: 'DRAFT_ORDER_API_UNAVAILABLE',
+    requestFingerprint: 'a'.repeat(64),
+    currency: 'EUR',
+    traceId: 'tpv-sale-hook-test',
+  };
+  assert.doesNotThrow(() => H.TransaccionesTPV_beforeInsert(item));
+  assert.throws(() => H.TransaccionesTPV_beforeUpdate(item), /LEDGER_APPEND_ONLY/);
+  assert.throws(() => H.TransaccionesTPV_beforeRemove(item._id), /LEDGER_APPEND_ONLY/);
+});
+
 test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields', () => {
   const item = {
     _id: 'TPV-physical-hook-001',
