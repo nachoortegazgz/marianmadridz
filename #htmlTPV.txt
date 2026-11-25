@@ -600,7 +600,7 @@ body {
         if (timer) clearTimeout(timer);
       };
       const handler = (event) => {
-        if (event.source !== window.parent) return;
+        if (event.source !== window.parent || event.origin !== PARENT_ORIGIN) return;
         const data = event.data || {};
         if (data.type === responseType && (data.messageId === id || data.requestId === id)) {
           cleanup();

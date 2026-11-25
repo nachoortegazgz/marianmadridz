@@ -159,72 +159,9 @@ const ERROR_CATALOG = Object.freeze({
         retryable: false,
         requiresReconciliation: false,
     }),
-    TPV_TEST_SESSION_ALREADY_OPEN: Object.freeze({
-        message: "Ya existe una sesión de prueba abierta para este administrador.",
-        solution: "Continúa esa sesión o genera su cierre de prueba antes de abrir otra.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
     TPV_SESSION_NOT_OPEN: Object.freeze({
-        message: "No hay una sesión de prueba abierta.",
-        solution: "Abre una sesión de prueba antes de registrar operaciones.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_RUN_EXPIRED: Object.freeze({
-        message: "La sesión de prueba ha caducado.",
-        solution: "Abre una nueva sesión; el historial anterior se conserva durante el periodo de retención.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_SALE_CONTRACT_INVALID: Object.freeze({
-        message: "La venta no cumple el contrato de prueba V1.",
-        solution: "Utiliza una sola tasa impositiva verificable y un único medio de pago simulado por el total exacto.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_REFUND_SALE_NOT_FOUND: Object.freeze({
-        message: "La venta indicada no existe en esta sesión de prueba.",
-        solution: "Copia la referencia de una venta de prueba de la sesión actual.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_REFUND_EXCEEDS_ORIGINAL_PAYMENT: Object.freeze({
-        message: "El importe de la devolución supera el cobro simulado original.",
-        solution: "Comprueba la referencia y el medio de pago de la venta original.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_CASH_OUT_EXCEEDS_EXPECTED: Object.freeze({
-        message: "La salida de efectivo supera el saldo esperado de la sesión de prueba.",
-        solution: "Comprueba el importe y los movimientos de efectivo anteriores.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_RUNTIME_CONCURRENT_RETRY_REQUIRED: Object.freeze({
-        message: "La sesión está recibiendo operaciones simultáneas.",
-        solution: "Consulta el estado de la sesión antes de repetir la acción con la misma clave idempotente.",
-        recoverable: false,
-        retryable: false,
-        requiresReconciliation: true,
-    }),
-    TPV_TEST_EVENT_LIMIT_EXCEEDED: Object.freeze({
-        message: "La sesión de prueba ha alcanzado el límite de eventos.",
-        solution: "Genera el cierre de prueba y abre una sesión nueva.",
-        recoverable: true,
-        retryable: false,
-        requiresReconciliation: false,
-    }),
-    TPV_TEST_RUN_PAYLOAD_LIMIT_EXCEEDED: Object.freeze({
-        message: "El historial de prueba ha alcanzado el límite de almacenamiento.",
-        solution: "Genera el cierre de prueba y abre una sesión nueva.",
+        message: "No hay una sesión de caja abierta.",
+        solution: "Consulta el estado de caja y abre una sesión cuando el backend autorice la operación.",
         recoverable: true,
         retryable: false,
         requiresReconciliation: false,
@@ -383,7 +320,6 @@ async function dispatch(message) {
                     itemId,
                     ...(optionalString(line.varianteId, 160) ? { varianteId: optionalString(line.varianteId, 160) } : {}),
                     cantidad: numeric(line.cantidad, "QUANTITY", { allowZero: false }),
-                    descuentoImporte: numeric(line.descuentoImporte ?? 0, "DISCOUNT"),
                     profesionalId: optionalString(line.profesionalId, 160),
                 };
             });
@@ -450,16 +386,7 @@ async function dispatch(message) {
                 reason: optionalString(payload.reason, 500) || "",
             });
         case "REFUND":
-            return registrarDevolucion({
-                idempotencyKey: key,
-                sessionId: optionalString(payload.sessionId, 160) || "",
-                saleId: optionalString(payload.saleId, 160) || "",
-                reason: optionalString(payload.reason, 500) || "",
-                payments: Array.isArray(payload.payments) ? payload.payments.map((payment) => ({
-                    paymentMethod: String(payment.paymentMethod || "").trim().toUpperCase(),
-                    amount: numeric(payment.amount, "REFUND_AMOUNT", { allowZero: false }),
-                })) : [],
-            });
+            return registrarDevolucion();
         case "TICKET_X":
             return generarControlX({ sessionId: optionalString(payload.sessionId, 160) || "", idempotencyKey: key });
         case "TICKET_Z":
