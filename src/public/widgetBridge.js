@@ -10,8 +10,8 @@
  * HtmlComponent onMessage documenta event.data, pero no garantiza event.origin.
  * Seguridad: allowOpaqueOrigin es opt-in por flujo, false por defecto. El bypass
  * omite solo la comprobación de origin; nunca la allowlist de tipos, protocolo ni
- * autorización backend. TPV mantiene false; reservas conservan la excepción existente
- * hasta validar su handshake en Preview/Runtime.
+ * autorización backend. TPV habilita la excepción solo en su instancia del puente;
+ * los demás consumidores conservan su política explícita y el valor predeterminado es false.
  */
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
