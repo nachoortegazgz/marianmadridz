@@ -185,8 +185,12 @@ export function createWidgetBridge(widgetElement, options = {}) {
     function extractEvent(event) {
         const classified = classifyOrigin(event?.origin);
         if (classified.opaque) {
-            if (!originPolicy.allowOpaqueOrigin) { reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value }); return null; }
-            // Expected for opted-in sandboxed Wix HTML Components; keep all message validation.
+            // The Wix HTML Component sandbox reports the literal opaque origin "null".
+            // Do not extend this exception to blob:, data: or filesystem: URLs.
+            if (classified.value !== "null" || !originPolicy.allowOpaqueOrigin) {
+                reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value });
+                return null;
+            }
         } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
             reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value }); return null;
         }
