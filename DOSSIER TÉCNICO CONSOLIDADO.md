@@ -3,7 +3,9 @@
 
 > **Estado documental:** referencia histórica/técnica de apoyo. Revisión operativa vigente: 2026-11-25.
 >
-> **No seguir instrucciones obsoletas de este dossier** cuando contradigan el código de `main`, la documentación canónica o el estado Wix verificado. En particular:
+> **Solo la DOCUMENTACION OFICIAL DE WIX y WIX APPS INTEGRADAS y los OBJETIVOS y DIRECTRICES y NORMATIVA VIGENTE son SSOT en este proyecto.** Todo lo que obstaculice alcanzar los objetivos marcados puede ser editable excepto SSOT.
+> 
+> **Este dossier consolidado NO ES SSOT, ES REFERENCIA CONSULTIVA EDITABLE SI SE DETECTAN ERRORES O INCOHERENCIAS  en su contenido que afecten al desarrollo del proyecto.** En particular:
 > - No se deben publicar, copiar ni solicitar claves API en documentación. Los secretos se gestionan exclusivamente mediante Wix Secrets Manager/entorno seguro; nunca incluir valores en Git.
 > - Los registros TPV históricos sintéticos deben conservarse intactos. No se borran ni sobrescriben; cualquier corrección debe ser trazable y append-only.
 > - No generar nuevas ventas/pagos/devoluciones sintéticas ni habilitar operaciones reales para probar.
@@ -11,7 +13,7 @@
 > - La PR #611 está fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`. La preparación TPV integrada es read-only; `saleReady=false`, `paymentVerified=false`, `persisted=false`.
 > - El release continúa **NO-GO**. CI offline no acredita Preview/Runtime ni despliegue Wix.
 >
-> **Fuentes operativas obligatorias:** [PROJECT-CANON](docs/PROJECT-CANON.md), [STATE-NOW](docs/STATE-NOW.md), [RELEASE-READINESS](docs/RELEASE-READINESS.md) y [TPV backend README](src/backend/tpv/README.md). Si existe contradicción, prevalecen estas fuentes y el código probado del commit indicado.
+> **Fuentes operativas prioritarias actuales:** [PROJECT-CANON](docs/PROJECT-CANON.md), [STATE-NOW](docs/STATE-NOW.md), [RELEASE-READINESS](docs/RELEASE-READINESS.md) y [TPV backend README](src/backend/tpv/README.md). Si existe contradicción, prevalecen estas fuentes y el código probado del commit indicado.
 
 ---
 
@@ -974,19 +976,19 @@ Hasta completar:
 
 ---
 
-## 2. Documentación general de Wix
+## 2. Documentación oficial de Wix
 
 - Documentación oficial de Wix Developers:
-- https://dev.wix.com/docs/overview
-- https://dev.wix.com/docs/develop-websites
--  
-  [https://dev.wix.com/](https://dev.wix.com/docs/develop-websites-sdk)
+  https://dev.wix.com/docs/overview
+  https://dev.wix.com/docs/develop-websites
+  https://dev.wix.com/](https://dev.wix.com/docs/develop-websites-sdk
 
 - Referencia general de APIs Wix:  
   https://dev.wix.com/docs/api-reference
 
 - Referencia SDK API:  
   https://dev.wix.com/docs/api-reference/account-level/about-account-level-apis?apiView=SDK
+  
 - Documentación de Velo:  
   https://dev.wix.com/docs/velo
 
@@ -1007,6 +1009,62 @@ Hasta completar:
 
 - Seguridad de Wix Data:  
   https://dev.wix.com/docs/velo/apis/wix-data/data-api/permissions
+
+  
+### Prioridad 1: reservas y lógica F1 → F2
+- [Crear una reserva completa](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/end-to-end-booking-flow)
+- [Servicios de Wix Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/services)
+- [Disponibilidad y horarios](https://dev.wix.com/docs/api-reference/business-solutions/bookings/time-slots)
+- [Configuración de empleados y horarios](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/bookings-staff-setup)
+- [Políticas de reserva](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/booking-service-policy-setup)
+
+### Prioridad 2: código backend Velo
+- [Backend Velo](https://dev.wix.com/docs/velo/backend)
+- [Web Modules](https://dev.wix.com/docs/velo/backend/web-modules)
+- [Funciones backend](https://dev.wix.com/docs/velo/backend-code)
+- [Eventos backend](https://dev.wix.com/docs/velo/events)
+- [Wix Data desde backend](https://dev.wix.com/docs/velo/api-reference/wix-data)
+- [Gestión de secretos](https://dev.wix.com/docs/velo/api-reference/wix-secrets-backend)
+
+### Prioridad 3: colecciones personalizadas
+- [CMS Data Items CRUD](https://dev.wix.com/docs/api-reference/business-solutions/cms/skills/cms-data-items-crud)
+- [Gestión de esquemas CMS](https://dev.wix.com/docs/api-reference/business-solutions/cms/skills/cms-schema-management)
+- [Referencias entre colecciones](https://dev.wix.com/docs/api-reference/business-solutions/cms/data-items)
+- [Eventos y disparadores de datos](https://dev.wix.com/docs/velo/api-reference/wix-data)
+
+Especialmente relevante para `CitasF2`, `ServiciosCatalogo`, `RegistroIntegracion`, `ControlOperativo` y `MapaStaff`.
+
+### Prioridad 4: SDK moderno de Wix
+- [SDK de Wix](https://dev.wix.com/docs/sdk)
+- [Referencia del SDK](https://dev.wix.com/docs/sdk/api-reference)
+- [SDK de Bookings](https://dev.wix.com/docs/sdk/backend-modules/bookings)
+- [SDK de CMS / Wix Data](https://dev.wix.com/docs/sdk/backend-modules/data)
+- [SDK de eCommerce](https://dev.wix.com/docs/sdk/backend-modules/ecom)
+
+### Prioridad 5: pagos y checkout
+- [API eCommerce](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce)
+- [Carritos y checkout](https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/cart)
+- [Pagos](https://dev.wix.com/docs/api-reference/business-management/payments)
+- [Pruebas del checkout](https://dev.wix.com/docs/sdk/backend-modules/ecom)
+
+### Prioridad 6: contenido dinámico del sitio
+- [API de Wix Blog](https://dev.wix.com/docs/api-reference/business-solutions/blog)
+- [Entradas y borradores del blog](https://dev.wix.com/docs/api-reference/business-solutions/blog/draft-posts)
+- [Wix Stores Catalog V3](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3)
+- [Rich Content de Wix](https://dev.wix.com/docs/api-reference/assets/rich-content)
+
+### Orden recomendado de estudio
+
+1. **Backend Velo y Web Modules**
+2. **Bookings y disponibilidad**
+3. **Wix Data/CMS y colecciones**
+4. **SDK de Bookings y Wix Data**
+5. **eCommerce, checkout y pagos**
+6. **Blog, Stores y contenido dinámico**
+
+Para el desarrollo actual del sitio, el núcleo técnico es:
+
+**Velo Backend → Bookings → Wix Data → SDK → eCommerce/Checkout**.
 
 ---
 
