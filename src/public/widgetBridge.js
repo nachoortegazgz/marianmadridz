@@ -5,9 +5,9 @@
  * DOC: https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder
  *      https://developer.mozilla.org/en-US/docs/Web/API/URL
  *
- * CONTEXTO WIX: los iframes/widgets sandboxed pueden operar con origin opaco ("null").
- * Wix documenta este comportamiento en contextos sandboxed del Editor; su contrato
- * HtmlComponent onMessage documenta event.data, pero no garantiza event.origin.
+ * CONTEXTO WIX: el HtmlComponent se ejecuta en un iframe sandboxed. En Preview se
+ * ha observado origin opaco ("null"); la API onMessage documenta event.data, pero
+ * no define event.origin como propiedad autenticadora del evento.
  * Seguridad: el transporte Wix HtmlComponent entrega un evento wrapper cuya API
  * documenta event.data, no un MessageEvent con origen autenticable. En ese transporte
  * la identidad del emisor la delimita el propio widgetElement.onMessage; se omite
