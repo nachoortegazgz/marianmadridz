@@ -214,6 +214,33 @@ test("widget bridge rejects opaque origins when strict TPV origin policy is acti
     bridge.destroy();
 });
 
+test("TPV bridge accepts only the literal Wix opaque origin while preserving message allowlists", () => {
+    let receive;
+    let reported = [];
+    const widget = {
+        onMessage(handler) { receive = handler; return () => { receive = null; }; },
+        postMessage() {},
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        allowedOrigin: "https://tpv.example.test",
+        allowOpaqueOrigin: true,
+        onError: (error) => { reported.push(error.code); },
+    });
+
+    receive({ origin: "blob:https://tpv.example.test/id", data: { type: MESSAGE_TYPES.READY, version: 1 } });
+    assert.equal(bridge.handshakeCompleted, false);
+    assert.ok(reported.includes("WIDGET_ORIGIN_OPAQUE_REJECTED"));
+
+    receive({ origin: "null", data: { type: "UNLISTED_REQUEST", version: 1 } });
+    assert.equal(bridge.handshakeCompleted, false);
+    assert.ok(reported.includes("WIDGET_MESSAGE_TYPE_NOT_ALLOWED"));
+
+    receive({ origin: "null", data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-opaque-ready-123" } });
+    assert.equal(bridge.handshakeCompleted, true);
+    bridge.destroy();
+});
+
 test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are allowed", async () => {
     const sent = [];
     let receive;
