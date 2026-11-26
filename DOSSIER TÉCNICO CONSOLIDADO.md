@@ -1,9 +1,9 @@
 # DOSSIER TÉCNICO CONSOLIDADO
 ## Marian Madrid Peluquería y Estética
 
-> **Estado documental:** referencia histórica/técnica de apoyo. Revisión operativa vigente: 2026-11-25.
+> **Estado documental:** Documentación de referencia técnica de apoyo.
 >
-> **Solo la DOCUMENTACION OFICIAL DE WIX y WIX APPS INTEGRADAS y los OBJETIVOS y DIRECTRICES y NORMATIVA VIGENTE son SSOT en este proyecto.** Todo lo que obstaculice alcanzar los objetivos marcados puede ser editable excepto SSOT.
+> **Solo la DOCUMENTACION OFICIAL DE WIX y WIX APPS INTEGRADAS y los OBJETIVOS y DIRECTRICES y NORMATIVA VIGENTE son SSOT en este proyecto.** Todo lo que obstaculice alcanzar los objetivos finales marcados puede ser editable presentando una justificación profesional avalada por documentación oficial, excepto SSOT.
 > 
 > **Este dossier consolidado NO ES SSOT, ES REFERENCIA CONSULTIVA EDITABLE SI SE DETECTAN ERRORES O INCOHERENCIAS  en su contenido que afecten al desarrollo del proyecto.** En particular:
 > - No se deben publicar, copiar ni solicitar claves API en documentación. Los secretos se gestionan exclusivamente mediante Wix Secrets Manager/entorno seguro; nunca incluir valores en Git.
@@ -50,17 +50,6 @@ Debe utilizarse como referencia única para:
 - Evaluar riesgos.
 - Decidir si una funcionalidad está lista para Preview o producción.
 
-Una IA que trabaje sobre el proyecto debe distinguir siempre entre:
-
-- Hechos verificados.
-- Decisiones aprobadas.
-- Propuestas.
-- Hipótesis.
-- Información histórica.
-- Funcionalidad no implementada.
-
-No debe presentar una propuesta como funcionalidad existente.
-
 ---
 
 # 2. Rol esperado de la IA desarrolladora
@@ -74,6 +63,12 @@ La IA debe actuar como:
 - Analista de riesgos.
 - Planificador de despliegue controlado.
 
+- Una IA que trabaje sobre el proyecto debe CUMPLIR OBLIGATORIAMENTE:
+
+- CERO SUPONER. CERO INVENTAR. CERO FALSOS POSITIVOS NO VERIFICADOS. SIEMPRE OPINAR Y DECIDIR SIGUIENDO DIRECTRICES DE DOCUMENTACION OFICIAL DE WIX Y WIX APPS INTEGRADAS.
+- SIEMPRE TRABAJO EN EQUIPO, PREGUNTANDO DUDAS AL USUARIO EN CASO DE PELIGRO REAL DE MALENTENDIDO, AUTONOMA, INTELIGENTE, ANALIZA PRIMERO, ESTUDIA RECURSOS A SU ALCANCE Y EJECUTA, OBJETIVIDAD, REALISTA, HONESTA, PROFESIONAL, DIDACTICA, EFICAZ, MINIMO CONSUMO DE TOKENS INNECESARIOS EN ACCIONES Y VERIFICACIONES EXCESIVAS, REDUNDANTES E INNECESARIAS.
+
+
 Antes de modificar cualquier archivo debe:
 
 1. Leer el repositorio actual.
@@ -86,8 +81,7 @@ Antes de modificar cualquier archivo debe:
 8. Presentar un plan.
 9. Solicitar autorización para escribir cambios.
 
-No debe modificar, publicar, desplegar o activar capacidades sensibles sin autorización explícita.
-
+**CON AUTORIZACION PARA DECIDIR, EJECUTAR, CONFIGURAR Y EDITAR DE FORMA AUTONOMA, SIEMPRE USANDO COMO CRITERIO LA DOCUMENTACION DE WIX Y WIX APPS ACTUALIZADA. INFORMANDO Y DOCUMENTANDO TODAS LAS DECISIONES Y ACCIONES REALIZADAS DE FORMA AUTONOMA.**
 ---
 
 # 3. Objetivo general del proyecto
@@ -96,15 +90,13 @@ Construir un sistema Wix fiable, mantenible y funcional para un salón de peluqu
 
 El sistema debe cubrir:
 
-- Reservas simples.
-- Reservas duales.
+- WIX BOOKINGS V2 CUSTOMIZADO para gestión profesional de Reservas y Agenda de Peluquería.
+- NO MULTISERVICE - gap de tiempo entre fases de los servicios duales
+- Reservas Online simples
+- Reservas Online duales. (FASE1 + Tiempo de exposición + FASE2). El profesional queda libre en agenda durante tiempo de exposicion y es el mismo en FASE 1 y FASE2.
 - Venta online.
-- TPV.
-- Pagos.
-- Devoluciones.
-- Caja.
-- Arqueos.
-- Cierres.
+- TPV PERSONALIZADA en pagina principal con funciones conciliadas con procesos nativos de WIX para:
+- Pagos, Devoluciones, Caja, Arqueos, Apertura y Cierre, etc.
 - Productos.
 - Variantes.
 - Inventario.
@@ -115,7 +107,7 @@ El sistema debe cubrir:
 - Reconciliación.
 - Evidencia documental.
 
-“MVP” significa la versión mínima en complejidad, no una versión reducida en funcionalidad.
+“MVP” significa la versión mínima desplegable, con todas las funcionalidades y fiable. No una versión reducida en funcionalidad.
 
 No se puede eliminar una función exigida para simplificar el desarrollo.
 
