@@ -224,15 +224,11 @@ test("TPV bridge trusts the Wix HtmlComponent transport boundary while preservin
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
         allowedOrigin: "https://tpv.example.test",
-        allowOpaqueOrigin: true,
+        transport: "wix-html-component",
         onError: (error) => { reported.push(error.code); },
     });
 
-    receive({ origin: "https://unrelated.example.test", data: { type: MESSAGE_TYPES.READY, version: 1 } });
-    assert.equal(bridge.handshakeCompleted, false);
-    assert.ok(reported.includes("WIDGET_ORIGIN_OPAQUE_REJECTED"));
-
-    receive({ origin: "null", data: { type: "UNLISTED_REQUEST", version: 1 } });
+    receive({ origin: "https://unrelated.example.test", data: { type: "UNLISTED_REQUEST", version: 1 } });
     assert.equal(bridge.handshakeCompleted, false);
     assert.ok(reported.includes("WIDGET_MESSAGE_TYPE_NOT_ALLOWED"));
 
@@ -256,7 +252,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
         allowedOrigin: "https://tpv.example.test",
-        allowOpaqueOrigin: true,
+        transport: "wix-html-component",
         handshakeTimeoutMs: 1000,
         onContextReady: async () => ({
             status: "SUCCESS",
