@@ -739,9 +739,14 @@ function _matchesFilter(record, filter) {
     });
 }
 
-export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType = "physical" } = {}) {
+export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerType } = {}) {
 
-    assertTpvOperationalLedgerConfigured(ledgerType);
+    // Derive the ledger from the destination collection; callers cannot downgrade a fiscal guard.
+    const derivedLedgerType = collection === TPV_COLLECTIONS.AUDITORIA ? "audit" : "physical";
+    if (ledgerType !== undefined && ledgerType !== derivedLedgerType) {
+        throw new Error("TPV_LEDGER_TYPE_COLLECTION_MISMATCH");
+    }
+    assertTpvOperationalLedgerConfigured(derivedLedgerType);
     if (collection === TPV_COLLECTIONS.VENTAS) {
         throw new Error("TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV");
     }

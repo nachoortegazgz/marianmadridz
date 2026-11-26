@@ -224,9 +224,16 @@ async function appendSaleAudit(record, traceId) {
         payload: {
             sessionId: record.sessionId,
             orderId: record.orderId || null,
+            subtotalNeto: record.subtotalNeto,
+            impuestosTotal: record.impuestosTotal,
             totalVenta: record.totalVenta,
+            medioPago: record.medioPago || null,
+            lineCount: Array.isArray(record.lineas) ? record.lineas.length : 0,
+            currency: record.currency,
             status: record.status,
             sourceType: record.sourceType,
+            requiresReconciliation: record.requiresReconciliation === true,
+            requestFingerprint: record.requestFingerprint,
         },
     });
 }
@@ -259,7 +266,7 @@ export const registrarVenta = webMethod(
         const rawPagos = Array.isArray(input?.pagos) ? input.pagos : null;
         if (!input || typeof input !== "object" || Array.isArray(input) ||
             !sessionId || !UUID_V4.test(idempotencyKey) ||
-            lineas.length === 0 || lineas.length > 100 || pagos.length > 100 ||
+            lineas.length === 0 || lineas.length > 100 || (rawPagos && rawPagos.length > 100) ||
             lineas.some((line) =>
                 !line || typeof line !== "object" ||
                 !["PRODUCTO", "SERVICIO"].includes(String(line.tipoLinea || "").trim().toUpperCase()) ||
