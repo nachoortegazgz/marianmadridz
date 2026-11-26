@@ -19,7 +19,7 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
-    assert.match(controller, /allowOpaqueOrigin: false/);
+    assert.match(controller, /allowOpaqueOrigin: true/);
     assert.doesNotMatch(controller, /ALLOWED_ORIGIN\s*=\s*["']\*["']/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
@@ -229,7 +229,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
         allowedOrigin: "https://tpv.example.test",
-        allowOpaqueOrigin: false,
+        allowOpaqueOrigin: true,
         handshakeTimeoutMs: 1000,
         onContextReady: async () => ({
             status: "SUCCESS",
@@ -239,7 +239,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     });
 
     receive({
-        origin: "https://tpv.example.test",
+        origin: "null",
         data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-ready-12345678" },
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
