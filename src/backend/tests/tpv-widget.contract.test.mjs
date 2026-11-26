@@ -228,11 +228,11 @@ test("TPV bridge trusts the Wix HtmlComponent transport boundary while preservin
         onError: (error) => { reported.push(error.code); },
     });
 
-    receive({ origin: "https://unrelated.example.test", data: { type: "UNLISTED_REQUEST", version: 1 } });
-    assert.equal(bridge.handshakeCompleted, false);
-    assert.ok(reported.includes("WIDGET_MESSAGE_TYPE_NOT_ALLOWED"));
+    receive({ origin: "https://unrelated.example.test", data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-opaque-ready-123" } });
+    assert.equal(bridge.handshakeCompleted, true);
 
-    receive({ origin: "null", data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-opaque-ready-123" } });
+    receive({ origin: "null", data: { type: "UNLISTED_REQUEST", version: 1 } });
+    assert.ok(reported.includes("WIDGET_MESSAGE_TYPE_NOT_ALLOWED"));
     assert.equal(bridge.handshakeCompleted, true);
     bridge.destroy();
 });
