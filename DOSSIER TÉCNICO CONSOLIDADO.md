@@ -976,15 +976,17 @@ Hasta completar:
 
 ## 2. Documentación general de Wix
 
-- Documentación oficial de Wix Developers:  
-  https://dev.wix.com/
+- Documentación oficial de Wix Developers:
+- https://dev.wix.com/docs/overview
+- https://dev.wix.com/docs/develop-websites
+-  
+  [https://dev.wix.com/](https://dev.wix.com/docs/develop-websites-sdk)
 
 - Referencia general de APIs Wix:  
   https://dev.wix.com/docs/api-reference
 
-- Referencia REST API:  
-  https://dev.wix.com/docs/api-reference
-
+- Referencia SDK API:  
+  https://dev.wix.com/docs/api-reference/account-level/about-account-level-apis?apiView=SDK
 - Documentación de Velo:  
   https://dev.wix.com/docs/velo
 
