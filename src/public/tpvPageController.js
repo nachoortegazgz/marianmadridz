@@ -433,7 +433,7 @@ export function initializeTpvPage(widget) {
 
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT, ...REQUEST_TYPES],
-        allowOpaqueOrigin: true, // Wix HTML Component sandbox may report origin="null"; scope exception to this TPV bridge only.
+        transport: "wix-html-component", // Wix onMessage is the trust boundary; its documented event contract exposes event.data, not event.origin.
         handshakeTimeoutMs: 65000,
         onContextReady: async () => {
             const [configResult, permissionsResult] = await Promise.all([
