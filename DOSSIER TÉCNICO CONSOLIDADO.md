@@ -9,9 +9,12 @@
 > - No se deben publicar, copiar ni solicitar claves API en documentación. Los secretos se gestionan exclusivamente mediante Wix Secrets Manager/entorno seguro; nunca incluir valores en Git.
 > - Los registros TPV históricos sintéticos deben conservarse intactos. No se borran ni sobrescriben; cualquier corrección debe ser trazable y append-only.
 > - No generar nuevas ventas/pagos/devoluciones sintéticas ni habilitar operaciones reales para probar.
-> - Wix CMS es la SSOT transaccional; SharePoint es solo repositorio documental de evidencia.
-> - La PR #611 está fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`. La preparación TPV integrada es read-only; `saleReady=false`, `paymentVerified=false`, `persisted=false`.
-> - El release continúa **NO-GO**. CI offline no acredita Preview/Runtime ni despliegue Wix.
+> - Wix CMS es SSOT únicamente para entidades personalizadas; las aplicaciones Wix gobiernan sus respectivos dominios nativos.
+> - Los hechos históricos y registros append-only de CMS, TPV, auditoría, informes y exportaciones no se editan ni eliminan; las rectificaciones son nuevos registros enlazados.
+> - Estado confirmado comunicado por el propietario tras la última acción: sitio **NO PUBLICADO**. No se presenta como lectura live independiente.
+> - Estado del release TPV: **NO-GO PARA PRODUCCIÓN**. La publicación permanece bloqueada salvo autorización expresa y superación de gates.
+> - `saleReady`, `paymentVerified` y `persisted` describen exclusivamente una ejecución TPV concreta, correlacionada por `traceId`/`correlationId`; no describen el sitio o proyecto completos.
+> - La preparación TPV read-only descrita en PR #611 y sus flags pertenecen a esa ejecución concreta.
 >
 > **Fuentes operativas prioritarias actuales:** [PROJECT-CANON](docs/PROJECT-CANON.md), [STATE-NOW](docs/STATE-NOW.md), [RELEASE-READINESS](docs/RELEASE-READINESS.md) y [TPV backend README](src/backend/tpv/README.md). Si existe contradicción, prevalecen estas fuentes y el código probado del commit indicado.
 
@@ -31,7 +34,9 @@
 - **Región:** España
 - **Moneda:** EUR
 - **Zona horaria:** `Europe/Madrid`
-- **Estado:** Draft / no publicar sin autorización
+- **Estado confirmado del sitio:** NO PUBLICADO (confirmación comunicada por el propietario tras la última acción; pendiente de nuevo read-back independiente de Wix).
+- **Estado del release TPV:** NO-GO PARA PRODUCCIÓN.
+- **Regla de release:** la publicación permanece bloqueada salvo autorización expresa y gates completos. Esta regla no sustituye al estado actual del sitio.
 
 ---
 
@@ -107,27 +112,19 @@ El sistema debe cubrir:
 - Reconciliación.
 - Evidencia documental.
 
-“MVP” significa la versión mínima desplegable, con todas las funcionalidades y fiable. No una versión reducida en funcionalidad.
-
-No se puede eliminar una función exigida para simplificar el desarrollo.
+“MVP” significa la primera versión con alcance de negocio explícitamente aprobado, completa respecto de ese alcance y verificada mediante pruebas y evidencias proporcionales al riesgo. No significa implementar todas las funcionalidades imaginables ni reducir unilateralmente requisitos aprobados. Cualquier exclusión o aplazamiento requiere decisión trazable del propietario.
 
 ---
 
 # 4. Aplicaciones Wix instaladas
 
-En el sitio están confirmadas:
+### Inventario de apps y fecha de verificación
 
-- Wix Bookings.
-- Wix Stores, Catalog V3.
-- Wix Payments.
-- Wix Invoices, versión V1.
-- Wix Forms & Payments.
-- Wix Gift Cards.
-- Wix Members Area.
-- Wix Blog.
-- Promote SEO.
+**Read-back de contexto Wix documentado el 2026-11-25:** Wix Bookings, Wix Stores Catalog V3, Wix Payments e Wix Invoices V1 aparecen instalados en el sitio. Fuente: lectura de contexto Wix registrada en README.md; no equivale a verificar que cada capacidad, permiso, método de pago o writer esté operativo.
 
-Las versiones son específicas del sitio y no deben sustituirse por versiones de otras instalaciones.
+**Declaradas en documentación anterior, sin read-back individual vigente en este corte:** Wix Forms & Payments, Wix Gift Cards, Wix Members Area, Wix Blog y Promote SEO. No deben tratarse como instaladas/activas hasta comprobarlas.
+
+Cada inventario futuro debe registrar fecha/hora, fuente (GetSiteContext / App Management / Dashboard), app, versión/API, estado observado y alcance de la comprobación. La instalación no demuestra configuración, permisos, activación comercial ni disponibilidad de una función.
 
 ## Regla de compatibilidad
 
@@ -140,7 +137,7 @@ Antes de usar una API:
 5. Confirmar permisos y contexto.
 6. Probar primero en lectura o Preview.
 
-No utilizar APIs de Catalog V1, Invoices V2 u otras versiones incompatibles con este sitio.
+El código existente usa Velo como vía principal. REST y Wix JavaScript SDK solo se incorporan cuando el método, versión, autenticación, permisos y compatibilidad con el runtime/sitio estén verificados en documentación oficial y en el proyecto. No se presume equivalencia entre Velo, REST y SDK. No migrar a Catalog V1 ni aplicar contratos de Invoices V2 cuando el sitio/código requiera Catalog V3 e Invoices V1.
 
 ---
 
@@ -212,9 +209,9 @@ Las aplicaciones Wix gobiernan sus dominios nativos:
 
 - Bookings: servicios, disponibilidad, reservas, profesionales y recursos.
 - Stores Catalog V3: productos, variantes, precios e inventario.
-- eCommerce: pedidos y transacciones.
-- Payments: cobros y reembolsos.
-- Invoices V1: facturas nativas.
+- eCommerce: pedidos y su ciclo de vida; las transacciones asociadas se consultan/registran mediante las APIs eCommerce correspondientes.
+- Payments / eCommerce Order Billing: ejecución de cobros, capturas, anulaciones y reembolsos según proveedor y método soportado. Un registro de pago en Order Transactions no mueve dinero por sí solo.
+- Invoices V1: documentos de factura dentro de las capacidades que la API exponga y que estén disponibles para este sitio; su uso no acredita por sí mismo cumplimiento fiscal español, Veri*Factu ni validez legal/fiscal.
 - Members y Contacts: identidades y contactos cuando corresponda.
 
 ## 6.3. SharePoint
@@ -518,30 +515,13 @@ El CMS puede conservar:
 - Incidencias.
 - Estados de reconciliación.
 
-El sistema debe soportar:
-
-- Reserva simple.
-- Reserva dual.
-- Dos fases.
-- Dos profesionales.
-- Dos recursos.
-- Reprogramación.
-- Cancelación.
-- Pago vinculado.
-
-No duplicar en CMS la reserva como sustituto de Bookings.
+El sistema debe soportar reserva simple, reprogramación, cancelación y pagos vinculados mediante Bookings. El caso F1 → intervalo de exposición → F2 no se considera una reserva multiservicio nativa por defecto: es una orquestación propia de backend que coordina reservas nativas independientes, correlación/pair token, locks, idempotencia, liberación del profesional durante el intervalo y reconciliación. Cada booking conserva Bookings como autoridad de su disponibilidad, estado y ciclo de vida. No presentar el flujo dual como capacidad nativa multiservicio salvo verificación documental específica.
 
 ---
 
 # 13. Inventario y catálogo
 
-Stores Catalog V3 gobierna:
-
-- Productos.
-- Variantes.
-- Precios.
-- SKUs.
-- Inventario.
+Stores Catalog V3 gobierna productos, variantes, información comercial y precios del catálogo. La API Inventory Items V3 gobierna cantidades/disponibilidad por variante y ubicación. El campo agregado de inventario de un producto no sustituye la consulta del item de inventario por variante/ubicación.
 
 El backend debe:
 
@@ -605,14 +585,7 @@ El cierre Z debe ser inmutable.
 
 # 16. Fiscalidad y normativa
 
-El sistema debe separar:
-
-- Factura nativa de Wix.
-- Registro fiscal personalizado.
-- Ledger contable.
-- Documento interno.
-- Evidencia documental.
-- Informe derivado.
+El sistema debe separar factura nativa Wix, registro fiscal propio, ledger contable, documento interno, evidencia documental e informe derivado. Wix Invoices V1 solo se utiliza para las funciones efectivamente soportadas y disponibles en el sitio. La conformidad con normativa española (incluidos requisitos de facturación y Veri*Factu cuando resulten aplicables) exige análisis legal/fiscal y validación técnica independiente; no se presume por emitir una factura en Wix.
 
 Durante QA permanecen bloqueados, salvo autorización y gates aprobados:
 
@@ -628,45 +601,19 @@ No marcar una factura o registro fiscal como emitido sin confirmación real.
 
 # 17. Datos sintéticos de QA
 
-Los datos sintéticos deben:
-
-- Estar claramente identificados.
-- Permanecer aislados.
-- No afectar ledgers productivos.
-- No entrar en informes oficiales.
-- No generar efectos fiscales.
-- No alterar permisos.
-- No usar repositorios paralelos.
-- No simular confirmaciones reales.
-
-Si se necesita un marcador, utilizarlo exclusivamente en `concepto`:
-
-```text
-[SINTÉTICO]
-```
-
-No utilizar estados como:
-
-```text
-CONFIRMADA_SINTETICA
-SIMULATED
-NO-GATEWAY
-```
-
-como sustitutos de una confirmación real.
+Los datos sintéticos de QA deben identificarse mediante metadatos de QA trazables (por ejemplo, `qaRunId`, `recordNature`, `createdByTest`, `environmentEvidence` y timestamp), usando el mismo contrato y código que el flujo normal cuando así esté aprobado. No se deben inventar estados de negocio para marcar simulaciones ni representar como confirmados pagos, reservas, persistencias o efectos fiscales que no hayan ocurrido realmente. Los simuladores de pasarela solo pueden devolver respuestas de prueba controladas y no pueden generar transacciones reales ni confirmar pagos en el sistema nativo. Los metadatos no sustituyen la evidencia de aislamiento/destino. No usar `CONFIRMADA_SINTETICA`, `SIMULATED` ni `NO-GATEWAY` como estados de pago/negocio. Un test simulado nunca puede poner `paymentVerified=true`.
 
 ---
 
 # 18. QA y gates
 
-Durante QA deben permanecer bloqueados:
+Separar tres niveles que no son intercambiables:
 
-- Pagos reales.
-- Writers fiscales.
-- Veri*Factu.
-- Automatizaciones externas.
-- Publicación.
-- Despliegue productivo.
+1. **QA offline:** tests unitarios/contratos/lint/CI sobre el código. Acreditan propiedades del código cubiertas por esos tests; no acreditan Wix Preview, Runtime, configuración del sitio ni despliegue.
+2. **Wix Preview seguro:** validación en Preview después de comprobar el destino real de CMS y apps, permisos, automatizaciones, notificaciones y ausencia de efectos económicos/fiscales externos. Preview no implica aislamiento de datos por sí solo.
+3. **Producción:** pruebas y operaciones reales solo tras gates, autorización expresa y controles legales/operativos. No usar cargos, reembolsos, emisión fiscal ni publicación como método de QA.
+
+En QA deben permanecer bloqueados pagos reales, writers fiscales, Veri*Factu, automatizaciones con efectos externos y publicación productiva.
 
 Gates mínimos:
 
@@ -684,17 +631,20 @@ Gates mínimos:
 Cada gate debe registrar:
 
 - Responsable.
-- Fecha.
-- Evidencia.
-- Resultado.
-- Bloqueos.
-- Decisión.
+- Fecha/hora y entorno.
+- Commit/versión y `qaRunId`.
+- Evidencia reproducible y destino de datos verificado.
+- Resultado PASS/FAIL/BLOCKED.
+- Bloqueos y riesgos.
+- Decisión y autorizador.
+
+Los flags `saleReady`, `paymentVerified` y `persisted` son resultados de una ejecución TPV concreta, correlacionados con `traceId`/`correlationId` y el snapshot de operación. No son indicadores globales del sitio, release o proyecto. `saleReady` expresa preparación comercial validada; `paymentVerified` exige confirmación real del proveedor/nativo aplicable; `persisted` exige confirmación de persistencia en los sistemas de autoridad correspondientes. Una simulación no puede convertir un pago en verificado.
 
 ---
 
 # 19. Informes y conservación histórica
 
-Los informes históricos no se eliminan por ser antiguos.
+Los informes históricos, registros append-only y hechos de auditoría no se eliminan ni sobrescriben por antigüedad. Esta regla se aplica a CMS, ledgers fiscales/contables/laborales, informes, exportaciones, auditoría y evidencia documental. Las rectificaciones se incorporan como nuevos registros/versiones enlazados al original, conservando fecha, actor, motivo y trazabilidad cuando el esquema lo permita.
 
 Debe conservarse:
 
@@ -787,7 +737,7 @@ Toda operación relevante debe registrar:
 - Errores.
 - Rectificaciones.
 
-La auditoría también debe registrar bloqueos y fallos de reconciliación.
+La auditoría también debe registrar bloqueos y fallos de reconciliación. Está prohibido almacenar tokens, API keys, secretos, credenciales, cookies/sesiones, datos completos de tarjetas o CVV. Registrar únicamente identificadores tokenizados/mascarados y metadatos mínimos necesarios. Aplicar minimización, control de acceso y retención conforme a normativa.
 
 ---
 
@@ -858,9 +808,7 @@ Los tests deben cubrir:
 - Seguridad del bridge.
 - Aislamiento QA.
 
-Los tests offline no demuestran por sí solos compatibilidad real con Wix.
-
-Debe existir validación adicional en Wix Preview.
+Los tests offline demuestran únicamente compatibilidad del código dentro del alcance ejecutado. No acreditan Wix Preview, Runtime, integración real, permisos efectivos, aislamiento ni publicación. Preview y producción requieren evidencias separadas y registradas.
 
 ---
 
@@ -897,13 +845,15 @@ El MVP será aceptable cuando:
 
 ---
 
-# 26. Estado de salida
-
-El estado inicial del proyecto debe considerarse:
+# 26. Estado del sitio y del release
 
 ```text
-NO-GO PARA PRODUCCIÓN
+Estado confirmado del sitio: NO PUBLICADO.
+Estado del release TPV: NO-GO PARA PRODUCCIÓN.
+La publicación permanece bloqueada salvo autorización expresa.
 ```
+
+El estado NO PUBLICADO describe el sitio; NO-GO describe la decisión de release TPV. No son estados equivalentes ni deben mezclarse. La confirmación de no publicación procede de la última confirmación comunicada por el propietario; se requiere read-back Wix fechado para elevarla a verificación independiente.
 
 Hasta completar:
 
@@ -973,7 +923,7 @@ Hasta completar:
 - Documentación oficial de Wix Developers:
   https://dev.wix.com/docs/overview
   https://dev.wix.com/docs/develop-websites
-  https://dev.wix.com/](https://dev.wix.com/docs/develop-websites-sdk
+  https://dev.wix.com/docs/develop-websites
 
 - Referencia general de APIs Wix:  
   https://dev.wix.com/docs/api-reference
@@ -1005,8 +955,8 @@ Hasta completar:
   
 ### Prioridad 1: reservas y lógica F1 → F2
 - [Crear una reserva completa](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/end-to-end-booking-flow)
-- [Servicios de Wix Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/services)
-- [Disponibilidad y horarios](https://dev.wix.com/docs/api-reference/business-solutions/bookings/time-slots)
+- [Servicios de Wix Bookings](https://dev.wix.com/docs/api-reference/business-solutions/bookings/services/services-v2/introduction)
+- [Disponibilidad y horarios](https://dev.wix.com/docs/api-reference/business-solutions/bookings/time-slots/time-slots-v2/introduction)
 - [Configuración de empleados y horarios](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/bookings-staff-setup)
 - [Políticas de reserva](https://dev.wix.com/docs/api-reference/business-solutions/bookings/skills/booking-service-policy-setup)
 
@@ -1239,7 +1189,7 @@ La documentación de Veri*Factu, normativa fiscal española y obligaciones legal
   https://dev.wix.com/docs/build-apps/develop-your-app/build-apps-overview/rate-limits
 
 - HTML Components y comunicación:  
-  https://dev.wix.com/docs/velo/develop-websites/articles/coding-with-velo/working-with-components/communicating-with-an-html-component
+  https://dev.wix.com/docs/velo/api-reference/%24w/html-component/on-message
 
 ---
 
@@ -1317,20 +1267,22 @@ Reglas de uso:
 
 ---
 
-## 14. Regla de precedencia documental
+## 14. Matriz única de autoridad y precedencia
 
-Cuando existan contradicciones, aplicar este orden:
+| Dominio | Autoridad primaria | Papel de Wix CMS / código propio |
+|---|---|---|
+| Reservas, servicios, disponibilidad, staff/recursos | Wix Bookings | Correlación, auditoría y proyección; F1→intervalo→F2 se orquesta en backend |
+| Productos, variantes y catálogo | Wix Stores Catalog V3 | Metadatos de negocio que no existan en catálogo nativo |
+| Stock por variante/ubicación | Wix Stores Inventory Items V3 | Locks/correlación/reconciliación; no duplicar el stock nativo |
+| Pedidos y ciclo post-compra | Wix eCommerce Orders | Correlación y ledger interno complementario |
+| Cobros, capturas, anulaciones y reembolsos | Wix Payments / eCommerce Order Billing según operación y proveedor | El registro de transacción no equivale por sí solo a movimiento de dinero |
+| Facturas nativas | Wix Invoices V1 dentro de sus capacidades | Registro fiscal/legal propio solo tras validación independiente |
+| Entidades personalizadas del negocio | Wix CMS | SSOT solo de esas entidades, no de dominios nativos |
+| Identidades y contactos | Wix Members / CRM Contacts según entidad | Referencias y datos complementarios mínimos |
+| Evidencia documental | SharePoint | Repositorio; nunca autoridad transaccional |
+| Auditoría/ledgers personalizados | CMS/almacenamiento canónico definido por dominio | Append-only, inmutables y rectificables mediante nuevos registros |
 
-1. Estado actual del sitio y sus aplicaciones instaladas.
-2. Código existente en el commit revisado.
-3. Tests ejecutados sobre ese commit.
-4. Documentación oficial de Wix de la versión instalada.
-5. Decisiones aprobadas en este chat.
-6. Dossier técnico consolidado.
-7. Documentación histórica.
-8. Propuestas o comentarios no aprobados.
-
-La IA debe marcar cualquier contradicción en lugar de elegir silenciosamente una versión.
+Precedencia de decisión: (1) normativa aplicable y documentación oficial vigente para contratos técnicos; (2) decisiones expresas y más recientes del propietario para objetivos, alcance y autorizaciones; (3) estado live verificado de Wix y apps; (4) código y configuración del commit inspeccionado; (5) tests ejecutados sobre ese commit; (6) dossier y demás documentación derivada; (7) documentación histórica/propuestas. La precedencia no convierte el código o un test en autoridad de negocio: son evidencia del estado implementado. Toda contradicción debe registrarse y resolverse explícitamente.
 
 ---
 
@@ -1346,3 +1298,26 @@ La IA debe marcar cualquier contradicción en lugar de elegir silenciosamente un
 > Preservar ledgers e informes históricos.  
 > Aislar datos sintéticos.  
 > No modificar ni publicar sin plan, autorización y evidencia suficiente.
+
+
+## Anexo operativo — permisos por rol y protección de auditoría (corte 2026-11-26)
+
+### Roles Wix / aplicación
+
+Los permisos efectivos no se deducen del nombre visible del rol ni de descripciones genéricas. Deben verificarse por aplicación, recurso, método y rol mediante la configuración live, security.js, internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID y las APIs de Bookings/Members que correspondan.
+
+| Rol de negocio | Permitido | Denegado | Estado de evidencia |
+|---|---|---|---|
+| ADMIN | Pendiente de matriz efectiva verificada | Pendiente | No completar por inferencia |
+| GESTION | Pendiente de matriz efectiva verificada | Pendiente | No completar por inferencia |
+| ESTILISTA ROL | Solo permisos explícitos que se documenten tras inspección de cada WebMethod y recurso | Todo permiso no incluido expresamente en la allowlist; no conceder contabilidad, configuración global ni gestión de usuarios por una descripción genérica | Matriz efectiva pendiente de extracción y prueba negativa |
+
+La frase “ESTILISTA: todo excepto contabilidad y gestión” queda retirada por ser demasiado amplia y ambigua. Hasta que se publique una allowlist verificable, aplicar denegación por defecto y no ampliar permisos. La matriz final debe enumerar operaciones concretas (lectura/escritura, recurso, método y condiciones) y pruebas positivas/negativas por rol.
+
+### Protección de registros y auditoría
+
+No incluir en auditoría, logs, exportaciones, issues ni dossiers: tokens, API keys, secretos, credenciales, cookies, sesiones, números completos de tarjeta, CVV ni payloads sensibles completos. Usar referencias opacas, enmascaramiento y minimización. Esta prohibición se aplica también a logs de error y evidencias de QA.
+
+### Estado de verificación de URLs oficiales
+
+Se han contrastado en documentación oficial, a fecha 2026-11-26, los enlaces de Bookings Services V2, Bookings Reader V2, Time Slots V2, Catalog V3 Inventory Items, conceptos de inventario Catalog V3, eCommerce Orders, Order Transactions, Order Billing/Refund Payments y HtmlComponent.onMessage. Los demás enlaces de esta sección son rutas oficiales de referencia general, pero deben revalidarse al consultar cada método concreto; no se consideran verificados por el mero hecho de estar listados. Se ha eliminado la URL malformada del antiguo enlace a develop-websites-sdk.
