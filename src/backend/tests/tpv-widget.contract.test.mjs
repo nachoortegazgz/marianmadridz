@@ -19,7 +19,8 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
-    assert.match(controller, /allowOpaqueOrigin: false/);
+    assert.match(controller, /transport: "wix-html-component"/);
+    assert.doesNotMatch(controller, /allowOpaqueOrigin: true/);
     assert.doesNotMatch(controller, /ALLOWED_ORIGIN\s*=\s*["']\*["']/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
@@ -214,6 +215,29 @@ test("widget bridge rejects opaque origins when strict TPV origin policy is acti
     bridge.destroy();
 });
 
+test("TPV bridge trusts the Wix HtmlComponent transport boundary while preserving message allowlists", () => {
+    let receive;
+    let reported = [];
+    const widget = {
+        onMessage(handler) { receive = handler; return () => { receive = null; }; },
+        postMessage() {},
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        allowedOrigin: "https://tpv.example.test",
+        transport: "wix-html-component",
+        onError: (error) => { reported.push(error.code); },
+    });
+
+    receive({ origin: "https://unrelated.example.test", data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-opaque-ready-123" } });
+    assert.equal(bridge.handshakeCompleted, true);
+
+    receive({ origin: "null", data: { type: "UNLISTED_REQUEST", version: 1 } });
+    assert.ok(reported.includes("WIDGET_MESSAGE_TYPE_NOT_ALLOWED"));
+    assert.equal(bridge.handshakeCompleted, true);
+    bridge.destroy();
+});
+
 test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are allowed", async () => {
     const sent = [];
     let receive;
@@ -229,7 +253,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     const bridge = createWidgetBridge(widget, {
         allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
         allowedOrigin: "https://tpv.example.test",
-        allowOpaqueOrigin: false,
+        transport: "wix-html-component",
         handshakeTimeoutMs: 1000,
         onContextReady: async () => ({
             status: "SUCCESS",
@@ -239,7 +263,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     });
 
     receive({
-        origin: "https://tpv.example.test",
+        origin: "null",
         data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-ready-12345678" },
     });
     await new Promise((resolve) => setTimeout(resolve, 0));

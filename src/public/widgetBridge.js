@@ -5,13 +5,14 @@
  * DOC: https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder
  *      https://developer.mozilla.org/en-US/docs/Web/API/URL
  *
- * CONTEXTO WIX: los iframes/widgets sandboxed pueden operar con origin opaco ("null").
- * Wix documenta este comportamiento en contextos sandboxed del Editor; su contrato
- * HtmlComponent onMessage documenta event.data, pero no garantiza event.origin.
- * Seguridad: allowOpaqueOrigin es opt-in por flujo, false por defecto. El bypass
- * omite solo la comprobación de origin; nunca la allowlist de tipos, protocolo ni
- * autorización backend. TPV mantiene false; reservas conservan la excepción existente
- * hasta validar su handshake en Preview/Runtime.
+ * CONTEXTO WIX: el HtmlComponent se ejecuta en un iframe sandboxed. En Preview se
+ * ha observado origin opaco ("null"); la API onMessage documenta event.data, pero
+ * no define event.origin como propiedad autenticadora del evento.
+ * Seguridad: el transporte Wix HtmlComponent entrega un evento wrapper cuya API
+ * documenta event.data, no un MessageEvent con origen autenticable. En ese transporte
+ * la identidad del emisor la delimita el propio widgetElement.onMessage; se omite
+ * event.origin y se mantienen allowlist, protocolo, límites y autorización backend.
+ * El modo estricto por origen sigue siendo el predeterminado para otros transportes.
  */
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
@@ -153,6 +154,7 @@ export function createWidgetBridge(widgetElement, options = {}) {
     const settings = safeObject(options);
     instanceCounter += 1;
     const bridgeId = `wbridge-${instanceCounter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const wixHtmlComponentTransport = settings.transport === "wix-html-component";
     const originPolicy = resolveOriginPolicy(settings);
     const allowedTypes = new Set(
         Array.isArray(settings.allowedTypes) && settings.allowedTypes.length > 0
@@ -183,12 +185,17 @@ export function createWidgetBridge(widgetElement, options = {}) {
     function clearAllTimers() { timers.forEach((t) => clearTimeout(t)); timers.clear(); handshakeTimer = null; }
 
     function extractEvent(event) {
-        const classified = classifyOrigin(event?.origin);
-        if (classified.opaque) {
-            if (!originPolicy.allowOpaqueOrigin) { reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value }); return null; }
-            // Expected for opted-in sandboxed Wix HTML Components; keep all message validation.
-        } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
-            reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value }); return null;
+        if (!wixHtmlComponentTransport) {
+            const classified = classifyOrigin(event?.origin);
+            if (classified.opaque) {
+                if (!originPolicy.allowOpaqueOrigin) {
+                    reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value });
+                    return null;
+                }
+            } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
+                reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value });
+                return null;
+            }
         }
         const message = safeObject(event?.data);
         if (estimateBytes(message) > MAX_MESSAGE_BYTES) { reportError(WIDGET_ERROR_CODE.MESSAGE_TOO_LARGE); return null; }
