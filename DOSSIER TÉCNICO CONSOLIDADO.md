@@ -601,45 +601,19 @@ No marcar una factura o registro fiscal como emitido sin confirmación real.
 
 # 17. Datos sintéticos de QA
 
-Los datos sintéticos deben:
-
-- Estar claramente identificados.
-- Permanecer aislados.
-- No afectar ledgers productivos.
-- No entrar en informes oficiales.
-- No generar efectos fiscales.
-- No alterar permisos.
-- No usar repositorios paralelos.
-- No simular confirmaciones reales.
-
-Si se necesita un marcador, utilizarlo exclusivamente en `concepto`:
-
-```text
-[SINTÉTICO]
-```
-
-No utilizar estados como:
-
-```text
-CONFIRMADA_SINTETICA
-SIMULATED
-NO-GATEWAY
-```
-
-como sustitutos de una confirmación real.
+Los datos sintéticos de QA deben identificarse mediante metadatos de QA trazables (por ejemplo, `qaRunId`, `recordNature`, `createdByTest`, `environmentEvidence` y timestamp), usando el mismo contrato y código que el flujo normal cuando así esté aprobado. No se deben inventar estados de negocio para marcar simulaciones ni representar como confirmados pagos, reservas, persistencias o efectos fiscales que no hayan ocurrido realmente. Los simuladores de pasarela solo pueden devolver respuestas de prueba controladas y no pueden generar transacciones reales ni confirmar pagos en el sistema nativo. Los metadatos no sustituyen la evidencia de aislamiento/destino. No usar `CONFIRMADA_SINTETICA`, `SIMULATED` ni `NO-GATEWAY` como estados de pago/negocio. Un test simulado nunca puede poner `paymentVerified=true`.
 
 ---
 
 # 18. QA y gates
 
-Durante QA deben permanecer bloqueados:
+Separar tres niveles que no son intercambiables:
 
-- Pagos reales.
-- Writers fiscales.
-- Veri*Factu.
-- Automatizaciones externas.
-- Publicación.
-- Despliegue productivo.
+1. **QA offline:** tests unitarios/contratos/lint/CI sobre el código. Acreditan propiedades del código cubiertas por esos tests; no acreditan Wix Preview, Runtime, configuración del sitio ni despliegue.
+2. **Wix Preview seguro:** validación en Preview después de comprobar el destino real de CMS y apps, permisos, automatizaciones, notificaciones y ausencia de efectos económicos/fiscales externos. Preview no implica aislamiento de datos por sí solo.
+3. **Producción:** pruebas y operaciones reales solo tras gates, autorización expresa y controles legales/operativos. No usar cargos, reembolsos, emisión fiscal ni publicación como método de QA.
+
+En QA deben permanecer bloqueados pagos reales, writers fiscales, Veri*Factu, automatizaciones con efectos externos y publicación productiva.
 
 Gates mínimos:
 
@@ -657,11 +631,14 @@ Gates mínimos:
 Cada gate debe registrar:
 
 - Responsable.
-- Fecha.
-- Evidencia.
-- Resultado.
-- Bloqueos.
-- Decisión.
+- Fecha/hora y entorno.
+- Commit/versión y `qaRunId`.
+- Evidencia reproducible y destino de datos verificado.
+- Resultado PASS/FAIL/BLOCKED.
+- Bloqueos y riesgos.
+- Decisión y autorizador.
+
+Los flags `saleReady`, `paymentVerified` y `persisted` son resultados de una ejecución TPV concreta, correlacionados con `traceId`/`correlationId` y el snapshot de operación. No son indicadores globales del sitio, release o proyecto. `saleReady` expresa preparación comercial validada; `paymentVerified` exige confirmación real del proveedor/nativo aplicable; `persisted` exige confirmación de persistencia en los sistemas de autoridad correspondientes. Una simulación no puede convertir un pago en verificado.
 
 ---
 
