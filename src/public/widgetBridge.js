@@ -8,10 +8,11 @@
  * CONTEXTO WIX: los iframes/widgets sandboxed pueden operar con origin opaco ("null").
  * Wix documenta este comportamiento en contextos sandboxed del Editor; su contrato
  * HtmlComponent onMessage documenta event.data, pero no garantiza event.origin.
- * Seguridad: allowOpaqueOrigin es opt-in por flujo, false por defecto. El bypass
- * omite solo la comprobación de origin; nunca la allowlist de tipos, protocolo ni
- * autorización backend. TPV habilita la excepción solo en su instancia del puente;
- * los demás consumidores conservan su política explícita y el valor predeterminado es false.
+ * Seguridad: el transporte Wix HtmlComponent entrega un evento wrapper cuya API
+ * documenta event.data, no un MessageEvent con origen autenticable. En ese transporte
+ * la identidad del emisor la delimita el propio widgetElement.onMessage; se omite
+ * event.origin y se mantienen allowlist, protocolo, límites y autorización backend.
+ * El modo estricto por origen sigue siendo el predeterminado para otros transportes.
  */
 export const PROTOCOL_VERSION = 1;
 export const MESSAGE_TYPES = Object.freeze({
@@ -153,6 +154,7 @@ export function createWidgetBridge(widgetElement, options = {}) {
     const settings = safeObject(options);
     instanceCounter += 1;
     const bridgeId = `wbridge-${instanceCounter.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const wixHtmlComponentTransport = settings.transport === "wix-html-component";
     const originPolicy = resolveOriginPolicy(settings);
     const allowedTypes = new Set(
         Array.isArray(settings.allowedTypes) && settings.allowedTypes.length > 0
