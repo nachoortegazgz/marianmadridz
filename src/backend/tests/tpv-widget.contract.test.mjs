@@ -19,7 +19,7 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
     assert.match(controller, /createWidgetBridge/);
-    assert.match(controller, /allowOpaqueOrigin: true/);
+    assert.match(controller, /transport: "wix-html-component"/);\n    assert.doesNotMatch(controller, /allowOpaqueOrigin: true/);
     assert.doesNotMatch(controller, /ALLOWED_ORIGIN\s*=\s*["']\*["']/);
     assert.match(bridge, /widgetElement\.onMessage/);
     assert.match(bridge, /widgetElement\.postMessage/);
@@ -214,7 +214,7 @@ test("widget bridge rejects opaque origins when strict TPV origin policy is acti
     bridge.destroy();
 });
 
-test("TPV bridge accepts only the literal Wix opaque origin while preserving message allowlists", () => {
+test("TPV bridge trusts the Wix HtmlComponent transport boundary while preserving message allowlists", () => {
     let receive;
     let reported = [];
     const widget = {
@@ -228,7 +228,7 @@ test("TPV bridge accepts only the literal Wix opaque origin while preserving mes
         onError: (error) => { reported.push(error.code); },
     });
 
-    receive({ origin: "blob:https://tpv.example.test/id", data: { type: MESSAGE_TYPES.READY, version: 1 } });
+    receive({ origin: "https://unrelated.example.test", data: { type: MESSAGE_TYPES.READY, version: 1 } });
     assert.equal(bridge.handshakeCompleted, false);
     assert.ok(reported.includes("WIDGET_ORIGIN_OPAQUE_REJECTED"));
 
