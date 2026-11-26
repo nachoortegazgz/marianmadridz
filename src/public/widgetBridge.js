@@ -185,16 +185,17 @@ export function createWidgetBridge(widgetElement, options = {}) {
     function clearAllTimers() { timers.forEach((t) => clearTimeout(t)); timers.clear(); handshakeTimer = null; }
 
     function extractEvent(event) {
-        const classified = classifyOrigin(event?.origin);
-        if (classified.opaque) {
-            // The Wix HTML Component sandbox reports the literal opaque origin "null".
-            // Do not extend this exception to blob:, data: or filesystem: URLs.
-            if (classified.value !== "null" || !originPolicy.allowOpaqueOrigin) {
-                reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value });
+        if (!wixHtmlComponentTransport) {
+            const classified = classifyOrigin(event?.origin);
+            if (classified.opaque) {
+                if (!originPolicy.allowOpaqueOrigin) {
+                    reportError(WIDGET_ERROR_CODE.ORIGIN_OPAQUE_REJECTED, { origin: classified.value });
+                    return null;
+                }
+            } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
+                reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value });
                 return null;
             }
-        } else if (originPolicy.mode !== "off" && !isOriginAllowed(classified.value, originPolicy)) {
-            reportError(WIDGET_ERROR_CODE.ORIGIN_REJECTED, { origin: classified.value }); return null;
         }
         const message = safeObject(event?.data);
         if (estimateBytes(message) > MAX_MESSAGE_BYTES) { reportError(WIDGET_ERROR_CODE.MESSAGE_TOO_LARGE); return null; }
