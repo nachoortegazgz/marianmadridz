@@ -1,48 +1,50 @@
 # Release readiness — 2026-11-27
 
-**Estado: NO-GO MVP operativo y comercial.** Este estado se refiere a habilitación operativa/productiva; no impide desarrollar ni probar el código con fixtures sintéticos.
+**NO-GO para MVP operativo/comercial.** No impide desarrollo, unitarias, contratos ni integración simulada con fixtures.
 
-## Gates por contexto
+## Bloqueos por contexto
 
-| Dominio | Desarrollo / CI con fixtures | Wix Preview / integración aislada | Producción |
+| Control | Desarrollo / CI | Wix Preview aislado | Producción |
 |---|---|---|---|
-| Lógica TPV | Unitarias y contratos con fixtures, incluyendo casos fiscales incompletos | Mismo dominio con adaptadores simulados | Configuración, permisos y writers productivos validados |
-| Pago | Proveedor simulado; sin cobro | Adaptador simulado, sin terminal real | Pago verificado y proveedor autorizado |
-| Fiscal/SIF | Fixtures de impuestos/series marcados sintéticos; probar también configuración ausente | No requiere identidad fiscal productiva si todos los efectos están interceptados | Configuración legal, serie y writer validados |
-| Caja/ledger | Repositorio de test/dobles; probar append-only e idempotencia | Fixture aislado; nunca caja singleton compartida | Writer y controles aprobados |
-| Reservas | Fixtures Bookings V2/CitasF2 | Integración aislada de lectura o tenant de prueba | Reconciliación contra fuente nativa |
-| Capa 3 | Transformación, minimización y checksum con datos sintéticos | Transporte simulado o tenant de pruebas | SharePoint/Graph y permisos reales autorizados |
-| Runtime | No es requisito para unitarias/contrato | Pruebas de aplicación con fingerprint e identidad | Evidencia operativa posterior al despliegue |
+| Configuración fiscal/serie ausente | No bloquea pruebas de dominio; probar también el rechazo concreto | No bloquea si efectos externos están interceptados | Bloquea la operación fiscal afectada |
+| Identidad/permisos inválidos | Bloquea la operación bajo prueba | Bloquea | Bloquea |
+| Esquema, importe, secuencia o hash inválido | Bloquea el writer afectado | Bloquea | Bloquea |
+| Idempotencia/concurrencia no garantizadas | Las pruebas deben detectar el defecto | Bloquea escritura | Bloquea |
+| Pago, AEAT, terminal o notificación externa | Dobles simulados; cero efectos reales | Dobles o tenant de pruebas | Solo con configuración y autorización |
+| Persistencia CMS | Repositorio/fixture aislado | Solo writer canónico y fixture aislado | Writer autorizado y controles completos |
+| Wix Runtime | No requerido para unitarias/contrato | Requerido para aceptación Runtime | Evidencia posterior al despliegue |
 
-## Bloqueos productivos vigentes
+## Bloqueos actuales conocidos
 
-- Venta/cobro/persistencia comercial: no habilitados en Runtime según la última auditoría.
-- Fiscal/SIF: la configuración legal única no está acreditada. Se retiró el interruptor global que impedía invocar writers; cada escritura sigue condicionada por validación de configuración fiscal, contrato, autorización y controles de integridad. Esto no acredita conformidad fiscal ni habilitación productiva.
-- Recuperación fiscal: tres compensaciones PENDING_RECOVERY pendientes de correlación con sus operaciones fuente.
-- Jornada laboral: writer deshabilitado; sin fichajes en el último read-back.
-- Bookings ↔ CitasF2: seis proyecciones divergentes pendientes de reconciliación backend.
-- Wix Preview/UI E2E, SHA Git ↔ Wix y transporte SharePoint/Graph: no acreditados.
+- CI final de PR #651 pendiente en el HEAD consultado; PR no integrada.
+- No hay evidencia Runtime E2E de venta, pago, movimiento físico, devolución, arqueo o cierre.
+- Configuración fiscal productiva y mapping AEAT no acreditados; no conectar el hash interno como hash AEAT.
+- Tres recuperaciones fiscales pendientes de correlación según último read-back.
+- Seis divergencias Bookings/CitasF2 pendientes de reconciliación.
+- Writer de jornada y transporte SharePoint/Graph E2E no validados.
+- Sin evidencia de sincronización del SHA Git con el código instalado en Wix.
 
-Estos bloqueos no deben propagarse a pruebas unitarias, contractuales o de integración simulada. Cada defecto debe asignarse al nivel que realmente afecta.
+## Invariantes de QA
 
-## Restricciones de integridad
+- Un solo código y contrato de dominio en todos los contextos.
+- No borrar registros ni purgar físicamente. No modificar ledgers contabilizados, cierres ni evidencia histórica.
+- No reutilizar la caja singleton ABIERTA ni escribir sobre históricos.
+- Las pruebas usan fixtures y adaptadores simulados; ningún pago, reembolso, remesa AEAT, terminal o notificación real.
+- Los errores deben ser específicos, estables y accionables; no reemplazar fallos concretos por bloqueos globales o mensajes genéricos.
+- CI verde no autoriza publicación ni habilitación productiva.
 
-- No alterar ni borrar movimientos físicos, cierres, registros fiscales/contables/laborales ni auditoría append-only. Los registros sintéticos persistidos también son inmutables.
-- No actualizar estados de reservas divergentes a mano; probar la reconciliación con fixtures y aplicar cambios solo a través del proceso backend sobre el ámbito autorizado.
-- No activar cobros, reembolsos, remisión AEAT, terminales, notificaciones ni automatizaciones con efectos externos durante QA.
-- No publicar ni habilitar actividad real por el mero hecho de que CI esté verde.
+## Criterios GO
 
-## Criterios GO de producción
-
-1. Cerrar el fallo Bookings/CitasF2 con reconciliación verificable e idempotente.
-2. Validar WebMethods TPV y bridge en Preview/Runtime sobre identidad y fixture aislados.
+1. PR #651 revisada, CI PASS sobre HEAD final, diff y seguridad revisados, reversión definida y merge autorizado.
+2. WebMethods TPV y bridge aceptados en Wix Preview/Runtime sobre identidad y fixture aislados.
 3. Confirmar destino de escritura y sincronización del SHA/fingerprint instalado.
-4. Completar configuración fiscal real validada por fuente autorizada y revisión profesional; activar writers mediante procedimiento formal.
-5. Resolver las tres compensaciones fiscales correlacionadas con sus operaciones fuente.
-6. Completar pruebas de pagos simulados, devoluciones, caja, cierres, conciliación y no-efectos externos.
-7. Validar transporte Capa 3 en tenant SharePoint aislado y read-back de evidencia.
-8. Superar CI, revisión de diff, seguridad, reversión y aceptación posterior.
+4. Configuración fiscal validada por fuente oficial y revisión profesional; mapping AEAT verificado.
+5. Correlacionar y resolver las recuperaciones fiscales pendientes sin alterar registros fuente.
+6. Reconciliar Bookings/CitasF2 con proceso idempotente y evidencia.
+7. Validar pagos simulados, devoluciones, caja, cierres, conciliación y ausencia de efectos externos.
+8. Validar transporte Capa 3 en tenant SharePoint aislado.
+9. Superar CI, revisión, seguridad, reversión y aceptación posterior.
 
-## Regla de evidencia
+## Evidencia
 
-Cada PASS identifica commit, entorno, prueba y resultado. Etiquetas: estático/contrato, unitario, integración simulada, Wix Preview, Wix Runtime, producción. No extrapolar un nivel a otro.
+Cada PASS identifica SHA, entorno, prueba y resultado. Niveles: estático/contrato, unitario, integración simulada, Preview, Runtime y producción. No extrapolar.
