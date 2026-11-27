@@ -1518,9 +1518,9 @@ test('RES-INV-01 invalidate retires only target-day DUAL_CACHE rows without dele
   seedService(row);
   const ymd = '2026-10-24';
   wixDataMock._seed(CONTROL_COL, [
-    { _id: 'd1', controlType: 'DUAL_CACHE', serviceId: row.serviceId, dateYmd: ymd, resourceId: '', expiresAt: new Date(Date.now() + 60000) },
-    { _id: 'd2', controlType: 'DUAL_CACHE', serviceId: row.serviceId, dateYmd: ymd, resourceId: '', expiresAt: new Date(Date.now() + 60000) },
-    { _id: 'd3', controlType: 'DUAL_CACHE', serviceId: row.serviceId, dateYmd: '2026-10-25', resourceId: '', expiresAt: new Date(Date.now() + 60000) },
+    { _id: 'd1', controlType: 'DUAL_CACHE', dedupeKey: 'dual:d1', traceId: 'trace:d1', payload: {}, serviceId: row.serviceId, dateYmd: ymd, resourceId: '', expiresAt: new Date(Date.now() + 60000) },
+    { _id: 'd2', controlType: 'DUAL_CACHE', dedupeKey: 'dual:d2', traceId: 'trace:d2', payload: {}, serviceId: row.serviceId, dateYmd: ymd, resourceId: '', expiresAt: new Date(Date.now() + 60000) },
+    { _id: 'd3', controlType: 'DUAL_CACHE', dedupeKey: 'dual:d3', traceId: 'trace:d3', payload: {}, serviceId: row.serviceId, dateYmd: '2026-10-25', resourceId: '', expiresAt: new Date(Date.now() + 60000) },
   ]);
   const out = await RW._invalidateCachesInternal(row.serviceId, ymd, '');
   assert.strictEqual(out.ok, true);
@@ -1536,8 +1536,8 @@ test('RES-INV-02 cleanExpiredDualSlots retires expired evidence and keeps alive 
   resetState();
   await invalidateStaffCache();
   wixDataMock._seed(CONTROL_COL, [
-    { _id: 'x1', controlType: 'DUAL_CACHE', expiresAt: new Date(Date.now() - 1000) },
-    { _id: 'x2', controlType: 'DUAL_CACHE', expiresAt: new Date(Date.now() + 600000) },
+    { _id: 'x1', controlType: 'DUAL_CACHE', dedupeKey: 'dual:x1', traceId: 'trace:x1', payload: {}, expiresAt: new Date(Date.now() - 1000) },
+    { _id: 'x2', controlType: 'DUAL_CACHE', dedupeKey: 'dual:x2', traceId: 'trace:x2', payload: {}, expiresAt: new Date(Date.now() + 600000) },
   ]);
   const res = await RW._cleanExpiredDualSlotsInternal({ limit: 10 });
   assert.strictEqual(res.status, 'SUCCESS');
