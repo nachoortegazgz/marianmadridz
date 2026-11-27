@@ -72,3 +72,14 @@ La nueva decisión [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) sustituye cualquie
 - Se retira del área viva el documento de preparación online del runtime separado; se conserva como evidencia histórica marcada explícitamente como supersedida.
 - Se elimina el artefacto generado `.codeviz/Untitled 1/Untitled-1.md`: no estaba indexado, duplicaba diagramas y contenía referencias/placeholder no verificados.
 - El criterio operativo vigente se limita a `PROJECT-CANON.md`, `STATE-NOW.md`, `RELEASE-READINESS.md`, `TPV-UNIFIED-FLOW.md` y `TPV-MILESTONE-01-UNIFIED-CORE.md`; los documentos archivados no son instrucciones ejecutables.
+
+
+## Consolidación de sesión — 2026-11-27
+
+- `docs/TPV-ONLINE-TEST-READINESS.md` se elimina del árbol operativo: su copia ya está en `archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md`; autoridad actual: `TPV-UNIFIED-FLOW.md`.
+- `docs/TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md` se reduce a una página de sustitución. Su contenido anterior se preserva en `archive/2026-11/qa/TPV-SYNTHETIC-FISCAL-ACCEPTANCE-2026-11-27-SUPERSEDED.md`.
+- `DOSSIER TÉCNICO CONSOLIDADO.md` deja de ser documentación operativa y se convierte en un índice de transición a PROJECT-CANON, STATE-NOW, RELEASE-READINESS e INDEX. Se mantiene el path para no romper referencias históricas externas.
+- `audits/2026-11-27-wix-site-and-tpv-cli-audit.md` queda marcado explícitamente como baseline anterior a PR #640; no se borra porque documenta el diagnóstico que motivó la corrección.
+- No se purgan auditorías ni documentos históricos que acreditan cambios, decisiones, contratos o resultados. El archivo histórico no es documentación activa.
+- Auditoría de código TPV: no se encontró el runtime separado `tpvTestRuntime*.js` en el árbol actual. `tpvHistoricalCompat.js`, discriminadores históricos y sus validadores/hooks conservan referencias desde `validation.js`, `data.js`, `dataAccessPolicy.js` y pruebas; no se eliminan hasta separar y probar esa compatibilidad. No se ha demostrado ningún módulo TPV huérfano con evidencia suficiente para borrarlo.
+- No se ha ejecutado suite local ni CI para esta rama documental; no se declara validación de código ni runtime.
