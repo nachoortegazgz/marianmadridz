@@ -144,6 +144,13 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
             const expiresAt = existing.expiresAt instanceof Date ? existing.expiresAt : new Date(existing.expiresAt);
             const existingOwner = String(_readPayload(existing).lockOwnerId || "");
             if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= now.getTime()) {
+                if (!["ACTIVE", "RELEASED"].includes(String(existing.status || ""))) {
+                    throw new Error("ACCOUNTING_LEDGER_LOCK_INVALID_STATE");
+                }
+                const version = Number(existing.version);
+                if (!Number.isSafeInteger(version) || version < 0) {
+                    throw new Error("ACCOUNTING_LEDGER_LOCK_VERSION_INVALID");
+                }
                 const acquiredAt = new Date();
                 const replacementPayload = {
                     ..._readPayload(existing),
@@ -151,17 +158,24 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
                     lockStatus: "ACTIVE",
                     acquiredAt: acquiredAt.toISOString(),
                 };
-                await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+                const claim = await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+                    { fieldPath: "status", action: "SET_FIELD", value: "ACTIVE" },
+                    { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
                     { fieldPath: "payload", action: "SET_FIELD", value: replacementPayload },
                     { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(acquiredAt.getTime() + ACCOUNTING_LEDGER_LOCK_CONFIG.TTL_MS) },
                     { fieldPath: "heartbeatAt", action: "SET_FIELD", value: acquiredAt },
                 ], { condition: { filter: {
                     controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+                    status: { $eq: existing.status },
+                    version: { $eq: version },
                     expiresAt: { $eq: existing.expiresAt },
                 } } });
+                if (!Array.isArray(claim?.updatedItemIds) || !claim.updatedItemIds.includes(ACCOUNTING_LEDGER_LOCK_CONFIG.ID)) {
+                    continue;
+                }
                 const claimed = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
-                if (_readPayload(claimed).lockOwnerId === ownerId) {
-                    return { ownerId, revision: claimed?._revision ?? null };
+                if (_readPayload(claimed).lockOwnerId === ownerId && claimed?.status === "ACTIVE") {
+                    return { ownerId, version: Number(claimed.version), revision: claimed?._revision ?? null };
                 }
                 continue;
             }
@@ -197,7 +211,7 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
         };
         try {
             const saved = await dalInsert(CONTROL_COL, lock);
-            return { ownerId, revision: saved?._revision ?? null };
+            return { ownerId, version: Number(saved?.version ?? 0), revision: saved?._revision ?? null };
         } catch (error) {
             if (!_isDuplicate(error)) throw error;
             if (Date.now() >= deadline) {
@@ -216,6 +230,7 @@ async function _assertAccountingLedgerLock(lock) {
     if (!current) throw new Error("ACCOUNTING_LEDGER_LOCK_LOST");
     const expiresAt = current.expiresAt instanceof Date ? current.expiresAt : new Date(current.expiresAt);
     if (_readPayload(current).lockOwnerId !== lock.ownerId ||
+        (Number.isSafeInteger(Number(lock.version)) && Number(current.version) !== Number(lock.version)) ||
         !Number.isFinite(expiresAt.getTime()) ||
         expiresAt.getTime() <= Date.now()) {
         throw new Error("ACCOUNTING_LEDGER_LOCK_LOST");
@@ -227,12 +242,17 @@ async function _releaseAccountingLedgerLock(lock) {
     if (!lock?.ownerId) return { released: false, reason: "INVALID_OWNER" };
     const current = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
     if (!current) return { released: true, missing: true };
-    if (_readPayload(current).lockOwnerId !== lock.ownerId) {
+    const currentVersion = Number(current.version);
+    if (_readPayload(current).lockOwnerId !== lock.ownerId ||
+        !Number.isSafeInteger(currentVersion) ||
+        (Number.isSafeInteger(Number(lock.version)) && currentVersion !== Number(lock.version))) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };
     }
     try {
         const releasedAt = new Date();
-        await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+        const release = await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+            { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
+            { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
             {
                 fieldPath: "payload",
                 action: "SET_FIELD",
@@ -242,10 +262,14 @@ async function _releaseAccountingLedgerLock(lock) {
             { fieldPath: "heartbeatAt", action: "SET_FIELD", value: releasedAt },
         ], { condition: { filter: {
             controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+            status: { $eq: current.status },
+            version: { $eq: currentVersion },
             expiresAt: { $eq: current.expiresAt },
         } } });
-        const latest = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
-        return { released: _readPayload(latest).lockOwnerId !== lock.ownerId };
+        if (!Array.isArray(release?.updatedItemIds) || !release.updatedItemIds.includes(ACCOUNTING_LEDGER_LOCK_CONFIG.ID)) {
+            return { released: false, reason: "OWNERSHIP_CHANGED" };
+        }
+        return { released: true };
     } catch (error) {
         return { released: false, reason: error?.code || error?.message || "RELEASE_FAILED" };
     }
