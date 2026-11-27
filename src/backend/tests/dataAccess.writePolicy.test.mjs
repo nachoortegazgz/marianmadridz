@@ -202,7 +202,6 @@ test("TransaccionesTPV validates backend-priced records and permits only synthet
         createdAt: new Date("2026-11-25T10:00:00.000Z"),
         status: "PENDING_PAYMENT",
         sourceType: "SYNTHETIC",
-        recordTimestamp: new Date("2026-11-25T10:00:00.000Z"),
         requiresReconciliation: true,
         draftOrderReason: "DRAFT_ORDER_API_UNAVAILABLE",
         requestFingerprint: "a".repeat(64),
@@ -212,25 +211,24 @@ test("TransaccionesTPV validates backend-priced records and permits only synthet
     assert.equal(assertTransaccionesTPVRecord(record), true);
     assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
     assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record));
-    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "CMS_TPV_TRANSACTION_DELETE_DENIED" });
     assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
-    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "TPV" }), { code: "CMS_DELETE_PROHIBITED" });
-    assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.TRANSACCIONES_TPV), false);
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "REAL" }), { code: "CMS_TPV_TRANSACTION_DELETE_DENIED" });
     assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
 });
 
-test("MovimientosCaja accepts legacy source labels without classifying the record", () => {
+test("MovimientosCaja rejects every historical TPV discriminator on new inserts", () => {
     for (const movementType of new Set(Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
-        assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
-            recordSource: "TPV_LEDGER",
+        assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
+            recordSource: "SYNTHETIC",
             movementType,
-        }), movementType);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, movementType);
     }
     for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
-        assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
+        assert.throws(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, {
             recordSource,
             movementType: "COBRO",
-        }), recordSource);
+        }), { code: "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED" }, recordSource);
     }
 });
 
@@ -240,7 +238,7 @@ test("WEBHOOK_EVENT is neither mutable nor removable", () => {
         controlType: T.WEBHOOK_EVENT,
     }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
-        code: "CMS_DELETE_PROHIBITED",
+        code: "CMS_REMOVE_SCOPE_DENIED",
     });
 });
 
@@ -267,24 +265,97 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
     }), { code: "CMS_SAVE_CONTROL_TYPE_DENIED" });
 });
 
-test("all single-item deletions are prohibited", () => {
-    for (const collection of Object.values(C).concat(Object.values(O))) {
-        assert.throws(
-            () => assertRemoveAllowed(collection, "existing-row"),
-            { code: "CMS_DELETE_PROHIBITED" }
-        );
+test("single-item removal keeps ControlOperativo scoped and denies append-only ledgers", () => {
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1", T.DUAL_CACHE));
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "token-1", T.DISPLAY_TOKEN));
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "lock-1", T.SLOT_LOCK));
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "claim-1", T.IDEMPOTENCY));
+    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
+        code: "CMS_REMOVE_SCOPE_DENIED",
+    });
+    assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1"), {
+        code: "CMS_REMOVE_SCOPE_DENIED",
+    });
+    for (const collection of [
+        C.MOVIMIENTOS_CAJA,
+        C.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+        C.REGISTROS_HORARIOS_STAFF,
+        C.HISTORICO_CIERRES_Z,
+    ]) {
+        assert.throws(() => assertRemoveAllowed(collection, "synthetic-ledger-row"), {
+            code: "LEDGER_APPEND_ONLY",
+        });
     }
 });
-
-test("bulk deletion is prohibited for every collection", () => {
-    for (const collection of Object.values(C).concat(Object.values(O))) {
-        assert.throws(
-            () => assertBulkRemoveAllowed(collection, ["existing-row"]),
-            { code: "CMS_BULK_DELETE_PROHIBITED" }
-        );
+test("bulk update is disabled and bulk remove requires an allowlisted conditional purge", () => {
+    const cutoff = new Date("2026-11-14T00:00:00.000Z");
+    for (const collection of Object.values(C)) {
+        assert.throws(() => assertBulkUpdateAllowed(collection, [{ _id: "synthetic-row-1" }]), {
+            code: "CMS_BULK_UPDATE_SCOPE_DENIED",
+        });
     }
-});
 
+    const ttlFilter = (controlType) => ({
+        condition: { filter: {
+            controlType: { $eq: controlType },
+            expiresAt: { $lt: cutoff },
+        } },
+    });
+    for (const controlType of [
+        T.SLOT_LOCK, T.RATE_LIMIT, T.DISPLAY_TOKEN, T.DUAL_CACHE, T.DAYS_CACHE,
+    ]) {
+        assert.doesNotThrow(() => assertBulkRemoveAllowed(
+            C.CONTROL_OPERATIVO, ["synthetic-row-1"], ttlFilter(controlType)
+        ));
+    }
+
+    const statusFilter = (controlType, status, dateField) => ({
+        condition: { filter: {
+            controlType: { $eq: controlType },
+            status: { $eq: status },
+            [dateField]: { $lt: cutoff },
+        } },
+    });
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.IDEMPOTENCY, "COMPLETED", "_updatedDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.SYSTEM_FLAG, "RECONCILED", "_updatedDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.ALERT, "CLOSED", "_createdDate")
+    ));
+    assert.doesNotThrow(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.COMPENSATION, "EXECUTED", "_createdDate")
+    ));
+
+    assert.throws(() => assertBulkRemoveAllowed(C.CONTROL_OPERATIVO, ["synthetic-row-1"]), {
+        code: "CMS_BULK_REMOVE_SCOPE_DENIED",
+    });
+    for (const controlType of [T.WEBHOOK_EVENT, T.DEDUPE_KEY, T.LEDGER_IDEMPOTENCY, T.WEBHOOK_CLAIM]) {
+        assert.throws(() => assertBulkRemoveAllowed(
+            C.CONTROL_OPERATIVO, ["synthetic-row-1"], ttlFilter(controlType)
+        ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    }
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        statusFilter(T.IDEMPOTENCY, "IN_PROGRESS", "_updatedDate")
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.MOVIMIENTOS_CAJA, ["synthetic-row-1"], ttlFilter(T.DUAL_CACHE)
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertBulkRemoveAllowed(
+        C.CONTROL_OPERATIVO, ["synthetic-row-1"],
+        { condition: { filter: {
+            controlType: { $eq: T.DUAL_CACHE },
+            expiresAt: { $lt: "2026-11-14T00:00:00.000Z" },
+        } } }
+    ), { code: "CMS_BULK_REMOVE_SCOPE_DENIED" });
+});
 test("DATAACCESS-MOVIMIENTOS-APPEND-01 public bulk mutation APIs reject MovimientosCaja", () => {
     assert.throws(
         () => bulkUpdate(C.MOVIMIENTOS_CAJA, [{ _id: "synthetic-row", totalAmount: 1 }]),
