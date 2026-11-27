@@ -1,14 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createTpvRecordMetadata } from "../tpv/tpvRecordNature.js";
+import { classifyTpvRecordNature } from "../tpv/tpvRecordNature.js";
 
-test("TPV metadata uses one neutral server timestamp without classifying record nature", async () => {
-    const metadata = await createTpvRecordMetadata();
-
-    assert.ok(metadata.recordTimestamp instanceof Date);
-    assert.ok(Number.isFinite(metadata.recordTimestamp.getTime()));
-    assert.deepEqual(Object.keys(metadata), ["recordTimestamp"]);
-    assert.equal(Object.isFrozen(metadata), true);
-    assert.equal(Object.hasOwn(metadata, "recordNature"), false);
-    assert.equal(Object.hasOwn(metadata, "isSynthetic"), false);
+test("no activation cutoff classifies records as synthetic", () => {
+    assert.equal(classifyTpvRecordNature("2026-11-27T00:00:00.000Z", null), "SYNTHETIC");
+});
+test("timestamp before cutoff is synthetic", () => {
+    assert.equal(classifyTpvRecordNature("2026-11-27T04:59:59.999Z", "2026-11-27T05:00:00.000Z"), "SYNTHETIC");
+});
+test("timestamp exactly at cutoff is real", () => {
+    assert.equal(classifyTpvRecordNature("2026-11-27T05:00:00.000Z", "2026-11-27T05:00:00.000Z"), "REAL");
+});
+test("timestamp after cutoff is real", () => {
+    assert.equal(classifyTpvRecordNature("2026-11-27T05:00:00.001Z", "2026-11-27T05:00:00.000Z"), "REAL");
+});
+test("invalid timestamp or cutoff is rejected", () => {
+    assert.throws(() => classifyTpvRecordNature("invalid", null), /TPV_RECORD_TIMESTAMP_INVALID/);
+    assert.throws(() => classifyTpvRecordNature("2026-02-31T05:00:00.000Z", null), /TPV_RECORD_TIMESTAMP_INVALID/);
+    assert.throws(() => classifyTpvRecordNature("2026-11-27T05:00:00Z", "invalid"), /TPV_PRODUCTION_ACTIVATION_AT_INVALID/);
 });
