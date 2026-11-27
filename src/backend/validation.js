@@ -262,6 +262,9 @@ export function assertMovimientosCajaRequiredFields(item) {
         if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
             throw new Error("SCHEMA_VIOLATION: TPV physical recordTimestamp must be DATETIME");
         }
+        if (!["SYNTHETIC", "REAL"].includes(item.recordNature)) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical recordNature invalid");
+        }
         if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
             !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
             throw new Error("SCHEMA_VIOLATION: TPV physical SHA-256 chain invalid");
@@ -367,6 +370,12 @@ export function assertMapaStaffRecord(item, { partial = false } = {}) {
 export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
+    }
+    if (item.recordNature !== undefined || item.recordTimestamp !== undefined) {
+        if (!["SYNTHETIC", "REAL"].includes(item.recordNature) ||
+            !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: CajaActual TPV record metadata invalid");
+        }
     }
     if (item.sequenceCounters !== undefined && item.sequenceCounters !== null &&
         (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
