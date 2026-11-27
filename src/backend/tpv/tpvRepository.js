@@ -97,9 +97,11 @@ async function withTpvScopedLock({
     traceId,
     operation,
     errorPrefix,
+    allowLegacyProjection = false,
 }) {
 
-    await _ensureCajaActual();
+    const caja = await _getCajaActual();
+    _assertTpvCajaLockable(caja, allowLegacyProjection);
     const cleanScopeId = String(scopeId || "").trim();
     if (!cleanScopeId || typeof operation !== "function") throw new Error(errorPrefix + "_INVALID");
     const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -249,9 +251,9 @@ export async function withTpvSaleLock(saleId, traceId, operation, sessionId = nu
         : executeSaleLock();
 }
 
-export async function withTpvSessionLock(sessionId, traceId, operation) {
-    const caja = await _ensureCajaActual();
-    assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+export async function withTpvSessionLock(sessionId, traceId, operation, { allowLegacyProjection = false } = {}) {
+    const caja = await _getCajaActual();
+    _assertTpvCajaLockable(caja, allowLegacyProjection);
     const lockId = makeTpvSessionLockId(sessionId);
     return withTpvScopedLock({
         lockId,
@@ -262,6 +264,7 @@ export async function withTpvSessionLock(sessionId, traceId, operation) {
         traceId,
         operation,
         errorPrefix: "TPV_SESSION",
+        allowLegacyProjection,
     });
 }
 
@@ -459,6 +462,18 @@ export async function closeTpvCajaSessionProjection({
         const item = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
         return { item, replayed: false };
     });
+}
+
+function _assertTpvCajaLockable(caja, allowLegacyProjection = false) {
+    if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
+    const session = _sessionFromCaja(caja);
+    if (session) {
+        assertTpvCajaIntegrity(caja);
+        return true;
+    }
+    if (allowLegacyProjection && _isLegacyUnverifiedProjection(caja)) return true;
+    assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+    return true;
 }
 
 function _isLegacyUnverifiedProjection(caja) {
