@@ -250,7 +250,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /PENDING_PAYMENT/);
     assert.ok(sales.includes("sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE"));
     assert.match(sales, /createTpvRecordMetadata/);
+    assert.doesNotMatch(sales, /recordNature|SYNTHETIC|REAL/);
     assert.match(sales, /TPV_SALE_NOT_READY/);
+    assert.doesNotMatch(sales, /FISCAL_CONFIG_UNVERIFIED/);
     assert.match(sales, /getMyCajeroContext/);
     assert.match(sales, /prepareTpvSaleCatalog/);
     assert.match(sales, /catalogVerified: true/);
@@ -459,7 +461,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(config, /TPV_HISTORICAL_POLICY/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
-    assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.doesNotMatch(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
@@ -474,9 +476,9 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(utilities, /export function makeTpvPayload/);
     assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds/);
     assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
-    assert.match(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.doesNotMatch(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
-    assert.match(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.doesNotMatch(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
     assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
@@ -486,7 +488,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
     assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_REFUND|CONFIRMADO_SINTETICO/);
-    assert.match(movements, /\[SINTÉTICO\]/);
+    assert.doesNotMatch(movements, /\[SINTÉTICO\]/);
     assert.doesNotMatch(movements, /syntheticOnly: true/);
 });
 
