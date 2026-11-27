@@ -631,8 +631,11 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
 
 test("Ticket X and Z use neutral status values and explicit synthetic source metadata", async () => {
     const closures = await source("tpv/tpvCierres.web.js");
-    assert.match(closures, /status: "GENERADO",\s*sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
-    assert.match(closures, /status: "CERRADO",\s*sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
+    assert.match(closures, /action: "TICKET_X_GENERATED"/);
+    assert.match(closures, /entityType: "TICKET_X"/);
+    assert.match(closures, /fiscalLedgerWritten: false/);
+    assert.doesNotMatch(closures, /insertTpvEvent\\(TPV_COLLECTIONS\\.TICKET_X/);
+    assert.match(closures, /status: "CERRADO",\\s*sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
     assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
     assert.match(closures, /toMinorUnits\(input\.countedCash, "COUNTED_CASH"\)/);
 });
