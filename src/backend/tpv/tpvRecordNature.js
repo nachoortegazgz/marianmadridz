@@ -4,7 +4,15 @@ import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 const NATURES = Object.freeze({ SYNTHETIC: "SYNTHETIC", REAL: "REAL" });
 
 function validUtcInstant(value) {
-    const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+    if (value instanceof Date) {
+        const date = new Date(value.getTime());
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+    if (typeof value !== "string" ||
+        !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(value)) {
+        return null;
+    }
+    const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
