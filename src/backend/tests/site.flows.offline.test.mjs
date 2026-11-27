@@ -363,7 +363,8 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
-    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Reintento idempotente (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    tipoImpositivo: 21,
     channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
@@ -567,6 +568,7 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
   const bookingOnlyRequest = {
     kind: 'FISCAL_LEDGER',
     bookingIds: 'booking-recovery-002,booking-recovery-001',
+    transactionId: 'booking-recovery-transaction-002',
     totalAmount: 15,
     paymentMethod: 'WIX_PAYMENTS',
     movementType: 'REEMBOLSO',
@@ -739,16 +741,16 @@ test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar l
   await setupFiscalSecrets();
   const before = (wixDataMock._store.get('MovimientosCaja') || []).length;
 
-  const neg = await cajas.registerManualTransaction({ totalAmount: -5, paymentMethod: 'EFECTIVO' });
+  const neg = await cajas.registerManualTransaction({ totalAmount: -5, paymentMethod: 'EFECTIVO', transactionId: 'flow-caja-invalid-amount' });
   assert.strictEqual(neg.status, 'ERROR');
   assert.strictEqual(neg.error.code, 'INVALID_AMOUNT');
 
-  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, tipoFactura: 'F2', paymentMethod: 'ONLINE-CRYPTO' });
+  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, tipoFactura: 'F2', paymentMethod: 'ONLINE-CRYPTO', transactionId: 'flow-caja-invalid-payment' });
   assert.strictEqual(badMethod.status, 'ERROR');
   assert.strictEqual(badMethod.error.code, 'INVALID_PAYMENT_METHOD');
 
   // > umbral NIF tercero sin recipientTaxId (Ley 11/2021 / Alcabala control)
-  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA', channelType: 'ONLINE' });
+  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA', channelType: 'ONLINE', transactionId: 'flow-caja-recipient-tax-id' });
   assert.strictEqual(big.status, 'ERROR');
   assert.strictEqual(big.error.code, 'RECIPIENT_TAX_ID_REQUIRED');
 
@@ -1500,4 +1502,89 @@ test('FLOW-HOR-09 normalizes invalid history limits and rejects malformed month 
   assert.equal(summary.status, 'ERROR');
   assert.equal(summary.error.code, 'INVALID_MONTH_KEY');
   assert.match(summary.error.message, /AAAA-MM/);
+});
+
+
+test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const base = {
+    totalAmount: 12,
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoFactura: 'F2',
+    operationDescription: 'Prueba de contrato transactionId',
+    channelType: 'PRESENCIAL',
+  };
+  const missing = await cajas.registerManualTransaction(base);
+  assert.strictEqual(missing.status, 'ERROR');
+  assert.strictEqual(missing.error.code, 'TRANSACTION_ID_REQUIRED');
+
+  const oversized = await cajas.registerManualTransaction({
+    ...base,
+    transactionId: 'x'.repeat(129),
+  });
+  assert.strictEqual(oversized.status, 'ERROR');
+  assert.strictEqual(oversized.error.code, 'TRANSACTION_ID_REQUIRED');
+  assert.strictEqual((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+
+  const maximumLength = await cajas.registerManualTransaction({
+    ...base,
+    transactionId: 'm'.repeat(128),
+  });
+  assert.strictEqual(maximumLength.status, 'SUCCESS', JSON.stringify(maximumLength.error));
+  assert.strictEqual(maximumLength.data.transactionId.length, 128);
+});
+
+test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const payload = {
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta de prueba idempotente',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoImpositivo: 21,
+    transactionId: 'p0-idempotency-contract-0001',
+    channelType: 'PRESENCIAL',
+  };
+  const first = await cajas.registerManualTransaction(payload);
+  assert.strictEqual(first.status, 'SUCCESS', JSON.stringify(first.error));
+  const retry = await cajas.registerManualTransaction(payload);
+  assert.strictEqual(retry.status, 'SUCCESS', JSON.stringify(retry.error));
+  assert.strictEqual(retry.idempotent, true);
+
+  const changed = await cajas.registerManualTransaction({
+    ...payload,
+    totalAmount: 51,
+  });
+  assert.strictEqual(changed.status, 'ERROR');
+  assert.strictEqual(changed.error.code, 'TRANSACTION_ID_PAYLOAD_CONFLICT');
+  assert.strictEqual((wixDataMock._store.get('MovimientosCaja') || [])
+    .filter((item) => item.transactionId === payload.transactionId).length, 1);
+});
+
+test('P0-FISCAL-TX-03 recovery queue rejects absent or oversized transactionId', async () => {
+  const { cajas } = await freshImports();
+  const missing = await cajas.queueFiscalRecovery({ traceId: 'recovery-missing-tx' });
+  assert.strictEqual(missing.queued, false);
+  assert.strictEqual(missing.error, 'TRANSACTION_ID_REQUIRED');
+
+  const oversized = await cajas.queueFiscalRecovery({
+    traceId: 'recovery-oversized-tx',
+    transactionId: 'x'.repeat(129),
+  });
+  assert.strictEqual(oversized.queued, false);
+  assert.strictEqual(oversized.error, 'TRANSACTION_ID_REQUIRED');
 });
