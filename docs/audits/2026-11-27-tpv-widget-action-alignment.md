@@ -62,10 +62,12 @@ El widget presenta un comprobante imprimible mediante el diálogo del navegador 
 ## Validación y límites
 
 - VERIFICADO: lectura CMS de `CajaActual` y sus valores legacy; lectura de esquemas y colecciones nativas documentadas en la auditoría CMS del mismo día.
+- Wix `GetSiteContext` posterior al merge confirma que el sitio sigue en Draft, Editor Classic, Velo habilitado, Stores Catalog V3 e Invoices V1.
+- La integración Wix usada permite leer/escribir datos y consultar el sitio, pero no expone un escritor del código Velo ni del HTML Component del Editor Classic. La documentación CLI consultada no ofrece un flujo de sincronización de este Editor Classic desde el repositorio: Wix Origami corresponde a Studio Two y la CLI Headless a sitios Headless. No se ha ejecutado ningún despliegue.
 - MERGED: PR #658, merge commit `af73da08156a357677131629a30a6cc5bf225bc1`.
 - CI pre-merge en HEAD `b2eb170a840862244856ae7ca391703afc225a7e`: Layer 1 29 suites / 380 PASS; Layer 2 16 / 249 PASS; suite offline 81 suites / 767 PASS; contratos Wix Cart, Order Transactions y TPV SDK PASS; ESLint, npm audit y Secret scanning PASS.
 - CI post-merge: no se obtuvo run/status asociado al merge commit; no se atribuye PASS post-merge.
-- PENDIENTE: Wix Preview; prueba autenticada de apertura; lectura de Ticket X; comprobación de impresión en dispositivo real.
+- PENDIENTE: sincronizar manualmente los archivos Velo y `#htmlTPV.txt` desde el repositorio al Editor Classic; después ejecutar Wix Preview, prueba autenticada de apertura, lectura de Ticket X y comprobación de impresión en dispositivo real.
 - NO EJECUTADO: no se ha abierto/cerrado caja, escrito CMS, cobrado, reembolsado, generado cierre Z, enviado a AEAT ni publicado el sitio.
 
 No declarar el TPV validado en runtime o producción hasta completar esas pruebas.
