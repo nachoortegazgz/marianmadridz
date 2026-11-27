@@ -235,6 +235,7 @@ export const SDK_CONFIG = Object.freeze({
     STAFF_MAX_ENTRIES: 100,
     SERVICES_TTL_MS: 120000,
     SERVICES_MAX_ENTRIES: 500,
+    DAYS_CACHE_VERSION: "v1",
   }),
 
   SECURITY: Object.freeze({
