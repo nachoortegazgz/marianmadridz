@@ -23,6 +23,8 @@
 - [Contrato de errores TPV](qa/2026-11-27-tpv-actionable-error-contract.md).
 - [ADR transporte HtmlComponent](architecture/ADR-2026-11-26-WIX-HTMLCOMPONENT-TRANSPORT.md).
 
+- [Auditoría Capa 0 y conciliación de bugs](audits/2026-11-28-capa0-bug-reconciliation.md).
+
 ## Mantenimiento
 
 STATE-NOW y RELEASE-READINESS reflejan cambios de estado. PROJECT-CANON y TPV-UNIFIED-FLOW solo cambian cuando cambia una decisión o contrato. No crear resúmenes duplicados. Los informes antiguos se conservan en `docs/archive` como evidencia histórica, nunca como instrucciones vigentes.
