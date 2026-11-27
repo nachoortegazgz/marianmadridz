@@ -13,9 +13,9 @@ export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-session-summary");
-        await requireCajero(traceId);
 
         try {
+            await requireCajero(traceId);
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
