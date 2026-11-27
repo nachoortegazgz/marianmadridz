@@ -1,6 +1,6 @@
 # Release readiness — 2026-11-28
 
-**Estado global: NO-GO para MVP operativo/comercial.** El sitio permanece Draft/no publicado según el último read-back documentado. La validación offline de Capa 0 está verde para el HEAD validado de PR #670; no hay aceptación Wix Local Editor/Preview E2E, Wix Runtime ni producción acreditada.
+**Estado global: NO-GO para MVP operativo/comercial.** El sitio permanece Draft/no publicado según el último read-back documentado. La validación offline de Capa 0 está verde para PR #675 (89 suites / 804 tests PASS en su HEAD validado); no hay aceptación Wix Local Editor/Preview E2E, Wix Runtime ni producción acreditada.
 
 El estado detallado, los SHAs y la evidencia más reciente se mantienen en [STATE-NOW](STATE-NOW.md). Este documento define gates y criterios de aceptación; no duplica el historial de CI.
 
