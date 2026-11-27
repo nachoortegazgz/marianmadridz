@@ -1,4 +1,4 @@
-import { TPV_COLLECTIONS, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import {
     getCommittedTpvSales,
     getTpvCashMovements,
@@ -19,7 +19,7 @@ export async function buildTpvSessionSummary(session) {
 
     const totals = {
         sessionId: session.sessionId,
-        currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
+        currency: SDK_CONFIG.CURRENCY_CODE,
         ticketCount: sales.length,
         refundCount: refunds.length,
         grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
