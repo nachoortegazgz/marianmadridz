@@ -612,7 +612,21 @@ export function HistoricoCierresZ_beforeUpdate(item) {
 }
 
 export function HistoricoCierresZ_beforeRemove() {
-    _fiscalError("Borrado de HistoricoCierresZ prohibido: registro fiscal append-only");
+    throw createActionableError({
+        code: "HISTORICO_CIERRES_Z_APPEND_ONLY",
+        userMessage: "Los cierres Z históricos son append-only y no se pueden borrar.",
+        technicalDetail: "HistoricoCierresZ conserva la evidencia de cierre y su cadena de auditoría.",
+        remediation: [
+            "Conservar el cierre original y su evidencia.",
+            "Registrar cualquier corrección mediante un asiento o evento rectificativo trazable.",
+            "No eliminar ni reconstruir el cierre histórico.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -646,7 +660,21 @@ export function RegistrosHorariosStaff_beforeUpdate(item) {
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
-    _fiscalError("Borrado de RegistrosHorariosStaff prohibido: registro horario append-only (RD 8/2019)");
+    throw createActionableError({
+        code: "STAFF_TIME_LEDGER_APPEND_ONLY",
+        userMessage: "Los registros horarios son append-only y no se pueden borrar.",
+        technicalDetail: "RegistrosHorariosStaff conserva la evidencia laboral de jornada.",
+        remediation: [
+            "Registrar una rectificación horaria trazable.",
+            "Conservar el registro original y su firma.",
+            "No sobrescribir ni eliminar la evidencia de jornada.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
