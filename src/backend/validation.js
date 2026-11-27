@@ -821,6 +821,38 @@ export function isValidNifOrEuVat(value) {
 }
 
 /**
+ * Identifica exclusivamente marcadores explícitos de fixtures/smoke.
+ * No clasifica por sourceType, etiquetas REAL/SYNTHETIC/SIMULATION ni por huellas inválidas.
+ */
+export function isExplicitSimulationLedgerRecord(item) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const upper = (value) => String(value ?? "").trim().toUpperCase();
+    const recordSource = upper(item.recordSource);
+    const eventType = upper(item.eventType);
+    const movementType = upper(item.movementType);
+    const projectionStatus = upper(item.projectionStatus);
+    const source = upper(item.source);
+    const accountCode = upper(item.desgloseDetallado?.accountCode);
+    const hash = upper(item.hash);
+    const previousRecordHash = upper(item.previousRecordHash);
+
+    const legacyTpvDevelopmentFixture = item.synthetic === true &&
+        recordSource === "TPV_QA_DEVELOPMENT" &&
+        source === "TPV_FUNCTIONAL_TEST";
+
+    return recordSource === "SMOKE_TEST" ||
+        eventType.startsWith("SIMULATED_") ||
+        eventType.endsWith("_SIMULATED") ||
+        movementType.startsWith("SIMULATED_") ||
+        /(?:^|_)SIMULAD[AO]$/.test(movementType) ||
+        projectionStatus === "SIMULATED_ONLY" ||
+        legacyTpvDevelopmentFixture ||
+        accountCode === "SIMULATED" ||
+        hash === "SIMULATED_HASH" ||
+        previousRecordHash === "SIMULATED_PREVIOUS_HASH";
+}
+
+/**
  * Identifica exclusivamente filas de simulacion marcadas de forma explicita.
  * No clasifica como simulacion una fila solo por tener una huella invalida:
  * esos registros deben seguir provocando una alerta de integridad.
