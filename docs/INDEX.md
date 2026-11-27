@@ -25,6 +25,7 @@
 
 - [Auditoría Capa 0 y conciliación de bugs](audits/2026-11-28-capa0-bug-reconciliation.md).
 - [Auditoría Capa 0: proveedores, identidad y DAL](audits/2026-11-28-capa0-provider-error-propagation.md).
+- [Auditoría Capa 0: secretos, importes y configuración](audits/2026-11-28-capa0-secrets-money-config.md).
 
 ## Mantenimiento
 
