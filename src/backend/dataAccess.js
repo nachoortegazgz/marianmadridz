@@ -374,14 +374,20 @@ export async function removeById(collection, idOrItem, options = {}) {
         throw dataAccessError("REMOVE_CONTROL_TYPE_MISMATCH");
     }
 
-    const filter = collection === "MovimientosCaja"
+    const filter = collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV
         ? {
-            recordSource: { $eq: existing.recordSource },
-            movementType: { $eq: existing.movementType },
-            traceId: { $eq: existing.traceId },
-            transactionId: { $eq: existing.transactionId },
+            sourceType: { $eq: existing.sourceType },
+            status: { $eq: existing.status },
+            requestFingerprint: { $eq: existing.requestFingerprint },
         }
-        : { controlType: { $eq: expectedControlType } };
+        : collection === "MovimientosCaja"
+            ? {
+                recordSource: { $eq: existing.recordSource },
+                movementType: { $eq: existing.movementType },
+                traceId: { $eq: existing.traceId },
+                transactionId: { $eq: existing.transactionId },
+            }
+            : { controlType: { $eq: expectedControlType } };
     const result = await elevatedBulkRemove(collection, [id], {
         condition: { filter },
     });
