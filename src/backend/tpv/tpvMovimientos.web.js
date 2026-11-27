@@ -153,9 +153,9 @@ export const obtenerMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-cash-movements-read");
-        await requireCajero(traceId);
 
         try {
+            await requireCajero(traceId);
             const limit = Number(input.limit ?? 50);
             if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
                 throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
