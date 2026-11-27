@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { queryTpvRecords } from "backend/tpv/tpvRepository";
 
 import { normalizeTpvError } from "backend/tpv/tpvError";
@@ -64,7 +64,7 @@ export const obtenerAuditoriaTPV = webMethod(
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                 },
                 error: null,
                 traceId,
