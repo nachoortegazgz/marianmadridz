@@ -42,6 +42,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 - [Auditoría Wix CLI/TPV — 2026-11-27](audits/2026-11-27-wix-site-and-tpv-cli-audit.md): baseline anterior a PR #640; histórico/supersedido para estado de implementación.
 - [Auditoría TPV widget/action — 2026-11-27](audits/2026-11-27-tpv-widget-action-alignment.md): correspondencia de UI, bridge y acciones; verificar que no haya revisión posterior.
 - [Auditoría Capa 0 — 2026-11-28](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente. Nombre de archivo conserva fecha 27, contenido actualizado a 28.
+- [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md): cambios integrados y CI offline PASS (89 suites / 804 tests); queda pendiente verificar cobertura de service providers y resolver secretos.
 - [Conciliación bugs Capa 0 — 2026-11-28](audits/2026-11-28-capa0-bug-reconciliation.md): análisis BUG-001…020; parte de su estado describe la rama de trabajo y debe contrastarse con STATE-NOW/PR #670 antes de reutilizar.
 
 ### QA, contratos y decisiones
