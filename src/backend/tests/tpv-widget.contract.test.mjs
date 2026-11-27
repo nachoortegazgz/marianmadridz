@@ -132,6 +132,12 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.match(html, /openingSessionId/);
     assert.match(html, /const ticketResult = await call\("TICKET_X"/);
     assert.match(html, /renderTicketXMarkup\(ticket\)/);
+    const closures = await source("src/backend/tpv/tpvCierres.web.js");
+    assert.match(closures, /reportType: "CONTROL_PARCIAL"/);
+    assert.match(closures, /generatedBy: \{[\s\S]*?operatorId: operator\.operatorId/);
+    assert.match(closures, /sessionOperator: \{[\s\S]*?activeSession\.operatorId/);
+    assert.match(closures, /openingCash: fromMinorUnits/);
+    assert.match(closures, /expectedCash: fromMinorUnits/);
 });
 
 test("TPV HTML component JavaScript parses without syntax errors", async () => {
