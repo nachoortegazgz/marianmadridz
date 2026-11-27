@@ -22,7 +22,9 @@ test("DATA-QUERY-02 rejects zero, negative, fractional and out-of-range limits",
 
 test("DATA-QUERY-03 array membership is explicit and unsupported contains helpers are absent", () => {
     assert.equal(typeof query("TestCollection").hasSome, "function");
+    assert.equal(typeof query("TestCollection").hasAll, "function");
     assert.equal(query("TestCollection").contains, undefined);
     assert.equal(wql.hasSome("resourceIds", ["resource-1"]).resourceIds.$hasSome[0], "resource-1");
+    assert.equal(wql.hasAll("resourceIds", ["resource-1", "resource-2"]).resourceIds.$hasAll.length, 2);
     assert.equal(wql.contains, undefined);
 });
