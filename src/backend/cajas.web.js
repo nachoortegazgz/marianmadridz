@@ -788,8 +788,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                         cashProjectionStatus: cashProjection?.status || "UNKNOWN",
                     };
                 }
-                return { status: "SUCCESS", data: existingRes.items[0], error: null, idempotent: true, cashProjectionStatus: "SUCCESS" };
-            }
+                return { status: "SUCCESS", data: existingMovement, error: null, idempotent: true, cashProjectionStatus: "SUCCESS" };
         }
 
         const currentCashRegister = await getCashRegisterSingleton();
