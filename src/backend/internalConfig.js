@@ -49,9 +49,9 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
   ADJUSTMENTS_ENABLED: false,
 });
 
-// No global CMS mutation override is exported. Only records carrying the exact
-// active synthetic TPV test-run marker may be edited; all other fiscal,
-// accounting, labor and webhook records remain append-only.
+// CMS mutation permissions are collection- and state-specific.
+// TransaccionesTPV permits changes only to unpaid synthetic commercial intents;
+// physical, fiscal, accounting, labor and closing ledgers retain their own guards.
 
 // Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
 // are certified. Simulation records are denied unless a trusted test harness
