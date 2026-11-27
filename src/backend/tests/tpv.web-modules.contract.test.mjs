@@ -644,7 +644,6 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
         desgloseFormaPago: { efectivo: 121, tarjeta: 0, bizum: 0, online: 0 },
     };
     const rows = [{
-        recordNature: "REAL",
         invoiceNumber: "MM-2026-0001",
         fechaExpedicion: "2026-10-01",
         tipoFactura: "BORRADOR_INTERNO",
@@ -700,7 +699,6 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
         desgloseFormaPago: { efectivo: 0, tarjeta: 0, bizum: 0, online: 0 },
     };
     const row = {
-        recordNature: "SYNTHETIC",
         invoiceNumber: "QA-1",
         fechaExpedicion: "2026-10-01",
         tipoFactura: "BORRADOR_INTERNO",
@@ -722,7 +720,7 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
     }), /C3_EXPORT_SOURCE_RECORD_NOT_REAL/);
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
-        summary, rows: [{ ...row, recordNature: "REAL", fechaExpedicion: "2026-02-31" }],
+        summary, rows: [{ ...row, fechaExpedicion: "2026-02-31" }],
     }), /C3_EXPORT_ISSUE_DATE_INVALID/);
 });
 
