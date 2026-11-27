@@ -294,14 +294,21 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
     () => H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" }),
     /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
   );
-  await assert.doesNotReject(() => H.TransaccionesTPV_beforeRemove(item._id));
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove(item._id),
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY" && error?.retryable === false
+  );
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove({ _id: item._id }),
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
+  );
   wixDataMock._reset();
 
   const real = { ...item, sourceType: "REAL" };
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [real]);
   await assert.rejects(
     () => H.TransaccionesTPV_beforeRemove(real._id),
-    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
   );
   wixDataMock._reset();
 });
@@ -384,7 +391,14 @@ test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash mo
   const row = { _id: 'cash-movement-real', movementType: 'VENTA', recordSource: 'INTERNAL', traceId: 'real-ledger', sequenceNumber: 1 };
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
   await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }), /Modificacion de MovimientosCaja/);
-  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /Borrado de MovimientosCaja/);
+  await assert.rejects(
+    () => H.MovimientosCaja_beforeRemove(row._id),
+    (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.LibroAsientosContablesDetalle_beforeRemove(),
+    (error) => error?.code === "ACCOUNTING_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
