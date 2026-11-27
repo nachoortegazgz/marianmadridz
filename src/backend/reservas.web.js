@@ -1643,7 +1643,7 @@ export async function _cleanExpiredDualSlotsInternal({ limit = 100, traceId = nu
     const safeLimit = Math.max(1, Math.min(Number(limit) || 100, 100));
     const now = new Date();
     const result = await withTimeout(
-        dalQuery(CONTROL_COL).eq("controlType", CT_DUAL_CACHE).lt("expiresAt", now).limit(safeLimit).find(CONSISTENT_READ),
+        dalQuery(CONTROL_COL).eq("controlType", CT_DUAL_CACHE).gt("expiresAt", new Date(0)).lt("expiresAt", now).limit(safeLimit).find(CONSISTENT_READ),
         WATCHDOG_TIMEOUT_MS,
         "cleanExpiredDualSlotsQuery"
     );
@@ -1942,6 +1942,7 @@ async function _removeDualCacheForDay(serviceId, dateYmd, resourceId, traceId) {
     if (ids === null) return 0;
     let query = dalQuery(CONTROL_COL)
         .eq("controlType", CT_DUAL_CACHE)
+        .gt("expiresAt", new Date(0))
         .eq("serviceId", String(serviceId))
         .eq("dateYmd", String(dateYmd));
     if (ids.length === 1) query = query.eq("resourceId", ids[0]);
@@ -1987,6 +1988,7 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
         let page = await withTimeout(
             dalQuery(CONTROL_COL)
                 .eq("controlType", CT_DAYS_CACHE)
+                .gt("expiresAt", new Date(0))
                 .limit(1000)
                 .find(CONSISTENT_READ),
             WATCHDOG_TIMEOUT_MS,
