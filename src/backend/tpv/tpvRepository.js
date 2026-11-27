@@ -5,6 +5,7 @@ P1/P3 OFFICIAL REFERENCES:
 - Wix Payments API: "Processing Payments" — idempotent transaction identity
   (wixTransactionId / stable transaction key).
 */
+import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
@@ -818,6 +819,8 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
                 assertTpvCajaIntegrity(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
+                const recordMetadata = await createTpvRecordMetadata();
+                Object.assign(record, recordMetadata);
                 if (caja.closedAt == null && _sessionFromCaja(caja)) {
                     throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 }
@@ -856,6 +859,8 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
     )) {
         throw new Error("TPV_PHYSICAL_LEDGER_CHAIN_BROKEN");
     }
+    const recordMetadata = await createTpvRecordMetadata();
+    Object.assign(record, recordMetadata);
     const physicalRecord = {
         ...record,
         sequenceNumber: previousSequence + 1,
