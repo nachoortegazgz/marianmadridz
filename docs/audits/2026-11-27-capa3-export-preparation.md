@@ -1,7 +1,7 @@
 # Capa 3 — preparación de exportación contable para registro externo
 
 **Fecha:** 2026-11-27  
-**Rama:** `feat/capa3-registry-export-contract-2026-11-27`  
+**Integración:** PR #641 fusionada en `main`.  
 **Estado:** contrato y preparación backend implementados en código; transporte y runtime pendientes.  
 **Autoridad:** Wix CMS sigue siendo SSOT transaccional. Capa 3 solo recibe evidencia documental.
 
@@ -28,8 +28,8 @@ No se exportan nombre/NIF/dirección de clientes, notas de reserva, descripción
 - No envía correo, no llama a Microsoft Graph, no sube a SharePoint y no ejecuta Power Automate.
 - No se ha añadido ningún cron de exportación.
 - Los registros deben ser `recordNature=REAL`; cualquier registro sintético/no clasificado bloquea el artefacto.
-- Los agregadores requieren la configuración fiscal canónica `MapaStaff/CONFIG_SISTEMA_FISCAL`. El read-back live del 2026-11-27 devolvió cero registros `CONFIG_SISTEMA`; por tanto no puede generarse un paquete fiscal online hasta completar datos legales verificados. No se inventan NIF ni datos del emisor.
-- La clasificación TPV `recordNature` depende de la PR #640 y de sus campos CMS aditivos. Esta PR de Capa 3 no debe fusionarse como si certificara esa dependencia.
+- Los agregadores requieren la configuración fiscal canónica de `MapaStaff`. El read-back live del 2026-11-27 devolvió cero registros de configuración; por tanto no puede generarse un paquete fiscal online hasta completar datos legales verificados. No se inventan NIF ni datos del emisor.
+- La clasificación TPV `recordNature` y los gates de escritura de venta ya están integrados en `main` mediante PR #640. El campo `productionActivationAt` está disponible en el esquema CMS, pero el registro de configuración sigue sin fecha de corte; hasta fijarla mediante procedimiento formal, los eventos siguen siendo `SYNTHETIC`.
 - No existe evidencia de tenant M365, biblioteca SharePoint, permisos, DLP, retención, PA-01…PA-07 ni aprobación de gestoría. No declarar transporte externo conectado.
 
 ## Gates para activar transporte
