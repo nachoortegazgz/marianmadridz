@@ -16,7 +16,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_HISTORICAL_POLICY, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
 import { createPersistedTpvProjectionError } from "backend/tpv/tpvMovementContracts";
 import {
@@ -638,7 +638,7 @@ async function findByIdempotencyKey(collection, key) {
             consistency: CONSISTENCY.STRONG,
         });
         if (result.items.length > 1) throw new Error("TPV_IDEMPOTENCY_INDEX_VIOLATION");
-        if (result.items[0] && _isCanonicalTpvLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
+        if (result.items[0] && _isTpvLedgerItem(result.items[0])) return _virtualRecord(result.items[0]);
     }
     return null;
 }
@@ -938,7 +938,7 @@ export async function queryTpvRecords(collection, filter, options = {}) {
     })));
     const records = [];
     const appendPage = (page) => records.push(...page.items
-        .filter(_isCanonicalTpvLedgerItem)
+        .filter(_isTpvLedgerItem)
         .map(_virtualRecord)
         .filter((item) => _matchesFilter(item, filter)));
     pages.forEach(appendPage);
