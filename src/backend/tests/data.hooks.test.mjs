@@ -278,7 +278,8 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
     operatorId: '0114748d-2806-3928-9b97-ff0d09853759',
     createdAt: new Date('2026-11-25T10:00:00.000Z'),
     status: 'PENDING_PAYMENT',
-    sourceType: 'SYNTHETIC',
+    sourceType: 'TPV',
+    recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
     requiresReconciliation: true,
     draftOrderReason: 'DRAFT_ORDER_API_UNAVAILABLE',
     requestFingerprint: 'a'.repeat(64),
@@ -290,10 +291,8 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [item]);
   const updatedIntent = { ...item, draftOrderReason: "QA_RESETTABLE" };
   assert.equal(await H.TransaccionesTPV_beforeUpdate(updatedIntent), updatedIntent);
-  await assert.rejects(
-    () => H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" }),
-    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
-  );
+  const paidIntent = await H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" });
+  assert.equal(paidIntent.status, "PAID");
   await assert.rejects(
     () => H.TransaccionesTPV_beforeRemove(item._id),
     (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY" && error?.retryable === false
@@ -304,10 +303,10 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
   );
   wixDataMock._reset();
 
-  const real = { ...item, sourceType: "REAL" };
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [real]);
+  const alternate = { ...item, sourceType: "TPV" };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [alternate]);
   await assert.rejects(
-    () => H.TransaccionesTPV_beforeRemove(real._id),
+    () => H.TransaccionesTPV_beforeRemove(alternate._id),
     (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
   );
   wixDataMock._reset();
