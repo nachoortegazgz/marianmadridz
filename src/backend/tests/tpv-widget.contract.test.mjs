@@ -329,6 +329,7 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(controller, /expectedSessionId,/);
     assert.match(caja, /const cajaActual = await readTpvCajaSnapshot\(\)/);
     assert.match(caja, /nextSessionPreview/);
+    assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
     assert.match(repository, /export async function readTpvCajaSnapshot\(\)/);
     assert.match(repository, /projectionStatus: session \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
