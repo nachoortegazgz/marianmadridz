@@ -182,14 +182,14 @@ function _buildFiscalSystemConfig(config) {
         fechaInicioVerifactu: _toFiscalStartDateText(config.fechaInicioVerifactu),
     };
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
-        throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Mantener deshabilitados los writers hasta corregir y certificar."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Corregir el identificador fiscal y verificarlo antes de repetir la operación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null }, retryable: false });
     }
 
     const missing = Object.entries(resolved)
         .filter(([, value]) => value === "" || value === null)
         .map(([key]) => key);
     if (missing.length) {
-        throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "La configuración fiscal está incompleta. Contacta al responsable legal.", technicalDetail: "Faltan campos fiscales obligatorios: " + missing.join(", "), remediation: ["Revisar el contrato fiscal aprobado y los campos obligatorios de CONFIG_SISTEMA_FISCAL.", "Completar únicamente datos respaldados por documentación legal.", "Validar el NIF con AEAT y mantener los writers deshabilitados hasta certificación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null, missingFields: missing }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "La configuración fiscal está incompleta. Contacta al responsable legal.", technicalDetail: "Faltan campos fiscales obligatorios: " + missing.join(", "), remediation: ["Revisar el contrato fiscal aprobado y los campos obligatorios de CONFIG_SISTEMA_FISCAL.", "Completar únicamente datos respaldados por documentación legal.", "Validar el NIF con AEAT y completar los campos obligatorios antes de repetir la operación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null, missingFields: missing }, retryable: false });
     }
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
         throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
