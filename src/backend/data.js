@@ -16,6 +16,7 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 
 import {
     BUSINESS_COLLECTIONS,
+    TPV_LEDGER_SOURCE,
     CATALOG_ENTRY_TYPE,
     CONTROL_TYPE,
     FISCAL_ROLE,
@@ -394,6 +395,15 @@ export function MovimientosCaja_beforeInsert(item) {
     // domain names before validation. The final persisted item is converted
     // back to the exact CMS field IDs at the end of this hook.
     _normalizeMovimientosCajaPhysicalFields(item, false);
+
+    const recordSource = _safeTrim(item.recordSource);
+    if (isExplicitSimulationLedgerRecord(item)) {
+        _schemaError(
+            recordSource === TPV_LEDGER_SOURCE
+                ? "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED"
+                : "CMS_HISTORICAL_RECORD_WRITE_DENIED"
+        );
+    }
 
     // BLOQUE DE INTEGRIDAD (v13.0, HOOK-CAJA-01/02/05): las guardas duras de
     // trazabilidad y cadena de hash se evaluan PRIMERO, antes que cualquier
