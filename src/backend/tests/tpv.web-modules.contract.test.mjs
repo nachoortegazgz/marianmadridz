@@ -458,7 +458,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(config, /SOURCE_TYPE: "TPV"/);
     assert.match(config, /LEDGER_VERSION: "TPV_LEDGER_V3"/);
     assert.match(config, /SCHEMA_VERSION: 3/);
-    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY|TPV_SYNTHETIC_LEDGER/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
     assert.doesNotMatch(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
@@ -717,7 +717,7 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
         summary, rows: [row],
-    }), /C3_EXPORT_SOURCE_RECORD_NOT_REAL/);
+    }), /C3_EXPORT_ISSUE_DATE_INVALID/);
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
         summary, rows: [{ ...row, fechaExpedicion: "2026-02-31" }],
