@@ -163,18 +163,23 @@ async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
             "Bookings.staffMembers.queryStaffMembers"
         );
 
-        if (!Array.isArray(response?.staffMembers)) {
+        const paging = response?.pagingMetadata;
+        if (!Array.isArray(response?.staffMembers) ||
+            !paging ||
+            typeof paging.hasNext !== "boolean" ||
+            !paging.cursors ||
+            typeof paging.cursors !== "object") {
             throw _createStaffProviderError(
                 "QUERY_STAFF_MEMBERS",
-                new Error("Bookings Staff Members response has no staffMembers array."),
+                new Error("Bookings Staff Members response does not match the documented response shape."),
                 traceId,
                 "STAFF_PROVIDER_RESPONSE_INVALID"
             );
         }
         all.push(...response.staffMembers);
 
-        const nextCursor = _safeTrim(response?.pagingMetadata?.cursors?.next || "");
-        if (response?.pagingMetadata?.hasNext === true && !nextCursor) {
+        const nextCursor = _safeTrim(paging.cursors.next || "");
+        if (paging.hasNext && !nextCursor) {
             throw _createStaffProviderError(
                 "QUERY_STAFF_MEMBERS_PAGING",
                 new Error("Bookings Staff Members response omitted the next cursor."),
@@ -182,7 +187,15 @@ async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
                 "STAFF_PROVIDER_RESPONSE_INVALID"
             );
         }
-        if (!nextCursor) break;
+        if (!paging.hasNext && nextCursor) {
+            throw _createStaffProviderError(
+                "QUERY_STAFF_MEMBERS_PAGING",
+                new Error("Bookings Staff Members response returned a next cursor while hasNext is false."),
+                traceId,
+                "STAFF_PROVIDER_RESPONSE_INVALID"
+            );
+        }
+        if (!paging.hasNext) break;
         if (page === MAX_STAFF_PAGES - 1) {
             const error = new Error(
                 "Bookings Staff Members pagination exceeded " + MAX_STAFF_PAGES + " pages; results are incomplete."
