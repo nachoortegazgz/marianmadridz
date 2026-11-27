@@ -719,7 +719,6 @@ paymentStatesManualRequired: 0,
 processed: 0,
 failed: 0,
 manualRequired: 0,
-skippedByPolicy: 0,
 errors: [],
 };
 
@@ -848,7 +847,6 @@ paymentStatesManualRequired: result.paymentStatesManualRequired,
 processed: result.processed,
 failed: result.failed,
 manualRequired: result.manualRequired,
-skippedByPolicy: result.skippedByPolicy,
 traceId,
 });
 } catch (err) {
