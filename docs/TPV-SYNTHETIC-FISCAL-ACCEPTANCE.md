@@ -1,6 +1,6 @@
 # TPV — aceptación fiscal sintética
 
-<badge>Documento sustituido</badge>
+**Documento sustituido; no es autoridad operativa.**
 
 Este documento histórico contenía criterios de pruebas y supuestos de CMS que han evolucionado. No debe utilizarse como runbook ni como autorización para mutar ledgers, caja o registros existentes.
 
