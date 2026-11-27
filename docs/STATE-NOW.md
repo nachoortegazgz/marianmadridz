@@ -68,7 +68,7 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 
 - Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor clásico, Velo habilitado, Draft.
 - Página TPV ID `yl5th`, ruta `/tpv`, `published=false` (read-back 27-11-2026).
-- Recuentos observados entonces: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
+- Recuentos de la auditoría integral posterior del 27-11-2026: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=81`, `MapaStaff=5`, `CitasF2=12`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`. La lectura read-only anterior de aceptación había observado `ControlOperativo=78` y `CitasF2=11`; se conserva como evidencia de ese instante, no como baseline posterior.
 - Es una lectura histórica, no consulta live actual. No modificar esos registros ni utilizarlos como fixtures.
 
 ## Fuentes y auditorías
