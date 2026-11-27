@@ -233,7 +233,13 @@ async function _resolveStaffContext(traceId) {
     }
 
     const member = response?.member || response;
-    if (!member || member.status === "ERROR") return null;
+    if (!member) return null;
+    if (member.status === "ERROR") {
+        const error = new Error("MEMBER_IDENTITY_RESPONSE_INVALID");
+        error.code = "MEMBER_IDENTITY_RESPONSE_INVALID";
+        error.traceId = traceId || null;
+        throw error;
+    }
 
     const memberId = _safeTrim(member._id || member.id || "");
     const contactId = _safeTrim(member.contactId || "");
