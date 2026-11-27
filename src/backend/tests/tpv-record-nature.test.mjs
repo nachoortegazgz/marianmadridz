@@ -16,5 +16,6 @@ test("timestamp after cutoff is real", () => {
 });
 test("invalid timestamp or cutoff is rejected", () => {
     assert.throws(() => classifyTpvRecordNature("invalid", null), /TPV_RECORD_TIMESTAMP_INVALID/);
+    assert.throws(() => classifyTpvRecordNature("2026-02-31T05:00:00.000Z", null), /TPV_RECORD_TIMESTAMP_INVALID/);
     assert.throws(() => classifyTpvRecordNature("2026-11-27T05:00:00Z", "invalid"), /TPV_PRODUCTION_ACTIVATION_AT_INVALID/);
 });
