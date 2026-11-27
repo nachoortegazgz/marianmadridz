@@ -100,8 +100,13 @@ export const generarTicketX = webMethod(
                     },
                     nOperaciones: sales.length + movements.length,
                 };
+                const snapshotFingerprint = makeRequestFingerprint({
+                    sessionId,
+                    totals,
+                    nOperaciones: sales.length + movements.length,
+                });
                 const audit = await appendTpvAudit({
-                    idempotencyKey: "TICKET_X:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + sessionId,
+                    idempotencyKey: "TICKET_X:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + sessionId + ":" + snapshotFingerprint,
                     action: "TICKET_X_GENERATED",
                     actorId: operator.operatorId,
                     entityType: "TICKET_X",
