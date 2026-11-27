@@ -325,10 +325,16 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    assert.match(caja, /const cajaResult = await initializeTpvCaja\(\)/);
-    assert.match(caja, /projectionStatus: canonicalProjection \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
+    assert.match(caja, /const cajaActual = await readTpvCajaSnapshot\(\)/);
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
+    assert.match(repository, /export async function readTpvCajaSnapshot\(\)/);
+    assert.match(repository, /projectionStatus: session \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
+    assert.match(repository, /function _isLegacyUnverifiedProjection\(caja\)/);
+    assert.match(repository, /monetarySnapshotReused: false/);
+    assert.match(repository, /posPaymentStatus: null/);
+    assert.match(repository, /transactionId: null/);
+    assert.match(repository, /ticketTotal: null/);
 
     // The operator is a Wix-authenticated member; permissions are server-owned.
     assert.match(permissions, /readCatalog: true/);
