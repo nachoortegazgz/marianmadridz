@@ -77,13 +77,11 @@ function buildSaleReadiness(prepared, validated) {
         totalVenta: validated.totalVenta,
     });
     const saleReadinessBlockers = [
-        "FISCAL_CONFIG_UNVERIFIED",
         "PAYMENT_NOT_VERIFIED",
         "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
         ...writeV1Blockers,
     ];
     if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
-    if (prepared.taxIncludedInPrice !== true) saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
     return { containsProducts, writeV1Blockers, saleReadinessBlockers };
 }
 
@@ -204,7 +202,6 @@ async function appendSaleAudit(record, traceId) {
             status: record.status,
             sourceType: record.sourceType,
             recordTimestamp: record.recordTimestamp,
-            recordNature: record.recordNature,
             requiresReconciliation: record.requiresReconciliation === true,
             requestFingerprint: record.requestFingerprint,
         },
