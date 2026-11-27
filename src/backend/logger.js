@@ -35,9 +35,11 @@ const PII_FIELD_PATTERN = /(?:email(?:address)?|correo|(?:mobile|telephone|phone
 
 function _sanitizeText(value) {
     return String(value)
+        .replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/gi, "[REDACTED_PRIVATE_KEY]")
         .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED_SECRET]")
-        .replace(/([?&](?:access[_-]?token|refresh[_-]?token|token|api[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|secret|signature|authorization|password)=)[^&#\s]*/gi, "$1[REDACTED_SECRET]")
-        .replace(/\b(password|secret|api[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|authorization)\s*[:=]\s*(['"]?)[^\s,;'"&]+/gi, "$1=[REDACTED_SECRET]")
+        .replace(/([?&](?:access[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|private[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|secret|hmac|signature|cookie|session[_-]?id|fiscal[_-]?key|authorization|password)=)[^&#\s]*/gi, "$1[REDACTED_SECRET]")
+        .replace(/\b(password|secret|token|api[_-]?key|apikey|private[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|authorization|hmac|signature|cookie|session[_-]?id|fiscal[_-]?key)\s*[:=]\s*(['"]?)[^\s,;'\"&]+/gi, "$1=[REDACTED_SECRET]")
+        .replace(/([/\\](?:access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|private[_-]?key|secret|hmac|signature|cookie)[/\\])[^/\\\s?#]+/gi, "$1[REDACTED_SECRET]")
         .replace(/(https?:\/\/)[^/@\s:]+:[^/@\s]+@/gi, "$1[REDACTED]@")
         .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]");
 }
