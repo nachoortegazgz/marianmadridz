@@ -5,6 +5,7 @@ P1/P3 OFFICIAL REFERENCES:
 - Wix Payments API: "Processing Payments" — idempotent transaction identity
   (wixTransactionId / stable transaction key).
 */
+import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
