@@ -12,7 +12,7 @@ import {
     getItem as dalGet,
     insertItem as dalInsert,
     updateItem as dalUpdate,
-    removeById as dalRemove,
+    bulkPatchItems,
     query as dalQuery,
 } from "backend/dataAccess";
 import {
@@ -144,14 +144,26 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
             const expiresAt = existing.expiresAt instanceof Date ? existing.expiresAt : new Date(existing.expiresAt);
             const existingOwner = String(_readPayload(existing).lockOwnerId || "");
             if (Number.isFinite(expiresAt.getTime()) && expiresAt.getTime() <= now.getTime()) {
-                try {
-                    await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
-                    continue;
-                } catch (error) {
-                    if (_isNotFound(error)) continue;
-                    const latest = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
-                    if (!latest || String(_readPayload(latest).lockOwnerId || "") !== existingOwner) continue;
+                const acquiredAt = new Date();
+                const replacementPayload = {
+                    ..._readPayload(existing),
+                    lockOwnerId: ownerId,
+                    lockStatus: "ACTIVE",
+                    acquiredAt: acquiredAt.toISOString(),
+                };
+                await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+                    { fieldPath: "payload", action: "SET_FIELD", value: replacementPayload },
+                    { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(acquiredAt.getTime() + ACCOUNTING_LEDGER_LOCK_CONFIG.TTL_MS) },
+                    { fieldPath: "heartbeatAt", action: "SET_FIELD", value: acquiredAt },
+                ], { condition: { filter: {
+                    controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+                    expiresAt: { $eq: existing.expiresAt },
+                } } });
+                const claimed = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
+                if (_readPayload(claimed).lockOwnerId === ownerId) {
+                    return { ownerId, revision: claimed?._revision ?? null };
                 }
+                continue;
             }
             if (Date.now() >= deadline) {
                 const error = new Error("ACCOUNTING_LEDGER_LOCK_BUSY");
@@ -170,6 +182,7 @@ async function _acquireAccountingLedgerLock(traceId, waitMs = ACCOUNTING_LEDGER_
             serviceId: ACCOUNTING_LEDGER_LOCK_CONFIG.SERVICE_ID,
             resourceId: ACCOUNTING_LEDGER_LOCK_CONFIG.RESOURCE_ID,
             status: "ACTIVE",
+            version: 0,
             expiresAt: new Date(acquiredAt.getTime() + ACCOUNTING_LEDGER_LOCK_CONFIG.TTL_MS),
             heartbeatAt: acquiredAt,
             payload: {
@@ -218,11 +231,23 @@ async function _releaseAccountingLedgerLock(lock) {
         return { released: false, reason: "OWNERSHIP_CHANGED" };
     }
     try {
-        await dalRemove(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, { expectedControlType: CONTROL_TYPE.SLOT_LOCK });
-        return { released: true };
+        const releasedAt = new Date();
+        await bulkPatchItems(CONTROL_COL, [ACCOUNTING_LEDGER_LOCK_CONFIG.ID], [
+            {
+                fieldPath: "payload",
+                action: "SET_FIELD",
+                value: { ..._readPayload(current), lockOwnerId: "", lockStatus: "RELEASED", releasedAt: releasedAt.toISOString() },
+            },
+            { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
+            { fieldPath: "heartbeatAt", action: "SET_FIELD", value: releasedAt },
+        ], { condition: { filter: {
+            controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
+            expiresAt: { $eq: current.expiresAt },
+        } } });
+        const latest = await dalGet(CONTROL_COL, ACCOUNTING_LEDGER_LOCK_CONFIG.ID, "strong");
+        return { released: _readPayload(latest).lockOwnerId !== lock.ownerId };
     } catch (error) {
-        if (_isNotFound(error)) return { released: true, missing: true };
-        return { released: false, reason: error?.message || "RELEASE_FAILED" };
+        return { released: false, reason: error?.code || error?.message || "RELEASE_FAILED" };
     }
 }
 
