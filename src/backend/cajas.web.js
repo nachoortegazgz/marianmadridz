@@ -601,6 +601,18 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
     const traceId = payload?.traceId || makeTraceId("manual-tx");
     try {
         await requireCajero(traceId);
+        const transactionId = _safeTrim(payload?.transactionId);
+        if (!transactionId || transactionId.length > 128) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "TRANSACTION_ID_REQUIRED",
+                    message: "transactionId es obligatorio y debe tener como máximo 128 caracteres.",
+                },
+                traceId,
+            };
+        }
         await validateFiscalConfig(traceId);
         const { nifEmisor } = await _getFiscalKeys();
 
@@ -652,18 +664,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
         ].includes(movementType);
         const operationDescription = _cleanText(payload?.operationDescription || payload?.description || "Venta mostrador", 500);
-        const transactionId = _safeTrim(payload?.transactionId);
-        if (!transactionId || transactionId.length > 128) {
-            return {
-                status: "ERROR",
-                data: null,
-                error: {
-                    code: "TRANSACTION_ID_REQUIRED",
-                    message: "transactionId es obligatorio y debe tener como máximo 128 caracteres.",
-                },
-                traceId,
-            };
-        }
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
         const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
