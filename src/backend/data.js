@@ -24,7 +24,7 @@ import {
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, isExplicitSimulationLedgerRecord, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -397,12 +397,12 @@ export function MovimientosCaja_beforeInsert(item) {
     _normalizeMovimientosCajaPhysicalFields(item, false);
 
     const recordSource = _safeTrim(item.recordSource);
-    if (isExplicitSimulationLedgerRecord(item)) {
-        _schemaError(
-            recordSource === TPV_LEDGER_SOURCE
-                ? "CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED"
-                : "CMS_HISTORICAL_RECORD_WRITE_DENIED"
-        );
+    if (recordSource === TPV_LEDGER_SOURCE) {
+        normalizeMovementKeys(item);
+        _normalizeMovimientosCajaObjectFields(item);
+        assertMovimientosCajaRequiredFields(item);
+        _normalizeMovimientosCajaPhysicalFields(item, true);
+        return item;
     }
 
     // BLOQUE DE INTEGRIDAD (v13.0, HOOK-CAJA-01/02/05): las guardas duras de
