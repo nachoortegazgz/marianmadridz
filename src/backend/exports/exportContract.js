@@ -36,7 +36,7 @@ function isoDate(value, code) {
 
 function dateOnly(value, code) {
     const normalized = requiredString(value, code, 10);
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(normalized)) throw new Error(code);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) throw new Error(code);
     const date = new Date(normalized + "T00:00:00.000Z");
     if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== normalized) {
         throw new Error(code);
