@@ -718,7 +718,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DISPLAY_TOKEN,
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.DAYS_CACHE,
-    CONTROL_TYPE.SLOT_LOCK,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
