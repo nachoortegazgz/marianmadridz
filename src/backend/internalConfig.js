@@ -160,17 +160,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
  * TPV flow. Never use these values to authorize, write, reconcile or filter
  * current operational transactions.
  */
-export const TPV_HISTORICAL_POLICY = Object.freeze({
-  SOURCE_TYPE: "SYNTHETIC",
-  LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
-  SCHEMA_VERSION: 2,
-  PROCESSING_MODE: "INTERNAL",
-  RECONCILIATION_STATUS: "NOT_RECONCILED",
-  LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
-  CASH_REGISTER_SOURCE: "TPV_SYNTHETIC",
-  LEGACY_CASH_REGISTER_SOURCE: "TPV_SANDBOX_INITIALIZED",
-  LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC",
-});
+
 
 export const CATALOG_ENTRY_TYPE = Object.freeze({
   SERVICE: "SERVICE",
