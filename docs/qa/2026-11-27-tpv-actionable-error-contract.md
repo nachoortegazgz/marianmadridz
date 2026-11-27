@@ -1,5 +1,7 @@
 # TPV operational policy and error contract — 2026-11-27
 
+**Estado:** integrado en `main` mediante PR #651, merge commit `abf862c9e7cbdc393c0186f650ed30f57aaeeee6`.
+
 ## Decision
 
 PR #651 consolidates TPV errors, write guards and data integrity without a parallel runtime or environment-wide write switch.
