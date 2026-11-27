@@ -273,7 +273,19 @@ function _getMemberId(member) {
 export const getBookingMemberProfile = webMethod(
     Permissions.SiteMember,
     async () => {
-        const member = await _getCurrentMemberInfo();
+        let member;
+        try {
+            member = await _getCurrentMemberInfo();
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: error?.code || "INTERNAL",
+                    message: "No se pudo verificar la identidad del miembro.",
+                },
+            };
+        }
         const memberId = _getMemberId(member);
         const contactId = _safeTrim(member?.contactId || "");
         if (!memberId || !_looksLikeGuid(contactId)) {
