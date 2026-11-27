@@ -1199,9 +1199,10 @@ const TRANSACTION_LEASE_MS =
 async function _getTransactionById(pairToken) {
     const id = _safeTrim(pairToken);
     if (!id) return null;
-    return await elevatedGet(TRANSACTIONS_COL, id).catch(function () {
-        return null;
+    const result = await elevatedQueryFind(TRANSACTIONS_COL, function (query) {
+        return query.eq("_id", id).limit(1);
     });
+    return result && Array.isArray(result.items) ? result.items[0] || null : null;
 }
 
 function _readTransaction(doc) {
