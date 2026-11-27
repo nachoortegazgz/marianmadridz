@@ -251,8 +251,8 @@ test("operational idempotency never derives identifiers from environment labels"
 
 test("TPV runtime uses a neutral contract and client idempotency keys are bounded", () => {
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "TPV");
-    assert.equal(TPV_RUNTIME_POLICY.CURRENCY, "EUR");
-    assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
+    assert.equal(SDK_CONFIG.CURRENCY_CODE, "EUR");
+    assert.equal(SDK_CONFIG.TZ, "Europe/Madrid");
     assert.match(TPV_RUNTIME_POLICY.SITE_ID, /^[0-9a-f-]{36}$/i);
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_LEDGER_V3");
     assert.equal(TPV_RUNTIME_POLICY.SCHEMA_VERSION, 3);
