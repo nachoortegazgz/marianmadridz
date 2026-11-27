@@ -1,74 +1,42 @@
-# Manifiesto de archivo — 2026-11
+# Manifiesto documental — 2026-11-27
 
-| Archivo de origen | Fecha documental | Motivo | Destino del contenido crítico |
-|---|---|---|---|
-| docs/PROJECT-STATUS.md | 2026-11-23 | Estado extenso duplicado; sustituido por estado acotado | STATE-NOW.md: P0/P1, estado Wix y NO-GO |
-| docs/PROJECT-OWNER-DIRECTIVE-2026-11-20.md | 2026-11-20 | Directriz conservada como evidencia fuente | STATE-NOW.md: autoridad y precedencia |
-| docs/DECISION-LOG.md | sin fecha nominal verificable | Registro histórico extenso; decisiones activas extraídas | STATE-NOW.md: BUS/TEC e invariantes |
-| docs/PROJECT-KNOWLEDGE-BASE.md | sin fecha nominal verificable | Duplica estado, arquitectura e índice | Archivo íntegro en archive/2026-11/ |
-| docs/MASTER-EXECUTION-PLAN.md | sin fecha nominal verificable | Duplica estado, backlog y criterios | Archivo íntegro en archive/2026-11/ |
-| docs/architecture/ADR-CASH-REGISTER-SESSION-CONTROL.md | sin fecha nominal verificable | ADR extensa; preservada íntegra | Archivo íntegro en archive/2026-11/architecture/ |
-| docs/architecture/ADR-VERIFACTU-REMISSION.md | sin fecha nominal verificable | Diseño y gates fiscales preservados | Archivo íntegro en archive/2026-11/architecture/ |
-| docs/audits/2026-11-23-fiscal-recovery-root-cause.md | 2026-11-23 | Evidencia P0 preservada | STATE-NOW.md: #416 y CONFIG_SISTEMA_FISCAL |
-| docs/audits/2026-11-23-movimientos-caja-count-drift.md | 2026-11-23 | Evidencia P0 de integridad preservada | STATE-NOW.md: #434 |
-| docs/audits/2026-11-23-bookings-revalidation.md | 2026-11-23 | Evidencia P1 de Bookings preservada | STATE-NOW.md: #522/#523 y contrato F1/F2 |
-| docs/audits/2026-11-23-repository-wix-cms-reconciliation.md | 2026-11-23 | Reconciliación Wix/CMS preservada | STATE-NOW.md: Draft y automatizaciones |
-| docs/audits/2026-11-23-dual-booking-classification-and-order-reconciliation.md | 2026-11-23 | Clasificación de bookings y pedidos preservada | Archivo íntegro en archive/2026-11/audits/ |
-| docs/architecture/TPV-HTML-WIDGET-BRIDGE.md | sin fecha nominal verificable | Contrato bridge actualizado preservado | STATE-NOW.md: 120 reintentos / 60 s / watchdog 65 s |
-| docs/qa/TPV-NATIVE-SESSION-CONTRACT-2026-11-23.md | 2026-11-23 | Contrato TPV neutral preservado | Archivo íntegro en archive/2026-11/qa/ |
-| docs/qa/TPV-WIX-NATIVE-RECONCILIATION-AUDIT-2026-11-23.md | 2026-11-23 | Conciliación POS/TPV preservada | STATE-NOW.md: pedidos #10030–#10034 |
-| docs/qa/2026-11-23-tpv-session-handoff.md | 2026-11-23 | Relevo técnico con bloqueos TPV preservado | STATE-NOW.md: #525 y #435 |
-| docs/qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md | 2026-11-23 | Matriz de aceptación preservada | Archivo íntegro en archive/2026-11/qa/ |
-| docs/qa/QA-ENVIRONMENT-SSOT.md | sin fecha nominal verificable | Addenda de entorno preservados; no son estado Runtime | Archivo íntegro en archive/2026-11/qa/ |
-| docs/reference/DICCIONARIO_DATOS_CMS.md | sin fecha nominal verificable | Referencia extensa; snapshots sujetos a read-back | Archivo íntegro en archive/2026-11/reference/ |
-| docs/reference/WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md | 2026-11-23 | Read-back físico preservado | Archivo íntegro en archive/2026-11/reference/ |
-| docs/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md | sin fecha nominal verificable | Diseño Capa 3 no operativo | STATE-NOW.md: autoridad Capa 1/Capa 3 |
+## Documentación operativa vigente
 
-## Reubicación
+La única entrada operativa es [INDEX.md](INDEX.md), con estas fuentes:
+- `PROJECT-CANON.md`: arquitectura e invariantes.
+- `STATE-NOW.md`: estado actual y siguiente sesión.
+- `RELEASE-READINESS.md`: gates de aceptación y GO/NO-GO.
+- `TPV-UNIFIED-FLOW.md`: contrato TPV.
+- `TPV-MILESTONE-01-UNIFIED-CORE.md`: estado del hito TPV.
+- `src/backend/tpv/README.md`: mapa del backend TPV.
 
-Los 156 archivos Markdown/texto inventariados se trasladan sin alterar su contenido a `docs/archive/2026-11/`, conservando su ruta relativa y nombre. Los documentos no enumerados individualmente en la tabla anterior se preservan íntegros en el mismo árbol de archivo; no se eliminan.
+## Política de archivo
 
-## Contadores
+`docs/archive/2026-11/` contiene auditorías, decisiones, handoffs, snapshots de CMS, diseños y contratos históricos. Se conserva como evidencia fechada y contexto de trazabilidad. No es fuente de instrucciones operativas: si una afirmación contradice el código integrado o las fuentes operativas vigentes, prevalece la evidencia más reciente y verificable.
 
-| Métrica | Antes | Después |
-|---|---:|---:|
-| Archivos .md/.txt bajo docs/ | 156 | 159 (3 vivos + 156 archivados) |
-| Documentos vivos bajo docs/ | 156 | 3 |
-| Documentos .md en docs/ raíz | 9 | 3 |
-| Archivos archivados | 0 | 156 |
-| Archivos borrados | 0 | 0 |
-| Archivos nuevos permitidos | 0 | 3 |
+No se borran auditorías históricas solo por ser antiguas. Los documentos duplicados o superados que ya no deban guiar trabajo se marcan como sustituidos, se archivan cuando aportan evidencia y se eliminan del árbol activo cuando existe una copia preservada.
 
-Reducción del corpus vivo: **156 → 3 (98,08 %)**. Reducción de documentos en la raíz: **9 → 3 (66,67 %)**.
+## Cambios de consolidación — 2026-11-27
 
+| Documento | Acción | Fuente vigente |
+|---|---|---|
+| `docs/TPV-ONLINE-TEST-READINESS.md` | Eliminado del árbol activo; copia histórica ya archivada | `docs/TPV-UNIFIED-FLOW.md` |
+| `docs/TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md` | Sustituido por una página breve; versión previa preservada en archivo | `docs/TPV-UNIFIED-FLOW.md`, `docs/RELEASE-READINESS.md` |
+| `DOSSIER TÉCNICO CONSOLIDADO.md` | Sustituido por un índice de transición para evitar duplicidad y directrices obsoletas | `docs/PROJECT-CANON.md`, `docs/STATE-NOW.md` |
+| `docs/audits/2026-11-27-wix-site-and-tpv-cli-audit.md` | Marcado como baseline anterior a PR #640; conservado como evidencia | `docs/STATE-NOW.md`, `docs/audits/2026-11-27-mvp-runtime-readonly-acceptance.md` |
+| `docs/TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md` | Copia íntegra archivada como `TPV-SYNTHETIC-FISCAL-ACCEPTANCE-2026-11-27-SUPERSEDED.md` | La versión corta actual solo redirige |
 
-## Ciclo 2026-11-25
+## Auditoría de código TPV
 
-| Archivo de origen | Acción | Destino | Contenido crítico conservado en |
-|---|---|---|---|
-| `docs/RUNTIME-EVIDENCE-CHECKLIST.md` | Archivado tras consolidar los seis criterios PASS y sus procedimientos | `docs/archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md` | `docs/RELEASE-READINESS.md` (bloques P1–P4, F1 y F5); `docs/PROJECT-CANON.md` (contratos y patrones) |
-| `docs/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | Archivado como revisión de sesión; referencias contractuales trasladadas al canónico | `docs/archive/2026-11/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md` | `docs/PROJECT-CANON.md` (TPV, inventario, pagos y estado) |
+El árbol actual no contiene `tpvTestRuntime.web.js`, `tpvTestRuntimeRepository.js` ni `tpvTestRuntimeCore.js`. No se encontró evidencia de un runtime de negocio paralelo activo.
 
-Conteo del ciclo documental previo: 2 archivos movidos; 0 eliminados. El inventario global debe recalcularse desde el árbol Git vigente antes de publicar nuevos contadores; los tres JSON de `docs/qa/` permanecen como fixtures/snapshots QA.
+La compatibilidad histórica no se considera código muerto: `tpvHistoricalCompat.js` tiene consumidores en validación y pruebas; los discriminadores históricos aparecen en hooks/políticas de acceso y pruebas. No se eliminan hasta separar explícitamente el contrato de lectura histórica y superar la suite de regresión.
 
+No se ha demostrado ningún módulo TPV huérfano con evidencia suficiente para borrarlo. La limpieza de dependencias/toolchain (ESLint 8 EOL y transitivas deprecated detectadas en auditoría previa) queda como tarea aislada, con actualización de lockfiles por herramienta oficial Wix/npm, CI y revisión de diff; no se mezcla con esta consolidación documental.
 
-## Revisión de vigencia — 2026-11-25
+## Límites de verificación
 
-- PR #611 está fusionada en `main` (merge `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`). El estado de TPV preparado y sus gates se mantienen en `docs/STATE-NOW.md`, `docs/RELEASE-READINESS.md` y `src/backend/tpv/README.md`.
-- Se actualizaron los documentos canónicos para retirar estados obsoletos de PR abierta/Draft y referencias antiguas a escrituras sintéticas activas.
-- No se eliminaron documentos archivados: contienen evidencia histórica, contratos y decisiones que no deben perder trazabilidad. La limpieza se realiza separando documentación viva de evidencia histórica y retirando referencias operativas obsoletas.
-- No se publican contadores de archivos nuevos en esta revisión porque el inventario anterior contenía cifras incompatibles entre sí; deben recalcularse desde el árbol Git completo antes de usarse como métrica.
-
-
-## Supersesión de directrices TPV — 2026-11-25
-
-La nueva decisión [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) sustituye cualquier instrucción histórica que ordene crear, mantener o autorizar un runtime TPV diferenciado por Sandbox/Live, sintético/real, Preview/Published o test-run. Los documentos de auditoría y handoff anteriores se conservan íntegros como evidencia fechada, pero dejan de ser instrucciones operativas. No se borran porque acreditan decisiones y observaciones anteriores; ante contradicción, prevalece el criterio de flujo único. La retirada de código se ejecutará solo después de verificar consumidores, bindings, hooks y pruebas.
-
-
-| docs/TPV-ONLINE-TEST-READINESS.md | 2026-11-25 | Instrucciones del runtime separado PR #615/#616 sustituidas por el flujo único | Copia histórica: [TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md](archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md); autoridad actual: [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md) |
-
-## Limpieza documental — 2026-11-25
-
-- Se retira del área viva el documento de preparación online del runtime separado; se conserva como evidencia histórica marcada explícitamente como supersedida.
-- Se elimina el artefacto generado `.codeviz/Untitled 1/Untitled-1.md`: no estaba indexado, duplicaba diagramas y contenía referencias/placeholder no verificados.
-- El criterio operativo vigente se limita a `PROJECT-CANON.md`, `STATE-NOW.md`, `RELEASE-READINESS.md`, `TPV-UNIFIED-FLOW.md` y `TPV-MILESTONE-01-UNIFIED-CORE.md`; los documentos archivados no son instrucciones ejecutables.
+- No se ejecutó código local ni se modificó lógica de negocio en esta consolidación.
+- No se ejecutó CI para esta rama documental; el HEAD de main no tiene runs asociados.
+- Los resultados CI citados en `STATE-NOW.md` corresponden a PR #640/#641.
+- Wix Preview/Runtime y sincronización Git-Wix siguen sin acreditarse.

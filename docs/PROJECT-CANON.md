@@ -1,182 +1,53 @@
-## GOBIERNO DEL PROYECTO — RESET DE DIRECTRICES HUMANAS (2026-11-27)
+# Canon de arquitectura — Marian Madrid
 
-**Prevalecen los objetivos funcionales y de negocio del proyecto.** Las decisiones, restricciones, procedimientos, convenciones y documentos redactados anteriormente por personas son material editable, no una autoridad autónoma ni un motivo suficiente para bloquear desarrollo, pruebas o correcciones. Este apartado sustituye cualquier directriz anterior incompatible.
+**Vigencia:** 2026-11-27. Para estado, bloqueos y siguiente sesión prevalecen [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Para el TPV prevalece [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md). Las auditorías fechadas son evidencia del instante observado, no una fuente de estado permanente.
 
-Reglas de trabajo:
-- Resolver cada bloqueo según el objetivo que impide alcanzar; retirar la restricción mínima necesaria y documentar el cambio, sin perpetuar bloqueos por decisiones históricas.
-- No existe un objetivo independiente de conservar artefactos de QA desechables, históricos de pruebas no-ledger o código heredado sin función. Esos artefactos pueden corregirse, migrarse o resetearse tras comprobar impacto, trazabilidad e identificación inequívoca del test-run.
-- Los datos sintéticos de QA son reutilizables y pueden resetearse cuando pertenezcan a artefactos explícitamente desechables y no-ledger. Esta regla **no autoriza** actualizar o eliminar movimientos físicos de caja, ledgers fiscales/contables/laborales, cierres ni registros que el contrato del sistema declare append-only; esos registros son inmutables también si son sintéticos y se corrigen mediante nuevos registros rectificativos trazables.
-- La política append-only se aplica a los ledgers y colecciones declarados inmutables por el contrato de datos y a los registros sujetos a obligaciones legales/contractuales. No se extiende automáticamente a proyecciones, intenciones comerciales sintéticas no cobradas ni artefactos temporales de QA, siempre que sus contratos permitan mutación y se compruebe el estado persistido.
-- No se bloquearán pruebas funcionales por la ausencia de una configuración de producción si la prueba puede ejecutarse con fixtures, simuladores o datos sintéticos en la misma ruta de negocio.
-- Las pasarelas, terminales, notificaciones, remisiones fiscales y demás efectos externos se simularán en QA. Ninguna prueba debe generar cobros, comunicaciones a clientes o declaraciones reales por accidente.
-- Los requisitos legales vigentes y los contratos técnicos de Wix/proveedores son restricciones objetivas del sistema, no directrices humanas arbitrarias. Deben verificarse y aplicarse al flujo real correspondiente, sin extenderlos a pruebas sintéticas cuando no proceda.
-- Una restricción temporal debe tener alcance, condición de salida y fecha/criterio de retirada. No se aceptan bloqueos indefinidos del tipo “pendiente humano” si existe una alternativa técnica segura que permita avanzar.
-- La evidencia de pruebas es reproducible y regenerable. El estado de validación debe distinguir pruebas unitarias, integración, Wix Preview/Runtime y producción; no se exige preservar registros operativos para declarar una prueba superada.
+## 1. Fuentes de verdad
 
-**Criterio de decisión:** objetivo del proyecto → requisito legal/contrato oficial verificable → comportamiento técnico demostrado → solución mínima. La documentación humana previa, los estados heredados y las decisiones históricas se revisan a la luz de este criterio y pueden ser sustituidos.
+- La documentación oficial vigente de Wix y de cada Wix App gobierna contratos de plataforma.
+- Wix Bookings/Stores/Payments gobiernan sus respectivos dominios nativos.
+- Wix CMS es SSOT transaccional de las entidades propias del proyecto.
+- SharePoint es repositorio de documentos/evidencias; no gobierna ni modifica datos transaccionales de Capa 1.
+- El repositorio Git es SSOT del código fuente versionado; no acredita por sí mismo el código instalado en Wix.
+- La configuración y el estado de Runtime se consideran verificados solo mediante read-back fechado del entorno correspondiente.
 
----
+## 2. Arquitectura por capas
 
-# PROJECT-CANON — marianmadridz
+- **Capa 1 — operación:** Wix Apps y CMS, backend Velo/WebMethods, eventos y jobs.
+- **Capa 2 — control y consolidación:** validación, conciliación, ledgers y preparación de información derivada sin alterar la fuente nativa.
+- **Capa 3 — documentación/evidencia:** preparación y entrega controlada de paquetes a SharePoint/Power Automate; nunca gobierna ni reescribe Capa 1.
+- El frontend presenta y orquesta. La lógica de negocio, permisos, validación, clasificación y acceso a datos reside en backend.
+- Los secretos se gestionan mediante Wix Secrets Manager o almacén seguro; nunca en frontend ni repositorio.
 
-Revisión: 2026-11-25 · Base de código TPV: `PR #612 merge 239fd8207d228bde56e9908055166980a87d4989` · flujo único documental integrado en main
+## 3. Contratos TPV vigentes
 
-## 1. IDENTIDAD
+- Un único código, contrato, validación y writer para desarrollo y producción. No crear runtime de negocio paralelo por entorno o naturaleza del dato.
+- `recordTimestamp` lo genera el backend en UTC. `recordNature` se deriva en backend comparándolo con `MapaStaff/CONFIG_SISTEMA.productionActivationAt`: anterior = SYNTHETIC; igual o posterior = REAL.
+- La clasificación es metadato de trazabilidad, no selector de runtime. Sin singleton/corte configurado, el sistema clasifica como SYNTHETIC; fecha inválida o configuración ambigua falla cerrada.
+- `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables. `MovimientosCaja` es el ledger físico canónico. `ControlOperativo` guarda locks/auditoría; `CajaActual` es proyección de sesión.
+- `registrarVenta()` aplica los mismos blockers que `validarVentaBorrador()`; no crea intención nueva si `saleReady=false`. El replay idempotente se resuelve antes del gate.
+- No se infiere cobro por la existencia de una intención. Pago verificado, movimiento físico y registro fiscal son etapas separadas.
+- Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables; las correcciones se realizan con registros rectificativos trazables.
 
-| Cliente | Negocio | Stack | Repo | Sitio Wix ID | Entorno actual | Última revisión |
-|---|---|---|---|---|---|---|
-| Marian Madrid | Peluquería, Zaragoza | Wix Editor clásico, Velo, Wix JavaScript SDK | [nachoortegazgz/marianmadridz](https://github.com/nachoortegazgz/marianmadridz) | `188bed94-177c-4bc9-a9f0-35080d874f3e` | Draft; Site Context read-back 2026-11-25 17:53 CET | 2026-11-25 |
+## 4. Reservas
 
-Evidencia histórica: [PROJECT-STATUS archivado](archive/2026-11/PROJECT-STATUS.md) y [directriz anterior](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md). La clasificación histórica de datos no gobierna el flujo TPV vigente.
+- Bookings V2 es la fuente de verdad del estado nativo de la reserva.
+- `CitasF2` es proyección propia; las divergencias se resuelven mediante reconciliación backend auditable e idempotente, no mediante estados inventados ni actualizaciones manuales sin lectura de origen.
+- La lectura del 2026-11-27 encontró 6/11 proyecciones con estado CONFIRMED/PENDING frente a Bookings V2 CANCELED. Sigue siendo un fallo abierto.
 
-## 2. OBJETIVOS
+## 5. Seguridad y fiabilidad
 
-### 2.1 Negocio
+- Comprobar autorización en cada WebMethod; no confiar en rol, identidad, precios, impuestos, totales o clasificación enviados por el cliente.
+- Webhooks, jobs, writers y reintentos deben ser idempotentes y trazables.
+- No asumir transacciones multi-documento de Wix Data; definir recuperación de proyección y reconciliación.
+- No usar REST/CMS directo para saltarse DAL, hooks, permisos o writers canónicos.
+- Simular pagos, terminales y notificaciones durante QA; no generar efectos externos reales.
+- No modificar ni borrar ledgers append-only, aunque sus registros sean sintéticos.
 
-- Publicar catálogo de servicios y permitir reservas online mediante Wix Bookings.
-- Gestionar servicios duales con dos bookings nativos independientes F1/F2, mismo resourceId y gap de exposición no reservado; F2 usa OFFLINE, importe 0 y noFee.
-- Gestionar ventas presenciales, cobros por medio de pago, caja física, movimientos y cierres X/Z mediante TPV; el terminal bancario presencial aún carece de contrato integrado.
-- Vender productos online y presencialmente con Wix Stores como autoridad de inventario.
-- Registrar facturación y jornada laboral conforme a los requisitos legales aplicables.
+## 6. Capa 3
 
-### 2.2 Código
+PR #641 integra la preparación de un paquete trimestral determinista, checksum SHA-256, minimización de campos y lectura estricta de registros REAL con WebMethod Admin-only. El paquete se prepara en memoria. No hay transporte SharePoint/Graph/Power Automate E2E acreditado.
 
-- Implementar el mínimo código necesario; no duplicar capacidades nativas de Wix.
-- Mantener simplicidad, fiabilidad, trazabilidad, idempotencia y concurrencia verificables.
-- Validar funcionalidad real en Wix Editor/Preview/Runtime; CI offline no acredita Runtime.
-- Aplicar backend/WebMethods para reglas, validación y autorización; frontend solo presenta y orquesta.
-- Seguir documentación oficial vigente de Wix, Wix Apps y normativa española; SDK primero cuando exista API soportada.
+## 7. Estado de aceptación
 
-### 2.3 Fuera de alcance MVP
-
-- Captura bancaria presencial propia: proveedor, contrato y credenciales no están contratados/verificados.
-- Inventario paralelo en CMS: Wix Stores Catalog V3 es la autoridad nativa del stock.
-- Emisión/remisión fiscal real: falta configuración legal validada y aceptación fiscal/runtime.
-- SharePoint como sistema transaccional: solo repositorio de evidencia; Wix CMS es SSOT.
-- Operación comercial TPV: release NO-GO hasta completar writer, gates fiscales, pagos, inventario, precio final y aceptación Runtime; el sitio está Draft según el último read-back Wix.
-
-## 3. STACK Y VERSIONES
-
-Versiones instaladas según [package.json](../package.json). “Versión oficial” indica la versión que muestra la documentación consultada a 2026-11-25; no implica que esté instalada.
-
-| Componente | Versión actual | Estado | Fuente oficial |
-|---|---|---|---|
-| Wix | Editor clásico; plataforma SaaS sin semver de sitio | RECOMENDADA | [Wix APIs y rutas de desarrollo](https://dev.wix.com/docs/overview/platform-overview/about-wix-apis) |
-| Velo | Velo habilitado; APIs versionadas por módulo, no existe versión global V2/V3 | RECOMENDADA con SDK-first | [Versionado por módulo](https://dev.wix.com/docs/velo/articles/api-overview/api-versions) |
-| JavaScript SDK | `@wix/sdk 1.21.17` instalado; `@wix/bookings 1.0.1704`, `@wix/data 1.0.527`,  `@wix/ecom 1.0.2539` (docs Cart V2: 1.0.2693), `@wix/stores 1.0.997` | RECOMENDADA; comparar pins con releases oficiales | [Wix SDK](https://dev.wix.com/docs/overview/platform-overview/about-wix-apis) |
-| Bookings | API Bookings V2; `@wix/bookings 1.0.1704` instalado; docs oficiales muestran 1.0.1803 | RECOMENDADA; pin pendiente de actualización/evaluación | [Bookings SDK](https://dev.wix.com/docs/api-reference/business-solutions/bookings/resources/resources-v2/introduction?apiView=SDK) |
-| Stores Catalog | Catalog V3; `@wix/stores 1.0.997` instalado | RECOMENDADA | [Catalog V3](https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/introduction) |
-| Payments | Wix Payments para pagos online; no hay proveedor/terminal presencial verificado | DEPRECADA solo la API Transactions/Card Tokens legacy desde 2026-09-30 | [Changelog Wix](https://dev.wix.com/docs/changelog/) · [Payments API](https://dev.wix.com/docs/api-reference/business-management/payments/introduction) |
-| Data | Wix Data/CMS; `@wix/data 1.0.527` instalado; documentación consultada muestra 1.0.544 | RECOMENDADA; pin pendiente de actualización/evaluación | [Wix Data](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction) |
-| Automations | Wix Automations nativo; sin paquete npm/versionado en repo | BLOQUEADA por verificación de 7 automatizaciones PREINSTALLED | [Wix Automations](https://support.wix.com/en/article/about-wix-automations) |
-| CMS | Wix CMS sobre Wix Data; SSOT transaccional | RECOMENDADA | [CMS API](https://dev.wix.com/docs/api-reference/business-solutions/cms/introduction) |
-
-Nota Payments: la deprecación afecta a métodos/eventos de Transactions y Card Tokens; no equivale a la deprecación del proveedor Wix Payments. Order Transactions registra movimientos asociados a pedidos, pero no captura fondos por sí mismo. Referencia de fecha: [Wix Developer Changelog](https://dev.wix.com/docs/changelog/).
-
-## 4. ARQUITECTURA VINCULANTE
-
-| Patrón no negociable | Dónde aplica | Referencia | Motivo |
-|---|---|---|---|
-| `resourceId` en dominio/DTO/CMS; mapear a `resource._id` en SDK Bookings y `resource.id` en REST | Reservas y profesionales | [ADR-002](archive/2026-11/adr/ADR-002-bookings-v2-sdk-field-names.md) | Separar contrato de dominio de forma SDK/REST |
-| Clave idempotente determinista + fingerprint; replay idéntico devuelve el existente; payload distinto es conflicto | TPV, reservas, webhooks y ledgers | PR [#587](https://github.com/nachoortegazgz/marianmadridz/pull/587) | Evitar duplicados y efectos dobles |
-| Lock con compare-and-swap (CAS), expiración y recuperación acotada | Caja, fiscalidad y procesos concurrentes | PR #587; `fiscalLedgerLock.js` | Exclusión mutua verificable sin forzar locks |
-| Hooks `beforeInsert` para validar/normalizar el sobre y rechazar datos inválidos | Wix Data/CMS | [Wix beforeInsert](https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-insert) · PR #587 | Validación server-side antes de persistir |
-| Errores accionables A/B | Operaciones y gates legales | PR [#604](https://github.com/nachoortegazgz/marianmadridz/pull/604), merge `0acb60d` | A: retry/replay acotado y observable; B: remediation humana sin quitar el gate |
-| Writer operativo append-only; rectificación mediante nuevo registro trazable. Mantenimiento de datos de desarrollo solo antes del corte y autorizado en backend | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | TEC-038; PR #589/#590; TPV-UNIFIED-FLOW.md | Preservar evidencia y trazabilidad; congelación total tras inicio de actividad real |
-| Wix CMS es SSOT; SharePoint solo evidencia; Capa 3 no gobierna Capa 1 | Todo el ecosistema | [Directriz](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md), [dossier de flujos](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Una autoridad transaccional |
-| Backend/WebMethods contiene lógica y permisos; frontend no decide negocio ni autorización | Todo el sitio | [README](../README.md), directriz del propietario | Seguridad y separación de responsabilidades |
-
-Decisiones registradas (fecha y origen):
-
-| Fecha | Decisión | Evidencia |
-|---|---|---|
-| 2026-10-30 | Contrato de identificadores Bookings V2; separación SDK/REST | [ADR-002](archive/2026-11/adr/ADR-002-bookings-v2-sdk-field-names.md) |
-| 2026-11-09 | Stores Catalog V3 como catálogo del sitio; inventario nativo | PR #216 merge `7b1d48d`; PR #238 merge `fb853e3`; [ADR](archive/2026-11/adr/ADR-004-stores-catalog-v3-migration.md) |
-| 2026-11-23 | Concurrencia, identidad, idempotencia y hooks; fiscal fail-closed; MovimientosCaja append-only | PR #587 `5983ddf`; #589 `b667bae`; #590 `63b55f1` |
-| 2026-11-24 | Decisión histórica de retirar el runtime anterior; supersedida por el flujo único | PR #600 `7ffca8c`; PR #601 `46a7e01`; decisión 2026-11-25 en TPV-UNIFIED-FLOW.md |
-| 2026-11-24 | Arnés Runtime F1–F6 creado; errores accionables A/B integrados | PR #603 `f42ef7f`; PR #604 `0acb60d` |
-| 2026-11-25 | Preparación de venta y contrato previo V1 integrados; decisión de flujo único consolidada | PR #611/#612; commit de documentación `19378e00f6568afaf68df6550d7fbb7844e221ab` está en la historia de main; Runtime pendiente |
-
-## 4.1 TPV — flujo de código único (decisión vinculante 2026-11-25)
-
-[TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) es la autoridad específica del TPV. Se elimina como criterio de diseño cualquier bifurcación funcional por entorno, procedencia de prueba, estado de publicación o test-run. El mismo backend, contrato de dominio y ruta de persistencia deben procesar todas las operaciones. Las pruebas automatizadas usan fixtures/dobles y las pruebas online ejercitan la misma ruta operativa y las colecciones existentes; no existe un runtime de negocio paralelo.
-
-La naturaleza del registro se marca como metadato persistido derivado por backend: recordTimestamp UTC anterior a productionActivationAt UTC = SYNTHETIC; igual o posterior = REAL. La marca no selecciona un runtime ni altera cálculos, validaciones, esquema o writer. El propietario autoriza pruebas online sobre el sitio y colecciones actuales durante desarrollo; los registros sintéticos pueden modificarse/resetearse antes de actividad real. Después del corte, los ledgers reales son append-only. El writer sigue pendiente hasta completar contrato físico/fiscal, autorización, idempotencia, secuencia, hash, concurrencia, hooks y pruebas Runtime.
-
-## 5. RESTRICCIONES NORMATIVAS
-
-**Actualización legal RRSIF (27-11-2026):** el RDL 43/2026, de 24 de noviembre (BOE-A-2026-24701), en vigor desde el 26-11-2026, modifica de nuevo la disposición final cuarta del RD 1007/2023. Para los obligados del artículo 3.1 del RD 1007/2023, el plazo de adaptación queda vinculado al plazo de 24 meses de la letra b) del apartado 1 de la disposición final cuarta del RD 238/2026. La Orden HAC/1028/2026 entró en vigor el 06-10-2026; el cómputo de 24 meses conduce al 06-10-2028. Las fechas anteriores de 01-01-2027 y 01-07-2027 derivadas del RDL 15/2025 quedan supersedidas para este calendario RRSIF. Esta modificación no elimina requisitos técnicos, ni equivale a certificación, ni habilita writers o remisión. La factura electrónica B2B del RD 238/2026 conserva su calendario propio (12 meses para >8 M€ y 24 meses para el resto); no confundir ambos hitos. Fuentes: [RDL 43/2026](https://www.boe.es/eli/es/rdl/2026/11/24/43), [RD 238/2026](https://www.boe.es/eli/es/rd/2026/03/25/238), [Orden HAC/1028/2026](https://www.boe.es/eli/es/o/2026/10/02/hac1028/con).
-
-| Norma | Ámbito | Qué exige al código | Estado |
-|---|---|---|---|
-| RD 1007/2023 y normativa SIF/VERI*FACTU | Facturas y registros de facturación | Hash SHA-256 y encadenamiento; QR/leyenda en factura según modalidad; remisión de registros en VERI*FACTU. La firma electrónica individual NO es obligatoria en VERI*FACTU; sí en NO VERI*FACTU según requisitos aplicables. | Diseño/ADR no equivale a certificación; configuración legal ausente y writers false. [AEAT hash](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/huella-hash.html) · [AEAT firma](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/preguntas-frecuentes/firma.html) · [AEAT modalidades](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/cuestiones-generales/modalidades-cumplimiento-obligaciones.html) |
-| Estatuto de los Trabajadores, art. 34.9 | Registro diario de jornada | Registrar hora concreta de inicio y fin; conservar registros cuatro años y mantenerlos disponibles a trabajadores, representantes e Inspección. | Requisito legal; aceptación Runtime y flujo laboral pendiente. [BOE](https://www.boe.es/buscar/act.php?id=BOE-A-2015-11430) |
-| Fail-closed fiscal | Configuración y writers fiscales/contables | Sin singleton fiscal legalmente validado, no escribir ni remitir; no inventar datos ni activar flags. | Gate implementado; singleton real ausente; flags permanecen false. PR #589/#604 |
-| Inmutabilidad de ledgers | Caja, fiscal, contabilidad, jornada, cierres y eventos webhook | Prohibir update/remove; correcciones mediante asiento/movimiento nuevo y referencia al original. | Política implementada; Runtime pendiente. TEC-038; PR #590 |
-
-## 6. ESTADO ACTUAL (DONE / BLOCKED / PENDING)
-
-| Área | Estado | Evidencia | Dependencia |
-|---|---|---|---|
-| TPV: preparación autoritativa de venta | DONE en código; persistencia PENDING | PR #611/#612; la arquitectura de flujo único está aprobada; migración de runtime y writer siguen pendientes | Contrato MovimientosCaja + pruebas Runtime |
-| Concurrencia/identidad/idempotencia/hooks en código | DONE en código; Runtime PENDING | PR #587 merge `5983ddf` | QA Preview |
-| Gate fiscal y append-only | DONE en código; datos legales PENDING | PR #589 `b667bae`; #590 `63b55f1` | Propietario + asesoría fiscal |
-| Arnés Runtime F1–F6 | DONE en código; ejecución PENDING | PR #603 merge `f42ef7f`; `tests/runtime/runtime-all.spec.js` | QA Preview |
-| Errores accionables A/B | DONE en código; Runtime PENDING | PR #604 merge `0acb60d`; CI 81 suites/750 tests | QA Preview |
-| #416 Caja, compensaciones y pedidos POS | BLOCKED P0 | [STATE-NOW histórico](archive/2026-11/PROJECT-STATUS.md); [RELEASE-READINESS](RELEASE-READINESS.md) | Propietario + QA; reconciliación y pruebas sobre datos de desarrollo, reset preproducción |
-| #415/#209 Configuración fiscal y SIF | BLOCKED P0 | F1 pendiente; PR #589/#604 | Propietario + asesoría fiscal; CONFIG_SISTEMA_FISCAL legalmente verificado |
-| #525 Concurrencia CajaActual | BLOCKED P0 Runtime | PR #587; P1 pendiente | QA online sobre el sitio/colecciones actuales |
-| #434 Discrepancia MovimientosCaja | BLOCKED P0 | PR #590; M4 pendiente | Propietario + administrador Wix; Activity Logs/backups |
-| #520 Wix Automations | BLOCKED P0 | Último read-back: 7 PREINSTALLED ACTIVE; app laboral INACTIVE | Propietario + administrador Wix |
-| #523/#522 Bookings y canales de pago | PENDING P1 | Revalidación 2026-11-23 | QA + propietario; estado nativo y flags |
-| #210 Protección de main | PENDING P1 | Último estado documentado: sin ruleset/checks obligatorios | Administrador del repositorio |
-| #435 TPV QA | PENDING P1 | PR #611 y #612 MERGED; preparación Wix read-only + contrato de preescritura V1; CI offline PASS; writer/persistencia/idempotencia/aceptación Runtime pendientes | QA Preview |
-
-Detalle operativo P0/P1: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md). Estado Wix/CMS y automatizaciones basado en último read-back documentado 2026-11-23; no se presenta como lectura en tiempo real.
-
-## 7. CONTRATOS EXTERNOS PENDIENTES
-
-| Contrato | Falta | PASS | Responsable |
-|---|---|---|---|
-| A — Pagos presenciales | Proveedor/terminal, contrato y credenciales; no confundir con Wix Payments online | Captura de 0,01 € y reembolso completado en entorno de certificación del proveedor, con identificadores y conciliación | Propietario + proveedor de pagos + QA |
-| B — Ubicación de inventario | `locationId` de Wix Locations o confirmación documentada de la ubicación predeterminada | SKU de prueba con stock > 0 leído en la ubicación física real del salón | Propietario + administrador Wix + QA |
-| C — Fiscal | Alta de singleton `CONFIG_SISTEMA_FISCAL` con datos legales verificados | Singleton único; writers permanecen false; lectura read-only devuelve taxId válido y campos obligatorios completos | Propietario + asesoría fiscal; QA verifica lectura |
-
-## 8. ÍNDICE DE REFERENCIAS
-
-| Qué buscas | Dónde mirar |
-|---|---|
-| Contexto, decisiones, stack y restricciones | [PROJECT-CANON.md](PROJECT-CANON.md) |
-| P0/P1 y estado vigente | [STATE-NOW.md](STATE-NOW.md) |
-| GO/NO-GO y evidencia Runtime | [RELEASE-READINESS.md](RELEASE-READINESS.md) |
-| Histórico de documentos | [ARCHIVE-MANIFEST.md](ARCHIVE-MANIFEST.md) |
-| Contratos CMS y campos | [Diccionario CMS](archive/2026-11/reference/DICCIONARIO_DATOS_CMS.md), [read-back CMS](archive/2026-11/reference/WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md) |
-| Flujos Capa 1 → Capa 3 | [Dossier de flujos](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) |
-| TPV y aceptación nativa | [Aceptación TPV](archive/2026-11/qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md), [revisión 24/11](archive/2026-11/qa/2026-11-24-tpv-diff-review-and-safe-hardening.md) |
-| Bookings duales y cancelaciones | [ADR Bookings](archive/2026-11/adr/ADR-002-bookings-v2-sdk-field-names.md), [revalidación](archive/2026-11/audits/2026-11-23-bookings-revalidation.md) |
-| Veri*Factu | [ADR Veri*Factu](archive/2026-11/architecture/ADR-VERIFACTU-REMISSION.md), [AEAT SIF](https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu.html) |
-| Evidencia detallada de pruebas Runtime | [Checklist archivada](archive/2026-11/RUNTIME-EVIDENCE-CHECKLIST.md), [arnés](../tests/runtime/runtime-all.spec.js) |
-
-
-## 9. ACTUALIZACIÓN VINCULANTE — 2026-11-25 (PR #611 + PR #612)
-
-Esta sección fija el estado actual de integración y prevalece sobre los registros de estado históricos anteriores.
-
-- PR [#611](https://github.com/nachoortegazgz/marianmadridz/pull/611) está **MERGED** en `main`; merge commit `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
-- PR [#612](https://github.com/nachoortegazgz/marianmadridz/pull/612) está **MERGED** en `main`; merge commit `239fd8207d228bde56e9908055166980a87d4989`. Su árbol `632c85edbd765a291abe7b411fe08af75da5e571` coincide con el commit sometido a CI.
-- Se integró preparación de venta TPV de solo lectura: backend resuelve catálogo Stores Catalog V3/Bookings, profesional autorizado y fiscalidad mediante `taxSettings.getTaxSettings` + `taxCalculation.calculateTax`. El frontend presenta importes devueltos por backend; no es autoridad de precios/impuestos.
-- PR #611 CI offline PASS sobre commit de código `b3ed704fa6a7a37ddba4975e4c1136c681b4630f`: run `45555933654`; Gitleaks run `45555933681` PASS.
-- PR #612 CI offline PASS sobre árbol `632c85edbd765a291abe7b411fe08af75da5e571`: run `45592833890`; Gitleaks run `45592834040` PASS. Wix Preview/Runtime no ejecutado.
-- Evidencia Wix read-only 2026-11-25: 24 productos, 70 servicios de precio fijo EUR, 30 registros de inventario en ubicación virtual online y 0 en ubicación física; `taxIncludedInItemPrices=false`.
-- PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
-- `saleReady=false`, `paymentVerified=false`, `persisted=false`. El contrato V1 no habilita persistencia. No se crean pedidos, Draft Orders, movimientos, pagos ni devoluciones. El guard de repository y el hook `MovimientosCaja_beforeInsert` siguen cerrados.
-- `TransaccionesTPV` es el registro comercial no fiscal de intenciones/ventas pendientes y su estado de pago; no sustituye al ledger físico. `MovimientosCaja` sigue siendo el registro de movimientos del cajón y `ControlOperativo` la auditoría. El writer actual solo persiste intenciones `PENDING_PAYMENT` sintéticas; no confirma cobros. No inicializar ni transferir inventario sin recuento físico.
-- Precio final al consumidor no verificado; la venta continúa bloqueada por el requisito de precio completo con impuestos incluidos (RDL 1/2007, arts. 20.1.c y 60.2.c).
-- La consulta de `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros; `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
-
-Fuente operativa única: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md). Si hay discrepancia con cualquier tabla histórica de este canon, prevalecen esos dos documentos y el código del commit indicado.
-
-
-## Aceptación MVP — read-back Wix 2026-11-27
-
-La auditoría [MVP runtime read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md) registra el estado real de Wix. No declarar funcionalidad E2E por CI offline ni por lectura de APIs. La coherencia Bookings/CitasF2 falla 6/11; los escritores TPV/fiscales/laborales siguen bloqueados; el transporte Capa 3 no está conectado. Los ledgers append-only son inmutables aunque contengan datos sintéticos; correcciones mediante registros rectificativos. Solo artefactos QA no-ledger explícitamente desechables pueden resetearse.
+El MVP permanece NO-GO. La evidencia actual, fallos y siguiente secuencia están centralizados en [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). No declarar runtime, E2E, despliegue o sincronización Git-Wix sin prueba específica del entorno.

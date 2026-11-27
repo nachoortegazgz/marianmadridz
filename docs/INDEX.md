@@ -1,29 +1,36 @@
 # Índice documental — Marian Madrid
 
-**Entrada principal:** [PROJECT-CANON.md](PROJECT-CANON.md). Para decisiones operativas prevalecen [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md).
+## Fuentes operativas
 
-| Necesidad | Documento |
-|---|---|
-| Identidad, arquitectura, decisiones e invariantes | [PROJECT-CANON.md](PROJECT-CANON.md) |
-| Estado técnico vigente, evidencia Wix y bloqueos P0/P1 | [STATE-NOW.md](STATE-NOW.md) |
-| Gates GO/NO-GO, CI y aceptación Runtime | [RELEASE-READINESS.md](RELEASE-READINESS.md) |
-| Ubicación de documentación histórica | [ARCHIVE-MANIFEST.md](ARCHIVE-MANIFEST.md) |
-| Auditoría Wix, TPV, CMS y CLI del 27-11-2026 | [audits/2026-11-27-wix-site-and-tpv-cli-audit.md](audits/2026-11-27-wix-site-and-tpv-cli-audit.md) |
-| Verificación multicapa y read-back directo Wix del 27-11-2026 | [audits/2026-11-27-current-site-layer-verification.md](audits/2026-11-27-current-site-layer-verification.md) |
-| Actualización legal RRSIF tras RDL 43/2026 del 27-11-2026 | [audits/2026-11-27-rrsif-deadline-update.md](audits/2026-11-27-rrsif-deadline-update.md) |
-| Aceptación MVP y read-back Wix Runtime read-only del 27-11-2026 | [audits/2026-11-27-mvp-runtime-readonly-acceptance.md](audits/2026-11-27-mvp-runtime-readonly-acceptance.md) |
-| Contrato de exportación Capa 3 y gates de registro externo | [audits/2026-11-27-capa3-export-preparation.md](audits/2026-11-27-capa3-export-preparation.md) |
-| Evidencia, auditorías y decisiones históricas | [archive/2026-11/](archive/2026-11/) |
-| Fixtures/snapshots QA (datos de prueba, no estado vivo) | [qa/](qa/) |
-| Criterio vinculante del flujo TPV único | [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) |
-| Esquema fiscal sintético, pruebas online de desarrollo y reset previo a producción | [TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md](TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md) |
-| Contratos y estado TPV backend | [src/backend/tpv/README.md](../src/backend/tpv/README.md) |
+| Propósito | Documento | Regla |
+|---|---|---|
+| Estado actual y relevo de sesión | [STATE-NOW.md](STATE-NOW.md) | Única referencia de continuidad; actualizar tras cada intervención. |
+| Gates y decisión de release | [RELEASE-READINESS.md](RELEASE-READINESS.md) | Fuente de NO-GO/GO y evidencia por entorno. |
+| Arquitectura, contratos e invariantes | [PROJECT-CANON.md](PROJECT-CANON.md) | Decisiones vigentes; no usar snapshots históricos como estado actual. |
+| TPV flujo único | [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) | Contrato técnico TPV vigente. |
+| Hito de núcleo TPV | [TPV-MILESTONE-01-UNIFIED-CORE.md](TPV-MILESTONE-01-UNIFIED-CORE.md) | Estado implementado y gaps restantes. |
+| Backend TPV | [README backend](../src/backend/tpv/README.md) | Mapa de módulos, gates y pruebas. |
+| Manifiesto de archivo | [ARCHIVE-MANIFEST.md](ARCHIVE-MANIFEST.md) | Ubicación y supersesión documental. |
 
-## Reglas de mantenimiento
+## Auditorías vigentes del 2026-11-27
 
-- Actualizar primero STATE-NOW y RELEASE-READINESS cuando cambie el estado operativo.
-- Actualizar PROJECT-CANON cuando cambien decisiones, contratos o arquitectura.
-- No duplicar informes de sesión como documentos vivos.
-- Archivar evidencia histórica; no eliminarla si puede sustentar trazabilidad, decisiones o auditorías.
-- Una fecha/estado de read-back debe acompañar toda afirmación sobre Wix CMS, apps o configuración.
-- CI offline no equivale a Preview/Runtime ni a despliegue Wix.
+- [Auditoría Wix/TPV/CLI](audits/2026-11-27-wix-site-and-tpv-cli-audit.md): baseline anterior a PR #640; conservar como evidencia histórica, no como estado de código actual.
+- [Verificación multicapa del sitio](audits/2026-11-27-current-site-layer-verification.md): Site Context, CMS y estructura.
+- [Aceptación MVP read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md): divergencia Bookings/CitasF2 y límites de Runtime.
+- [Preparación de exportación Capa 3](audits/2026-11-27-capa3-export-preparation.md): paquete en memoria, sin transporte externo.
+- [Actualización RRSIF](audits/2026-11-27-rrsif-deadline-update.md): fuentes BOE y calendario normativo.
+
+## QA y archivo
+
+- [Fixtures y escenarios QA](qa/): datos de prueba, no estado vivo.
+- [Archivo histórico 2026-11](archive/2026-11/): auditorías, handoffs, decisiones y diseños sustituidos; solo consulta histórica.
+- [TPV readiness anterior](archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md): copia archivada; no es instrucción operativa.
+
+## Mantenimiento
+
+- No duplicar estado actual en auditorías, README o handoffs.
+- Actualizar STATE-NOW y RELEASE-READINESS cuando cambie la aceptación.
+- PROJECT-CANON y TPV-UNIFIED-FLOW gobiernan decisiones/contratos.
+- Archivos en archive son evidencia histórica fechada; no deben guiar ejecución si contradicen fuentes vigentes.
+- Toda afirmación Wix/CMS incluye fecha de read-back y alcance.
+- CI offline nunca acredita Wix Preview/Runtime ni producción.

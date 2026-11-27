@@ -1,87 +1,43 @@
-# TPV — backend, contratos y validación
+# TPV backend — mapa operativo vigente
 
-**Estado de `main`:** PR #612 integrada en merge commit `239fd8207d228bde56e9908055166980a87d4989` (2026-11-25). **Release: NO-GO.** La preparación de venta es read-only; no hay persistencia comercial, pagos ni writers fiscales habilitados.
+**Main:** `f0b30c31c8ad924e42f8790338fa223716026420` al consolidar la sesión.  
+**PR #640:** clasificación temporal y gate de venta integrados.  
+**Estado:** CI offline PASS; Wix Runtime no aceptado; release NO-GO.
 
-## Criterio de ejecución vigente — flujo único
+## Módulos por responsabilidad
 
-El TPV debe operar con un único flujo de backend, un contrato de dominio y una ruta de persistencia para cualquier dato. No se admiten ramas funcionales ni runtimes distintos por etiquetas Sandbox/Live, sintético/real, Preview/Published o test-run. Cada registro lleva una naturaleza derivada en backend comparando recordTimestamp UTC con productionActivationAt UTC: anterior = SYNTHETIC; igual o posterior = REAL. Es metadato de trazabilidad, no selector de flujo. Las pruebas online y automatizadas ejercitan la misma lógica y el mismo writer. La especificación vinculante y el plan de migración están en [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md).
+- `tpvRecordNature.js`: timestamp UTC server-side, lectura del corte de activación y clasificación SYNTHETIC/REAL.
+- `tpvSalePreparation.js` / `tpvSalePreparationCore.js`: resolución de catálogo, normalización, importes e impuestos.
+- `tpvWriteV1Contract.js`: elegibilidad de preescritura V1 (una tasa, EFECTIVO/TARJETA, total conciliado); no confirma pago ni persistencia.
+- `tpvVentas.web.js`: WebMethods de preparación y registro de intención comercial; `registrarVenta` impone los mismos blockers del preflight.
+- `tpvRepository.js`: persistencia de eventos físicos, proyección de sesión, idempotencia, lock y auditoría.
+- `tpvCaja.web.js`, `tpvMovimientos.web.js`, `tpvCierres.web.js`, `tpvDevoluciones.web.js`, `tpvExport.web.js`: operaciones de caja/movimientos/cierres/devoluciones/exportación según contratos individuales.
+- `tpvPermisos.web.js` / `tpvOperatorContext.js`: contexto de operador y permisos; autorización siempre backend.
+- `tpvHistoricalCompat.js`: compatibilidad histórica acotada; no es runtime alternativo de escritura.
+- `tpvNativeDirectory.js` y `tpvMovementContracts.js`: contratos/adaptación de catálogo y movimientos.
 
-La implementación aún no cumple este criterio: el controlador importa `tpvTestRuntime.web.js`, permisos y configuración conservan referencias del runtime anterior, y el repositorio rechaza escrituras operativas. La retirada del runtime y sus discriminadores forma parte del Hito TPV-01; no retirar el guard hasta completar el contrato físico/fiscal de `MovimientosCaja` y probar la ruta única. Esta sección sustituye instrucciones anteriores de mantener escrituras/runtimes diferenciados por clasificación de datos.
+## Colecciones
 
-## Arquitectura y autoridad
+- `TransaccionesTPV`: intención comercial pendiente/no contable.
+- `MovimientosCaja`: ledger físico canónico append-only.
+- `CajaActual`: proyección de sesión.
+- `ControlOperativo`: locks, deduplicación y auditoría técnica.
+- `HistoricoCierresZ`: cierres con contrato de integridad propio.
 
-- `MovimientosCaja` es el ledger físico canónico. `TransaccionesTPV` almacena intenciones comerciales pendientes, no es un ledger alternativo; las intenciones sintéticas no pagadas son reseteables bajo la política DAL/hooks.
-- Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
-- Durante desarrollo, los registros sintéticos pueden modificarse/resetearse mediante mantenimiento controlado antes del corte. Tras productionActivationAt, los ledgers reales son append-only; rectificaciones mediante nuevos registros trazables.
-- El contrato operativo único no clasifica operaciones por origen de datos. Los registros heredados quedan fuera de la nueva ruta y se conservan hasta definir su tratamiento controlado.
-- Frontend: presentación/orquestación. Backend/WebMethods: catálogo, importes, fiscalidad, permisos y reglas.
-- No activar pagos reales, terminales ni remisión AEAT durante QA. La persistencia de registros sintéticos online solo se habilitará tras completar el contrato físico, la clasificación temporal y los controles de integridad.
+## Gates y límites
 
-## Preparación de venta (PR #611)
+- La naturaleza temporal se deriva en `tpvRecordNature.js`; no aceptar valores del cliente.
+- Sin singleton `MapaStaff/CONFIG_SISTEMA` y `productionActivationAt`, los registros válidos se clasifican SYNTHETIC.
+- `registrarVenta` no crea intención nueva cuando `saleReady=false`; los replays idempotentes se resuelven antes del gate.
+- El TPV actual permanece MODO CONSULTA/`saleReady=false`; no se ha acreditado venta persistida, pago o movimiento físico Runtime.
+- No activar pagos, Draft Orders, reembolsos, writers fiscales ni efectos externos durante QA.
+- No mutar ni reutilizar `CajaActual` ABIERTA ni ledgers históricos para pruebas.
 
-### Backend
-- `tpvSalePreparationCore.js`: normalización estricta, cantidades enteras, cálculo monetario en céntimos y reconciliación fiscal por línea.
-- `tpvSalePreparation.js`: consulta productos y variantes mediante Wix Stores Catalog V3; servicios Bookings de precio fijo; profesional autorizado; lectura de tax settings y cálculo fiscal Wix.
-- `tpvVentas.web.js`: `validarVentaBorrador` no confía en precios, impuestos ni totales enviados por el navegador.
-- El resultado devuelve precios/base imponible/impuestos/totales calculados en backend y estado de preparación. No persiste datos.
+## Validación
 
-### Frontend
-- `tpvPageController.js` envía los datos mínimos de línea y método de pago.
-- El widget solicita cotización al cambiar líneas, descarta respuestas obsoletas y presenta los importes backend.
-- Pago/registro se bloquean si `saleReady !== true` o no existe capability de escritura.
-- No se declara venta completada ni se limpia el ticket sin confirmación de persistencia.
-- Líneas personalizadas, descuentos no autorizados y bonos/tarjetas regalo sin validación de saldo están bloqueados.
+- PR #640: 81 suites / 764 tests PASS offline.
+- Clasificación: pruebas de corte ausente, anterior, igualdad, posterior y timestamps inválidos.
+- No ejecutado: Wix Preview/Runtime, UI E2E, permisos reales de rol, persistencia online, concurrencia Wix, hardware y recuperación.
+- Los tests offline y contratos no sustituyen aceptación Runtime.
 
-## Contrato de preescritura V1 (PR #612, integrado en main)
-
-El módulo puro `tpvWriteV1Contract.js` delimita el primer writer sin persistir:
-- Una única tasa impositiva verificable en todas las líneas. Una venta con más de una tasa queda bloqueada; no se selecciona una tasa representativa.
-- Un único medio de pago admitido por el contrato de escritura V1: EFECTIVO o TARJETA. Bizum no está incluido en `SUPPORTED_WRITE_V1_PAYMENT_METHODS` y debe rechazarse hasta ampliar el contrato con pruebas.
-- El importe aplicado (importe recibido menos cambio) debe coincidir exactamente con el total recalculado por Wix.
-- El pago en efectivo puede incluir cambio; la proyección aplica solo el importe neto recibido.
-- La elegibilidad de este contrato NO acredita que el pago bancario se haya recibido ni autoriza escritura.
-- `registrarVenta` recalcula catálogo e impuestos en backend y aplica el contrato V1 antes de devolver el bloqueo de persistencia. No confía en importes fiscales del navegador.
-
-La persistencia continúa cerrada por ausencia de configuración fiscal verificada, writer append-only canónico, evidencia del pago y aceptación Runtime. El runtime separado y su cableado son deuda de migración del Hito TPV-01, no una arquitectura que deba mantenerse. No se debe interpretar `writeContractV1.eligible=true` como `saleReady=true`.
-
-## Evidencia Wix read-only — 2026-11-25
-
-- 24 productos Stores y 70 servicios Bookings de precio fijo EUR.
-- `taxSettings.getTaxSettings`: `taxIncludedInItemPrices=false`; el código admite modo inclusivo y exclusivo.
-- Cálculo fiscal Wix probado en muestras de producto/servicio; el backend reconcilia importes por línea y falla cerrado ante resultados inconsistentes.
-- 30 registros de inventario con `trackQuantity=true`, todos en ubicación virtual online. La ubicación física del salón existe, pero tiene 0 registros asignados.
-- No se ha transferido ni inicializado stock. La ubicación física requiere recuento y asignación controlada antes de vender productos desde el TPV.
-- La presentación pública del precio final al consumidor no está verificada.
-
-## Bloqueos obligatorios
-
-1. **Ledger:** `tpvRepository.insertTpvEvent()` falla cerrado mediante guard; `MovimientosCaja_beforeInsert` rechaza TPV_*. El builder actual no completa todos los campos fiscales obligatorios. Retirar un guard no constituye un writer válido.
-2. **Fiscal:** no se encontró singleton `CONFIG_SISTEMA_FISCAL` (`MapaStaff`, `recordType=CONFIG_SISTEMA`, consulta 2026-11-25: 0 registros). `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
-3. **Pagos presenciales:** no existe contrato de captura bancaria integrado. El flujo manual requiere confirmación del empleado tras comprobar el lector externo y conservar el justificante para conciliación; no se simula confirmación bancaria.
-4. **Inventario:** 0 ítems en la ubicación física. No vender producto sin inventario físico validado por variante y ubicación.
-5. **Precio al consumidor:** con IVA excluido del precio de catálogo y presentación pública no verificada, no se autoriza venta; RDL 1/2007 arts. 20.1.c y 60.2.c exige precio final completo.
-6. **Runtime/hardware:** Wix Preview/Runtime, Epson, cajón monedero y lector externo no probados en esta validación.
-
-## Resultado de preparación
-
-`catalogVerified=true`, `taxVerified=true` para el cálculo de preparación; `paymentVerified=false`, `persisted=false`, `saleReady=false`. `inventoryVerified` solo puede considerarse para las líneas de servicio que no requieren stock; los productos permanecen bloqueados hasta validar inventario físico.
-
-## CI acreditada
-
-- Commit de código probado: `b3ed704fa6a7a37ddba4975e4c1136c681b4630f`.
-- Backend offline quality gates: run `45555933654` PASS (package/lock, dependencias, npm audit, Layer 1, Layer 2, suite completa, SDK Wix y ESLint).
-- Gitleaks full-history: run `45555933681` PASS.
-- Merge PR #611: `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
-- Wix Preview/Runtime: no ejecutado. La CI no acredita ejecución en Wix.
-
-## Secuencia técnica pendiente
-
-1. Contrato de sesión de caja/venta e idempotencia que reutilice los controles existentes.
-2. Writer append-only válido para `MovimientosCaja`, con todos los campos fiscales y compatibilidad explícita con hook/política de datos.
-3. Configuración fiscal legalmente verificada, sin activar flags por conveniencia.
-4. Confirmación manual del lector y registro de evidencia/conciliación, sin fingir captura bancaria por API.
-5. Recuento y asignación de inventario físico por variante.
-6. Verificación de precio final al consumidor.
-7. Pruebas Runtime de permisos, concurrencia, idempotencia, hardware, caja, X/Z y recuperación.
-
-No desplegar ni habilitar ventas reales hasta superar todos los gates, revisar diff y disponer de reversión.
+La autoridad de flujo es [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md); el estado de aceptación es [docs/STATE-NOW.md](../../../docs/STATE-NOW.md).
