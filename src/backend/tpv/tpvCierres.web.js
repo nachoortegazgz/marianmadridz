@@ -114,12 +114,15 @@ export const generarTicketX = webMethod(
                     traceId,
                     payload: { ticketX, closesSession: false, fiscalLedgerWritten: false },
                 });
+                const ticketXResult = {
+                    ...(audit.item?.payload?.ticketX || ticketX),
+                    timestamp: audit.item?.processedAt || new Date(),
+                };
                 return {
                     status: "SUCCESS",
-                    ticketX: {
-                        ...(audit.item?.payload?.ticketX || ticketX),
-                        timestamp: audit.item?.processedAt || new Date(),
-                    },
+                    ticketX: ticketXResult,
+                    data: { ticketX: ticketXResult, replayed: audit.replayed },
+                    error: null,
                     replayed: audit.replayed,
                     traceId,
                 };
@@ -128,6 +131,7 @@ export const generarTicketX = webMethod(
             return {
                 status: "ERROR",
                 ticketX: null,
+                data: null,
                 error: { code: String(error?.code || error?.message || "TPV_TICKET_X_FAILED") },
                 traceId,
             };
