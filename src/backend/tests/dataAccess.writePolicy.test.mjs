@@ -211,9 +211,10 @@ test("TransaccionesTPV validates backend-priced records and permits only synthet
     assert.equal(assertTransaccionesTPVRecord(record), true);
     assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
     assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record));
-    assert.doesNotThrow(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record));
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "CMS_TPV_TRANSACTION_DELETE_DENIED" });
     assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
-    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "REAL" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "REAL" }), { code: "CMS_TPV_TRANSACTION_DELETE_DENIED" });
+    assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.TRANSACCIONES_TPV), false);
     assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
 });
 
