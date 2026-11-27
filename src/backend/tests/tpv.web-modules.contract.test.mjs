@@ -663,6 +663,8 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /closeTpvCajaSessionProjection/);
     assert.match(cash, /data: resultData/);
     assert.match(cash, /replayed: true/);
+    assert.match(cash, /TPV_CLOSE_MOVEMENT_MISSING/);
+    assert.match(cash, /CAJA_CIERRE:" \\+ sessionId/);
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
     assert.match(repository, /cashRegisterStatus: "CERRADA"/);
     const closeBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
