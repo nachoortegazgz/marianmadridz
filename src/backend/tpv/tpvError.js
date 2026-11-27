@@ -34,7 +34,7 @@ export function normalizeTpvError(
             "Corregir la causa indicada antes de reintentar.",
         ],
         technicalDetail: String(technicalDetail || fallbackCode).slice(0, 1000),
-        retryable: error?.retryable === true,
+        retryable: false,
     };
 }
 
