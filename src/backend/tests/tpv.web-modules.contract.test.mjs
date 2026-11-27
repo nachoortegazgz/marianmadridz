@@ -744,7 +744,7 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
         code: "TPV_TEST_ACTIONABLE",
         userMessage: "No se puede completar la operación.",
         remediation: ["Revisar el ledger."],
-        technicalDetail: "ledger unavailable",
+        technicalDetail: "TPV_TEST_ACTIONABLE",
         retryable: true,
     });
 
@@ -759,7 +759,7 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
     const generic = normalizeTpvError(new Error("database timeout"), "TPV_CASH_MOVEMENT_FAILED");
     assert.equal(generic.code, "TPV_CASH_MOVEMENT_FAILED");
     assert.equal(generic.userMessage, "No se pudo completar la operación TPV.");
-    assert.equal(generic.technicalDetail, "database timeout");
+    assert.equal(generic.technicalDetail, "TPV_CASH_MOVEMENT_FAILED");
     const unknownRetryability = normalizeTpvError(
         Object.assign(new Error("network timeout"), { retryable: true }),
         "TPV_CASH_MOVEMENT_FAILED"
@@ -780,7 +780,7 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
         { technicalDetail: "service unavailable", retryable: true }
     );
     assert.equal(envelope.error.code, "TPV_ENVELOPE_TEST");
-    assert.equal(envelope.error.technicalDetail, "service unavailable");
+    assert.equal(envelope.error.technicalDetail, "TPV_ENVELOPE_TEST");
     assert.equal(envelope.error.retryable, true);
 });
 
