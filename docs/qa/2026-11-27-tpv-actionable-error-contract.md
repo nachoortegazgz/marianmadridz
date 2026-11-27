@@ -13,8 +13,9 @@ The formatter is used by cashier/session, cash movement, movement/audit export, 
 
 ## Append-only CMS hooks
 
-- `MovimientosCaja_beforeRemove` throws `MOVIMIENTOS_CAJA_APPEND_ONLY`.
-- `LibroAsientosContablesDetalle_beforeRemove` throws `ACCOUNTING_LEDGER_APPEND_ONLY`.
+- `MovimientosCaja_beforeUpdate` and `MovimientosCaja_beforeRemove` throw `MOVIMIENTOS_CAJA_APPEND_ONLY`.
+- `LibroAsientosContablesDetalle_beforeUpdate` and `LibroAsientosContablesDetalle_beforeRemove` throw `ACCOUNTING_LEDGER_APPEND_ONLY`.
+- `ControlOperativo/WEBHOOK_EVENT` rejects both update and remove with an actionable append-only error.
 - `TransaccionesTPV_beforeRemove` resolves the requested identifier, verifies that the target exists using the strong DAL read, then throws `TPV_TRANSACTIONS_APPEND_ONLY`. Both string and `{ _id }` hook arguments are accepted.
 - The errors include remediation and a sanitized context snapshot. No hook performs a delete or changes an existing ledger record.
 
@@ -23,6 +24,10 @@ The existing controlled update policy for pending commercial intents is unchange
 ## Operational guard boundary
 
 The `assertTpvOperationalLedgerConfigured("physical"|"audit")` checks and the corresponding operator-context resolution now execute inside each affected WebMethod's `try/catch`. Configuration, authorization and context-resolution failures therefore use the same normalized error contract. Authorization checks remain mandatory and are not bypassed.
+
+## Fiscal read-model safety
+
+The fiscal aggregator excludes explicit smoke/simulation markers (source, event type, movement type, projection status and sentinel hashes) from both quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
 
 ## Regression coverage
 
