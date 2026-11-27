@@ -57,12 +57,14 @@ export function buildCashMovementSuccessData({
     };
 }
 
+import { normalizeTpvError } from "backend/tpv/tpvError";
+
 export function buildCashMovementFailure(error, persistedBeforeError, traceId) {
     const persisted = persistedBeforeError === true || error?.persisted === true;
     const result = {
         status: "ERROR",
         data: null,
-        error: { code: String(error?.code || error?.message || "TPV_CASH_MOVEMENT_FAILED") },
+        error: normalizeTpvError(error, "TPV_CASH_MOVEMENT_FAILED"),
         persisted,
         recoverable: persisted,
         traceId,
