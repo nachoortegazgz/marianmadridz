@@ -650,9 +650,9 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * Central CMS write allowlist. Append-only ledgers are excluded from update/remove;
- * bulk update and business-collection deletion remain fail-closed. Only scoped
- * ControlOperativo purges are permitted by the policy below.
+ * Central CMS write allowlist. TransaccionesTPV permits constrained updates only;
+ * append-only ledgers and TPV commercial intents are excluded from removal.
+ * Only scoped ControlOperativo purges are permitted by the policy below.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([
@@ -667,7 +667,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   updateCollections: Object.freeze([
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
@@ -677,8 +677,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   removeCollections: Object.freeze([
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
   ]),
   bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
