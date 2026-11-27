@@ -1331,13 +1331,15 @@ No cambiar el release a GO ni declarar el proyecto plenamente validado hasta cer
 
 Los permisos efectivos no se deducen del nombre visible del rol ni de descripciones genéricas. Deben verificarse por aplicación, recurso, método y rol mediante la configuración live, security.js, internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID y las APIs de Bookings/Members que correspondan.
 
-| Rol de negocio | Permitido | Denegado | Estado de evidencia |
-|---|---|---|---|
-| ADMIN | Pendiente de matriz efectiva verificada | Pendiente | No completar por inferencia |
-| GESTION | Pendiente de matriz efectiva verificada | Pendiente | No completar por inferencia |
-| ESTILISTA ROL | Solo permisos explícitos que se documenten tras inspección de cada WebMethod y recurso | Todo permiso no incluido expresamente en la allowlist; no conceder contabilidad, configuración global ni gestión de usuarios por una descripción genérica | Matriz efectiva pendiente de extracción y prueba negativa |
+| Rol de negocio | Evidencia estática actual | Permitido en TPV según código | Denegado / límite probado estáticamente | Estado |
+|---|---|---|---|---|
+| ADMIN | Un recurso está asignado a `ROL_WEBSITE.ADMIN` en `internalConfig.STAFF.WEBSITE_ROLE_BY_RESOURCE_ID`. `security.js:isAdmin()` exige coincidencia de identidad Wix + Contact ID + Bookings resourceId. | `SiteMember` más guard backend; lectura y preparación/registro de venta; apertura de sesión y arqueo parcial. `tpvPermisos.web.js` declara `read`, `createSale`, `openSession`, `registerCashMovement` y `registerPartialCount` como disponibles para ADMIN. | Reembolsos, cierre de sesión, tickets X/Z, exportaciones de movimientos/auditoría, notificaciones a clientes y hardware físico permanecen deshabilitados en el contrato de capacidades leído. | Evidencia estática; Runtime pendiente |
+| GESTION | Enum y guards existen; `isCajero()` y `getMyCajeroContext()` aceptan ADMIN/GESTION. Sin embargo, el mapa estático actual no asigna ningún `resourceId` a GESTION. | Si se asignara mediante el mapa canónico, podría superar los guards de cajero para lectura/preparación/registro de venta y bootstrap/lectura de caja. | No supera `requireAdmin()`: apertura de sesión y arqueo parcial TPV denegados. No se debe inferir acceso a otras capacidades. | Rol definido, pero sin asignación activa en el mapa inspeccionado |
+| ESTILISTA | Dos recursos están asignados a `ROL_WEBSITE.ESTILISTA`; `isEstilista()` y `isStaffCollaborator()` reconocen este rol. | Identidad reconocida como colaborador/staff en los métodos que admitan explícitamente ese rol. | No supera `isCajero()` ni `getMyCajeroContext()`; por tanto, el acceso a los WebMethods TPV examinados que exigen esos guards queda denegado. No tiene permisos TPV de venta/caja por el mero hecho de ser staff. | Evidencia estática; Runtime pendiente |
 
-La frase “ESTILISTA: todo excepto contabilidad y gestión” queda retirada por ser demasiado amplia y ambigua. Hasta que se publique una allowlist verificable, aplicar denegación por defecto y no ampliar permisos. La matriz final debe enumerar operaciones concretas (lectura/escritura, recurso, método y condiciones) y pruebas positivas/negativas por rol.
+**Base de evidencia inspeccionada en `main` (merge de PR #623):** `src/backend/internalConfig.js` (mapa de roles); `src/backend/security.js` (`isAdmin`, `isCajero`, `isEstilista`, `getMyCajeroContext`, `requireAdmin`, `requireCajero`); `src/backend/tpv/tpvPermisos.web.js`; `src/backend/tpv/tpvCaja.web.js`; `src/backend/tpv/tpvVentas.web.js`. Los WebMethods TPV revisados declaran `Permissions.SiteMember` y aplican además guards de rol en backend. La matriz describe solo el alcance TPV inspeccionado, no todos los módulos ni los permisos efectivos del Dashboard Wix.
+
+La frase “ESTILISTA: todo excepto contabilidad y gestión” queda retirada por ser demasiado amplia y ambigua. ESTILISTA no hereda permisos por pertenecer al staff: cada WebMethod debe permitir expresamente el rol. Mantener denegación por defecto. La matriz global por aplicación y recurso requiere seguir revisando los demás WebMethods y permisos nativos Wix; las pruebas Runtime positivas/negativas siguen pendientes.
 
 ### Protección de registros y auditoría
 
