@@ -29,7 +29,6 @@ import {
     assertUpdateAllowed,
     assertSaveAllowed,
     assertRemoveAllowed,
-    assertBulkRemoveAllowed,
     assertBulkUpdateAllowed,
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
@@ -139,7 +138,6 @@ const elevatedSave = auth.elevate(items.save);
 const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
-const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
     items.queryReferencedItems
 );
