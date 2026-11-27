@@ -443,7 +443,7 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     for (const method of [
         "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial",
         "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja",
-        "registrarDevolucion", "generarControlX", "generarCierreZ",
+        "registrarDevolucion", "generarTicketX", "generarCierreZ", "cerrarSesionCaja", "exportarMovimientos",
         "obtenerResumenCaja", "obtenerAuditoriaTPVLista", "obtenerConfiguracionTPV",
         "obtenerServicios", "obtenerProductos", "obtenerVariantesProducto",
         "obtenerStaff", "buscarClientesTPV", "obtenerPermisosTPV",
@@ -643,4 +643,34 @@ test("TPV envelope helpers expose the complete status/data/error contract", asyn
     assert.match(envelope, /status: "SUCCESS",[\s\S]*?data,[\s\S]*?error: null/);
     assert.match(envelope, /status: "PENDING",[\s\S]*?data: null,[\s\S]*?error: null/);
     assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: toPublicShape\(actionable\)/);
+});
+
+
+test("TPV close session uses the operational ledger and a separate CajaActual projection without fiscal Z", async () => {
+    const [cash, repository] = await Promise.all([
+        source("tpv/tpvCaja.web.js"),
+        source("tpv/tpvRepository.js"),
+    ]);
+    assert.match(cash, /export const cerrarSesionCaja = webMethod\\(/);
+    assert.match(cash, /withTpvSessionLock\\(sessionId/);
+    assert.match(cash, /movementType: "CIERRE"/);
+    assert.match(cash, /insertTpvEvent\\(\\s*TPV_COLLECTIONS\\.MOVIMIENTOS_CAJA/);
+    assert.match(cash, /closeTpvCajaSessionProjection/);
+    assert.match(repository, /export async function closeTpvCajaSessionProjection/);
+    assert.match(repository, /cashRegisterStatus: "CERRADA"/);
+    assert.doesNotMatch(cash, /TPV_COLLECTIONS\\.TICKET_Z|HistoricoCierresZ|eventLog/);
+});
+
+test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", async () => {
+    const exportModule = await source("tpv/tpvExport.web.js");
+    const permissions = await source("tpv/tpvPermisos.web.js");
+    assert.match(exportModule, /await requireAdmin\\(traceId\\)/);
+    assert.match(exportModule, /limit: PAGE_SIZE/);
+    assert.match(exportModule, /offset: rawCursor/);
+    assert.match(exportModule, /nextCursor:/);
+    assert.match(exportModule, /recordSource/);
+    assert.doesNotMatch(exportModule, /payloadFiscal:|taxAmount|taxBase|invoice/);
+    assert.match(permissions, /closeSession: staff\\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /issueTicketX: staff\\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /exportMovements: staff\\.rolWebsite === "ADMIN"/);
 });
