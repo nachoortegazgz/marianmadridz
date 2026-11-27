@@ -10,6 +10,10 @@ El propietario establece un único código, contrato, validación y writer para 
 
 **TPV-01 unificado en la rama de trabajo:** el controlador usa WebMethods operativos; `tpvTestRuntime.web.js`, `tpvTestRuntimeRepository.js` y `tpvTestRuntimeCore.js` retirados. La compatibilidad histórica `TPV_TEST_RUN` queda en `tpvHistoricalCompat.js` para lectura/validación; las escrituras legacy quedan denegadas.
 
+**Fase 2 Wix Apps (2026-11-27):** Bookings y Data hooks alineados con documentación oficial; Catalog V3 usa variante/precio correctos y disponibilidad por defecto, sin consulta de cantidades por ubicación. APIs Payments Create Transaction/Create Card Token sin referencias activas en `src/`.
+**Idempotencia:** venta, movimiento, cierre y Ticket X usan claves/IDs deterministas; cierre corregido a `sessionId-CIERRE` para impedir duplicados si cambia el messageId. Ubicación física única detectada; default location no acreditado por la respuesta de Locations.
+**Validación:** CI offline de esta PR pendiente; Wix Runtime no ejecutado. Inventario por ubicación concreta requiere confirmar la ubicación predeterminada si se desea mostrar cantidades exactas.
+
 ## 1. Estado ejecutivo
 
 - PR #611, `feat(tpv-authoritative-sale-preparation-v2-20261125`, fusionada en `main` mediante `62fdcb7b560f7eab16f1188ecf9227ae7b45d5cf`.
