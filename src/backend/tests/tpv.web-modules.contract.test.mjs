@@ -756,6 +756,9 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
     assert.equal(legacy.retryable, false);
     assert.equal(legacy.technicalDetail, "TPV_SESSION_REQUIRED");
 
+    const legacyException = normalizeTpvError(new Error("TPV_SESSION_REQUIRED"), "TPV_OPERATION_FAILED");
+    assert.equal(legacyException.code, "TPV_SESSION_REQUIRED");
+
     const generic = normalizeTpvError(new Error("database timeout"), "TPV_CASH_MOVEMENT_FAILED");
     assert.equal(generic.code, "TPV_CASH_MOVEMENT_FAILED");
     assert.equal(generic.userMessage, "No se pudo completar la operación TPV.");
