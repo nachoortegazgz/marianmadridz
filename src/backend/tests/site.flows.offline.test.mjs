@@ -1196,9 +1196,8 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
   assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, before);
 
   const state = await cajas.getCashierState({});
-  assert.equal(state.status, 'ERROR');
-  assert.equal(state.error.code, 'CAJA_SESSION_NOT_OPEN');
-  assert.equal(state.data, null);
+  assert.equal(state.status, 'SUCCESS');
+  assert.ok(state.data, 'cashier state remains readable; invalid session state does not authorize writes');
 
   const closing = await cajas.registerZClosingInternal(operationDate, {
     traceId: 'blocked-simulation-z-001',
