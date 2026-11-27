@@ -267,9 +267,7 @@ export async function createBookingCartCheckout(bookingId, traceId, memberIdenti
     }
 
     const checkoutTimeoutMs = SDK_CONFIG.TIMEOUTS.CHECKOUT_MS;
-    const apiTimeoutMs =
-        Number(SDK_CONFIG && SDK_CONFIG.TIMEOUTS && SDK_CONFIG.TIMEOUTS.API_MS) ||
-        15000;
+    const apiTimeoutMs = SDK_CONFIG.TIMEOUTS.API_MS;
 
     const createdCart = await withTimeout(
         function () {

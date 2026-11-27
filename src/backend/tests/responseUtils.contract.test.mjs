@@ -50,3 +50,12 @@ test("errorResponse accepts native Error without changing the public envelope", 
         message: "Checkout failed",
     });
 });
+
+test("response error messages never stringify plain objects as [object Object]", () => {
+    const response = errorResponse("INVALID_PROVIDER_ERROR", {
+        detail: "not a message",
+    });
+    assert.equal(response.error.code, "INVALID_PROVIDER_ERROR");
+    assert.equal(response.error.message, "Error interno");
+    assert.notEqual(response.error.message, "[object Object]");
+});

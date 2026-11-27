@@ -70,8 +70,15 @@ export function assertCitasF2(item) {
     assertValidEnum(item.bookingStatus, CITAS_BOOKING_STATUS, "bookingStatus");
     assertValidEnum(item.paymentStatus, CITAS_PAYMENT_STATUS, "paymentStatus");
 
+    const hasBookingType = item.bookingType !== undefined &&
+        item.bookingType !== null &&
+        String(item.bookingType).trim() !== "";
     const canonicalBookingType = normalizeBookingType(item.bookingType);
-    assertValidEnum(canonicalBookingType, BOOKING_TYPE, "bookingType");
+    // Historical records may lack bookingType and still need status-only updates.
+    // New inserts enforce presence in assertCitasF2Insert below.
+    if (hasBookingType) {
+        assertValidEnum(canonicalBookingType, BOOKING_TYPE, "bookingType");
+    }
 
     if (!item.traceId || !String(item.traceId).trim()) {
         throw new Error("SCHEMA_VIOLATION: CitasF2 requires traceId");
@@ -106,6 +113,10 @@ export function assertCitasF2(item) {
 
 export function assertCitasF2Insert(item) {
     assertCitasF2(item);
+    if (item?.bookingType === undefined || item?.bookingType === null ||
+        String(item.bookingType).trim() === "") {
+        throw new Error("SCHEMA_VIOLATION: CitasF2 insert requires bookingType");
+    }
     for (const field of ["serviceId", "resourceId"]) {
         if (!isValidGuid(item[field])) {
             throw new Error(`SCHEMA_VIOLATION: CitasF2 requires valid GUID ${field}`);
@@ -676,11 +687,11 @@ export function assertRegistrosHorariosStaff(item) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff item must be an object");
     }
 
-    if (!item.resourceId || !String(item.resourceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires resourceId");
+    if (!isValidGuid(item.resourceId)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires valid GUID resourceId");
     }
-    if (!item.memberId || !String(item.memberId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires memberId");
+    if (!isValidGuid(item.memberId)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires valid GUID memberId");
     }
 
     for (const field of ["recordId", "source", "timeZone", "schemaVersion", "traceId"]) {

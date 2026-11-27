@@ -1,51 +1,72 @@
-# Estado actual — 2026-11-27
+# Estado actual — 2026-11-28
 
-**MVP operativo/comercial: NO-GO.** Desarrollo y QA offline con fixtures: PASS. Wix Runtime E2E, publicación y sincronización Git-Wix: no acreditados.
+**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado. La validación offline de Capa 0 está verde en CI; Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
 
 ## Git y CI
 
-- Repositorio: `nachoortegazgz/marianmadridz`.
-- PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, fingerprint de replay y validación del movimiento antes de persistir. Mapping AEAT no integrado.
-- PR #651 integrada en `main` mediante squash: merge commit `abf862c9e7cbdc393c0186f650ed30f57aaeeee6`. Código validado `7771f4c6bb7da61ecf60bd58708b26d5331745dd`; CI completo PASS.
-- CI de ese HEAD: **PASS**. Layer 1: 29 suites / 376 tests; Layer 2: 16 suites / 249 tests; suite completa: 81 suites / 763 tests; 0 fallos. Gitleaks, npm audit, contratos SDK Wix y ESLint: PASS.
-- CI no acredita Wix Runtime ni sincronización Git-Wix. PR no integrada.
+- Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
+- HEAD previo a esta actualización documental: `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- PR #662–#667: endurecimiento de serialización, errores de CMS, configuración, criptografía, bookingType y transactionId; integradas en main.
+- PR #668: evidencia documental inicial de Capa 0; integrada.
+- PR #670: validación DAL, GUID de jornada, normalización de errores públicos, redacción de logs y paridad de enums frontend/backend; integrada mediante squash en `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- PR #669 quedó cerrada sin merge porque su rama estaba desactualizada; su trabajo fue recreado y validado en #670.
 
-## Cambios consolidados en PR #651
+### CI verificado para PR #670
 
-- Error TPV común: código estable, mensaje público seguro, remediation, retryability, `traceId` y metadatos de persistencia/recuperación. `technicalDetail` se limita al código seguro; no se reenvían mensajes brutos ni datos de proveedor al frontend.
-- DAL: `bulkRemove` y `assertBulkRemoveAllowed` deniegan borrado físico. `removeById` solo permite retirada lógica CAS para tipos operativos autorizados (cachés, token, lock y rate limit).
-- Crons: cachés, tokens, locks y rate limits se retiran lógicamente; idempotencia, flags y evidencia de auditoría se conservan. No se purgan ledgers ni evidencia.
-- Locks del ledger contable: adquisición y liberación con CAS versionado y verificación de resultado.
-- Hooks CMS: ledgers físicos, contables, cierres, jornada y eventos webhook append-only; intención comercial solo admite cambios validados.
-- TPV reader: valida identidad, hash, secuencia, timestamp y envelope antes de tratar un registro como ledger. Sin clasificador genérico por entorno.
-- Marcadores explícitos de smoke/fixture se excluyen de lecturas fiscales/recibos cuando el contrato lo exige; etiquetas genéricas REAL/SYNTHETIC/SIMULATION no clasifican negocio.
-- Corregido `TransaccionesTPV_beforeInsert` para no referenciar un registro previo inexistente.
+- Layer 1: 29 suites / 384 tests; 0 fallos.
+- Layer 2: 16 suites / 250 tests; 0 fallos.
+- Suite offline completa: 88 suites / 794 tests; 0 fallos.
+- Wix eCommerce Cart SDK: PASS.
+- Wix eCommerce Transactions SDK: PASS.
+- Wix TPV SDK: PASS.
+- ESLint: PASS.
+- Gitleaks full-history scan: PASS.
+- npm audit: paso completado correctamente.
+- Workflow backend quality gates: run `46081642075`, job `140781735934`, PASS.
+- Secret scanning: run `46081642097`, PASS.
+
+Estas evidencias son CI offline del HEAD de PR #670. No demuestran ejecución dentro del Wix Runtime.
+
+## Capa 0 — corregido e integrado
+
+- Fingerprints TPV: serialización estricta; rechaza valores no JSON, ciclos, arrays dispersos, fechas inválidas, getters y objetos no planos.
+- Writers fiscales: errores de lectura CMS distintos de ausencia real; el periodo no se considera abierto ante indisponibilidad.
+- Configuración: timeouts, cachés, TTL y límites compartidos centralizados en `SDK_CONFIG`.
+- Criptografía: SHA-256/HMAC no generan hashes ficticios ante entradas vacías.
+- Bookings dual: ausencia de `bookingType` preservada; nuevas inserciones CitasF2 lo exigen y las actualizaciones legacy no inventan el dato.
+- Writer de eventos económicos: `transactionId` obligatorio (1–128 caracteres), identidad única para dedupe y recuperación; sin sustitución por secuencia ni traceId.
+- DAL: límites y offsets inválidos rechazados; offset 0 permitido; no se inventa un máximo 100 no declarado en el contrato usado. Retirados `contains` y la heurística implícita; pertenencia a arrays mediante `hasSome`/`hasAll` explícitos.
+- Jornada laboral: `resourceId` y `memberId` validados como GUID.
+- Errores públicos: objetos arbitrarios no se convierten en `[object Object]`.
+- Logging: redacción recursiva de claves y strings, secretos, tokens, credenciales URL, emails, PII y stacks; pruebas de regresión añadidas.
+- Contrato frontend/backend: retirado `PAYMENT_METHOD.OTRO` del espejo público al no formar parte del enum backend ni tener consumidores activos localizados.
+
+## Pendiente — Capa 0 sigue EN EJECUCIÓN
+
+1. **Secretos — P1:** `secretAccess.js` aún convierte errores del proveedor en cadena vacía. La documentación oficial Velo confirma `getSecretValue()`, permisos elevados y uso exclusivo backend, pero no declara errores personalizados para distinguir de forma contractual NOT_FOUND de indisponibilidad. No clasificar códigos de error por intuición. Próximo cambio: preservar el fallo de proveedor con código técnico seguro y revisar cada consumidor para mantener fail-closed; ausencia solo podrá tratarse como opcional donde el contrato lo permita.
+2. **Staff — P1:** `staff.js` aún convierte fallos de consulta Bookings en `null`/ `[]`; autorización permanece fail-closed, pero los llamadores no distinguen ausencia de fallo del proveedor. La API documenta cursor paging y respuestas con `staffMembers`/ `pagingMetadata`; revisar consumidores y cambiar contratos con pruebas.
+3. **DAL — P1/P2:** `getItem(collection,id)` devuelve null para colección/ID vacíos; inventariar consumidores antes de endurecer. `queryReferencedItems()` normaliza respuestas desconocidas como lista vacía; verificar contrato SDK exacto y consumidores.
+4. **Dinero — P1:** `toFiniteNumber`, `_roundMoney` y helpers relacionados convierten ciertas entradas inválidas en fallback/0. Hay consumidores en contabilidad, fiscalidad, caja y reservas. No cambiar hasta definir contratos por dominio y añadir pruebas de regresión de importes.
+5. **Configuración — P2:** `TPV_RUNTIME_POLICY.CURRENCY` y `CURRENCY_CODE` duplican semánticamente EUR. Revisar consumidores y consolidar solo si no hay dependencia contractual.
+6. **Idempotencia global — P1:** completar inventario de todos los writers económicos/operativos y clasificar cuáles requieren `transactionId`, claves de idempotencia propias o no aplicabilidad justificada. No imponer una regla global ciega a eventos no económicos.
+7. **Deuda/código muerto:** continuar inventario por consumidores/imports/exports y dependencias; PR #670 no elimina módulos ni aliases históricos por tamaño o sospecha.
+8. **Runtime:** ejecutar Local Editor y pruebas E2E aisladas con fixture/sesión propia, sin reutilizar `CajaActual` ABIERTA y sin cobros reales. Confirmar despliegue/sincronización Wix-Git mediante evidencia del sitio.
+
+**Estado Capa 0: EN EJECUCIÓN.** El endurecimiento estático principal y la CI están validados, pero los puntos anteriores impiden declarar Capa 0 COMPLETADA o “excelente” todavía.
 
 ## Wix/CMS — último read-back documentado
 
-- Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Editor clásico, Velo habilitado, Draft.
-- TPV page ID `yl5th`, ruta vigente `/tpv` (read-back Wix API, 27-11-2026; `published=false`).
-- Recuentos observados: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
-- No había `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco MapaStaff consultados.
-- Lectura fechada 27-11-2026; no es consulta live actual. No se hicieron escrituras en esas auditorías.
+- Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor clásico, Velo habilitado, Draft.
+- Página TPV ID `yl5th`, ruta `/tpv`, `published=false` (read-back 27-11-2026).
+- Recuentos observados entonces: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
+- Es una lectura histórica, no consulta live actual. No se modificaron colecciones ni registros en esta intervención.
 
-## Runtime Wix — estrategia y límites verificados (27-11-2026)
+## Fuentes oficiales y criterios
 
-- La documentación oficial confirma que Wix Editor clásico admite Git Integration + Wix CLI for Sites; `wix dev` abre Local Editor y permite probar código local sin publicar. La conexión efectiva del sitio Marian Madrid con este repo sigue PENDIENTE de verificar en el panel GitHub del Editor.
-- `wix preview` remoto y Test Sites requieren que el sitio haya sido publicado al menos una vez. El sitio sigue Draft; no usar el workflow `.github/workflows/wix-tpv-preview.yml` con `create_preview=true` en este estado.
-- El smoke Playwright actual bloquea endpoints dinámicos y no interactúa: solo prueba HTTP/renderizado básico, no bridge, WebMethods, CMS ni TPV. No equivale a Runtime ni E2E.
-- Wix Preview asigna rol Admin y no ejecuta determinados eventos backend. Las colecciones de aplicaciones Wix pueden seguir usando datos live incluso con sandbox habilitado. CajaActual singleton ABIERTA y ledgers existentes quedan fuera de pruebas de escritura.
-- Ruta inmediata: verificar Git Integration → `wix dev` si ya está conectada; de lo contrario, sincronización manual al Editor → Preview read-only → smoke TPV/bridge/CASHIER_STATE. Escrituras requieren fixture aislado; no publicar ni tocar datos actuales.
+- Velo Secrets API v2: https://dev.wix.com/docs/velo/apis/wix-secrets-backend-v2/secrets/get-secret-value
+- Bookings Query Staff Members: https://dev.wix.com/docs/api-reference/business-solutions/bookings/staff-members/staff-members/query-staff-members
+- Wix Data Query / Paging: https://dev.wix.com/docs/velo/apis/wix-data/query
+- Wix Data `get()`: https://dev.wix.com/docs/velo/apis/wix-data/get
+- Documentación de proyecto: `PROJECT-CANON.md`, `TPV-UNIFIED-FLOW.md`, `RELEASE-READINESS.md`, `ESQUEMA_CMS.md`.
 
-## Pendientes
-
-1. Auditar `eventLog.js` y consumidores: sigue existiendo fallback `TX_${sequenceNumber}`; el contrato global de `transactionId` no está cerrado.
-2. Mapping AEAT oficial de alta/anulación, tipo, serie/número, fecha, importes y hash previo. No inferirlo desde el hash interno ni recalcular históricos.
-3. Wix Preview/Runtime E2E con fixture/sesión aislada y writer canónico. No reutilizar `CajaActual` ABIERTA ni activar pagos/remesas.
-4. Reconciliar las seis divergencias Bookings/CitasF2 con proceso backend idempotente.
-5. Validar transporte Capa 3 SharePoint/Graph/Power Automate en tenant aislado.
-6. Confirmar SHA/fingerprint instalado en Wix. No publicar como parte de esta PR.
-
-## Evidencia
-
-Cada PASS identifica SHA, entorno, comando/flujo y resultado. No extrapolar CI a Runtime ni declarar E2E sin ejecución real.
+**CI PASS ≠ Runtime PASS ≠ Producción verificada.** Mantener NO-GO hasta obtener evidencia del entorno correspondiente.

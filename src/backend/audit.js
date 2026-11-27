@@ -49,7 +49,7 @@ import { logger } from "backend/logger";
 const log = logger;
 
 const CONTROL_OPERATIVO_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WEBHOOK_MS) || 30000;
+const API_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.WEBHOOK_MS;
 
 const DEFAULT_ENTITY_ID = "system";
 const DEFAULT_SOURCE = "backend/audit.js";
