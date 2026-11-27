@@ -106,6 +106,24 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.doesNotMatch(html, /createPayment|capturePayment|processRefund/i);
 });
 
+
+test("TPV reads CajaActual on startup and refreshes the projection only after completed operations", async () => {
+    const html = await source("%23htmlTPV.txt");
+    const repository = await source("src/backend/tpv/tpvRepository.js");
+    const caja = await source("src/backend/tpv/tpvCaja.web.js");
+    assert.match(html, /function initializeWidgetAfterHandshake\(\)[\s\S]*?refreshCashState\(\)\.catch/);
+    assert.match(html, /async function runOperation\(fn\)[\s\S]*?const result = await fn\(\);[\s\S]*?await refreshCashState\(\)/);
+    assert.doesNotMatch(html, /setInterval\s*\(/);
+    assert.match(html, /id="refreshCatalog"/);
+    assert.match(html, /\$\("refreshCatalog"\)\.onclick = \(\) => loadCatalog/);
+    assert.match(repository, /export async function initializeTpvCaja\(\)[\s\S]*?_getCajaActual\(\)/);
+    assert.match(repository, /saved = await insertItem\(BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA, ledgerItem\)/);
+    assert.match(repository, /await _projectPersistedTpvEvent\([\s\S]*?collection, record, item\._id, item\.hash, key, false/);
+    assert.match(repository, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
+    assert.match(caja, /const session = await latestTpvSession\(\)/);
+    assert.match(caja, /await buildTpvSessionSummary\(session\)/);
+});
+
 test("TPV HTML component JavaScript parses without syntax errors", async () => {
     const html = await source("%23htmlTPV.txt");
     const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
