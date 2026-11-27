@@ -669,6 +669,18 @@ body {
     toast(person ? "Profesional: " + person.nombre : "Profesional sin asignar");
     refreshSaleQuote();
   };
+$("addPayment").onclick = async () => {
+    const amountEl = $("paymentAmount");
+    const amount = parseLocalizedAmount(amountEl.value);
+    if (amount === null || isNaN(amount)) {
+      toast("TPV_INVALID_PAYMENT_AMOUNT");
+      return;
+    }
+    const method = $("paymentMethods").querySelector(".active")?.dataset?.method || "EFECTIVO";
+    state.payments = [...state.payments, { method, amountMinor: Math.round(amount * 100), changeMinor: 0 }];
+    amountEl.value = "";
+    refreshSaleQuote();
+  };
 
   function renderSelectedCustomer() {
     $("selectClient").textContent = state.customerIdentityId
