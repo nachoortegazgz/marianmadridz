@@ -244,7 +244,7 @@ describe("ControlOperativo hooks", () => {
         _id: original._id,
         status: CONTROL_STATUS.CLOSED,
       }),
-      (error) => error?.code === "CMS_UPDATE_CONTROL_TYPE_DENIED"
+      (error) => error?.code === "WEBHOOK_EVENT_APPEND_ONLY"
     );
 
     await assert.rejects(
