@@ -75,8 +75,6 @@ export const wql = Object.freeze({
         fieldClause(field, "$hasSome", asArray(values)),
     startsWith: (field, value) =>
         fieldClause(field, "$startsWith", value),
-    contains: (field, value) =>
-        fieldClause(field, "$contains", value),
     and: (...clauses) => ({ $and: clauses.filter(Boolean) }),
     or: (...clauses) => ({ $or: clauses.filter(Boolean) }),
 });
@@ -96,12 +94,18 @@ function buildOptions(consistency) {
 
 function normalizeLimit(value) {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 100;
+    if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 2147483647) {
+        throw dataAccessError("QUERY_LIMIT_INVALID");
+    }
+    return parsed;
 }
 
 function normalizeOffset(value) {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 2147483647) {
+        throw dataAccessError("QUERY_OFFSET_INVALID");
+    }
+    return parsed;
 }
 
 function normalizeSort(sort) {
@@ -588,12 +592,6 @@ class QueryBuilder {
     hasSome(field, values) { return this._add(wql.hasSome(field, values)); }
     startsWith(field, value) {
         return this._add(wql.startsWith(field, value));
-    }
-
-    contains(field, value) {
-        return /Ids?$/.test(String(field))
-            ? this.hasSome(field, [value])
-            : this._add(wql.contains(field, value));
     }
 
     ascending(...fields) {
