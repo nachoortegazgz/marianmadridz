@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvOperationalLedgerConfigured, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessionProjection, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -307,6 +307,106 @@ export const registrarArqueoParcial = webMethod(
             });
         } catch (error) {
             return { ...errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted };
+        }
+    }
+);
+
+
+export const cerrarSesionCaja = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        let persisted = false;
+        const traceId = makeTraceId("tpv-session-close");
+        await requireAdmin(traceId);
+        assertTpvOperationalLedgerConfigured("physical");
+        const operator = await resolveTpvContext(traceId);
+
+        try {
+            const sessionId = String(input.sessionId || "").trim();
+            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
+            const arqueo = input.arqueo && typeof input.arqueo === "object" ? input.arqueo : {};
+            const countedCashMinor = toMinorUnits(arqueo.contadoEfectivo, "COUNTED_CASH");
+            const countedCardMinor = arqueo.contadoTarjeta === undefined || arqueo.contadoTarjeta === null
+                ? null
+                : toMinorUnits(arqueo.contadoTarjeta, "COUNTED_CARD");
+            const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            const observations = String(input.observaciones || "").trim().slice(0, 500);
+            const session = await latestTpvSession();
+            if (!session || session.sessionId !== sessionId) {
+                throw new Error(session ? "TPV_SESSION_MISMATCH" : "CERRAR_SESSION_NOT_FOUND");
+            }
+
+            return await withTpvSessionLock(sessionId, traceId, async () => {
+                const current = await latestTpvSession();
+                if (!current || current.sessionId !== sessionId) throw new Error("TPV_SESSION_MISMATCH");
+                const summary = await buildTpvSessionSummary(current);
+                const expectedCashMinor = Number(summary.expectedCashMinor || 0);
+                const differenceMinor = countedCashMinor - expectedCashMinor;
+                const closedAt = new Date();
+                const { item: movement, replayed: movementReplayed } = await insertTpvEvent(
+                    TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+                    idempotencyKey + ":CIERRE",
+                    {
+                        sessionId,
+                        movementType: "CIERRE",
+                        amountMinor: differenceMinor,
+                        paymentMethod: "EFECTIVO",
+                        reason: observations,
+                        createdAt: closedAt,
+                        payload: {
+                            traceId,
+                            countedCashMinor,
+                            countedCardMinor,
+                            expectedCashMinor,
+                            differenceMinor,
+                            observations,
+                            operatorId: operator.operatorId,
+                        },
+                    }
+                );
+                persisted = true;
+                const projection = await closeTpvCajaSessionProjection({
+                    sessionId,
+                    countedCash: fromMinorUnits(countedCashMinor),
+                    expectedCash: fromMinorUnits(expectedCashMinor),
+                    difference: fromMinorUnits(differenceMinor),
+                    operatorId: operator.operatorId,
+                    closedAt,
+                });
+                await appendTpvAudit({
+                    idempotencyKey: idempotencyKey + ":AUDIT",
+                    action: "CAJA_SESSION_CLOSED",
+                    actorId: operator.operatorId,
+                    entityType: "SESION_CAJA",
+                    entityId: sessionId,
+                    traceId,
+                    payload: {
+                        sessionId,
+                        movementId: movement._id,
+                        expectedCashMinor,
+                        countedCashMinor,
+                        countedCardMinor,
+                        differenceMinor,
+                        observations,
+                        replayed: movementReplayed || projection.replayed,
+                    },
+                });
+                return {
+                    status: "SUCCESS",
+                    sessionId,
+                    saldoFinal: fromMinorUnits(countedCashMinor),
+                    diferencia: fromMinorUnits(differenceMinor),
+                    replayed: movementReplayed || projection.replayed,
+                    traceId,
+                };
+            });
+        } catch (error) {
+            return {
+                ...errorResult(String(error?.code || error?.message || "TPV_SESSION_CLOSE_FAILED")),
+                traceId,
+                persisted,
+                recoverable: persisted,
+            };
         }
     }
 );
