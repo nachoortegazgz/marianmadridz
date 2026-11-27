@@ -22,7 +22,7 @@ function toMinorUnits(value) {
     if (raw === null || raw === undefined || raw === "") return null;
     try {
         return toMinorUnitsStrict(raw, "CATALOG_PRICE");
-    } catch (_) {
+    } catch (error) {
         return null;
     }
 }
@@ -155,11 +155,11 @@ export const obtenerServicios = webMethod(
                 data: { items, pagingMetadata: result?.pagingMetadata || null },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_SERVICES_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_SERVICES_READ_FAILED"),
             };
         }
     }
@@ -239,11 +239,11 @@ export const obtenerProductos = webMethod(
                 },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_STORES_PRODUCTS_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_STORES_PRODUCTS_READ_FAILED"),
             };
         }
     }
@@ -303,11 +303,11 @@ export const obtenerVariantesProducto = webMethod(
                 },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_PRODUCT_VARIANTS_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_PRODUCT_VARIANTS_READ_FAILED"),
             };
         }
     }
