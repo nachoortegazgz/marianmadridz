@@ -18,7 +18,7 @@ function seedControl(controlType, id = "control-target") {
             attempts: 0,
         } : {}),
         expiresAt: new Date(Date.now() + 60000),
-        payload: {},
+        payload: controlType === CONTROL_TYPE.DISPLAY_TOKEN ? { maxAttempts: 3 } : {},
     }]);
 }
 
