@@ -21,9 +21,10 @@ El estado detallado, los SHAs y la evidencia más reciente se mantienen en [STAT
 
 Consultar [STATE-NOW](STATE-NOW.md) para el detalle fechado. A 2026-11-28:
 
-- PR #670 está integrada en `main`; su CI offline reportó 88 suites / 794 tests, cero fallos, SDK checks, ESLint y secret scanning PASS.
-- La evidencia CI pertenece al SHA validado de PR #670. No se debe trasladar automáticamente a commits posteriores.
-- Capa 0 continúa EN EJECUCIÓN: quedan contratos de secretos, Bookings Staff, DAL, conversiones monetarias, configuración de moneda, matriz de writers/idempotencia y validación Runtime.
+- PR #670 está integrada en `main`; su CI offline reportó 88 suites / 794 tests PASS.
+- PR #675 está integrada en `main` mediante squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`; su HEAD validado reportó 89 suites / 804 tests PASS, SDK Cart/Transactions/TPV, ESLint, npm audit y Gitleaks PASS.
+- La evidencia CI pertenece a los HEAD validados de cada PR; no se debe trasladar automáticamente a commits posteriores.
+- Capa 0 continúa EN EJECUCIÓN: quedan propagación de fallos del almacén de secretos, verificación de cobertura de Staff Members v1 para todos los resourceId, conversiones monetarias, configuración de moneda, matriz de writers/idempotencia, deuda/código muerto y validación Runtime.
 - El último read-back Wix documentado es 27-11-2026 y es histórico: Draft, una `CajaActual` ABIERTA, movimientos e históricos existentes y divergencias Bookings/CitasF2. No usar esos registros como fixtures ni asumir que los recuentos siguen vigentes.
 - No se ha acreditado sincronización entre el SHA de Git y el código instalado en Wix.
 - No se han acreditado venta, cobro, movimiento físico, devolución, arqueo, cierre Z ni jornada en Wix Runtime.
