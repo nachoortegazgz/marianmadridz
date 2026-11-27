@@ -81,3 +81,29 @@ El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15)
 - No ejecutar `abrirSesionCaja()` hasta implementar/verificar la clasificación única `recordNature = recordTimestamp < productionActivationAt ? SYNTHETIC : REAL` y confirmar el campo/corte CMS. La implementación actual no persiste esos metadatos; apertura modifica la proyección `CajaActual`.
 - Gates runtime ejecutados: 0/3. No se generó JSON porque no se abrió una sesión de naturaleza acreditada. La paginación multi-page sigue sin ejercitar.
 - Corrección requerida al plan PR #629: el read-back de `MovimientosCaja` debe filtrar por `movementType === "CIERRE"` y `payloadFiscal.sessionId`, no por `sessionId` raíz (según `_buildTpvLedgerItem()`).
+
+
+
+## Auditoría profunda de código y continuidad online — 2026-11-27
+
+| Área | Verificación | Estado |
+|---|---|---|
+| SDK/Bookings/Catalog/eCommerce/CRM | SDK npm actual + API Bookings V2, Catalog V3, Cart V2, Contacts V5; Wix backend events/hooks/web modules usan convenciones Velo requeridas | PASS estático; runtime pendiente |
+| API Wix deprecated | No halladas familias activas `wix-bookings-backend`, `wix-stores-backend`, `wix-pay-backend`, `wix-ecom-backend`, `wix-bookings.v1`, `@wix/api-client` | PASS en búsquedas de código |
+| Dependencias SDK | npm lock sincronizado; `wix.lock` difiere en `@wix/crm` y `@wix/stores`; paquetes Wix por detrás de versiones publicadas | PENDIENTE reconciliar/actualizar con pruebas |
+| Toolchain | ESLint 8.25.0 EOL; npm ci advierte inflight, rimraf 3, glob 7 y @humanwhocodes | FAIL P2 mantenimiento |
+| Reservas online | Bookings V2 + Cart V2; webhook PAID necesita ledger fiscal bloqueado | PENDIENTE Contract A/C; riesgo P1 |
+| Ledger fiscal/contable | `LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false` | BLOQUEADO por política |
+| Jornada | `WRITES_ENABLED=false`, `ADJUSTMENTS_ENABLED=false` | BLOQUEADO por política |
+| TPV | Preparación devuelve blockers; registro genera draft/PENDING_PAYMENT, no cobro ni movimiento físico | NO-GO comercial |
+| Paquetes gestoría | Preview existe; creación, historial, descarga y envío devuelven stub de storage retirado | NO IMPLEMENTADO |
+| Cron | 15 jobs declarados; paridad estática PASS | Runtime no acreditado |
+| Navegación pública | Home y páginas principales enlazadas; `/reserva-online` lenta/DOM vacío; `/blank` vacía; redes apuntan a Wix | PARCIAL |
+| Runtime Wix | CI offline PASS 80 suites/759 tests; no JSON runtime TPV ni Preview E2E completo | PENDIENTE |
+
+- CI main: run `45937204664` PASS (80 suites/759 tests, SDK contracts, ESLint); secret scan `45937204680` PASS. No confundir con runtime Wix.
+- No certificar online end-to-end mientras el webhook de pago no pueda persistir y reconciliar ledger, no se habiliten/validen fichajes, no exista salida documental y no se ejecute Preview con datos sintéticos clasificados.
+- Actualización de ESLint y dependencias Wix debe hacerse en PR aislada, reconciliando `wix.lock` con el gestor Wix y verificando import/exports de todos los SDK, suites y Preview antes de merge.
+
+- TPV writer gap: `productionActivationAt`/`recordNature` is specified in docs but not implemented in backend source; `registrarVenta()` hardcodes `sourceType=SYNTHETIC` and does not re-enforce `saleReadinessBlockers` before draft-order/`TransaccionesTPV` persistence. Direct WebMethod calls can create pending synthetic intents although `saleReady=false`; no payment or physical ledger movement is created.
+- Collection contract conflict: `internalConfig.js`/`tpvVentas.web.js` write commercial transaction intents to `TransaccionesTPV`, while `docs/PROJECT-CANON.md` says not to create that collection. Define whether it is a non-ledger staging collection or remove its writer in a separately reviewed change. Do not treat it as the physical cash ledger; that remains `MovimientosCaja`.
