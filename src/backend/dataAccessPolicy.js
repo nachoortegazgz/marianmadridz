@@ -6,17 +6,27 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_LEDGER_SOURCE,
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
+
+const APPEND_ONLY_COLLECTIONS = Object.freeze([
+    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+]);
 
 function _appendOnlyError(collection, operation) {
     return createActionableError({
         code: "LEDGER_APPEND_ONLY",
         userMessage: "Los registros append-only no se modifican. Registra un nuevo evento rectificativo y trazable.",
         technicalDetail: "CMS " + operation + " denied for append-only collection: " + collection,
-        remediation: ["No intentar update/remove sobre ledgers append-only como MovimientosCaja, LibroAsientosContablesDetalle, RegistrosHorariosStaff ni HistoricoCierresZ.", "Registrar la corrección como un nuevo evento rectificativo trazable, referenciando el _id original y conforme al contrato aplicable.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
+        remediation: [
+            "No intentar update/remove sobre ledgers append-only como MovimientosCaja, LibroAsientosContablesDetalle, RegistrosHorariosStaff ni HistoricoCierresZ.",
+            "Registrar la corrección como un nuevo evento rectificativo trazable, referenciando el _id original y conforme al contrato aplicable.",
+            "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador.",
+        ],
         contextSnapshot: { collection, operation },
         retryable: false,
     });
@@ -26,6 +36,38 @@ function _policyError(code) {
     const error = new Error("DATA_ACCESS_ERROR");
     error.code = code;
     return error;
+}
+
+function _isRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function _isHistoricalTpvMarker(item) {
+    const recordSource = String(item?.recordSource || "").trim().toUpperCase();
+    const movementType = String(item?.movementType || "").trim().toUpperCase();
+
+    return Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
+}
+
+function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
+    if (
+        !_isRecord(item) ||
+        (requireId && !item._id) ||
+        !allowedTypes.includes(item.controlType)
+    ) {
+        throw _policyError(errorCode);
+    }
+
+    if (CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.some((field) =>
+        Object.prototype.hasOwnProperty.call(item, field)
+    )) {
+        throw _policyError("CMS_WRITE_NON_CANONICAL_CONTROL_FIELD");
+    }
 }
 
 export function assertBulkPatchAllowed(collection, modifications, conditionFilter) {
@@ -73,36 +115,10 @@ export function assertBulkPatchAllowed(collection, modifications, conditionFilte
         const field = String(modification?.fieldPath || "").trim();
         const action = String(modification?.action || "");
         const allowedActions = typePolicy.fields[field];
+
         if (!allowedActions || !allowedActions.includes(action)) {
             throw _policyError("BULK_PATCH_POLICY_FIELD_OR_ACTION_DENIED");
         }
-    }
-}
-
-
-function _isRecord(value) {
-    return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-const NON_REMOVABLE_LEDGER_COLLECTIONS = Object.freeze([
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
-    BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
-    BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
-]);
-
-function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
-    if (
-        !_isRecord(item) ||
-        (requireId && !item._id) ||
-        !allowedTypes.includes(item.controlType)
-    ) {
-        throw _policyError(errorCode);
-    }
-    if (CONTROL_OPERATIVO_NON_CANONICAL_FIELDS.some((field) =>
-        Object.prototype.hasOwnProperty.call(item, field)
-    )) {
-        throw _policyError("CMS_WRITE_NON_CANONICAL_CONTROL_FIELD");
     }
 }
 
@@ -110,39 +126,91 @@ export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
-    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
-        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
-        _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
+
+    if (
+        collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
+        _isHistoricalTpvMarker(item)
+    ) {
+        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
+
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(item.controlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
+        _assertControlRecord(
+            item,
+            Object.values(CONTROL_TYPE),
+            "CMS_INSERT_CONTROL_TYPE_INVALID",
+            false
+        );
+    }
+
     if (collection === BUSINESS_COLLECTIONS.CITAS_F2 && !item.bookingId) {
         throw _policyError("CMS_INSERT_BOOKING_ID_REQUIRED");
     }
-    if (collection === BUSINESS_COLLECTIONS.MAPA_STAFF &&
-        !Object.values(RECORD_TYPE).includes(item.recordType)) {
+
+    if (
+        collection === BUSINESS_COLLECTIONS.MAPA_STAFF &&
+        !Object.values(RECORD_TYPE).includes(item.recordType)
+    ) {
         throw _policyError("CMS_INSERT_MAPA_STAFF_RECORD_TYPE_INVALID");
     }
 }
 
 export function assertUpdateAllowed(collection, item) {
-    if (!_isRecord(item)) throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
-    if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
-        if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
+    if (!_isRecord(item)) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
-    if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
+
+    if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
+        if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+            throw _appendOnlyError(collection, "UPDATE");
+        }
+        throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
+    }
+
+    if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+        throw _appendOnlyError(collection, "UPDATE");
+    }
+
     if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        if (!item._id) {
+            throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        }
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
-        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
-        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(item.controlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
+        if (!item._id) {
+            throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        }
+
+        if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
+            throw _policyError("CMS_UPDATE_CONTROL_TYPE_DENIED");
+        }
+
+        // Las actualizaciones directas no permiten los locks TPV.
+        // TPV_REFUND_LOCK y TPV_SESSION_LOCK solo pueden cambiar mediante
+        // assertBulkPatchAllowed con su condición compare-and-swap.
         _assertControlRecord(
             item,
-            Object.values(CONTROL_TYPE),
+            DATA_ACCESS_WRITE_POLICY.mutableControlTypes,
             "CMS_UPDATE_CONTROL_TYPE_DENIED",
             false
         );
     } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL) {
-        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        if (!item._id) {
+            throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        }
     } else if (collection === BUSINESS_COLLECTIONS.CITAS_F2) {
         if (!item._id || !item.bookingId) {
             throw _policyError("CMS_UPDATE_BOOKING_ID_REQUIRED");
@@ -154,27 +222,60 @@ export function assertSaveAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.saveCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_SAVE_COLLECTION_DENIED");
     }
+
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
-        _assertControlRecord(item, [CONTROL_TYPE.DAYS_CACHE], "CMS_SAVE_CONTROL_TYPE_DENIED");
+        _assertControlRecord(
+            item,
+            [CONTROL_TYPE.DAYS_CACHE],
+            "CMS_SAVE_CONTROL_TYPE_DENIED"
+        );
     } else if (collection === BUSINESS_COLLECTIONS.CAJA_ACTUAL && !item._id) {
         throw _policyError("CMS_SAVE_ID_REQUIRED");
     }
 }
 
 export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
-    if (!id) throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
-        if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "REMOVE");
+    if (!id) {
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
+
+    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
+        if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+            throw _appendOnlyError(collection, "REMOVE");
+        }
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+
     if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-    } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
-        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(expectedControlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
-        if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
-            expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT) {
+        return;
+    }
+
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(expectedControlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
+        if (
+            !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
+            expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT
+        ) {
             throw _policyError("CMS_REMOVE_SCOPE_DENIED");
         }
-    } else if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) {
+
+        if (
+            existingItem &&
+            existingItem.controlType !== expectedControlType
+        ) {
+            throw _policyError("CMS_REMOVE_CONTROL_TYPE_MISMATCH");
+        }
+
+        return;
+    }
+
+    if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
         throw _appendOnlyError(collection, "REMOVE");
     }
 }
@@ -191,24 +292,36 @@ const EXPIRY_PURGE_TYPES = new Set([
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.DAYS_CACHE,
 ]);
+
 const UPDATED_AT_PURGE_STATUSES = Object.freeze({
     [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
     [CONTROL_TYPE.SYSTEM_FLAG]: new Set(["COMPLETED", "RECONCILED", "RESOLVED"]),
 });
+
 const CREATED_AT_PURGE_STATUSES = Object.freeze({
     [CONTROL_TYPE.ALERT]: new Set(["COMPLETED", "CLOSED", "RESOLVED"]),
     [CONTROL_TYPE.COMPENSATION]: new Set(["EXECUTED"]),
 });
 
 function _exactClauseValue(clause, operator) {
-    if (!_isRecord(clause) || Object.keys(clause).length !== 1 ||
-        !Object.prototype.hasOwnProperty.call(clause, operator)) return undefined;
+    if (
+        !_isRecord(clause) ||
+        Object.keys(clause).length !== 1 ||
+        !Object.prototype.hasOwnProperty.call(clause, operator)
+    ) {
+        return undefined;
+    }
+
     return clause[operator];
 }
+
 function _isLessThanDate(clause) {
     const value = _exactClauseValue(clause, "$lt");
-    return value instanceof Date && Number.isFinite(value.getTime()) && value.getTime() <= Date.now();
+    return value instanceof Date &&
+        Number.isFinite(value.getTime()) &&
+        value.getTime() <= Date.now();
 }
+
 function _hasExactKeys(value, expected) {
     return _isRecord(value) &&
         Object.keys(value).sort().join("|") === [...expected].sort().join("|");
@@ -227,6 +340,7 @@ export function assertBulkRemoveAllowed(collection, ids, options = {}) {
 
     const filter = options?.condition?.filter;
     const type = _exactClauseValue(filter?.controlType, "$eq");
+
     if (
         typeof type !== "string" ||
         !DATA_ACCESS_WRITE_POLICY.purgeControlTypes.includes(type) ||
@@ -236,8 +350,10 @@ export function assertBulkRemoveAllowed(collection, ids, options = {}) {
     }
 
     if (EXPIRY_PURGE_TYPES.has(type)) {
-        if (!_hasExactKeys(filter, ["controlType", "expiresAt"]) ||
-            !_isLessThanDate(filter.expiresAt)) {
+        if (
+            !_hasExactKeys(filter, ["controlType", "expiresAt"]) ||
+            !_isLessThanDate(filter.expiresAt)
+        ) {
             throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
         }
         return;
@@ -246,6 +362,7 @@ export function assertBulkRemoveAllowed(collection, ids, options = {}) {
     const updatedStatuses = UPDATED_AT_PURGE_STATUSES[type];
     if (updatedStatuses) {
         const status = _exactClauseValue(filter.status, "$eq");
+
         if (
             !_hasExactKeys(filter, ["controlType", "status", "_updatedDate"]) ||
             !updatedStatuses.has(status) ||
@@ -259,6 +376,7 @@ export function assertBulkRemoveAllowed(collection, ids, options = {}) {
     const createdStatuses = CREATED_AT_PURGE_STATUSES[type];
     if (createdStatuses) {
         const status = _exactClauseValue(filter.status, "$eq");
+
         if (
             !_hasExactKeys(filter, ["controlType", "status", "_createdDate"]) ||
             !createdStatuses.has(status) ||
