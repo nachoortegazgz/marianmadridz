@@ -2126,9 +2126,7 @@ export const getMovimientoByBooking = webMethod(
 
             let items = canonical.items || [];
 
-            if (items.length === 0 || items.every((movement) =>
-                isExplicitSimulationLedgerRecord(movement)
-            )) {
+            if (items.length === 0) {
                 // Read-only compatibility for historical CSV/single-string rows.
                 const exact = await dalQuery(MOVIMIENTOS_CAJA_COL)
                     .eq("linkedBookingIds", cleanId)
@@ -2141,8 +2139,6 @@ export const getMovimientoByBooking = webMethod(
             // eq retains exact-match compatibility for historical scalar rows.
             // Do not use contains(): Wix Data contains() is for String/Reference,
             // not array fields, and substring matching could return false positives.
-
-            // Simulation-marked rows are historical synthetic evidence, never a fiscal receipt.
 
             if (items.length === 0) {
                 return {
