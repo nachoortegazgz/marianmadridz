@@ -397,6 +397,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
     libroFilas.push({
       orden: orderIndex++,
+      recordNature: _safeTrim(m.recordNature).toUpperCase(),
       invoiceNumber: _readInvoiceNumber(m),
       fechaExpedicion: _readOperationDate(m),
       tipoFactura: isRefund ? "R1" : "BORRADOR_INTERNO",
