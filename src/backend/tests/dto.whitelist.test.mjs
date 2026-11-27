@@ -219,6 +219,8 @@ test('DTO-09 anonymous credential issuance is idempotent and reuses the one-time
   const tokenHash = MMU._hashKey(priorCredential);
   list.push({
     _id: `DT_${tokenHash}`, controlType: 'DISPLAY_TOKEN',
+    dedupeKey: `DISPLAY_TOKEN:${tokenHash}`, traceId: 'trace-dto-09',
+    status: 'ACTIVE', version: 0,
     bookingId: DTO_GUID_1, tokenHash, expiresAt: new Date(Date.now() + 60000),
     attempts: 0, payload: { maxAttempts: 3 }, consumedAt: null,
   });
