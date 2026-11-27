@@ -1,6 +1,6 @@
 // Public response envelopes and safe error serialization.
 
-import { _cloneDeep, _safeTrim } from "public/mmUtils";
+import { _safeTrim } from "public/mmUtils";
 
 // =============================================================================
 // BLOQUE 1 - CONSTANTES
@@ -14,10 +14,40 @@ const UNKNOWN_ERROR_CODE = "UNKNOWN_ERROR";
 // Internal helpers.
 
 function _cloneMeta(value) {
-    if (!value || typeof value !== "object") return {};
+    if (!value || typeof value !== "object" || value instanceof Date) return {};
+
+    const ancestors = new WeakMap();
+    const cloneValue = (current) => {
+        if (current === null) return null;
+        if (typeof current === "bigint") return current.toString();
+        if (typeof current === "number") return Number.isFinite(current) ? current : null;
+        if (typeof current === "function" || typeof current === "symbol") return undefined;
+        if (typeof current !== "object") return current;
+        if (current instanceof Date) {
+            return Number.isNaN(current.getTime()) ? null : current.toISOString();
+        }
+        if (ancestors.has(current)) return "[Circular]";
+
+        ancestors.set(current, true);
+        let cloned;
+        if (Array.isArray(current)) {
+            cloned = current.map((entry) => cloneValue(entry));
+        } else {
+            cloned = {};
+            for (const [key, entry] of Object.entries(current)) {
+                if (key === "__proto__" || key === "constructor" || key === "prototype") {
+                    continue;
+                }
+                const safeValue = cloneValue(entry);
+                if (safeValue !== undefined) cloned[key] = safeValue;
+            }
+        }
+        ancestors.delete(current);
+        return cloned;
+    };
 
     try {
-        return _cloneDeep(value);
+        return cloneValue(value);
     } catch {
         return { details: "Metadata could not be cloned safely." };
     }
