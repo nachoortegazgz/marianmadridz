@@ -383,6 +383,22 @@ test('BCORE-TX-05 empty pairToken rejected immediately', async () => {
   assert.strictEqual(res.error, 'INVALID_PAIR_TOKEN');
 });
 
+test('BCORE-TX-08 missing idempotency lookup uses a strong query, not get', async () => {
+  wixDataMock._reset();
+  const result = await BC._inspectTransactionReplay('pt-first-read', 'hashA');
+
+  assert.deepStrictEqual(result, { state: 'MISSING' });
+  assert.ok(
+    wixDataMock._calls.some((call) => call.op === 'query' && call.collection === CONTROL),
+    'missing idempotency state is resolved through a collection query'
+  );
+  assert.equal(
+    wixDataMock._calls.some((call) => call.op === 'get' && call.collection === CONTROL),
+    false,
+    'an expected missing item must not issue a failing get request'
+  );
+});
+
 test('BCORE-TX-07 writer intent phases persist and update without losing sibling phase', async () => {
   wixDataMock._reset();
   const intent = {
