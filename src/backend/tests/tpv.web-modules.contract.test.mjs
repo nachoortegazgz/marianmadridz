@@ -635,7 +635,7 @@ test("Ticket X and Z use neutral status values and explicit synthetic source met
     assert.match(closures, /entityType: "TICKET_X"/);
     assert.match(closures, /fiscalLedgerWritten: false/);
     assert.match(closures, /data: \{ ticketX: ticketXResult/);
-    assert.doesNotMatch(closures, /insertTpvEvent\\(TPV_COLLECTIONS\\.TICKET_X/);
+    assert.equal(closures.includes("insertTpvEvent(TPV_COLLECTIONS.TICKET_X"), false);
     assert.match(closures, /status: "CERRADO",\\s*sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
     assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
     assert.match(closures, /toMinorUnits\(input\.countedCash, "COUNTED_CASH"\)/);
