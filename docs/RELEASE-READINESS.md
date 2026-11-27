@@ -89,7 +89,7 @@ PR #612 incorpora cambios de código sobre el árbol probado `632c85edbd765a291a
 
 ## Normativa
 
-El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15) fija los plazos de adaptación RRSIF indicados en su art. 3.1. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige que el precio informado al consumidor sea el precio final completo, incluidos impuestos. Confirmar siempre la norma consolidada vigente antes de tomar decisiones fiscales.
+Actualización 27-11-2026: el [RDL 43/2026](https://www.boe.es/eli/es/rdl/2026/11/24/43), vigente desde 26-11-2026, modifica la DF4 del RD 1007/2023 y vincula el plazo RRSIF de los obligados del art. 3.1 al plazo de 24 meses de la DF4.1.b del [RD 238/2026](https://www.boe.es/eli/es/rd/2026/03/25/238). La [Orden HAC/1028/2026](https://www.boe.es/eli/es/o/2026/10/02/hac1028/con) entró en vigor el 06-10-2026; el hito de 24 meses es 06-10-2028. Quedan supersedidas para RRSIF las fechas 01-01-2027 / 01-07-2027 del RDL 15/2025. El calendario de factura electrónica B2B del RD 238/2026 es distinto y mantiene 12/24 meses. El aplazamiento no acredita adaptación ni conformidad. El [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c, exige informar el precio final completo, incluidos impuestos. Confirmar la norma consolidada y la aplicación concreta con asesoría fiscal antes de decisiones de producción.
 
 **Estado operativo: NO-GO.** Read-back CMS de solo lectura 2026-11-25; Wix Preview/Runtime no ejecutado. No se han modificado datos CMS, configuración fiscal, secretos, ledgers, pedidos, pagos ni inventario.
 
