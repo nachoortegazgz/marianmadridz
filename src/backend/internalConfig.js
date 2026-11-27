@@ -53,15 +53,6 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
 // TransaccionesTPV permits changes only to unpaid synthetic commercial intents;
 // physical, fiscal, accounting, labor and closing ledgers retain their own guards.
 
-// Fail-closed real-operation defaults until fiscal, accounting and runtime E2E
-// are certified. Simulation records are denied unless a trusted test harness
-// explicitly enables them; frontend input cannot change this policy.
-export const FISCAL_RUNTIME_POLICY = Object.freeze({
-  LEDGER_WRITES_ENABLED: false,
-  ACCOUNTING_LEDGER_WRITES_ENABLED: false,
-  ALLOW_SIMULATION_RECORDS: false,
-});
-
 // Logical event discriminators are not CMS collection IDs. Physical drawer events map to MovimientosCaja,
 // commercial sales to TransaccionesTPV, audit events to ControlOperativo, and sessions to CajaActual.
 export const TPV_COLLECTIONS = Object.freeze({
