@@ -1,101 +1,46 @@
-# Runtime test plan — Wix Preview TPV gates
+# Wix Preview / Runtime — plan de aceptación TPV
 
-**Estado de ejecución (2026-11-27):**
-- TinyFish run `946abe74-37c6-41fc-bf5f-d449a6f5f8c0`: Wix Dashboard redirigió a `https://users.wix.com/signin`; no había sesión autenticada. Preview y página TPV inaccesibles.
-- Wix MCP `ExecuteWixAPI`: tres probes GET de solo lectura a `https://www.marianmadrid.es/_functions-dev/{cerrarSesionCaja,generarTicketX,exportarMovimientos}` devolvieron HTTP 403: `Forbidden: requests to www.marianmadrid.es not allowed`. El wrapper permite llamadas a Wix APIs, pero no al dominio del sitio; no invoca Velo WebMethods.
-- No se ejecutó ningún gate ni se mutaron registros. Runtime pendiente de sesión Wix autenticada.
+**Estado:** NO EJECUTADO. El último intento documentado no obtuvo una sesión Wix autenticada ni acceso permitido a WebMethods. No se ha demostrado sincronización Git-Wix ni ejecución de flujos TPV en Runtime.
 
-## Precondiciones
+## Objetivo
 
-1. Abrir Wix Editor → Preview del sitio Marian Madrid, sin publicar.
-2. Iniciar sesión con un miembro Wix que tenga rol ADMIN efectivo.
-3. Disponer de una sesión TPV de prueba abierta y confirmada como sintética. No ejecutar contra una sesión real ni contra una sesión cuya naturaleza no esté acreditada.
-4. Tener a mano `sessionId`, efectivo contado y rango UTC que cubra los movimientos de prueba.
-5. Ejecutar en el código de página TPV temporalmente (no publicar) el snippet siguiente. La llamada a Ticket X debe preceder al cierre: `generarTicketX` rechaza una sesión ya cerrada.
+Validar el bridge, permisos, WebMethods, persistencia, idempotencia, concurrencia y recuperación en Wix Preview sin publicar ni producir efectos externos.
 
-## Invocación de WebMethods en Preview
+## Precondiciones obligatorias
 
-Velo WebMethods se consumen desde código frontend importando el módulo `.web.js`; no son endpoints REST `/_functions-dev/<nombre>` invocables por Wix MCP. En el código de página TPV, añadir temporalmente este bloque, sustituir los cuatro valores `REEMPLAZAR_...` y abrir Preview:
+1. Abrir Preview del sitio correcto desde Wix Editor autenticado; no publicar.
+2. Confirmar Site ID y fingerprint/build SHA del código que realmente carga Preview.
+3. Usar identidad ADMIN de prueba autorizada y verificar permisos efectivos desde backend.
+4. Preparar una sesión y datos sintéticos aislados mediante el flujo canónico y writer de aplicación. No utilizar ni cerrar la sesión singleton `CajaActual` existente ni reutilizar movimientos/cierres históricos.
+5. Confirmar que el fixture no puede disparar pagos, remesas fiscales, notificaciones ni integraciones externas.
+6. Definir explícitamente el alcance de cada prueba, los IDs de correlación y la estrategia de recuperación antes de ejecutar.
 
-```js
-import wixData from "wix-data";
-import { generarTicketX } from "backend/tpv/tpvCierres.web";
-import { cerrarSesionCaja } from "backend/tpv/tpvCaja.web";
-import { exportarMovimientos } from "backend/tpv/tpvExport.web";
+Si no se cumplen todas las precondiciones, detener la prueba. No insertar fixtures por REST/CMS directo ni añadir código temporal al sitio para saltarse los contratos.
 
-$w.onReady(async () => {
-  const sessionId = "REEMPLAZAR_SESSION_ID_SINTETICA";
-  const countedCash = REEMPLAZAR_EFECTIVO_CONTADO_NUMERICO;
-  const desde = "REEMPLAZAR_INICIO_UTC_ISO";
-  const hasta = "REEMPLAZAR_FIN_UTC_ISO";
+## Secuencia de aceptación
 
-  // 1) Ticket X: debe ejecutarse mientras la sesión siga ABIERTA.
-  const ticketX = await generarTicketX({ sessionId });
-  console.info("RUNTIME_GATE_TICKET_X", JSON.stringify(ticketX));
-  if (ticketX?.status !== "SUCCESS") throw new Error("ABORT: Ticket X no pasó; no ejecutar cierre");
+1. **Bridge read-only:** handshake `MM_READY → MM_CONTEXT`, carga de catálogo y diagnóstico. Verificar rechazo de tipos no permitidos y payloads inválidos.
+2. **Autorización:** probar roles permitidos y denegados en WebMethods sin realizar escrituras.
+3. **Preflight TPV:** ejecutar `validarVentaBorrador()`; confirmar que los bloqueos esperados se devuelven y que no se persiste nada.
+4. **Gate de venta:** invocar `registrarVenta()` con la misma operación no preparada; debe devolver `TPV_SALE_NOT_READY`, `persisted=false` y no crear intención.
+5. **Idempotencia:** repetir una solicitud idéntica en entorno aislado; comprobar mismo resultado/ID sin duplicación. Payload conflictivo debe rechazarse.
+6. **Concurrencia:** dos operaciones con la misma clave/recurso; comprobar una única adquisición/escritura y respuesta determinista para el competidor.
+7. **Persistencia y recuperación:** solo sobre fixture aislado, verificar read-back de la escritura canónica, lock, auditoría y proyección. Simular timeout/reintento sin pagos ni efectos externos.
+8. **Cierre/arqueo:** no ejecutar hasta disponer de sesión sintética aislada, aceptación de Ticket X/export y aprobación explícita del escenario. Cerrar la sesión es una mutación irreversible del fixture; nunca probar contra la sesión actual.
 
-  // 2) Export JSON: cursor inicial; si hasMore=true, pedir la siguiente página.
-  const page1 = await exportarMovimientos({
-    desde, hasta, formato: "json", sessionId, cursor: 0
-  });
-  console.info("RUNTIME_GATE_EXPORT_PAGE_1", JSON.stringify(page1));
-  if (page1?.status !== "SUCCESS") throw new Error("ABORT: exportación no pasó; no ejecutar cierre");
-  let page2 = null;
-  if (page1?.status === "SUCCESS" && page1.hasMore === true) {
-    page2 = await exportarMovimientos({
-      desde, hasta, formato: "json", sessionId, cursor: page1.nextCursor
-    });
-    console.info("RUNTIME_GATE_EXPORT_PAGE_2", JSON.stringify(page2));
-    if (page2?.status !== "SUCCESS") throw new Error("ABORT: segunda página falló; no ejecutar cierre");
-  }
+## Evidencia requerida
 
-  // 3) Cierre: último, porque cambia la sesión a CERRADA.
-  const close = await cerrarSesionCaja({
-    sessionId,
-    arqueo: { contadoEfectivo: countedCash },
-    observaciones: "QA runtime Preview — sesión sintética"
-  });
-  console.info("RUNTIME_GATE_CLOSE", JSON.stringify(close));
+Por cada prueba guardar: commit/fingerprint, sitio/entorno, identidad/rol, método invocado, payload anonimizado, IDs de correlación, resultado, read-back y logs. No registrar secretos, datos de tarjeta ni datos personales innecesarios.
 
-  // Read-back de persistencia en CMS. Puede requerir permisos de lectura
-  // de colección para el miembro ADMIN; un error de permisos es FAIL de verificación.
-  const movementRead = await wixData.query("MovimientosCaja")
-    .eq("sessionId", sessionId)
-    .eq("movementType", "CIERRE")
-    .limit(100).find();
+## Criterios PASS
 
-  const auditRead = await wixData.query("ControlOperativo")
-    .eq("controlType", "TPV_AUDIT_EVENT")
-    .descending("_createdDate")
-    .limit(1000).find();
+- El fingerprint coincide con el commit esperado.
+- Bridge funcional y rechazos de protocolo efectivos.
+- Autorización backend aplicada.
+- Gates de venta coherentes entre preflight y escritura.
+- Persistencia exactamente una vez lógica bajo replay/concurrencia.
+- Proyección y ledger coherentes; recuperación trazable.
+- Cero efectos externos reales.
+- No se modifica la caja singleton ni ningún ledger histórico.
 
-  const audits = auditRead.items.filter(item =>
-    item.payload?.entityId === sessionId ||
-    item.payload?.entityId === "TPV-X-" + sessionId
-  );
-  const evidence = {
-    sessionId,
-    cierreMovimientos: movementRead.items,
-    auditoriasTPV: audits
-  };
-  console.info("RUNTIME_PERSISTENCE_READBACK", JSON.stringify(evidence));
-});
-```
-
-## Resultado PASS / FAIL
-
-| Gate | PASS | FAIL |
-|---|---|---|
-| `generarTicketX` | `status === "SUCCESS"`, `ticketX.sessionId` coincide y read-back en `ControlOperativo` contiene `payload.action === "TICKET_X_GENERATED"`, `payload.entityId === "TPV-X-" + sessionId`. | `status !== "SUCCESS"`, sesión no abierta, o no aparece auditoría persistida. |
-| `exportarMovimientos` | `status === "SUCCESS"`, `formato === "json"`, `contenido` es array y `nextCursor/hasMore` son coherentes. Si `hasMore` es true, la segunda página debe responder SUCCESS y avanzar el cursor. | ERROR, contenido inválido, cursor repetido/no progresivo o fallo en segunda página cuando `hasMore === true`. Si no hay más de una página, registrar paginación multi-page como NO EJERCITADA, no como PASS. |
-| `cerrarSesionCaja` | `status === "SUCCESS"`, `sessionId` coincide y read-back devuelve exactamente un movimiento `CIERRE`; auditoría `CAJA_SESSION_CLOSED` presente en `ControlOperativo`. | ERROR, cero o más de un movimiento CIERRE, o ausencia de auditoría. |
-
-### Respuestas esperadas (forma contractual)
-
-- Ticket X: `{ status: "SUCCESS", ticketX: { sessionId, totales, desglose, nOperaciones, timestamp }, data: { ticketX, replayed }, error: null, traceId }`.
-- Export: `{ status: "SUCCESS", formato: "json", nRegistros, contenido: [...], nextCursor: string|null, hasMore: boolean, data, error: null, traceId }`.
-- Cierre: `{ status: "SUCCESS", sessionId, saldoFinal, diferencia, replayed, data, error: null, traceId }`.
-
-## Evidencia y cierre
-
-Guardar el JSON completo de cada llamada y `RUNTIME_PERSISTENCE_READBACK`, ocultando datos personales no necesarios. Pegar JSON de cada gate en el issue #435 o en el PR de runtime evidence. Tras capturar evidencia, retirar el bloque temporal de código de página sin publicar; no borrar ni modificar registros de auditoría/movimientos generados.
+Un smoke HTTP, un test estático, un mock o CI offline no acredita Runtime E2E.
