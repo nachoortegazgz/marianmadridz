@@ -125,6 +125,12 @@ async function _isMarianManagerIdentity(traceId) {
         error.cause = cause;
         throw error;
     }
+    if (member?.status === "ERROR") {
+        const error = new Error("MEMBER_IDENTITY_RESPONSE_INVALID");
+        error.code = "MEMBER_IDENTITY_RESPONSE_INVALID";
+        error.traceId = traceId;
+        throw error;
+    }
     const contactId = String(member?.contactId || "").trim();
     if (!contactId) return false;
 
