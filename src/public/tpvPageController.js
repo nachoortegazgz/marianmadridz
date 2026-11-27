@@ -39,6 +39,7 @@ const REQUEST_TYPES = Object.freeze([
     "AUDIT_EXPORT",
 ]);
 const activeBridges = new WeakMap();
+const CONTROLLER_BUILD = "TPV_BRIDGE_DIAGNOSTICS_2026-11-27";
 const MAX_KEY_LEN = 120;
 
 function optionalString(value, maxLength = MAX_KEY_LEN) {
@@ -507,13 +508,16 @@ export function initializeTpvPage(widget) {
                 reply(message.type + "_RES", errorEnvelope(error), message);
             }
         },
-        onError: (error) => {
-            const detail = error?.detail && typeof error.detail === "object" ? error.detail : {};
+        onError: (error, reportedDetail) => {
+            const detail = error?.detail && typeof error.detail === "object"
+                ? error.detail
+                : (reportedDetail && typeof reportedDetail === "object" ? reportedDetail : {});
             const allowedTypes = Array.isArray(detail.allowedTypes)
                 ? detail.allowedTypes.slice(0, 40).map((type) => String(type).slice(0, 40))
                 : [];
             console.error("[TPV] Widget bridge error", {
                 code: String(error?.code || "WIDGET_BRIDGE_ERROR").slice(0, 80),
+                controllerBuild: CONTROLLER_BUILD,
                 bridgeId: String(error?.bridgeId || "").slice(0, 80),
                 receivedType: typeof detail.receivedType === "string" ? detail.receivedType.slice(0, 40) : null,
                 receivedVersion: detail.receivedVersion ?? null,
@@ -526,5 +530,10 @@ export function initializeTpvPage(widget) {
     });
 
     activeBridges.set(widget, bridge);
+    console.info("[TPV] Widget bridge initialized", {
+        controllerBuild: CONTROLLER_BUILD,
+        protocolVersion: PROTOCOL_VERSION,
+        allowedTypes: bridge.allowedTypes,
+    });
     return bridge;
 }
