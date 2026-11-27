@@ -287,3 +287,25 @@ test('STAFF-SDK-06 CRM provider errors are not converted to an unlinked contact'
     { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
   );
 });
+
+
+test('TIME-CLOCK-IDENTITY-01 horario uses centralized identity and preserves staff provider errors', async () => {
+  staff.invalidateStaffCache();
+  mocks.members._current = {
+    _id: '66666666-6666-4666-8666-666666666666',
+    contactId: CONTACT_ID,
+  };
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => { throw Object.assign(new Error('Bookings unavailable'), { code: 'ECONNRESET' }); },
+  };
+
+  const horario = await import('../horario.web.js');
+  try {
+    const result = await horario.getMyStaffContext({ traceId: 'timeclock-staff-provider-outage' });
+    assert.equal(result.status, 'ERROR');
+    assert.equal(result.error.code, 'STAFF_PROVIDER_UNAVAILABLE');
+  } finally {
+    mocks.members._current = null;
+    staff.invalidateStaffCache();
+  }
+});
