@@ -194,6 +194,7 @@ test('STAFF-CONFIG-01 cache limits and API timeout come only from canonical SDK_
     STAFF_MAX_ENTRIES: 100,
     SERVICES_TTL_MS: 120000,
     SERVICES_MAX_ENTRIES: 500,
+    DAYS_CACHE_VERSION: "v1",
   });
   assert.equal(SDK_CONFIG.TIMEOUTS.API_MS, 15000);
   assert.match(source, /const CACHE_TTL_MS = SDK_CONFIG\.CACHE\.STAFF_TTL_MS;/);
