@@ -93,18 +93,25 @@ export const exportarMovimientos = webMethod(
             const records = page.items
                 .filter((item) => !sessionId || item.payloadFiscal?.sessionId === sessionId)
                 .map(projectRecord);
-            return {
-                status: "SUCCESS",
+            const contenido = formato === "csv" ? toCsv(records) : records;
+            const resultData = {
                 formato,
                 nRegistros: records.length,
-                contenido: formato === "csv" ? toCsv(records) : records,
+                contenido,
                 nextCursor: page.hasNext ? String(rawCursor + page.items.length) : null,
                 hasMore: page.hasNext,
+            };
+            return {
+                status: "SUCCESS",
+                ...resultData,
+                data: resultData,
+                error: null,
                 traceId,
             };
         } catch (error) {
             return {
                 status: "ERROR",
+                data: null,
                 formato: String(input.formato || "json").toLowerCase(),
                 nRegistros: 0,
                 contenido: null,
