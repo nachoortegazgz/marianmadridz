@@ -194,7 +194,7 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - CI de esta rama pendiente; Wix Runtime no ejecutado; sin mutaciones CMS reales.
 
 
-## Read-back Wix actualizado — 2026-11-27 05:xx CET
+## Read-back Wix actualizado — 2026-11-27 05:44 CET
 
 - `GetSiteContext`: sitio Marian Madrid Peluquería y Estética `188bed94-177c-4bc9-a9f0-35080d874f3e` figura **Published**, plan Premium, dominio personalizado, Editor y Velo habilitado. Última actualización indicada por Wix: 2026-11-27 03:55.
 - Apps confirmadas en contexto: Wix Bookings, Stores Catalog V3, Wix Payments, Wix Invoices V1, Members Area, Gift Cards, Forms & Payments, Blog y SEO.
