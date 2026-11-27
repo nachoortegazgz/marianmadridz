@@ -94,8 +94,14 @@ export const generarTicketX = webMethod(
                     queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, wql.eq("sessionId", sessionId)),
                 ]);
                 const generatedAt = new Date();
+                const snapshotFingerprint = makeRequestFingerprint({
+                    sessionId,
+                    totals,
+                    nOperaciones: sales.length + movements.length,
+                    generatedBy: operator.operatorId,
+                });
                 const ticketX = {
-                    reportId: "TPV-X-" + sessionId,
+                    reportId: "TPV-X-" + sessionId + "-" + snapshotFingerprint.slice(0, 12),
                     reportType: "CONTROL_PARCIAL",
                     sessionId,
                     businessDate: businessDateISO(generatedAt),
@@ -129,12 +135,6 @@ export const generarTicketX = webMethod(
                     },
                     nOperaciones: sales.length + movements.length,
                 };
-                const snapshotFingerprint = makeRequestFingerprint({
-                    sessionId,
-                    totals,
-                    nOperaciones: sales.length + movements.length,
-                    generatedBy: operator.operatorId,
-                });
                 const audit = await appendTpvAudit({
                     idempotencyKey: "TICKET_X:" + sessionId + ":" + snapshotFingerprint.slice(0, 32),
                     action: "TICKET_X_GENERATED",
