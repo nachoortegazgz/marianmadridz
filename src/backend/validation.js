@@ -870,47 +870,9 @@ export function isValidNifOrEuVat(value) {
  * No clasifica como simulacion una fila solo por tener una huella invalida:
  * esos registros deben seguir provocando una alerta de integridad.
  */
-export function isExplicitSimulationLedgerRecord(item) {
-    if (!item || typeof item !== "object") return false;
-    const upper = (value) => String(value ?? "").trim().toUpperCase();
-    const recordSource = upper(item.recordSource);
-    const eventType = upper(item.eventType);
-    const movementType = upper(item.movementType);
-    const accountCode = upper(item.desgloseDetallado?.accountCode);
-    const hash = upper(item.hash);
-    const previousRecordHash = upper(item.previousRecordHash);
-    const projectionStatus = upper(item.projectionStatus);
-    const source = upper(item.source);
-    const simulatedMovementType = movementType.startsWith("SIMULATED_") ||
-        /(?:^|_)SIMULAD[AO]$/.test(movementType);
-    // Explicit legacy TPV-QA markers observed in CMS on 2026-11-23.
-    // Keep the triple condition for MovimientosCaja; a bare synthetic=true
-    // flag is not sufficient to hide a malformed financial record.
-    const legacyTpvDevelopmentRecord = item.synthetic === true &&
-        recordSource === "TPV_QA_DEVELOPMENT" &&
-        source === "TPV_FUNCTIONAL_TEST";
-    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object"
-        ? item.payloadFiscal
-        : {};
-    const historicalTpvLedgerRecord = recordSource === TPV_LEDGER_SOURCE &&
-        envelope.sourceType === TPV_HISTORICAL_POLICY.SOURCE_TYPE &&
-        envelope.ledgerVersion === TPV_HISTORICAL_POLICY.LEDGER_VERSION &&
-        [1, TPV_HISTORICAL_POLICY.SCHEMA_VERSION].includes(Number(envelope.schemaVersion)) &&
-        Number(item.sequenceNumber) === 0 &&
-        envelope.externalSideEffects === false &&
-        (envelope.isSynthetic === true || envelope.realPayment === false);
-    const tpvLedgerSource = historicalTpvLedgerRecord ||
-        [TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE, TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE].includes(recordSource);
-    return tpvLedgerSource ||
-        recordSource === "SMOKE_TEST" ||
-        eventType.startsWith("SIMULATED_") ||
-        eventType.endsWith("_SIMULATED") ||
-        simulatedMovementType ||
-        projectionStatus === "SIMULATED_ONLY" ||
-        legacyTpvDevelopmentRecord ||
-        accountCode === "SIMULATED" ||
-        hash === "SIMULATED_HASH" ||
-        previousRecordHash === "SIMULATED_PREVIOUS_HASH";
+/** @deprecated Environment labels never classify or suppress ledger records. */
+export function isExplicitSimulationLedgerRecord() {
+    return false;
 }
 
 
