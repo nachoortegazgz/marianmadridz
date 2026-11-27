@@ -146,6 +146,28 @@ describe("ControlOperativo hooks", () => {
       }),
       /expiresAt/
     );
+
+    const reservationLock = {
+      ...base(CONTROL_TYPE.SLOT_LOCK),
+      dedupeKey: "slot_test_" + RESOURCE_ID + "_29900000_29900060",
+      resourceId: RESOURCE_ID,
+      expiresAt: new Date(Date.now() + 60000),
+      payload: {
+        slotStart: new Date("2026-11-27T08:00:00.000Z"),
+        slotEnd: new Date("2026-11-27T09:00:00.000Z"),
+      },
+    };
+    assert.deepEqual(ControlOperativo_beforeInsert(reservationLock), reservationLock);
+    for (const payload of [
+      {},
+      { slotStart: new Date("2026-11-27T09:00:00.000Z"), slotEnd: new Date("2026-11-27T08:00:00.000Z") },
+      { slotStart: "invalid", slotEnd: new Date("2026-11-27T09:00:00.000Z") },
+    ]) {
+      assert.throws(
+        () => ControlOperativo_beforeInsert({ ...reservationLock, payload }),
+        /payload\.slotStart and payload\.slotEnd/
+      );
+    }
   });
 
   it("merges partial updates with the persisted record before validating", async () => {
