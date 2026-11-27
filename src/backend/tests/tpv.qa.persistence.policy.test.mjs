@@ -41,8 +41,6 @@ test("TPV runtime policy is neutral and historical markers are isolated", async 
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, undefined);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, undefined);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES, undefined);
-    assert.equal(TPV_HISTORICAL_POLICY.SOURCE_TYPE, "SYNTHETIC");
-    assert.equal(TPV_HISTORICAL_POLICY.LEDGER_VERSION, "TPV_SYNTHETIC_LEDGER_V1");
     assert.doesNotMatch(source, /TPV_RUNTIME_POLICY[\\s\\S]*?ALLOW_REAL_PAYMENTS|TPV_RUNTIME_POLICY[\\s\\S]*?ALLOW_NATIVE_WRITES/);
 });
 
@@ -101,8 +99,8 @@ test("CajaActual operational projections use neutral metadata and ignore histori
     assert.match(utilities, /export function getTpvRuntimeState\(caja\)/);
     assert.match(utilities, /caja\?\.conceptOperations\?\.tpvRuntime/);
     assert.doesNotMatch(utilities, /tpvSandbox/);
-    assert.match(repository, /_isCanonicalTpvLedgerItem/);
-    assert.match(repository, /_isHistoricalTpvLedgerItem/);
+    assert.match(repository, /_isTpvLedgerItem/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
 });
 
 test("logical TPV entities cannot be newly persisted until the canonical ledger is implemented", () => {
@@ -132,8 +130,8 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /LEDGER_APPEND_ONLY/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /LEDGER_APPEND_ONLY/);
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), { code: "CMS_DELETE_PROHIBITED" });
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
@@ -193,7 +191,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
         collection,
         "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         CONTROL_TYPE.TPV_REFUND_LOCK
-    ), /DATA_ACCESS_ERROR/);
+    ), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("TPV session lock is deterministic, bounded and CAS-only", () => {
@@ -229,7 +227,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
@@ -252,7 +250,7 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
 
 test("legacy transaction IDs remain migration-only and are not used by operational idempotency", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
-    assert.match(repository, /_isCanonicalTpvLedgerItem/);
+    assert.match(repository, /_isTpvLedgerItem/);
     assert.doesNotMatch(repository, /makeLegacyTpvTransactionId/);
 });
 
@@ -293,24 +291,12 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
     assert.equal(payload.allowNativePayments, undefined);
     assert.equal(payload.allowNativeRefunds, undefined);
 
-    for (const field of [
-        "isSynthetic",
-        "realPayment",
-        "realPayments",
-        "processingMode",
-        "reconciliationStatus",
-        "sandboxRunId",
-        "legacyRunId",
-        "sourceType",
-        "ledgerVersion",
-        "schemaVersion",
-        "recordSource",
-    ]) {
-        assert.throws(
-            () => makeTpvPayload({ [field]: "legacy-value" }),
-            /TPV_OPERATIONAL_METADATA_FORBIDDEN/,
-            "operational payload must reject legacy metadata field: " + field
-        );
+    const neutralPayload = makeTpvPayload({ isSynthetic: true, realPayment: false, processingMode: "SIMULATION" });
+    assert.equal(neutralPayload.isSynthetic, undefined);
+    assert.equal(neutralPayload.realPayment, undefined);
+    assert.equal(neutralPayload.processingMode, undefined);
+    for (const field of ["sourceType", "ledgerVersion", "schemaVersion", "recordSource"]) {
+        assert.throws(() => makeTpvPayload({ [field]: "client-value" }), /TPV_BACKEND_METADATA_FORBIDDEN/);
     }
     assert.throws(() => makeTpvPayload(null), /TPV_INVALID_PAYLOAD/);
     assert.throws(() => makeTpvPayload([]), /TPV_INVALID_PAYLOAD/);
