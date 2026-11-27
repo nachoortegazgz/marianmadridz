@@ -9,6 +9,7 @@
 | Gates GO/NO-GO, CI y aceptación Runtime | [RELEASE-READINESS.md](RELEASE-READINESS.md) |
 | Ubicación de documentación histórica | [ARCHIVE-MANIFEST.md](ARCHIVE-MANIFEST.md) |
 | Auditoría Wix, TPV, CMS y CLI del 27-11-2026 | [audits/2026-11-27-wix-site-and-tpv-cli-audit.md](audits/2026-11-27-wix-site-and-tpv-cli-audit.md) |
+| Verificación multicapa y read-back directo Wix del 27-11-2026 | [audits/2026-11-27-current-site-layer-verification.md](audits/2026-11-27-current-site-layer-verification.md) |
 | Contrato de exportación Capa 3 y gates de registro externo | [audits/2026-11-27-capa3-export-preparation.md](audits/2026-11-27-capa3-export-preparation.md) |
 | Evidencia, auditorías y decisiones históricas | [archive/2026-11/](archive/2026-11/) |
 | Fixtures/snapshots QA (datos de prueba, no estado vivo) | [qa/](qa/) |
