@@ -505,17 +505,15 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
     assert.match(sales, /invalidProductIds\.join\(", "\)/);
 });
 
-test("registrarVenta creates an optional Draft Order and persists a pending commercial transaction", async () => {
+test("registrarVenta persists a pending synthetic intent without creating external Wix orders", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(sales, /draftOrders\.createDraftOrder/);
-    assert.match(sales, /catalogLines\.map/);
-    assert.doesNotMatch(sales, /DRAFT_ORDER_CATALOG_PRODUCTS_ONLY/);
-    assert.match(sales, /calculatedDraftOrder\?\.draftOrder/);
-    assert.match(sales, /orderId: draft\.orderId/);
+    assert.doesNotMatch(sales, /draftOrders|createDraftOrder|auth\.elevate/);
+    assert.match(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED/);
     assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
     assert.match(sales, /status: "PENDING_PAYMENT"/);
     assert.match(sales, /sourceType: "SYNTHETIC"/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
+    assert.match(sales, /status: "SKIPPED", reason: record\.draftOrderReason/);
     assert.doesNotMatch(sales, /wixPay|checkout\.create|createPayment|capturePayment/);
 });
 
