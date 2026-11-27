@@ -851,6 +851,12 @@ export function safeLockId(key) {
 export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) {
     const resourceId = parseResourceIdFromSlotKey(slotClave);
     const slotRange = _parseSlotRangeFromSlotKey(slotClave);
+    if (!resourceId || !slotRange) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_DATES,
+            "Slot lock key must contain a valid resourceId and a valid start/end range"
+        );
+    }
     const resolvedServiceId = _safeTrim(serviceId);
     const ttl = Number(ttlMs);
     const now = new Date();
@@ -867,7 +873,7 @@ export function _buildSlotLockControl(slotClave, lockOwnerId, ttlMs, serviceId) 
         version: 0,
         // Slot range and lock metadata are payload; they are not physical CMS columns.
         payload: {
-            ...(slotRange || {}),
+            ...slotRange,
             lockOwnerId: String(lockOwnerId || ""),
             lockToken: _generateUUID(),
             acquiredAt: now,
