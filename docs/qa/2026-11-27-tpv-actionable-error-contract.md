@@ -9,7 +9,7 @@ The TPV backend uses one public error envelope for caught WebMethod failures. Th
 - Unknown exceptions receive a safe public message, bounded technical detail and non-retryable default.
 - `errorResult` returns the common `{ status, data, error, traceId }` shape and allows operation metadata such as `persisted` and `recoverable`.
 
-The formatter is used by cashier/session, cash movement, movement/audit export, closure/ticket, catalog, payment-validation and audit-read WebMethods. The existing `tpvEnvelope` contract in the sales/refund path remains the domain-specific response builder; it already returns user guidance and technical metadata and is not duplicated.
+The formatter is used by cashier/session, cash movement, movement/audit export, closure/ticket, catalog, payment-validation and audit-read WebMethods. The sales/refund `tpvEnvelope` delegates to the same formatter, preserving domain-specific messages while exposing the common technical-detail/retryability fields. The movement export also filters explicit simulated rows and catches its authorization failure inside the same error boundary.
 
 ## Append-only CMS hooks
 
@@ -29,7 +29,7 @@ The `assertTpvOperationalLedgerConfigured("physical"|"audit")` checks and the co
 
 ## Fiscal read-model safety
 
-The canonical `isExplicitSimulationLedgerRecord` classifier is now applied by booking-receipt lookup, cash/fiscal chain-head readers and the fiscal aggregator. Explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
+The canonical `isExplicitSimulationLedgerRecord` classifier is now applied by booking-receipt lookup, cash/fiscal chain-head readers, movement export and the fiscal aggregator. Explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
 
 ## Regression coverage
 
