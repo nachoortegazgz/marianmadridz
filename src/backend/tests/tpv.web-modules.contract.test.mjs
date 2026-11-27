@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { validateSaleDraft } from "../tpv/tpvValidation.js";
+import { normalizeTpvError, errorResult } from "../tpv/tpvError.js";
+import { createActionableError } from "../errors/actionableError.js";
 
 const backendRoot = new URL("../", import.meta.url);
 const repoRoot = new URL("../../../", import.meta.url);
@@ -730,4 +732,61 @@ test("Capa 3 export WebMethod is admin-only and has no delivery or write side ef
     assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
     assert.match(service, /buildQuarterlyRegistryPackage/);
     assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph/);
+});
+
+
+test("TPV error normalization preserves actionable metadata and legacy error codes", () => {
+    const actionable = createActionableError({
+        code: "TPV_TEST_ACTIONABLE",
+        userMessage: "No se puede completar la operación.",
+        technicalDetail: "ledger unavailable",
+        remediation: ["Revisar el ledger."],
+        retryable: true,
+    });
+    assert.deepEqual(normalizeTpvError(actionable), {
+        code: "TPV_TEST_ACTIONABLE",
+        userMessage: "No se puede completar la operación.",
+        remediation: ["Revisar el ledger."],
+        technicalDetail: "ledger unavailable",
+        retryable: true,
+    });
+
+    const legacy = normalizeTpvError("TPV_SESSION_REQUIRED", "TPV_FALLBACK");
+    assert.equal(legacy.code, "TPV_SESSION_REQUIRED");
+    assert.equal(legacy.retryable, false);
+    assert.equal(legacy.technicalDetail, "TPV_SESSION_REQUIRED");
+
+    const generic = normalizeTpvError(new Error("database timeout"), "TPV_CASH_MOVEMENT_FAILED");
+    assert.equal(generic.code, "TPV_CASH_MOVEMENT_FAILED");
+    assert.equal(generic.userMessage, "No se pudo completar la operación TPV.");
+    assert.equal(generic.technicalDetail, "database timeout");
+
+    const result = errorResult(actionable, "TPV_FALLBACK", "trace-test", { persisted: true });
+    assert.equal(result.status, "ERROR");
+    assert.equal(result.error.code, "TPV_TEST_ACTIONABLE");
+    assert.equal(result.traceId, "trace-test");
+    assert.equal(result.persisted, true);
+});
+
+test("TPV operational ledger assertions and operator resolution are inside WebMethod try blocks", async () => {
+    const cases = [
+        ["tpv/tpvCaja.web.js", ["abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"]],
+        ["tpv/tpvMovimientos.web.js", ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"]],
+        ["tpv/tpvCierres.web.js", ["generarTicketX", "generarCierreZ"]],
+    ];
+    for (const [path, methods] of cases) {
+        const content = await source(path);
+        for (const method of methods) {
+            const start = content.indexOf("export const " + method);
+            assert.notEqual(start, -1, path + ":" + method + " exists");
+            const tryIndex = content.indexOf("try {", start);
+            const guardIndex = content.indexOf("assertTpvOperationalLedgerConfigured(", start);
+            const contextIndex = content.indexOf("resolveTpvContext(traceId)", start);
+            const nextMethod = content.indexOf("export const ", start + 1);
+            assert.ok(tryIndex > start && guardIndex > tryIndex && (nextMethod === -1 || guardIndex < nextMethod),
+                path + ":" + method + " operational guard must be caught");
+            assert.ok(contextIndex > tryIndex && (nextMethod === -1 || contextIndex < nextMethod),
+                path + ":" + method + " context resolution must be caught");
+        }
+    }
 });
