@@ -7,9 +7,17 @@ import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessi
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
+import { normalizeTpvError } from "backend/tpv/tpvError";
 
-function errorResult(code) {
-    return { status: "ERROR", data: null, error: { code }, persisted: false };
+function errorResult(error, fallbackCode = "TPV_OPERATION_FAILED", traceId = null, extra = {}) {
+    return {
+        status: "ERROR",
+        data: null,
+        error: normalizeTpvError(error, fallbackCode),
+        ...(traceId ? { traceId } : {}),
+        persisted: false,
+        ...extra,
+    };
 }
 
 const OPERATIONAL_CASH_STATUS = Object.freeze({
@@ -59,7 +67,7 @@ export const inicializarCaja = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_BOOTSTRAP_FAILED") },
+                error: normalizeTpvError(error, "TPV_BOOTSTRAP_FAILED"),
                 traceId,
                 persisted: false,
             };
@@ -144,11 +152,11 @@ export const abrirSesionCaja = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-session-open");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
 
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "TPV-SESSION-" + dayKey;
@@ -215,7 +223,7 @@ export const abrirSesionCaja = webMethod(
             });
 
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_SESSION_OPEN_FAILED")), persisted, recoverable: persisted };
+            return errorResult(error, "TPV_SESSION_OPEN_FAILED", traceId, { persisted, recoverable: persisted });
         }
     }
 );
@@ -225,11 +233,11 @@ export const registrarArqueoParcial = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-partial-count");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
 
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
@@ -306,7 +314,7 @@ export const registrarArqueoParcial = webMethod(
             };
             });
         } catch (error) {
-            return { ...errorResult(String(error?.message || "TPV_PARTIAL_COUNT_FAILED")), persisted, recoverable: persisted };
+            return errorResult(error, "TPV_PARTIAL_COUNT_FAILED", traceId, { persisted, recoverable: persisted });
         }
     }
 );
@@ -317,11 +325,11 @@ export const cerrarSesionCaja = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-session-close");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
 
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const sessionId = String(input.sessionId || "").trim();
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
             const arqueo = input.arqueo && typeof input.arqueo === "object" ? input.arqueo : {};
@@ -448,10 +456,7 @@ export const cerrarSesionCaja = webMethod(
             });
         } catch (error) {
             return {
-                ...errorResult(String(error?.code || error?.message || "TPV_SESSION_CLOSE_FAILED")),
-                traceId,
-                persisted,
-                recoverable: persisted,
+                ...errorResult(error, "TPV_SESSION_CLOSE_FAILED", traceId, { persisted, recoverable: persisted }),
             };
         }
     }
