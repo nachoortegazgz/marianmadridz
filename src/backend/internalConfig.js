@@ -228,6 +228,11 @@ export const SDK_CONFIG = Object.freeze({
     WEBHOOK_MS: 30000,
   }),
 
+  CACHE: Object.freeze({
+    STAFF_TTL_MS: 300000,
+    MAX_ENTRIES: 100,
+  }),
+
   EVENTS: Object.freeze({
     RETRY_ATTEMPTS: 3,
     RETRY_BASE_BACKOFF_MS: 1000,
