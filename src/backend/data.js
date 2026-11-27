@@ -759,7 +759,18 @@ export async function CajaActual_beforeUpdate(item) {
 }
 
 export function CajaActual_beforeRemove() {
-    throw new Error("SINGLETON_PROTECTED: No se puede eliminar el estado de caja");
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "CajaActual is a required operational singleton.",
+        remediation: [
+            "Conservar el singleton y actualizar su estado mediante el flujo de caja.",
+            "No crear un segundo singleton.",
+            "Registrar cualquier corrección mediante una actualización trazable.",
+        ],
+        contextSnapshot: { collection: BUSINESS_COLLECTIONS.CAJA_ACTUAL, operation: "REMOVE" },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -886,12 +897,19 @@ export function MapaStaff_beforeUpdate(item) {
     return item;
 }
 
-export function MapaStaff_beforeRemove(item) {
-    if (_safeTrim(item?._id) === "CONFIG_SISTEMA_FISCAL" ||
-        _safeTrim(item?.recordType).toUpperCase() === "CONFIG_SISTEMA") {
-        _fiscalError("SINGLETON_PROTECTED: No se puede eliminar CONFIG_SISTEMA_FISCAL");
-    }
-    return item;
+export function MapaStaff_beforeRemove() {
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "MapaStaff identity and fiscal configuration records are retained.",
+        remediation: [
+            "Actualizar el registro existente mediante el flujo autorizado.",
+            "Conservar la identidad y trazabilidad previas.",
+            "Añadir un nuevo registro cuando la operación represente una nueva entidad.",
+        ],
+        contextSnapshot: { collection: BUSINESS_COLLECTIONS.MAPA_STAFF, operation: "REMOVE" },
+        retryable: false,
+    });
 }
 
 const MAPA_STAFF_CONFIG_FORBIDDEN_FIELDS = [
