@@ -134,15 +134,78 @@ export function makeRequestFingerprint(value) {
 }
 
 export function stableSerialize(value) {
-    if (value instanceof Date) return JSON.stringify(value.toISOString());
-    if (Array.isArray(value)) return "[" + value.map(stableSerialize).join(",") + "]";
-    if (value && typeof value === "object") {
-        return "{" + Object.keys(value).sort()
-            .filter((key) => value[key] !== undefined)
-            .map((key) => JSON.stringify(key) + ":" + stableSerialize(value[key]))
-            .join(",") + "}";
+    const ancestors = new Set();
+
+    function serialize(current, path) {
+        if (current === null) return "null";
+
+        if (typeof current === "string" || typeof current === "boolean") {
+            return JSON.stringify(current);
+        }
+
+        if (typeof current === "number") {
+            if (!Number.isFinite(current)) {
+                throw new TypeError("TPV_FINGERPRINT_NON_FINITE_NUMBER:" + path);
+            }
+            return JSON.stringify(current);
+        }
+
+        if (typeof current === "undefined" || typeof current === "function" ||
+            typeof current === "symbol" || typeof current === "bigint") {
+            throw new TypeError("TPV_FINGERPRINT_UNSUPPORTED_VALUE:" + path);
+        }
+
+        if (current instanceof Date) {
+            if (Number.isNaN(current.getTime())) {
+                throw new TypeError("TPV_FINGERPRINT_INVALID_DATE:" + path);
+            }
+            return JSON.stringify(current.toISOString());
+        }
+
+        if (typeof current !== "object") {
+            throw new TypeError("TPV_FINGERPRINT_UNSUPPORTED_VALUE:" + path);
+        }
+
+        if (ancestors.has(current)) {
+            throw new TypeError("TPV_FINGERPRINT_CIRCULAR_REFERENCE:" + path);
+        }
+
+        ancestors.add(current);
+        try {
+            if (Array.isArray(current)) {
+                const values = [];
+                for (let index = 0; index < current.length; index += 1) {
+                    if (!Object.prototype.hasOwnProperty.call(current, index)) {
+                        throw new TypeError("TPV_FINGERPRINT_SPARSE_ARRAY:" + path + "[" + index + "]");
+                    }
+                    values.push(serialize(current[index], path + "[" + index + "]"));
+                }
+                return "[" + values.join(",") + "]";
+            }
+
+            const prototype = Object.getPrototypeOf(current);
+            if (prototype !== Object.prototype && prototype !== null) {
+                throw new TypeError("TPV_FINGERPRINT_UNSUPPORTED_OBJECT:" + path);
+            }
+
+            if (Object.getOwnPropertySymbols(current).length > 0) {
+                throw new TypeError("TPV_FINGERPRINT_SYMBOL_KEY:" + path);
+            }
+
+            const keys = Object.keys(current).sort();
+            return "{" + keys.map((key) => {
+                const descriptor = Object.getOwnPropertyDescriptor(current, key);
+                if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, "value")) {
+                    throw new TypeError("TPV_FINGERPRINT_ACCESSOR_PROPERTY:" + path + "." + key);
+                }
+                return JSON.stringify(key) + ":" + serialize(descriptor.value, path + "." + key);
+            }).join(",") + "}";
+        } finally {
+            ancestors.delete(current);
+        }
     }
-    return JSON.stringify(value);
+
+    return serialize(value, "$");
 }
 
 export function makeTpvId(prefix, idempotencyKey) {
