@@ -125,10 +125,11 @@ function _summarizeBulkRemove(response) {
         return { removed, skipped, failed, errors };
     }
     const errors = Array.isArray(response?.errors) ? response.errors : [];
+    const reportedFailed = Number(response?.failed);
     return {
         removed: Number(response?.removed) || 0,
         skipped: Number(response?.skipped) || 0,
-        failed: Number.isFinite(Number(response?.failed)) ? Number(response.failed) : errors.length,
+        failed: Number.isFinite(reportedFailed) ? reportedFailed : errors.length,
         errors,
     };
 }
