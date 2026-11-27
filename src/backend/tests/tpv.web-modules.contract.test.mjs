@@ -295,7 +295,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
     assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
-    assert.match(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.doesNotMatch(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
@@ -465,7 +465,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isCanonicalTpvLedgerItem/);
-    assert.match(repository, /_isHistoricalTpvLedgerItem/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
     assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
     assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
     assert.match(repository, /filter\(_isHistoricalTpvLedgerItem\)/);
