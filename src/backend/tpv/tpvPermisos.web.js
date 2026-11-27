@@ -17,7 +17,13 @@ export const obtenerPermisosTPV = webMethod(
                 role: staff.rolWebsite || "UNKNOWN",
                 capabilities: {
                     read: true,
+                    readCatalog: true,
+                    searchCustomers: true,
+                    readCashSummary: true,
+                    readAudit: true,
                     createSale: true,
+                    acceptPayment: false,
+                    printReceipt: false,
                     openSession: staff.rolWebsite === "ADMIN",
                     registerCashMovement: staff.rolWebsite === "ADMIN",
                     registerPartialCount: staff.rolWebsite === "ADMIN",

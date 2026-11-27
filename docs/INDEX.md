@@ -14,6 +14,7 @@
 ## Evidencia vigente (27-11-2026)
 
 - [Auditoría multicapa Wix/CMS](audits/2026-11-27-current-site-layer-verification.md).
+- [Alineación del widget TPV y colecciones nativas](audits/2026-11-27-tpv-widget-action-alignment.md).
 - [Auditoría integral de las 41 colecciones CMS](audits/2026-11-27-full-cms-collections-audit.md).
 - [Aceptación MVP read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md).
 - [Preparación Capa 3](audits/2026-11-27-capa3-export-preparation.md).

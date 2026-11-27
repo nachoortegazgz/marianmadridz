@@ -82,8 +82,36 @@ export const generarTicketX = webMethod(
                     queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("sessionId", sessionId)),
                     queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, wql.eq("sessionId", sessionId)),
                 ]);
+                const openedAt = activeSession.openedAt instanceof Date
+                    ? activeSession.openedAt
+                    : new Date(activeSession.openedAt);
+                if (Number.isNaN(openedAt.getTime())) throw new Error("TPV_SESSION_OPENED_AT_INVALID");
+                const issuedAt = new Date();
+                const dateParts = new Intl.DateTimeFormat("en-CA", {
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                }).formatToParts(openedAt);
+                const dateValues = Object.fromEntries(dateParts.map((part) => [part.type, part.value]));
+                const sessionDate = dateValues.year + "-" + dateValues.month + "-" + dateValues.day;
                 const ticketX = {
+                    ticketType: "CONTROL_PARCIAL_X",
                     sessionId,
+                    sessionDate,
+                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    openedAt: openedAt.toISOString(),
+                    issuedAt: issuedAt.toISOString(),
+                    cashRegisterStatus: "ABIERTA",
+                    openedBy: activeSession.operatorDisplayName || activeSession.operatorId || null,
+                    issuedBy: operator.operatorDisplayName || operator.operatorId,
+                    issuedByMemberId: operator.operatorId,
+                    operatorResourceId: activeSession.operatorResourceId || null,
+                    openingCash: fromMinorUnits(Number(activeSession.openingCashMinor || 0)),
+                    expectedCash: fromMinorUnits(totals.expectedCashMinor),
+                    totalCollected: fromMinorUnits(totals.totalCollectedMinor),
+                    readOnly: true,
+                    closesSession: false,
                     totales: {
                         totalVentas: fromMinorUnits(totals.grossSalesMinor),
                         totalEfectivo: fromMinorUnits(totals.cashMinor),

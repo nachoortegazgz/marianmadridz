@@ -448,16 +448,24 @@ test("TPV bootstrap no longer depends on the deleted identity collection", async
 });
 
 
-test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing ControlOperativo", async () => {
+test("TPV locks preserve CajaActual integrity; only session opening can supersede the known legacy projection", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
     const helperStart = repository.indexOf("async function _ensureCajaActual(");
     const helperEnd = repository.indexOf("\n}\n", helperStart) + 2;
     const lockStart = repository.indexOf("async function withTpvScopedLock(");
     const lockEnd = repository.indexOf("\nexport async function withTpvSaleLock", lockStart);
+    const sessionLockStart = repository.indexOf("export async function withTpvSessionLock(");
+    const sessionLockEnd = repository.indexOf("\nconst VOLATILE_FIELDS", sessionLockStart);
+    const guardStart = repository.indexOf("function _assertTpvCajaLockable(");
+    const guardEnd = repository.indexOf("\nfunction _isLegacyUnverifiedProjection", guardStart);
     assert.notEqual(helperStart, -1);
     assert.notEqual(helperEnd, -1);
     assert.notEqual(lockStart, -1);
     assert.notEqual(lockEnd, -1);
+    assert.notEqual(sessionLockStart, -1);
+    assert.notEqual(sessionLockEnd, -1);
+    assert.notEqual(guardStart, -1);
+    assert.notEqual(guardEnd, -1);
 
     const helper = repository.slice(helperStart, helperEnd);
     assert.match(helper, /const caja = await _getCajaActual\(\)/);
@@ -465,7 +473,7 @@ test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing Cont
     assert.match(helper, /assertTpvCajaIntegrity\(caja, \{ allowBootstrap: true \}\)/);
 
     const lock = repository.slice(lockStart, lockEnd);
-    const preflight = lock.indexOf("await _ensureCajaActual()");
+    const preflight = lock.indexOf("_assertTpvCajaLockable(caja, allowLegacyProjection)");
     const firstControlAccess = Math.min(
         ...["getItem(", "insertItem(", "bulkPatchItems("].map((token) => {
             const index = lock.indexOf(token);
@@ -473,5 +481,14 @@ test("TPV locks validate the pre-seeded Sandbox CajaActual before accessing Cont
         })
     );
     assert.notEqual(preflight, -1);
-    assert.ok(preflight < firstControlAccess, "CajaActual marker must be checked before ControlOperativo locks");
+    assert.ok(preflight < firstControlAccess, "CajaActual must be validated before ControlOperativo lock access");
+    assert.match(lock, /allowLegacyProjection = false/);
+
+    const sessionLock = repository.slice(sessionLockStart, sessionLockEnd);
+    assert.match(sessionLock, /allowLegacyProjection = false/);
+    assert.match(sessionLock, /allowLegacyProjection,/);
+
+    const guard = repository.slice(guardStart, guardEnd);
+    assert.match(guard, /if \(allowLegacyProjection && _isLegacyUnverifiedProjection\(caja\)\) return true/);
+    assert.match(guard, /assertTpvCajaIntegrity\(caja, \{ allowBootstrap: true \}\)/);
 });

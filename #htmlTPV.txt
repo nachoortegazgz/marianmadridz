@@ -213,7 +213,26 @@ body {
   border-radius: 8px; font-size: 13px; z-index: 200;
   opacity: 0; transition: opacity .25s; pointer-events: none;
 }
-.toast.show { opacity: 1; }
+ .toast.show { opacity: 1; }
+  .ticket-receipt {
+    width: 100%; max-width: 430px; margin: 0 auto; padding: 18px;
+    border: 1px dashed var(--line); color: var(--ink);
+    font: 13px/1.45 "Courier New", monospace;
+  }
+  .ticket-receipt h3, .ticket-receipt p { margin: 4px 0; }
+  .ticket-receipt .ticket-divider { border-top: 1px dashed var(--line); margin: 10px 0; }
+  .ticket-receipt .ticket-row { display:flex; justify-content:space-between; gap:12px; }
+  @media print {
+    body * { visibility: hidden !important; }
+    #modalBackdrop:not(.hidden), #modalBackdrop:not(.hidden) * { visibility: visible !important; }
+    #modalBackdrop:not(.hidden) { position:absolute; inset:0; display:block; padding:0; background:#fff; }
+    #modalBackdrop:not(.hidden) .modal {
+      width:80mm; max-width:80mm; max-height:none; margin:0 auto; padding:5mm;
+      border:0; border-radius:0; box-shadow:none; overflow:visible;
+    }
+    #modalBackdrop .head, #modalBackdrop .actions, #modalBackdrop #printTicketX { display:none !important; }
+    .ticket-receipt { border:0; max-width:none; padding:0; }
+  }
 </style>
 </head>
 <body>
@@ -277,13 +296,13 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución interna</button>
+          <button id="refund" class="btn danger">Devolución no habilitada</button>
           <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
           <button id="exportMovements" class="btn">Exportar movimientos</button>
           <button id="exportAudit" class="btn">Exportar auditoría</button>
-          <button id="printLast" class="btn">Imprimir último ticket</button>
+          <button id="printLast" class="btn" title="La impresión de tickets de venta aún no está integrada">Impresión de ticket pendiente</button>
         </div>
       </section>
 
@@ -317,9 +336,10 @@ body {
       <section class="panel">
         <h2>Pago presencial</h2>
 
+        <p id="paymentNotice" class="status">Cobros deshabilitados: el TPV registra ventas pendientes, no ejecuta cobros ni confirma pagos.</p>
         <div class="payment-methods" id="paymentMethods">
-          <button class="btn active" data-method="EFECTIVO">Efectivo</button>
-          <button class="btn" data-method="TARJETA">Tarjeta</button>
+          <button class="btn active" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
+          <button class="btn" data-method="TARJETA" disabled>Tarjeta (no habilitada)</button>
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
           <button class="btn" data-method="TARJETA_REGALO" disabled title="Saldo no verificable en esta versión">Tarjeta regalo (no verificada)</button>
@@ -327,15 +347,15 @@ body {
         </div>
 
         <div class="payment-input">
-          <input id="paymentAmount" class="field" type="text" inputmode="decimal" placeholder="Importe recibido (ej. 12,50)">
-          <button id="addPayment" class="btn">Añadir pago</button>
+          <input id="paymentAmount" class="field" type="text" inputmode="decimal" placeholder="Importe recibido (ej. 12,50)" disabled>
+          <button id="addPayment" class="btn" disabled>Añadir pago</button>
         </div>
 
         <div class="quick-cash" id="quickCash">
-          <button class="btn" data-cash="10">10 €</button>
-          <button class="btn" data-cash="20">20 €</button>
-          <button class="btn" data-cash="50">50 €</button>
-          <button class="btn" data-cash="exact">Exacto</button>
+          <button class="btn" data-cash="10" disabled>10 €</button>
+          <button class="btn" data-cash="20" disabled>20 €</button>
+          <button class="btn" data-cash="50" disabled>50 €</button>
+          <button class="btn" data-cash="exact" disabled>Exacto</button>
         </div>
 
         <div id="paymentList" style="margin-bottom:12px;color:var(--muted);">
@@ -482,9 +502,21 @@ body {
     partialCount: "registerPartialCount",
     ticketX: "issueTicketX",
     ticketZ: "issueTicketZ",
+    cashSummary: "readCashSummary",
+    audit: "readAudit",
     exportMovements: "exportMovements",
     exportAudit: "exportAudit",
+    refreshCatalog: "readCatalog",
+    tabServicios: "readCatalog",
+    tabProductos: "readCatalog",
+    selectClient: "searchCustomers",
+    printLast: "printReceipt",
   });
+  const SESSION_REQUIRED_CAPABILITIES = new Set([
+    "createSale", "registerCashMovement", "requestRefund", "registerPartialCount",
+    "issueTicketX", "issueTicketZ", "readCashSummary", "readAudit",
+    "exportMovements", "exportAudit", "printReceipt",
+  ]);
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -537,6 +569,11 @@ body {
       TPV_PREVIOUS_SESSION_NOT_CLOSED: "Existe una sesión anterior sin cierre. Consulta el estado antes de abrir otra.",
       TPV_SESSION_ALREADY_CLOSED_TODAY: "La sesión de hoy ya está cerrada y no puede volver a abrirse.",
       TPV_SESSION_REQUIRED: "No hay una sesión de caja seleccionada. Actualiza el estado de caja y abre una sesión antes de operar.",
+      TPV_SESSION_PREVIEW_REQUIRED: "La apertura necesita una previsualización vigente de CajaActual. Actualiza el estado de caja e inténtalo de nuevo.",
+      TPV_SESSION_PREVIEW_STALE: "La fecha o sesión ha cambiado desde la previsualización. Actualiza CajaActual y vuelve a abrir la caja.",
+      TPV_SESSION_OPEN_NOT_ALLOWED: "El backend no autoriza una nueva apertura. Comprueba el estado de la sesión y tu rol de usuario.",
+      TPV_TICKET_X_RESULT_INCOMPLETE: "El backend no ha devuelto los datos completos del control X. No se ha generado un comprobante.",
+      TPV_SESSION_OPENED_AT_INVALID: "La fecha de apertura guardada en CajaActual no es válida. Revisa la sesión antes de continuar.",
       TPV_SESSION_NOT_OPEN: "No existe una sesión de caja abierta. Consulta el estado y abre una sesión cuando el backend autorice la operación.",
       TPV_SESSION_CLOSED: "La sesión está cerrada. Abre una nueva sesión para continuar.",
       TPV_SESSION_MISMATCH: "La sesión seleccionada ya no es la sesión activa. Actualiza el estado de caja y vuelve a seleccionar la sesión.",
@@ -587,6 +624,8 @@ body {
   function openModal(title, bodyHtml, onConfirm) {
     $("modalTitle").textContent = title;
     $("modalBody").innerHTML = bodyHtml;
+    $("modalConfirm").textContent = "Confirmar";
+    $("modalCancel").classList.remove("hidden");
     $("modalBackdrop").classList.remove("hidden");
     $("modalConfirm").onclick = async () => {
       try {
@@ -724,15 +763,33 @@ body {
     };
   };
 
+  function updateControlAvailability() {
+    const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
+    const isOpen = operationalStatus === "ABIERTA";
+    const canOpenSession = state.session?.canOpenSession === true;
+    $("openCash").disabled = state.busy || isOpen || !canOpenSession ||
+      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
+    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
+      const element = $(id);
+      if (!element) return;
+      const requiresSession = SESSION_REQUIRED_CAPABILITIES.has(capability);
+      element.disabled = state.busy || !state.operationalWritesAvailable ||
+        state.capabilities[capability] !== true || (requiresSession && !isOpen);
+    });
+  }
+
   function renderSession(session) {
     state.session = session || null;
     const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
     const isOpen = operationalStatus === "ABIERTA";
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    const operatorId = state.session?.operatorId || state.session?.authenticatedOperatorId || "—";
-    const operatorName = state.session?.operatorDisplayName || state.session?.authenticatedDisplayName || operatorId;
-    $("operatorLabel").textContent = "Operador: " + operatorName + " · Usuario: " + operatorId;
+    const sessionOperatorId = state.session?.operatorId || "—";
+    const sessionOperatorName = state.session?.operatorDisplayName || sessionOperatorId;
+    const authenticatedOperatorId = state.session?.authenticatedOperatorId || "—";
+    const authenticatedDisplayName = state.session?.authenticatedDisplayName || authenticatedOperatorId;
+    $("operatorLabel").textContent = "Operador de sesión: " + sessionOperatorName +
+      " · Usuario autenticado: " + authenticatedDisplayName + " (" + authenticatedOperatorId + ")";
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
@@ -740,17 +797,13 @@ body {
       ? "Hora: " + new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone }).format(parsedTimestamp)
       : "Hora: —";
     $("cashStatus").className = "dot " + (isOpen ? "ok" : "error");
-    const integrationStatus = state.session?.integrationStatus || "NO_ENVIADO";
+    const legacyProjection = state.session?.cajaActual?.projectionStatus === "LEGACY_UNVERIFIED";
     $("cashLabel").textContent = isOpen
       ? "SESIÓN ABIERTA"
-      : (isClosed ? "SESIÓN CERRADA" : "SIN SESIÓN");
-    const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
-    $("openCash").disabled = isOpen || !canOpenSession || state.busy ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
-    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      $(id).disabled = !isOpen || state.busy || !state.operationalWritesAvailable ||
-        state.capabilities[capability] !== true;
-    });
+      : (isClosed ? "SESIÓN CERRADA" : (legacyProjection
+        ? "SIN SESIÓN · PROYECCIÓN ANTIGUA NO VERIFICADA"
+        : "SIN SESIÓN"));
+    updateControlAvailability();
     if (!state.operationalWritesAvailable) {
       $("cashLabel").textContent = isOpen
         ? "SESIÓN ABIERTA · MODO CONSULTA · ESCRITURAS NO AUTORIZADAS"
@@ -767,16 +820,7 @@ body {
   /* ---------- Bloqueo de operaciones ---------- */
   function setBusy(value) {
     state.busy = value;
-    const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
-    const isOpen = operationalStatus === "ABIERTA";
-    const canOpenSession = state.session?.canOpenSession ?? (operationalStatus === "SIN_SESION");
-    $("openCash").disabled = value || isOpen || !canOpenSession ||
-      !state.operationalWritesAvailable || state.capabilities.openSession !== true;
-    Object.entries(BUTTON_CAPABILITIES).forEach(([id, capability]) => {
-      const el = $(id);
-      if (el) el.disabled = value || !isOpen || !state.operationalWritesAvailable ||
-        state.capabilities[capability] !== true;
-    });
+    updateControlAvailability();
   }
 
   async function runOperation(fn) {
@@ -1195,22 +1239,56 @@ body {
     renderTicket();
   });
 
-  /* ---------- Apertura de caja ---------- */
-  $("openCash").onclick = () => openModal("Abrir caja", `
-    <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
-    <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
-  `, async () => {
-    const openingCash = num($("openingCash").value);
-    if (!Number.isFinite(openingCash) || openingCash < 0) throw new Error("TPV_INVALID_AMOUNT");
-    const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
-      openingCash,
-      reason: $("openingReason").value.trim(),
-      terminalId: "TPV",
-    }, "SESSION_OPEN_RES");
-    renderSession(session);
-    await refreshCashState();
-    toast("Sesión abierta.");
-  });
+  /* ---------- Apertura de caja: preflight autoritativo desde CajaActual ---------- */
+  $("openCash").onclick = async () => {
+    if (state.busy) return;
+    setBusy(true);
+    try {
+      const current = await call("CASHIER_STATE", {}, "CASHIER_STATE_RES");
+      renderSession(current);
+      const preview = current?.nextSessionPreview;
+      if (current?.canOpenSession !== true || !preview?.sessionId || !preview?.operationDate) {
+        throw new Error("TPV_SESSION_OPEN_NOT_ALLOWED");
+      }
+      const authenticatedName = current.authenticatedDisplayName || current.authenticatedOperatorId || "Usuario autenticado";
+      const projectionLabel = current.cajaActual?.projectionStatus !== "LEGACY_UNVERIFIED"
+        ? "Proyección CajaActual verificada"
+        : "Proyección anterior no verificada; no se reutiliza como sesión activa";
+      openModal("Abrir caja", `
+        <label class="status">Fecha de operación
+          <input id="openingOperationDate" class="field" value="${esc(preview.operationDate)}" readonly>
+        </label>
+        <label class="status">Sesión asignada por backend
+          <input id="openingSessionId" class="field" value="${esc(preview.sessionId)}" readonly>
+        </label>
+        <p>Usuario autenticado: <strong>${esc(authenticatedName)}</strong></p>
+        <p>${esc(projectionLabel)}</p>
+        <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
+        <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
+      `, async () => {
+        const openingCashInput = $("openingCash").value;
+        const openingCash = num(openingCashInput);
+        if (!String(openingCashInput || "").trim() || !Number.isFinite(openingCash) || openingCash < 0) {
+          throw new Error("TPV_INVALID_AMOUNT");
+        }
+        const expectedSessionId = $("openingSessionId").value.trim();
+        await runOperation(async () => {
+          const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
+            expectedSessionId,
+            openingCash,
+            reason: $("openingReason").value.trim(),
+            terminalId: "TPV",
+          }, "SESSION_OPEN_RES");
+          renderSession(session);
+          toast("Sesión abierta.");
+        });
+      });
+    } catch (e) {
+      error(e);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   /* ---------- Entrada / Salida de efectivo ---------- */
   function openCashMovement(type) {
@@ -1381,15 +1459,55 @@ body {
   )).catch((e) => error(e));
 
 
-  /* ---------- Control X ---------- */
+  /* ---------- Control X: informe parcial, lectura y auditoría ---------- */
+  function ticketXReceiptHtml(ticket) {
+    const totals = ticket.totales || {};
+    const breakdown = ticket.desglose || {};
+    const dateLabel = ticket.sessionDate || "Fecha no disponible";
+    const issuedLabel = ticket.issuedAt
+      ? new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone: ticket.timeZone || "Europe/Madrid" }).format(new Date(ticket.issuedAt))
+      : "No disponible";
+    const openedLabel = ticket.openedAt
+      ? new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium", timeZone: ticket.timeZone || "Europe/Madrid" }).format(new Date(ticket.openedAt))
+      : "No disponible";
+    return `
+      <article class="ticket-receipt" id="ticketXReceipt">
+        <h3>Marian Madrid</h3>
+        <p>CONTROL X · ARQUEO PARCIAL</p>
+        <p>INFORMATIVO · NO CIERRA LA CAJA</p>
+        <div class="ticket-divider"></div>
+        <p>Fecha: ${esc(dateLabel)}</p>
+        <p>Sesión: ${esc(ticket.sessionId || "—")}</p>
+        <p>Apertura: ${esc(openedLabel)}</p>
+        <p>Emitido: ${esc(issuedLabel)}</p>
+        <p>Abierta por: ${esc(ticket.openedBy || "—")}</p>
+        <p>Emitido por: ${esc(ticket.issuedBy || "—")}</p>
+        <div class="ticket-divider"></div>
+        <div class="ticket-row"><span>Fondo inicial</span><strong>${esc(money(ticket.openingCash ?? 0))}</strong></div>
+        <div class="ticket-row"><span>Ventas</span><strong>${esc(money(totals.totalVentas ?? 0))}</strong></div>
+        <div class="ticket-row"><span>Efectivo</span><strong>${esc(money(breakdown.EFECTIVO ?? 0))}</strong></div>
+        <div class="ticket-row"><span>Tarjeta</span><strong>${esc(money(breakdown.TARJETA ?? 0))}</strong></div>
+        <div class="ticket-row"><span>Otros</span><strong>${esc(money(totals.totalOtros ?? 0))}</strong></div>
+        <div class="ticket-divider"></div>
+        <div class="ticket-row"><span>Efectivo esperado</span><strong>${esc(money(ticket.expectedCash ?? 0))}</strong></div>
+        <div class="ticket-row"><span>Total cobrado</span><strong>${esc(money(ticket.totalCollected ?? 0))}</strong></div>
+        <p>Operaciones: ${esc(ticket.nOperaciones ?? 0)}</p>
+        <div class="ticket-divider"></div>
+        <p>Este documento es un control parcial de consulta. No modifica saldos, no registra cobros y no cierra la sesión.</p>
+      </article>
+      <button id="printTicketX" type="button" class="btn" style="width:100%;margin-top:12px;">Imprimir / Guardar PDF</button>
+    `;
+  }
+
   $("ticketX").onclick = () => runOperation(async () => {
-    try {
-      const result = await call("TICKET_X", { sessionId: state.session?.sessionId }, "TICKET_X_RES");
-      openModal("Control X", `
-        <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
-      `, async () => {});
-    } catch (e) { error(e); }
-  });
+    const result = await call("TICKET_X", { sessionId: state.session?.sessionId }, "TICKET_X_RES");
+    const ticket = result?.ticketX;
+    if (!ticket || ticket.ticketType !== "CONTROL_PARCIAL_X") throw new Error("TPV_TICKET_X_RESULT_INCOMPLETE");
+    openModal("Ticket X · Control parcial", ticketXReceiptHtml(ticket), async () => {});
+    $("modalConfirm").textContent = "Cerrar";
+    $("modalCancel").classList.add("hidden");
+    $("printTicketX").onclick = () => window.print();
+  }).catch((e) => error(e));
 
   /* ---------- Cierre Z ---------- */
   $("ticketZ").onclick = () => {
@@ -1416,11 +1534,7 @@ body {
 
   /* ---------- Impresión ---------- */
   $("printLast").onclick = () => {
-    if (!state.lastSale) {
-      toast("No hay último ticket.");
-      return;
-    }
-    window.print();
+    toast("La impresión de tickets de venta no está integrada. La venta registrada permanece pendiente de pago.");
   };
 
   /* ---------- Handshake y contexto del controlador Wix ---------- */

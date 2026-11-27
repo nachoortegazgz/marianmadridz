@@ -284,13 +284,17 @@ async function dispatch(message) {
     switch (message.type) {
         case "CASHIER_STATE":
             return obtenerEstadoCaja();
-        case "SESSION_OPEN":
+        case "SESSION_OPEN": {
+            const expectedSessionId = optionalString(payload.expectedSessionId, 160);
+            if (!expectedSessionId) throw new Error("TPV_SESSION_PREVIEW_REQUIRED");
             return abrirSesionCaja({
                 idempotencyKey: key,
+                expectedSessionId,
                 openingCash: numeric(payload.openingCash, "OPENING_CASH"),
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
+        }
         case "SESSION_CLOSE":
             return cerrarSesionCaja({
                 sessionId: optionalString(payload.sessionId, 160) || "",
