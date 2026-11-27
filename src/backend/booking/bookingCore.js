@@ -1777,13 +1777,12 @@ export async function _persistBooking(params, traceId) {
        Su ausencia es esperada; no generamos WARN. */
     const thirdPartyId = _safeTrim(p.thirdPartyId || metaObj.thirdPartyId);
     const catalogId = _safeTrim(p.catalogId) || serviceId;
-    const totalAmount = _roundMoney(
-        Number(
-            p.totalAmount !== undefined
-                ? p.totalAmount
-                : metaObj.totalAmount || 0
-        ) || 0
-    );
+    const rawTotalAmount = p.totalAmount !== undefined
+        ? p.totalAmount
+        : metaObj.totalAmount !== undefined
+            ? metaObj.totalAmount
+            : 0;
+    const totalAmount = _roundMoney(rawTotalAmount);
     const doc = {
         [BOOKING_FIELDS.BOOKING_ID]: bookingId,
         [BOOKING_FIELDS.PAIR_TOKEN]: pairToken,

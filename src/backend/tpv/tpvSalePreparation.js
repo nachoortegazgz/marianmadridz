@@ -2,7 +2,7 @@ import { auth } from "@wix/essentials";
 import { services } from "@wix/bookings";
 import { productsV3 } from "@wix/stores";
 import { taxCalculation, taxSettings } from "@wix/ecom";
-import { TPV_CATALOG_APP_IDS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_CATALOG_APP_IDS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { listAuthorizedProfessionals } from "backend/tpv/tpvNativeDirectory";
 import {
     buildTpvTaxCalculationLines,
@@ -180,7 +180,7 @@ export async function prepareTpvSaleCatalog(inputLines) {
 
     const taxLineItems = buildTpvTaxCalculationLines(catalogLines, taxIncludedInPrice);
     const taxResult = await calculateTaxElevated({
-        currency: TPV_RUNTIME_POLICY.CURRENCY_CODE,
+        currency: SDK_CONFIG.CURRENCY_CODE,
         addresses: [{ country: TPV_RUNTIME_POLICY.TAX_COUNTRY }],
         lineItems: taxLineItems,
     });

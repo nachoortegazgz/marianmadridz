@@ -212,7 +212,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /actorId: session\.actorId/);
     assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
     assert.match(cash, /operatorDisplayName: session\.operatorDisplayName/);
-    assert.match(cash, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
+    assert.match(cash, /timeZone: SDK_CONFIG\.TZ/);
     assert.match(cash, /integrationStatus: "NO_ENVIADO"/);
 
     assert.ok(sales.includes("BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
@@ -231,7 +231,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(audit, /if \(!sessionId \|\| sessionId\.length > 128/);
     assert.match(audit, /recordSessionId === sessionId/);
     assert.match(audit, /recordSessionId\s*\?\s*recordSessionId === sessionId/);
-    assert.match(audit, /timeZone: TPV_RUNTIME_POLICY\.TIME_ZONE/);
+    assert.match(audit, /timeZone: SDK_CONFIG\.TZ/);
     assert.match(controller, /case "PARTIAL_CASH_COUNT":[\s\S]*?registrarArqueoParcial\(/);
     assert.match(controller, /const sessionId = optionalString\(payload\.sessionId, 160\)/);
     assert.match(controller, /if \(!sessionId\) throw new Error\("TPV_SESSION_REQUIRED"\)/);

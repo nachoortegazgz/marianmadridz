@@ -6,7 +6,7 @@ import { error as tpvError, ok as tpvOk, pending as tpvPending } from "backend/t
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
 import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
 import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
-import { BUSINESS_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, SDK_CONFIG, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { CONSISTENCY, getItem, insertItem } from "backend/dataAccess";
 import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { toMinorUnits } from "backend/tpv/tpvUtils";
@@ -393,7 +393,7 @@ export const registrarVenta = webMethod(
                     requiresReconciliation: draft.requiresReconciliation,
                     draftOrderReason: draft.reason,
                     requestFingerprint,
-                    currency: TPV_RUNTIME_POLICY.CURRENCY,
+                    currency: SDK_CONFIG.CURRENCY_CODE,
                     traceId,
                 };
                 let saved;
