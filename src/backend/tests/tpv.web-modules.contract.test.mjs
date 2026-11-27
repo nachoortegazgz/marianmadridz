@@ -634,6 +634,7 @@ test("Ticket X and Z use neutral status values and explicit synthetic source met
     assert.match(closures, /action: "TICKET_X_GENERATED"/);
     assert.match(closures, /entityType: "TICKET_X"/);
     assert.match(closures, /fiscalLedgerWritten: false/);
+    assert.match(closures, /data: \{ ticketX: ticketXResult/);
     assert.doesNotMatch(closures, /insertTpvEvent\\(TPV_COLLECTIONS\\.TICKET_X/);
     assert.match(closures, /status: "CERRADO",\\s*sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
     assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
@@ -660,6 +661,8 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /idempotencyKey \\+ ":CIERRE"/);
     assert.match(cash, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA/);
     assert.match(cash, /closeTpvCajaSessionProjection/);
+    assert.match(cash, /data: resultData/);
+    assert.match(cash, /replayed: true/);
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
     assert.match(repository, /cashRegisterStatus: "CERRADA"/);
     assert.doesNotMatch(cash, /TPV_COLLECTIONS\.TICKET_Z|HistoricoCierresZ|eventLog/);
@@ -672,6 +675,7 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
     assert.match(exportModule, /limit: PAGE_SIZE/);
     assert.match(exportModule, /offset: rawCursor/);
     assert.match(exportModule, /nextCursor:/);
+    assert.match(exportModule, /data: resultData/);
     assert.match(exportModule, /recordSource/);
     assert.doesNotMatch(exportModule, /payloadFiscal:|taxAmount|taxBase|invoice/);
     assert.match(permissions, /closeSession: staff\.rolWebsite === "ADMIN"/);
