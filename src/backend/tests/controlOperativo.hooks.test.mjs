@@ -244,7 +244,7 @@ describe("ControlOperativo hooks", () => {
         _id: original._id,
         status: CONTROL_STATUS.CLOSED,
       }),
-      /append-only/
+      (error) => error?.code === "CMS_DELETE_PROHIBITED"
     );
 
     await assert.rejects(
@@ -272,7 +272,7 @@ describe("ControlOperativo hooks", () => {
     );
   });
 
-  it("allows removal of an expiring operational lock", async () => {
+  it("prohibits deletion of an expiring operational lock", async () => {
     const original = {
       _id: "lock-3",
       ...base(CONTROL_TYPE.SLOT_LOCK),
