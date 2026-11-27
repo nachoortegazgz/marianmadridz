@@ -14,6 +14,7 @@ const suites = [
   'security.rateLimiter.test.mjs',
   'booking.cart-v2.checkout.test.mjs',
   'tpv.web-modules.contract.test.mjs',
+  'tpv-record-nature.test.mjs',
   'tpv.sale-preparation.core.test.mjs',
   'tpv-ui.qa-source.test.mjs',
   'tpv.qa.persistence.policy.test.mjs',
