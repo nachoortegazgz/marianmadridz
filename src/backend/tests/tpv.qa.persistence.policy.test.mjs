@@ -11,6 +11,7 @@ import {
     TPV_COLLECTIONS,
     TPV_LEDGER_SOURCE,
     TPV_RUNTIME_POLICY,
+    SDK_CONFIG,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
@@ -34,8 +35,11 @@ test("TPV runtime policy uses the same contract independent of environment label
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "TPV");
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_LEDGER_V3");
     assert.equal(TPV_RUNTIME_POLICY.SCHEMA_VERSION, 3);
-    assert.equal(TPV_RUNTIME_POLICY.CURRENCY, "EUR");
-    assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, "Europe/Madrid");
+    assert.equal(SDK_CONFIG.CURRENCY_CODE, "EUR");
+    assert.equal(SDK_CONFIG.TZ, "Europe/Madrid");
+    assert.equal(TPV_RUNTIME_POLICY.CURRENCY, undefined);
+    assert.equal(TPV_RUNTIME_POLICY.CURRENCY_CODE, undefined);
+    assert.equal(TPV_RUNTIME_POLICY.TIME_ZONE, undefined);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, undefined);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, undefined);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES, undefined);
