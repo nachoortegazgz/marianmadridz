@@ -789,6 +789,6 @@ test('BOOKING-AMOUNT-01 booking writer does not coerce invalid totalAmount to ze
   const end = source.indexOf('const doc =', start);
   assert.ok(start >= 0 && end > start);
   const amountBlock = source.slice(start, end);
-  assert.match(amountBlock, /const totalAmount = _roundMoney\\(rawTotalAmount\\)/);
-  assert.doesNotMatch(amountBlock, /Number\\(|\\|\\|\\s*0/);
+  assert.match(amountBlock, /const totalAmount = _roundMoney\(rawTotalAmount\)/);
+  assert.doesNotMatch(amountBlock, /Number\(|\|\|\s*0/);
 });
