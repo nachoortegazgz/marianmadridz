@@ -130,9 +130,24 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - Reembolso y Ticket Z real siguen bloqueados por Contract A (pagos) y Contract C (fiscal), respectivamente.
 - Hito TPV-01 completado en PR propuesta: tres módulos de runtime retirados; compatibilidad histórica extraída y escrituras legacy denegadas.
 - Tres gates operativos: PASS estático en PR #626; Wix Runtime: PENDIENTE_HUMANO. CI offline PR #627: PASS, 80 suites/759 tests; ejecución local no realizada.
-- Runtime gates (2026-11-27): PENDIENTE_HUMANO; TinyFish bloqueado por login Wix y Wix MCP rechazó el dominio del sitio con HTTP 403.
-- Plan reproducible: `tests/runtime/RUNTIME-TEST-PLAN.md` (PR #629); no se invocaron gates ni se mutaron registros durante los intentos.
+- Runtime gates (2026-11-27): PENDIENTE; TinyFish autenticó para Wix Dashboard/Preview y localizó `/tpv`; no se invocaron WebMethods ni se mutaron datos. Wix MCP HTTP 403 previo no se considera método de ejecución válido.
+- Plan reproducible: `tests/runtime/RUNTIME-TEST-PLAN.md` (PR #629); la secuencia y el read-back deben respetar el contrato real del writer (`payloadFiscal.sessionId` en movimientos).
 - P1 cerrada en delegable para el alcance aprobado; bloqueos externos: Contract A (pagos) y Contract C (fiscal).
 
 - Wix Preview discovery (2026-11-27, TinyFish run `d10ece85-5528-409d-9372-a9315c07e908`): admin autenticado; página TPV localizada en `/tpv`, código `src/pages/TPV.yl5th.js`; interfaz visible y sin sesión de caja abierta. No se mutó CMS.
 - Runtime gates siguen BLOQUEADOS antes de abrir sesión: `abrirSesionCaja()` escribe en `CajaActual` y `SesionesCaja` con `sessionId=TPV-SESSION-YYYYMMDD`, pero `_buildTpvLedgerItem()` aún no deriva/persiste `recordNature` desde `recordTimestamp`/`productionActivationAt`; el contrato de clasificación y ubicación del campo sigue pendiente (`TPV-ONLINE-TEST-READINESS.md`). No se creó sesión ni se invocaron gates para evitar registros de naturaleza ambigua.
+
+
+## Auditoría CMS y disponibilidad pública (2026-11-27)
+
+- Wix Data API read-only: 41 colecciones. Conteos: `CitasF2` 11; `ControlOperativo` 78; `MovimientosCaja` 5; `LibroAsientosContablesDetalle` 3; `RegistroIntegracion` 3; `HistoricoCierresZ` 1; `CajaActual` 1; `RegistrosHorariosStaff` 0; `TransaccionesTPV` 0. `TransaccionesTPV` no debe convertirse en ledger alternativo: el contrato vigente designa `MovimientosCaja` como ledger físico canónico.
+- `CitasF2`: 11/11 con `traceId`; 9 `NOT_PAID`, 2 `PENDING_LEDGER`, 10 `CONFIRMED`, 1 `PENDING`; 11/11 sin `cashMovementId`. Persistencia de reserva acreditada, no conciliación de pago/caja.
+- `ControlOperativo`: 78 registros, con `SLOT_LOCK`, `IDEMPOTENCY`, `WEBHOOK_EVENT`, `WEBHOOK_CLAIM`, `RATE_LIMIT`, `COMPENSATION` y 5 `TPV_FUNCTIONAL_TEST`. `RegistroIntegracion`: 3 registros QA simulados con `traceId`, `idempotencyKey`, `payload`, `deliveryStatus=NOT_SENT`; delivery externo no ejercitado.
+- `MovimientosCaja`: 5 registros; 3 `TPV_QA_DEVELOPMENT`, 2 sin `recordSource`; 5/5 sin `recordTimestamp`, `hash` ni `previousRecordHash` en read-back. No se acredita integridad de cadena ni conformidad canónica de estos registros históricos; no se modificaron.
+- `LibroAsientosContablesDetalle`: 3 eventos simulados TPV; `HistoricoCierresZ`: 1 cierre `Z_SIMULATED`, `NOT_SIGNED`, `NOT_SENT`. No acreditan asientos/cierres fiscales reales.
+- `CajaActual`: singleton `ABIERTA`, abierto y actualizado el 2026-11-21, sin `closedAt`; requiere reconciliación antes de nuevas pruebas de caja. No se abrió ni cerró.
+- `RegistrosHorariosStaff`: 0 registros actuales; persistencia de fichajes no acreditada. `MapaStaff`: 5 registros (GESTORIA/TERCERO/STAFF); no se encontró `recordType=CONFIG_SISTEMA`.
+- Código actual `tpvRepository.js`: `insertTpvEvent()` permite writer físico/auditoría, rechaza ventas en esa ruta; `_buildTpvLedgerItem()` exige sesión, secuencia y hash previo y genera hash. La muestra histórica de `MovimientosCaja` no cumple esos campos. No se ejecutó el writer en Runtime.
+- Dominio: Dashboard Wix muestra `marianmadrid.es` Connected by Pointing/Primary y asignado al metaSiteId correcto (TinyFish `ca3ad06b-7aac-42fa-b221-5256adb1df9a`). GetSiteContext devuelve estado Draft. Prueba posterior de los cuatro hosts confirma redirección a `https://www.marianmadrid.es/` y contenido propio (TinyFish `08925334-d5c9-448e-b8df-4cd31466b8ac`); contradice la primera observación aislada de placeholder (`02ec3263-57f4-4123-a276-1cce82f141d8`). Tomar la prueba posterior como estado observado, conservar discrepancia para nueva comprobación.
+- Auditoría de enlaces internos y páginas de reservas/tienda/blog aún en curso (TinyFish `6f5f8f74-09bb-442d-9506-5e0cc5d547a5`). No enviar formularios, reservar, comprar ni pagar.
+- Solo lecturas: no se mutaron CMS, pedidos, pagos, inventario, roles, configuración fiscal ni dominio. No se publicó.
