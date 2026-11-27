@@ -38,8 +38,8 @@ test("P0-FISCAL-01 writers use domain validation instead of a global disable swi
 
   assert.match(accounting, /_normalizeEntry\(input, traceId\)/);
   assert.match(accounting, /ACCOUNTING_LEDGER_LOCK_CONFIG/);
-  assert.match(accounting, /debitTotal/);
-  assert.match(accounting, /creditTotal/);
+  assert.match(accounting, /totalDebit/);
+  assert.match(accounting, /totalCredit/);
 
   const recoveryStart = crons.indexOf("export async function runPendingCompensationsJob");
   const recovery = crons.slice(recoveryStart);
