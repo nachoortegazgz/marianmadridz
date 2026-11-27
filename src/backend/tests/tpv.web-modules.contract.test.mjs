@@ -572,10 +572,10 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /export const cerrarSesionCaja = webMethod\(/);
     assert.match(cash, /withTpvSessionLock\(sessionId/);
     assert.match(cash, /movementType: "CIERRE"/);
-    const closeBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
-    assert.match(closeBlock, /const closeIdempotencyKey = sessionId \+ "-CIERRE"/);
-    assert.match(closeBlock, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA,\s*closeIdempotencyKey/);
-    assert.doesNotMatch(closeBlock, /idempotencyKey \+ ":CIERRE"/);
+    const sessionCloseBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
+    assert.match(sessionCloseBlock, /const closeIdempotencyKey = sessionId \+ "-CIERRE"/);
+    assert.match(sessionCloseBlock, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA,\s*closeIdempotencyKey/);
+    assert.doesNotMatch(sessionCloseBlock, /idempotencyKey \+ ":CIERRE"/);
     assert.match(cash, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA/);
     assert.match(cash, /closeTpvCajaSessionProjection/);
     assert.match(cash, /data: resultData/);
@@ -584,7 +584,7 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.ok(cash.includes('"CAJA_CIERRE:" + sessionId.slice(0, 70) + ":AUDIT"'));
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
     assert.match(repository, /cashRegisterStatus: "CERRADA"/);
-    const closeBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
+    const sessionCloseBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
     assert.equal(closeBlock.includes("TPV_COLLECTIONS.TICKET_Z"), false);
     assert.equal(closeBlock.includes("HistoricoCierresZ"), false);
     assert.equal(closeBlock.includes("eventLog"), false);
