@@ -154,13 +154,6 @@ export function assertUpdateAllowed(collection, item) {
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
         }
-        if (
-            item.status !== "PENDING_PAYMENT" ||
-            item.sourceType !== "SYNTHETIC" ||
-            item.requiresReconciliation !== true
-        ) {
-            throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
-        }
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
@@ -210,7 +203,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
     if (!id) throw _policyError("CMS_REMOVE_ID_REQUIRED");
 
     if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-        throw _policyError("CMS_TPV_TRANSACTION_DELETE_DENIED");
+        throw _policyError("CMS_DELETE_PROHIBITED");
     }
 
     if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
