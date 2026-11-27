@@ -106,7 +106,7 @@ export const generarTicketX = webMethod(
                     nOperaciones: sales.length + movements.length,
                 });
                 const audit = await appendTpvAudit({
-                    idempotencyKey: "TICKET_X:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + sessionId + ":" + snapshotFingerprint,
+                    idempotencyKey: "TICKET_X:" + sessionId + ":" + snapshotFingerprint.slice(0, 32),
                     action: "TICKET_X_GENERATED",
                     actorId: operator.operatorId,
                     entityType: "TICKET_X",
