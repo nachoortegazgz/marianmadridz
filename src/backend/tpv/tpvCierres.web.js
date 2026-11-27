@@ -87,12 +87,14 @@ export const generarTicketX = webMethod(
                     : new Date(activeSession.openedAt);
                 if (Number.isNaN(openedAt.getTime())) throw new Error("TPV_SESSION_OPENED_AT_INVALID");
                 const issuedAt = new Date();
-                const sessionDate = new Intl.DateTimeFormat("en-CA", {
+                const dateParts = new Intl.DateTimeFormat("en-CA", {
                     timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
-                }).format(openedAt);
+                }).formatToParts(openedAt);
+                const dateValues = Object.fromEntries(dateParts.map((part) => [part.type, part.value]));
+                const sessionDate = dateValues.year + "-" + dateValues.month + "-" + dateValues.day;
                 const ticketX = {
                     ticketType: "CONTROL_PARCIAL_X",
                     sessionId,
