@@ -1,6 +1,4 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { draftOrders } from "@wix/ecom";
-import { auth } from "@wix/essentials";
 import { getMyCajeroContext, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
@@ -16,9 +14,6 @@ import { createHash } from "node:crypto";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const createDraftOrderElevated = typeof draftOrders?.createDraftOrder === "function"
-    ? auth.elevate(draftOrders.createDraftOrder)
-    : null;
 
 const PREPARATION_MESSAGES = Object.freeze({
     TPV_LINES_REQUIRED_OR_LIMIT_EXCEEDED: "La venta debe contener entre 1 y 100 líneas.",
@@ -153,39 +148,15 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
-async function createSaleDraftOrder(prepared) {
-    const catalogLines = prepared.lineas;
-    if (!createDraftOrderElevated) {
-        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_API_UNAVAILABLE" };
-    }
-    if (!Array.isArray(catalogLines) || catalogLines.length === 0) {
-        return { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_NO_CATALOG_LINES" };
-    }
-    try {
-        const response = await createDraftOrderElevated({
-            draftOrder: {
-                catalogLineItems: catalogLines.map((line) => ({
-                    catalogReference: {
-                        catalogItemId: line.itemId,
-                        appId: line.appId,
-                        ...(line.varianteId ? { options: { variantId: line.varianteId } } : {}),
-                    },
-                    quantity: line.cantidad,
-                })),
-            },
-        });
-        const draft = response?.calculatedDraftOrder?.draftOrder;
-        const orderId = String(draft?._id || draft?.id || "").trim();
-        return orderId
-            ? { orderId, requiresReconciliation: false, reason: "DRAFT_ORDER_CREATED" }
-            : { orderId: null, requiresReconciliation: true, reason: "DRAFT_ORDER_ID_MISSING" };
-    } catch (error) {
-        return {
-            orderId: null,
-            requiresReconciliation: true,
-            reason: String(error?.code || error?.message || "DRAFT_ORDER_UNAVAILABLE").slice(0, 120),
-        };
-    }
+async function createSaleDraftOrder() {
+    // This WebMethod persists a synthetic, unpaid QA intent only. Creating a
+    // Wix Draft Order is still a real external CMS/eCommerce side effect and
+    // is not required to test the TPV commercial persistence path.
+    return {
+        orderId: null,
+        requiresReconciliation: true,
+        reason: "QA_EXTERNAL_SIDE_EFFECTS_DISABLED",
+    };
 }
 
 function salePendingEnvelope(record, { replayed, auditPersisted = true, traceId }) {
@@ -204,7 +175,7 @@ function salePendingEnvelope(record, { replayed, auditPersisted = true, traceId 
         resolutionAttempts: [
             { step: "operator-authorization", status: "VERIFIED" },
             { step: "catalog-and-tax-recalculation", status: "VERIFIED" },
-            { step: "draft-order", status: record.orderId ? "CREATED" : "UNAVAILABLE", reason: record.orderId ? null : record.draftOrderReason },
+            { step: "draft-order", status: "SKIPPED", reason: record.draftOrderReason },
             { step: "commercial-transaction", status: "PERSISTED" },
             { step: "payment-provider", status: "BLOCKED", reason: "Contract A" },
             { step: "operational-audit", status: auditPersisted ? "PERSISTED" : "PENDING" },
