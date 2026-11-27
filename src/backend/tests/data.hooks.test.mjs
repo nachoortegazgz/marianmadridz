@@ -311,6 +311,10 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
     (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
   );
   wixDataMock._reset();
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove("missing-tpv-intent"),
+    /TransaccionesTPV remove target not found/
+  );
 });
 
 test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields', () => {
