@@ -13,6 +13,10 @@ function seedControl(controlType, id = "control-target") {
         dedupeKey: "operational-key",
         traceId: "trace-operational",
         status: "ACTIVE",
+        ...(controlType === CONTROL_TYPE.DISPLAY_TOKEN ? {
+            bookingId: "11111111-1111-4111-8111-111111111111",
+            attempts: 0,
+        } : {}),
         expiresAt: new Date(Date.now() + 60000),
         payload: {},
     }]);
