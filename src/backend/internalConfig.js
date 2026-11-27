@@ -654,8 +654,6 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
-),
-),
   }),
 });
 
