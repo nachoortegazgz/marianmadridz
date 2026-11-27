@@ -386,6 +386,20 @@ export async function initializeTpvCaja() {
     return { item: existing, created: false };
 }
 
+export async function readTpvCajaSnapshot() {
+    const caja = await _getCajaActual();
+    if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
+    const session = _sessionFromCaja(caja);
+    return {
+        projectionStatus: session ? "CANONICAL" : "LEGACY_UNVERIFIED",
+        cashRegisterStatus: caja.cashRegisterStatus || "DESCONOCIDO",
+        snapshotSource: caja.snapshotSource || null,
+        sessionId: session?.sessionId || null,
+        openedAt: session?.openedAt || null,
+        openedBy: session?.operatorDisplayName || session?.operatorId || null,
+    };
+}
+
 async function _getCajaActual() {
     const result = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.CAJA_ACTUAL,
@@ -445,6 +459,15 @@ export async function closeTpvCajaSessionProjection({
         const item = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
         return { item, replayed: false };
     });
+}
+
+function _isLegacyUnverifiedProjection(caja) {
+    const state = getTpvRuntimeState(caja);
+    return caja?.cashRegisterStatus === "ABIERTA" &&
+        caja?.snapshotSource === "MOVIMIENTOS_CAJA_RECONCILIADOS" &&
+        String(caja?.traceId || "") === "0" &&
+        caja?.lastOperationStatus === "SIMULATED_SUCCESS" &&
+        !String(state?.sessionId || "").trim();
 }
 
 function _sessionFromCaja(caja) {
@@ -598,10 +621,31 @@ async function _projectPersistedTpvEvent(collection, record, recordId, hash, ide
 function _sessionCajaPatch(caja, record, eventHash) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
+    const previousRuntime = getTpvRuntimeState(caja);
+    const legacyProjection = _isLegacyUnverifiedProjection(caja)
+        ? {
+            snapshotSource: caja.snapshotSource || null,
+            cashRegisterStatus: caja.cashRegisterStatus || null,
+            openedAt: caja.openedAt || null,
+            openedBy: caja.openedBy || null,
+            lastOperationStatus: caja.lastOperationStatus || null,
+            traceId: caja.traceId || null,
+            supersededAt: openedAt,
+            supersededBy: String(record.operatorId || record.cashierMemberId || ""),
+            monetarySnapshotReused: false,
+        }
+        : previousRuntime.legacyProjection || null;
+    const {
+        posOrderId: _legacyPosOrderId,
+        posTransactionId: _legacyPosTransactionId,
+        posPaymentId: _legacyPosPaymentId,
+        ...baseCaja
+    } = caja;
     return {
-        ...caja,
+        ...baseCaja,
         cashRegisterStatus: "ABIERTA",
         recordTimestamp: record.recordTimestamp,
+        operationDateHour: openedAt,
         openedAt,
         closedAt: null,
         openedBy: record.operatorId || record.cashierMemberId || null,
@@ -619,14 +663,59 @@ function _sessionCajaPatch(caja, record, eventHash) {
         difference: 0,
         differenceReason: "",
         salesCount: 0,
+        cashMovementId: null,
+        lastMovementAt: null,
+        ticketSequence: 0,
+        sequenceCounters: {},
         snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
         traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
         lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
         lastOperationType: "TPV_SESSION_OPEN",
         lastOperationAmount: openingCash,
-        lastOperationPaymentMethod: "EFECTIVO",
+        lastOperationPaymentMethod: null,
         lastOperationAt: openedAt,
         lastOperationStatus: "REGISTRADO",
+        posIntegrationStatus: "NO_ENVIADO",
+        ticketSyncStatus: "NO_ENVIADO",
+        orderId: null,
+        checkoutId: null,
+        paymentId: null,
+        transactionId: null,
+        paymentReference: null,
+        paymentStatus: null,
+        paymentMethod: null,
+        paymentBreakdown: {},
+        amountReceived: null,
+        changeReturned: null,
+        posPaymentStatus: null,
+        posPaymentMethod: null,
+        posPaymentProvider: null,
+        posAmount: null,
+        posCurrency: null,
+        posPaidAt: null,
+        ticketNumber: null,
+        ticketIssuedAt: null,
+        ticketType: null,
+        ticketSeries: null,
+        lineItems: {},
+        conceptQuantities: {},
+        customerName: null,
+        customerTaxId: null,
+        customerAddress: null,
+        netPrice: null,
+        discountAmount: null,
+        roundingAmount: null,
+        taxableBaseTotal: null,
+        appliedTax: null,
+        taxTotal: null,
+        fiscalText: null,
+        verifactuReference: null,
+        verificationQr: null,
+        ticketXControlReference: null,
+        contactId: null,
+        catalogItemId: null,
+        serviceId: null,
+        bookingId: null,
         conceptOperations: {
             ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
             tpvRuntime: {
@@ -642,6 +731,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
                 operatorResourceId: String(record.operatorResourceId || "").trim() || null,
                 requestFingerprint: String(record.requestFingerprint || eventHash || "") || null,
                 openedAt,
+                legacyProjection,
                 appliedMovementIds: [],
             },
         },
@@ -803,13 +893,20 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
         return withCajaActualProjectionLock(
             "TPV_SESSION:" + key,
             async (lock) => {
-                const caja = await _ensureCajaActual();
-                assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+                const caja = await _getCajaActual();
+                if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
+                const currentSession = _sessionFromCaja(caja);
+                const legacyProjection = _isLegacyUnverifiedProjection(caja);
+                if (currentSession) {
+                    assertTpvCajaIntegrity(caja);
+                } else if (!legacyProjection) {
+                    assertTpvCajaIntegrity(caja, { allowBootstrap: true });
+                }
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
                 const recordMetadata = await createTpvRecordMetadata();
                 Object.assign(record, recordMetadata);
-                if (caja.closedAt == null && _sessionFromCaja(caja)) {
+                if (caja.closedAt == null && currentSession) {
                     throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 }
                 const updated = _sessionCajaPatch(caja, record, fingerprint);
