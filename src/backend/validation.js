@@ -825,9 +825,4 @@ export function isValidNifOrEuVat(value) {
  * No clasifica como simulacion una fila solo por tener una huella invalida:
  * esos registros deben seguir provocando una alerta de integridad.
  */
-/** @deprecated Environment labels never classify or suppress ledger records. */
-export function isExplicitSimulationLedgerRecord() {
-    return false;
-}
-
 
