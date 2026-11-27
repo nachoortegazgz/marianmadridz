@@ -124,7 +124,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 ## 6. Normativa y calendario
 
 - [RDL 1/2007](https://www.boe.es/buscar/act.php?id=BOE-A-2007-20555), arts. 20.1.c y 60.2.c: precio final completo, incluidos impuestos, en la información al consumidor.
-- [RDL 15/2025](https://www.boe.es/eli/es/rdl/2025/12/02/15): calendario de adaptación RRSIF según art. 3.1.a y resto de contribuyentes. Confirmar siempre el texto BOE vigente antes de fijar decisiones fiscales.
+- **RRSIF — actualización BOE 27-11-2026:** el RDL 43/2026 (BOE-A-2026-24701), en vigor 26-11-2026, modifica la DF4 del RD 1007/2023 y vincula a los obligados del art. 3.1 al plazo de 24 meses de la letra b) de la DF4 del RD 238/2026. Con la Orden HAC/1028/2026 vigente desde 06-10-2026, el hito resultante es 06-10-2028. Las fechas 01-01-2027 / 01-07-2027 del RDL 15/2025 quedan supersedidas para el calendario RRSIF. La factura electrónica B2B del RD 238/2026 mantiene calendario separado (12/24 meses). No confundir aplazamiento con cumplimiento técnico ni habilitación fiscal. Fuentes oficiales: [RDL 43/2026](https://www.boe.es/eli/es/rdl/2026/11/24/43) · [RD 238/2026](https://www.boe.es/eli/es/rd/2026/03/25/238) · [Orden HAC/1028/2026](https://www.boe.es/eli/es/o/2026/10/02/hac1028/con).
 - La existencia de código fiscal o una configuración técnica no acredita conformidad legal ni certificación.
 
 ## 7. Decisiones e invariantes
