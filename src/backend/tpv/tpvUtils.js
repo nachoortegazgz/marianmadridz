@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { TPV_COLLECTIONS, TPV_HISTORICAL_POLICY, TPV_LEGACY_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 
@@ -43,33 +43,6 @@ export function makeTpvTransactionId(collection, idempotencyKey) {
     return "TPV_" + digest;
 }
 
-/**
- * Historical transaction ID lookup only.
- * Use exclusively when searching for records written by the previous run-scoped format;
- * never use this value for a new insert.
- */
-export function makeLegacyTpvTransactionIdByCollection(collection, idempotencyKey) {
-    const logicalKey = Object.keys(TPV_COLLECTIONS).find((key) => TPV_COLLECTIONS[key] === collection);
-    const legacyCollection = logicalKey ? TPV_LEGACY_COLLECTIONS[logicalKey] : null;
-    if (!legacyCollection) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
-    const key = normalizeIdempotencyKey(idempotencyKey);
-    const digest = createHash("sha256")
-        .update(TPV_HISTORICAL_POLICY.LEGACY_RUN_ID + ":" + legacyCollection + ":" + key, "utf8")
-        .digest("hex");
-    return "TPV_" + digest;
-}
-
-/**
- * Historical Sandbox ID lookup only. Retained for idempotent retries against old rows;
- * never use this value for a new insert.
- */
-export function makeLegacyTpvTransactionId(idempotencyKey) {
-    const key = normalizeIdempotencyKey(idempotencyKey);
-    const digest = createHash("sha256")
-        .update(TPV_HISTORICAL_POLICY.LEGACY_RUN_ID + ":" + key, "utf8")
-        .digest("hex");
-    return "TPVSANDBOX_" + digest;
-}
 
 export function normalizeIdempotencyKey(value) {
     const key = String(value || "").trim();
