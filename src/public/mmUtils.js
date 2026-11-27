@@ -56,7 +56,6 @@ export const PAYMENT_METHOD = Object.freeze({
     BIZUM: "BIZUM",
     TRANSFERENCIA: "TRANSFERENCIA",
     WIX_PAYMENTS: "WIX_PAYMENTS",
-    OTRO: "OTRO",
 });
 
 /* --------------------------------------------------------------------------
