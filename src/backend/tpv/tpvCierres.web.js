@@ -135,9 +135,6 @@ export const generarTicketX = webMethod(
     }
 );
 
-// Compatibilidad del nombre consumido por versiones anteriores del controlador.
-export const generarControlX = generarTicketX;
-
 export const generarCierreZ = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
