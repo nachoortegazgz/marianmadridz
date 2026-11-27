@@ -47,6 +47,16 @@ La lógica de negocio, permisos, validación, catálogo, importes, impuestos e i
 - No actualizar el código de página para introducir pruebas temporales. Usar runners/fixtures versionados.
 - Mantener errores accionables y comportamiento fail-closed; no eliminar gates para facilitar pruebas.
 
+## Contratos técnicos que no deben perderse
+
+- Los hooks CMS son invariantes server-side: beforeInsert valida/normaliza; beforeUpdate y beforeRemove protegen inmutabilidad y transiciones. Si la regla depende del estado persistido, leerlo antes de decidir.
+- Webhooks son al menos una vez: mantener claims idempotentes, claves deterministas, comparación de fingerprint/payload y CAS/leases/recovery. Replay idéntico no duplica efectos; payload conflictivo falla.
+- No intercambiar silenciosamente `resourceId` del dominio/CMS con `resource._id` del SDK o `resource.id` REST; adaptar explícitamente cada contrato.
+- Importes TPV en céntimos enteros o helpers decimales canónicos; nunca usar importes del navegador como autoridad. Cantidades positivas enteras.
+- Métodos de pago V1 admitidos: `EFECTIVO` y `TARJETA`; Bizum, split tender, bonos y tarjetas regalo siguen bloqueados.
+- Una intención sintética `TransaccionesTPV` solo puede corregirse/eliminarse si cumple simultáneamente `sourceType=SYNTHETIC`, `status=PENDING_PAYMENT`, `orderId=null`, `requiresReconciliation=true` y todos los pagos siguen sin confirmar. Cualquier otro caso requiere su contrato de inmutabilidad/rectificación; nunca limpiar por lote.
+- Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se sobrescriben ni borran, aunque sean sintéticos.
+
 ## Documentación
 
 Mantener solo las fuentes activas enlazadas desde `docs/INDEX.md`. Actualizar STATE-NOW/RELEASE-READINESS cuando cambie el estado; PROJECT-CANON/TPV-UNIFIED-FLOW solo cuando cambien decisiones o contratos. La evidencia histórica se archiva y no se presenta como estado actual.
