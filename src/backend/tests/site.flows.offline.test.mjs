@@ -364,6 +364,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
     totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    tipoImpositivo: 21,
     channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
