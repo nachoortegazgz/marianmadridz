@@ -82,8 +82,29 @@ export const generarTicketX = webMethod(
                     queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("sessionId", sessionId)),
                     queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, wql.eq("sessionId", sessionId)),
                 ]);
+                const generatedAt = new Date();
                 const ticketX = {
+                    reportId: "TPV-X-" + sessionId,
+                    reportType: "CONTROL_PARCIAL",
                     sessionId,
+                    businessDate: new Intl.DateTimeFormat("en-CA", {
+                        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                    }).format(generatedAt),
+                    generatedAt,
+                    generatedBy: {
+                        operatorId: operator.operatorId,
+                        displayName: operator.operatorDisplayName,
+                    },
+                    sessionOpenedAt: activeSession.openedAt || null,
+                    sessionOperator: {
+                        operatorId: activeSession.operatorId || activeSession.cashierMemberId || null,
+                        displayName: activeSession.operatorDisplayName || null,
+                    },
+                    openingCash: fromMinorUnits(Number(activeSession.openingCashMinor || 0)),
+                    expectedCash: fromMinorUnits(Number(totals.expectedCashMinor || 0)),
                     totales: {
                         totalVentas: fromMinorUnits(totals.grossSalesMinor),
                         totalEfectivo: fromMinorUnits(totals.cashMinor),
@@ -106,6 +127,7 @@ export const generarTicketX = webMethod(
                     sessionId,
                     totals,
                     nOperaciones: sales.length + movements.length,
+                    generatedBy: operator.operatorId,
                 });
                 const audit = await appendTpvAudit({
                     idempotencyKey: "TICKET_X:" + sessionId + ":" + snapshotFingerprint.slice(0, 32),
