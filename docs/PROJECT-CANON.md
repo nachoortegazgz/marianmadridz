@@ -22,13 +22,13 @@
 ## 3. Contratos TPV vigentes
 
 - Un único código, contrato de dominio y reglas de negocio para desarrollo, pruebas y producción. Los tests pueden inyectar fixtures y adaptadores simulados en los límites de infraestructura; no constituyen un runtime de negocio alternativo.
-- `recordTimestamp` lo genera el backend en UTC. `recordNature` es metadato de trazabilidad derivado en backend; no selecciona runtime ni cambia las reglas de dominio.
+- `recordTimestamp` lo genera el backend en UTC. No existe clasificación `recordNature` ni diferenciación REAL/SYNTHETIC/SIMULATION; todos los entornos comparten el mismo contrato.
 - La falta de configuración de activación o fiscal **no debe bloquear** pruebas unitarias, contractuales ni de integración que usen fixtures explícitos y dependencias simuladas. No se inventan configuraciones fiscales reales para superar esos tests.
 - La ausencia o ambigüedad de configuración sí impide clasificar como REAL, habilitar writers reales o producir efectos fiscales/contables externos. El entorno de prueba debe marcar inequívocamente sus fixtures como sintéticos.
 - `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables. `MovimientosCaja` es el ledger físico canónico. `ControlOperativo` guarda locks/auditoría; `CajaActual` es proyección de sesión.
 - `registrarVenta()` aplica las reglas de preparación antes de aceptar una operación real. Los tests deben cubrir tanto rechazo por gates reales como ejecución del mismo flujo de dominio con fixtures y puertos simulados.
 - No se infiere cobro por la existencia de una intención. Pago verificado, movimiento físico y registro fiscal son etapas separadas.
-- Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables, también cuando el dato es sintético; las correcciones se realizan con nuevos registros rectificativos trazables.
+- El borrado está prohibido para todas las colecciones. Los registros operativos/comerciales editables admiten actualización validada. Los ledgers fiscales/contables ya contabilizados, jornada y cierres se corrigen con eventos rectificativos trazables, sin sobrescribir evidencia legal.
 - No se utilizan interruptores globales que deshabiliten writers por entorno. Cada operación atraviesa el mismo código y sus validaciones de dominio, autorización, configuración, idempotencia y concurrencia; los datos sintéticos se identifican por metadatos, no por un runtime alternativo.
 
 ## 4. Reservas
@@ -45,7 +45,7 @@
 - No usar REST/CMS directo para saltarse DAL, hooks, permisos o writers canónicos.
 - Los adaptadores simulados deben interceptar pagos, terminales, notificaciones, AEAT y demás efectos externos en pruebas.
 - La seguridad se aplica por efecto y entorno: una prueba no necesita activar servicios reales para probar la lógica que los prepara.
-- No modificar ni borrar ledgers append-only, aunque sus registros sean sintéticos.
+- No borrar ningún registro. No alterar directamente ledgers contabilizados; corregirlos mediante registros rectificativos.
 
 ## 6. Capa 3
 
