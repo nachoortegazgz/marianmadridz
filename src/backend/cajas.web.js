@@ -382,6 +382,40 @@ function _formatAEATDateTimeMadrid(date) {
 // This is the project's internal fiscal-ledger chain payload, not the AEAT v0.1.2
 // hash input. Preserve its exact output to avoid changing existing chain semantics.
 // The official pure AEAT builder remains isolated in backend/aeatHash.js.
+function _manualTransactionFingerprint(movement) {
+    return {
+        totalAmount: Number(movement.totalAmount),
+        paymentMethod: _safeTrim(movement.paymentMethod).toUpperCase(),
+        movementType: _safeTrim(movement.movementType).toUpperCase(),
+        channelType: _safeTrim(movement.channelType).toUpperCase(),
+        tipoImpositivo: Number(movement.tipoImpositivo),
+        lineItems: Array.isArray(movement.lineItems) ? movement.lineItems : [],
+        nifDestinatario: _safeTrim(movement.nifDestinatario).toUpperCase(),
+        recipientLegalName: _cleanText(movement.recipientLegalName || "", 200),
+        isB2B: movement.isB2B === true,
+        tipoFactura: _safeTrim(movement.tipoFactura).toUpperCase(),
+        operationDescription: _cleanText(movement.operationDescription || "", 500),
+    };
+}
+
+function validateFiscalMovementContract(movement) {
+    const required = [
+        "transactionId", "hash", "previousRecordHash", "sequenceNumber",
+        "tipoFactura", "fiscalPeriod", "staffResourceId",
+    ];
+    const missing = required.filter((field) => {
+        const value = movement?.[field];
+        return value === undefined || value === null ||
+            (typeof value === "string" && !value.trim());
+    });
+    if (!Number.isSafeInteger(Number(movement?.sequenceNumber)) || Number(movement.sequenceNumber) < 1) {
+        if (!missing.includes("sequenceNumber")) missing.push("sequenceNumber");
+    }
+    return missing.length
+        ? { ok: false, code: "FISCAL_MOVEMENT_INCOMPLETE", missing }
+        : { ok: true };
+}
+
 function _buildInternalFiscalChainPayload(movement, generatedAt) {
     const fields = [
         ["IDEmisorFactura", movement.nifEmisor || ""],
@@ -610,7 +644,18 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
         ].includes(movementType);
         const operationDescription = _cleanText(payload?.operationDescription || payload?.description || "Venta mostrador", 500);
-        const transactionId = _safeTrim(payload?.transactionId) || null;
+        const transactionId = _safeTrim(payload?.transactionId);
+        if (!transactionId || transactionId.length > 128) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: "TRANSACTION_ID_REQUIRED",
+                    message: "transactionId es obligatorio y debe tener como máximo 128 caracteres.",
+                },
+                traceId,
+            };
+        }
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
         const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
@@ -683,20 +728,50 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const previousInvoiceId = _safeTrim(inDto.previousInvoiceId) || null;
         const issuerInvoiceNumber = _safeTrim(inDto.issuerInvoiceNumber) || null;
 
-        if (transactionId) {
-            const existingRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("transactionId", transactionId)
-                .limit(1)
-                .find(STRONG_READ);
+        const transactionFingerprint = await hashSHA256(_stableSerialize(_manualTransactionFingerprint({
+            totalAmount: amount,
+            paymentMethod,
+            movementType,
+            channelType,
+            tipoImpositivo: Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL,
+            lineItems: inDto.lineItems || [],
+            nifDestinatario,
+            recipientLegalName,
+            isB2B,
+            tipoFactura: tipoFacturaIn || TIPO_FACTURA.F1,
+            operationDescription,
+        })));
 
-            if (existingRes?.items?.length > 0) {
-                log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
-                const cashProjection = await _updateCajaActual(existingRes.items[0], traceId);
+        const existingRes = await dalQuery(MOVIMIENTOS_CAJA_COL)
+            .eq("transactionId", transactionId)
+            .limit(2)
+            .find(STRONG_READ);
+
+        if (existingRes?.items?.length > 1) {
+            return {
+                status: "ERROR", data: null,
+                error: { code: "TRANSACTION_ID_AMBIGUOUS", message: "transactionId identifica varios movimientos; requiere reconciliación." },
+                traceId,
+            };
+        }
+        if (existingRes?.items?.length === 1) {
+            const existingMovement = existingRes.items[0];
+            const existingFingerprint = existingMovement.idempotencyFingerprint ||
+                await hashSHA256(_stableSerialize(_manualTransactionFingerprint(existingMovement)));
+            if (existingFingerprint !== transactionFingerprint) {
+                return {
+                    status: "ERROR", data: null,
+                    error: { code: "TRANSACTION_ID_PAYLOAD_CONFLICT", message: "transactionId ya fue utilizado con datos diferentes." },
+                    traceId,
+                };
+            }
+            log.info("Ledger idempotent duplicate detected", { transactionId, traceId });
+            const cashProjection = await _updateCajaActual(existingMovement, traceId);
                 // Retry projection if the fiscal movement survived a prior partial attempt.
                 if (cashProjection?.status !== "SUCCESS") {
                     return {
                         status: "PARTIAL",
-                        data: existingRes.items[0],
+                        data: existingMovement,
                         error: { code: "CASH_PROJECTION_PENDING", message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion." },
                         idempotent: true,
                         cashProjectionStatus: cashProjection?.status || "UNKNOWN",
@@ -823,7 +898,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             staffResourceId: resourceId,
             resourceId,
             linkedBookingIds: _linkedBookingValue(inDto.linkedBookingIds),
-            transactionId: transactionId || `TX_${seq.sequenceNumber}`,
+            transactionId,
             orderId: inDto.orderId || null,
             refundId: inDto.refundId || null,
 
@@ -848,10 +923,42 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             correctionReason,
             previousInvoiceId,
             issuerInvoiceNumber,
+            idempotencyFingerprint: transactionFingerprint,
         };
 
         const fiscalChainPayload = _buildInternalFiscalChainPayload({ ...baseMovement, previousRecordHash }, generatedAt);
         const movementHash = await hashChain(previousRecordHash, fiscalChainPayload);
+        const movementContract = validateFiscalMovementContract({
+            ...baseMovement,
+            previousRecordHash,
+            hash: movementHash,
+        });
+        if (!movementContract.ok) {
+            const rolledBack = await rollbackFiscalSequence(ledgerLock, seq);
+            if (!rolledBack) {
+                retainLedgerLock = true;
+                return {
+                    status: "ERROR",
+                    data: null,
+                    error: {
+                        code: "LEDGER_REPAIR_REQUIRED",
+                        message: "No se pudo liberar la secuencia tras detectar un movimiento fiscal incompleto.",
+                        missing: movementContract.missing,
+                    },
+                    traceId,
+                };
+            }
+            return {
+                status: "ERROR",
+                data: null,
+                error: {
+                    code: movementContract.code,
+                    message: "Faltan datos obligatorios para registrar el movimiento fiscal.",
+                    missing: movementContract.missing,
+                },
+                traceId,
+            };
+        }
 
         let digitalSignature;
         try {
@@ -1276,12 +1383,20 @@ export async function registerBookingPayment(bookingIds, totalAmount, method, me
 // QUEUE FISCAL RECOVERY
 // ============================================================================
 
-export async function queueFiscalRecovery(recoveryData) {
-    const traceId = recoveryData.traceId || makeTraceId("fiscal-rec");
+export async function queueFiscalRecovery(recoveryData = {}) {
+    const traceId = _safeTrim(recoveryData.traceId) || makeTraceId("fiscal-rec");
+    const transactionId = _safeTrim(recoveryData.transactionId);
+    if (!transactionId || transactionId.length > 128) {
+        return {
+            queued: false,
+            error: "TRANSACTION_ID_REQUIRED",
+            traceId,
+        };
+    }
     try {
         const queued = await _queueCompensation({
             kind: recoveryData.kind || "FISCAL_LEDGER",
-            transactionId: recoveryData.transactionId,
+            transactionId,
             bookingIds: recoveryData.bookingIds,
             orderId: recoveryData.orderId,
             refundId: recoveryData.refundId,
