@@ -135,6 +135,16 @@ function _indexStaff(staff) {
     }
 }
 
+function _createStaffProviderError(operation, cause, traceId, code = "STAFF_PROVIDER_UNAVAILABLE") {
+    if (cause?.code && String(cause.code).startsWith("STAFF_")) return cause;
+    const error = new Error(code);
+    error.code = code;
+    error.operation = operation;
+    error.traceId = traceId || null;
+    error.cause = cause;
+    return error;
+}
+
 async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
     const all = [];
     let cursor = "";
@@ -153,12 +163,25 @@ async function _queryStaffMembers({ filter = null, traceId = null } = {}) {
             "Bookings.staffMembers.queryStaffMembers"
         );
 
-        const items = Array.isArray(response?.staffMembers)
-            ? response.staffMembers
-            : [];
-        all.push(...items);
+        if (!Array.isArray(response?.staffMembers)) {
+            throw _createStaffProviderError(
+                "QUERY_STAFF_MEMBERS",
+                new Error("Bookings Staff Members response has no staffMembers array."),
+                traceId,
+                "STAFF_PROVIDER_RESPONSE_INVALID"
+            );
+        }
+        all.push(...response.staffMembers);
 
         const nextCursor = _safeTrim(response?.pagingMetadata?.cursors?.next || "");
+        if (response?.pagingMetadata?.hasNext === true && !nextCursor) {
+            throw _createStaffProviderError(
+                "QUERY_STAFF_MEMBERS_PAGING",
+                new Error("Bookings Staff Members response omitted the next cursor."),
+                traceId,
+                "STAFF_PROVIDER_RESPONSE_INVALID"
+            );
+        }
         if (!nextCursor) break;
         if (page === MAX_STAFF_PAGES - 1) {
             const error = new Error(
@@ -194,15 +217,20 @@ async function _fetchStaffByResourceId(resourceId, traceId, { fresh = false } = 
         const found = staff.find((item) => item.resourceId === id) || null;
         if (found) _indexStaff(found);
         return found;
-    } catch (error) {
-        log.warn("_fetchStaffByResourceId failed", {
+    } catch (cause) {
+        const error = _createStaffProviderError("QUERY_BY_RESOURCE_ID", cause, traceId);
+        log.error("_fetchStaffByResourceId failed", {
             resourceId: id,
             traceId,
-            errorCode: error?.code || null,
-            error: error?.message,
+            errorCode: error.code,
+            operation: error.operation,
         });
-        return null;
+        throw error;
     }
+}
+
+/**
+ * Loads native staff profiles    }
 }
 
 /**
@@ -218,17 +246,19 @@ async function _fetchAllStaff(traceId) {
         for (const staff of all) _indexStaff(staff);
         _cacheSet(cacheKey, all);
         return all;
-    } catch (error) {
-        log.warn("_fetchAllStaff failed", {
+    } catch (cause) {
+        const error = _createStaffProviderError("QUERY_ALL_STAFF", cause, traceId);
+        log.error("_fetchAllStaff failed", {
             traceId,
-            errorCode: error?.code || null,
-            error: error?.message,
+            errorCode: error.code,
+            operation: error.operation,
         });
-        return [];
+        throw error;
     }
 }
 
 // =============================================================================
+// API PUBLICA// =============================================================================
 // API PUBLICA
 // =============================================================================
 
@@ -263,21 +293,32 @@ export async function getSiteMemberIdByContactId(contactId, traceId = null) {
             API_TIMEOUT_MS,
             "CRM.contactsV5.getContact"
         );
+        if (!response || typeof response !== "object") {
+            throw _createStaffProviderError(
+                "GET_CONTACT",
+                new Error("CRM contact response is not an object."),
+                traceId,
+                "STAFF_PROVIDER_RESPONSE_INVALID"
+            );
+        }
         const contact = response?.contact || response;
         const memberId = _safeTrim(contact?.memberInfo?.memberId || "");
         if (!isValidGuid(memberId)) return "";
         _cacheSet(cacheKey, memberId);
         return memberId;
-    } catch (error) {
-        log.warn("getSiteMemberIdByContactId failed", {
+    } catch (cause) {
+        const error = _createStaffProviderError("GET_CONTACT", cause, traceId);
+        log.error("getSiteMemberIdByContactId failed", {
             traceId,
-            error: error?.message,
+            errorCode: error.code,
+            operation: error.operation,
         });
-        return "";
+        throw error;
     }
 }
 
 /**
+ * Ficha de Marian/**
  * Ficha de Marian (identidad canonica). Unico punto donde vive el
  * resourceId de Marian (R2/DUP-03: sin duplicaciones en consumidores).
  */
