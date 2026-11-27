@@ -107,8 +107,7 @@ export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
 
 /**
  * Runtime contract for the single TPV business flow.
- * Historical synthetic markers are deliberately kept in TPV_HISTORICAL_POLICY
- * and must never be emitted by operational writers.
+ * Legacy movement aliases remain read-compatibility values only.
  */
 export const TPV_CATALOG_APP_IDS = Object.freeze({
   WIX_STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
