@@ -176,13 +176,6 @@ async function _getTimeclockIntegrity(records) {
         return { allVerified: true, unverifiedCount: 0, verified: [] };
     }
     const key = await getSecretValue(SECRETS.FISCAL_KEY);
-    if (!key) {
-        return {
-            allVerified: false,
-            unverifiedCount: items.length,
-            verified: items.map(() => false),
-        };
-    }
     const verified = await Promise.all(items.map((record) => verifyTimeclockSignature(record, key)));
     return {
         allVerified: verified.every(Boolean),
