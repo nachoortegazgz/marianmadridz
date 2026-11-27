@@ -288,7 +288,8 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
   assert.doesNotThrow(() => H.TransaccionesTPV_beforeInsert(item));
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [item]);
-  assert.equal(await H.TransaccionesTPV_beforeUpdate({ ...item, draftOrderReason: "QA_RESETTABLE" }), item);
+  const updatedIntent = { ...item, draftOrderReason: "QA_RESETTABLE" };
+  assert.equal(await H.TransaccionesTPV_beforeUpdate(updatedIntent), updatedIntent);
   await assert.rejects(
     () => H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" }),
     /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
