@@ -344,9 +344,23 @@ export const cerrarSesionCaja = webMethod(
                         TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
                         wql.and(wql.eq("sessionId", sessionId), wql.eq("movementType", "CIERRE"))
                     );
-                    if (!priorClosures.some((record) => record.idempotencyKey === idempotencyKey + ":CIERRE")) {
-                        throw new Error("TPV_SESSION_CLOSED");
+                    const prior = priorClosures[0] || null;
+                    if (prior && Number(prior.payload?.countedCashMinor) !== countedCashMinor) {
+                        throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
+                    const replayData = {
+                        sessionId,
+                        saldoFinal: prior ? fromMinorUnits(Number(prior.payload?.countedCashMinor || 0)) : null,
+                        diferencia: prior ? fromMinorUnits(Number(prior.payload?.differenceMinor || 0)) : null,
+                        replayed: true,
+                    };
+                    return {
+                        status: "SUCCESS",
+                        ...replayData,
+                        data: replayData,
+                        error: null,
+                        traceId,
+                    };
                 }
                 const summary = await buildTpvSessionSummary(current);
                 const expectedCashMinor = Number(summary.expectedCashMinor || 0);
