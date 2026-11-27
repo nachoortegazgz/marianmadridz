@@ -441,6 +441,29 @@ export async function registrarEventoEconomico(input) {
             },
         };
     }
+    const transactionId = _safeTrim(input?.transactionId);
+    if (!transactionId) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "TRANSACTION_ID_REQUIRED",
+                message: "El writer fiscal requiere un transactionId estable.",
+                traceId,
+            },
+        };
+    }
+    if (transactionId.length > 128) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: "TRANSACTION_ID_INVALID",
+                message: "transactionId excede la longitud máxima permitida (128).",
+                traceId,
+            },
+        };
+    }
     // SSOT-KEYFIELD-02 / HOOK-CAJA-06: normalizacion destructiva de la
     // entrada (unica implementacion en internalConfig.normalizeMovementKeys,
     // compartida con el hook data.MovimientosCaja_beforeInsert). Los writers
@@ -448,7 +471,7 @@ export async function registrarEventoEconomico(input) {
     // operationDate...); aqui se promueven a su canon SSOT sobre una copia
     // local — el objeto del caller NO se muta. Despues de esta linea todo el
     // motor trabaja SOLO con claves canonicas; ningun alias alcanza al doc.
-    input = normalizeMovementKeys({ ...input });
+    input = normalizeMovementKeys({ ...input, transactionId });
     input.movementType = _safeTrim(input.movementType).toUpperCase();
     input.paymentMethod = _safeTrim(input.paymentMethod).toUpperCase();
     input.channelType = _safeTrim(input.channelType).toUpperCase();
@@ -493,9 +516,9 @@ export async function registrarEventoEconomico(input) {
     const ledgerLock = await acquireFiscalLedgerLock(traceId);
     let retainLedgerLock = false;
     try {
-        if (_safeTrim(input.transactionId)) {
+        {
             const existing = await dalQuery(MOVIMIENTOS_CAJA_COL)
-                .eq("transactionId", _safeTrim(input.transactionId))
+                .eq("transactionId", transactionId)
                 .limit(1)
                 .find({ consistencyMode: "strong" });
             if (existing?.items?.length === 1) {
@@ -717,7 +740,7 @@ export async function registrarEventoEconomico(input) {
             input.staffResourceId || input.resourceId || "CAJA_LOCAL"
         ),
         linkedBookingIds: linkedBookingIdsArr,
-        transactionId: _safeTrim(input.transactionId) || `TX_${seq.sequenceNumber}`,
+        transactionId,
         orderId: _safeTrim(input.orderId) || null,
         refundId: _safeTrim(input.refundId) || null,
         pairToken: _safeTrim(input.pairToken) || null,
@@ -771,14 +794,13 @@ export async function registrarEventoEconomico(input) {
         cabecera = await dalInsert(MOVIMIENTOS_CAJA_COL, doc);
     } catch (err) {
         // A rejected insert can be an uncertain network outcome. Resolve by
-        // the caller's stable transactionId (or traceId when none exists)
-        // before deciding whether the sequence may be rolled back.
+        // the mandatory stable transactionId before deciding whether the
+        // sequence may be rolled back.
         let recovery;
         try {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL);
             recovery = await query
-                .eq(_safeTrim(doc.transactionId) ? "transactionId" : "traceId",
-                    _safeTrim(doc.transactionId) || traceId)
+                .eq("transactionId", transactionId)
                 .limit(2)
                 .find({ consistencyMode: "strong" });
         } catch (readError) {
@@ -897,7 +919,7 @@ export async function registrarEventoEconomico(input) {
         } else {
             log.error("FISCAL_LEDGER_LOCK_RETAINED_FOR_REPAIR", {
                 traceId,
-                transactionId: _safeTrim(input.transactionId) || null,
+                transactionId,
             });
         }
     }
