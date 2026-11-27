@@ -245,7 +245,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /PENDING_PAYMENT/);
-    assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
+    assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.match(sales, /createTpvRecordMetadata/);
     assert.match(sales, /TPV_SALE_NOT_READY/);
     assert.match(sales, /getMyCajeroContext/);
