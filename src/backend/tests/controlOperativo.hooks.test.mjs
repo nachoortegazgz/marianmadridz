@@ -254,7 +254,7 @@ describe("ControlOperativo hooks", () => {
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
       }),
-      (error) => error?.code === "CMS_UPDATE_CONTROL_TYPE_DENIED"
+      (error) => error?.code === "WEBHOOK_EVENT_APPEND_ONLY"
     );
   });
 
