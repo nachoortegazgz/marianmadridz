@@ -614,6 +614,8 @@ function _sessionCajaPatch(caja, record, eventHash) {
     return {
         ...caja,
         cashRegisterStatus: "ABIERTA",
+        recordTimestamp: record.recordTimestamp,
+        recordNature: record.recordNature,
         openedAt,
         closedAt: null,
         openedBy: record.operatorId || record.cashierMemberId || null,
@@ -698,7 +700,7 @@ function assertSameRequest(existing, fingerprint) {
 function _buildTpvLedgerItem(collection, key, record, fingerprint) {
     const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
-    const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
+    const now = record.recordTimestamp || record.createdAt || record.generatedAt || record.occurredAt || new Date();
     const timestamp = now instanceof Date ? now : new Date(now);
     if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_RECORD_TIMESTAMP_INVALID");
     const transactionId = _testTransactionId(collection, key);
@@ -744,6 +746,7 @@ function _buildTpvLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash,
         recordTimestamp: timestamp,
+        recordNature: record.recordNature,
         schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
         traceId,
         movementType,
@@ -1095,7 +1098,9 @@ export async function appendTpvAudit({
         return { item: existing, replayed: true };
     }
 
+    const recordMetadata = await createTpvRecordMetadata();
     const record = {
+        ...recordMetadata,
         _id: eventId,
         controlType: CONTROL_TYPE.TPV_AUDIT_EVENT,
         dedupeKey: key,
