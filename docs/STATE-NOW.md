@@ -6,7 +6,7 @@
 
 - Repositorio: `nachoortegazgz/marianmadridz`.
 - PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, fingerprint de replay y validación del movimiento antes de persistir. Mapping AEAT no integrado.
-- PR #651 abierta: `fix/tpv-actionable-errors-and-guards`; HEAD `7771f4c6bb7da61ecf60bd58708b26d5331745dd`.
+- PR #651 abierta: `fix/tpv-actionable-errors-and-guards`; código validado `7771f4c6bb7da61ecf60bd58708b26d5331745dd`. Los commits posteriores solo actualizan documentación.
 - CI de ese HEAD: **PASS**. Layer 1: 29 suites / 376 tests; Layer 2: 16 suites / 249 tests; suite completa: 81 suites / 763 tests; 0 fallos. Gitleaks, npm audit, contratos SDK Wix y ESLint: PASS.
 - CI no acredita Wix Runtime ni sincronización Git-Wix. PR no integrada.
 
