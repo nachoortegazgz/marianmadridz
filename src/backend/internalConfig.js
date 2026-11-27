@@ -453,7 +453,9 @@ export function normalizeBookingType(value) {
   if (s === BOOKING_TYPE.DUAL_F1 || s === BOOKING_TYPE.DUAL_F2 || s === BOOKING_TYPE.SIMPLE) {
     return s;
   }
-  return s || BOOKING_TYPE.SIMPLE;
+  // Missing values stay missing: the write-boundary validator must reject them.
+  // SIMPLE is a business decision and must be supplied explicitly by the caller.
+  return s;
 }
 
 export function isDualBookingType(value) {
