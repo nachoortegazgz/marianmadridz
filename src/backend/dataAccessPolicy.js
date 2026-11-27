@@ -182,6 +182,13 @@ export function assertUpdateAllowed(collection, item) {
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
         }
+        if (
+            item.status !== "PENDING_PAYMENT" ||
+            item.sourceType !== "SYNTHETIC" ||
+            item.requiresReconciliation !== true
+        ) {
+            throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
+        }
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (
             [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
