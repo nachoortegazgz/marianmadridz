@@ -763,6 +763,11 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
     assert.equal(generic.code, "TPV_CASH_MOVEMENT_FAILED");
     assert.equal(generic.userMessage, "No se pudo completar la operación TPV.");
     assert.equal(generic.technicalDetail, "database timeout");
+    const unknownRetryability = normalizeTpvError(
+        Object.assign(new Error("network timeout"), { retryable: true }),
+        "TPV_CASH_MOVEMENT_FAILED"
+    );
+    assert.equal(unknownRetryability.retryable, false);
 
     const result = errorResult(actionable, "TPV_FALLBACK", "trace-test", { persisted: true });
     assert.equal(result.status, "ERROR");
