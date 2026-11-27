@@ -358,7 +358,7 @@ export function saveItem(collection, item) {
     return elevatedSave(collection, item);
 }
 
-export async function removeById(collection, idOrItem) {
+export async function removeById(collection, idOrItem, options = {}) {
     const id = idOrItem && typeof idOrItem === "object"
         ? idOrItem._id || idOrItem.id
         : idOrItem;
@@ -367,6 +367,39 @@ export async function removeById(collection, idOrItem) {
     }
     const existing = await getItem(collection, id, CONSISTENCY.STRONG);
     if (!existing) throw dataAccessError("REMOVE_TARGET_NOT_FOUND");
+
+    if (collection === OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) {
+        const expectedType = options.expectedControlType;
+        if (!expectedType || existing.controlType !== expectedType) {
+            throw dataAccessError("CONTROL_TYPE_MISMATCH");
+        }
+        const retirementStatus = {
+            [CONTROL_TYPE.DUAL_CACHE]: "INVALIDATED",
+            [CONTROL_TYPE.DAYS_CACHE]: "INVALIDATED",
+            [CONTROL_TYPE.DISPLAY_TOKEN]: "CONSUMED",
+            [CONTROL_TYPE.SLOT_LOCK]: "RELEASED",
+        }[expectedType];
+        if (retirementStatus) {
+            const expiresAt = existing.expiresAt instanceof Date
+                ? existing.expiresAt
+                : new Date(existing.expiresAt);
+            if (!Number.isFinite(expiresAt.getTime())) {
+                throw dataAccessError("CMS_RETIREMENT_EXPIRY_REQUIRED");
+            }
+            const result = await bulkPatchItems(collection, [id], [
+                { fieldPath: "status", action: "SET_FIELD", value: retirementStatus },
+                { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
+            ], { condition: { filter: {
+                controlType: { $eq: expectedType },
+                expiresAt: { $eq: existing.expiresAt },
+            } } });
+            if (!Array.isArray(result?.updatedItemIds) || !result.updatedItemIds.includes(id)) {
+                throw dataAccessError("CMS_RETIREMENT_CONFLICT");
+            }
+            return { _id: id, deleted: false, retired: true, status: retirementStatus };
+        }
+    }
+
     assertRemoveAllowed(collection, id);
     throw dataAccessError("CMS_DELETE_PROHIBITED");
 }
