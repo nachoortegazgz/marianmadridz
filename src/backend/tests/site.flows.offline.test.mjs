@@ -567,6 +567,7 @@ test('FLOW-CAJA-08 fiscal recovery queue deduplicates repeated compensation requ
   const bookingOnlyRequest = {
     kind: 'FISCAL_LEDGER',
     bookingIds: 'booking-recovery-002,booking-recovery-001',
+    transactionId: 'booking-recovery-transaction-002',
     totalAmount: 15,
     paymentMethod: 'WIX_PAYMENTS',
     movementType: 'REEMBOLSO',
@@ -1505,6 +1506,7 @@ test('FLOW-HOR-09 normalizes invalid history limits and rejects malformed month 
 
 test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', async () => {
   wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { cajas } = await freshImports();
@@ -1529,6 +1531,13 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
   assert.strictEqual(oversized.status, 'ERROR');
   assert.strictEqual(oversized.error.code, 'TRANSACTION_ID_REQUIRED');
   assert.strictEqual((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+
+  const maximumLength = await cajas.registerManualTransaction({
+    ...base,
+    transactionId: 'm'.repeat(128),
+  });
+  assert.strictEqual(maximumLength.status, 'SUCCESS', JSON.stringify(maximumLength.error));
+  assert.strictEqual(maximumLength.data.transactionId.length, 128);
 });
 
 test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
