@@ -229,7 +229,7 @@ describe("ControlOperativo hooks", () => {
     assert.equal(updated.version, 1);
   });
 
-  it("keeps webhook-event records append-only during SANDBOX", async () => {
+  it("keeps webhook-event evidence immutable", async () => {
     const original = {
       _id: "event-1",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -244,7 +244,7 @@ describe("ControlOperativo hooks", () => {
         _id: original._id,
         status: CONTROL_STATUS.CLOSED,
       }),
-      (error) => error?.code === "CMS_DELETE_PROHIBITED"
+      (error) => error?.code === "CMS_UPDATE_CONTROL_TYPE_DENIED"
     );
 
     await assert.rejects(
@@ -254,11 +254,11 @@ describe("ControlOperativo hooks", () => {
         resourceId: RESOURCE_ID,
         expiresAt: new Date(Date.now() + 60000),
       }),
-      /append-only/
+      (error) => error?.code === "CMS_UPDATE_CONTROL_TYPE_DENIED"
     );
   });
 
-  it("rejects removal of webhook-event evidence during SANDBOX", async () => {
+  it("rejects removal of webhook-event evidence", async () => {
     const original = {
       _id: "event-2",
       ...base(CONTROL_TYPE.WEBHOOK_EVENT),
@@ -268,7 +268,7 @@ describe("ControlOperativo hooks", () => {
 
     await assert.rejects(
       ControlOperativo_beforeRemove(original._id),
-      /append-only/
+      (error) => error?.code === "CMS_DELETE_PROHIBITED"
     );
   });
 
@@ -281,9 +281,9 @@ describe("ControlOperativo hooks", () => {
     };
     seed(original);
 
-    assert.equal(
-      await ControlOperativo_beforeRemove(original._id),
-      original._id
+    await assert.rejects(
+      ControlOperativo_beforeRemove(original._id),
+      (error) => error?.code === "CMS_DELETE_PROHIBITED"
     );
   });
 
