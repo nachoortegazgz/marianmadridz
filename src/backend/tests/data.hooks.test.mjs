@@ -318,6 +318,7 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
     amount: 10,
     totalAmount: 10,
     recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
+    recordNature: 'SYNTHETIC',
     schemaVersion: '3',
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
     paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
