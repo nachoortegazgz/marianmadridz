@@ -629,8 +629,8 @@ body {
     $("modalBackdrop").classList.remove("hidden");
     $("modalConfirm").onclick = async () => {
       try {
-        await onConfirm();
-        closeModal();
+        const outcome = await onConfirm();
+        if (outcome?.keepOpen !== true) closeModal();
       } catch (e) {
         error(e);
       }
@@ -1250,10 +1250,11 @@ body {
       if (current?.canOpenSession !== true || !preview?.sessionId || !preview?.operationDate) {
         throw new Error("TPV_SESSION_OPEN_NOT_ALLOWED");
       }
-      const authenticatedName = current.authenticatedDisplayName || current.authenticatedOperatorId || "Usuario autenticado";
+      const authenticatedOperatorId = current.authenticatedOperatorId;
+      const authenticatedName = current.authenticatedDisplayName || authenticatedOperatorId || "Usuario autenticado";
       const projectionLabel = current.cajaActual?.projectionStatus !== "LEGACY_UNVERIFIED"
         ? "Proyección CajaActual verificada"
-        : "Proyección anterior no verificada; no se reutiliza como sesión activa";
+        : "Proyección anterior no verificada; no se reutiliza como sesión activa ni se reutilizan sus importes";
       openModal("Abrir caja", `
         <label class="status">Fecha de operación
           <input id="openingOperationDate" class="field" value="${esc(preview.operationDate)}" readonly>
@@ -1272,16 +1273,82 @@ body {
           throw new Error("TPV_INVALID_AMOUNT");
         }
         const expectedSessionId = $("openingSessionId").value.trim();
-        await runOperation(async () => {
-          const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
+        if (!expectedSessionId) throw new Error("TPV_SESSION_PREVIEW_REQUIRED");
+        if (state.busy) return { keepOpen: true };
+
+        setBusy(true);
+        let openedSessionId = null;
+        let confirmed = null;
+        try {
+          const latest = await call("CASHIER_STATE", {}, "CASHIER_STATE_RES");
+          renderSession(latest);
+          if (latest?.canOpenSession !== true ||
+              latest?.nextSessionPreview?.sessionId !== expectedSessionId ||
+              latest?.authenticatedOperatorId !== authenticatedOperatorId) {
+            throw new Error("TPV_SESSION_PREVIEW_STALE");
+          }
+
+          const opened = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
             expectedSessionId,
             openingCash,
             reason: $("openingReason").value.trim(),
             terminalId: "TPV",
           }, "SESSION_OPEN_RES");
-          renderSession(session);
-          toast("Sesión abierta.");
-        });
+          openedSessionId = opened?.sessionId;
+          if (!openedSessionId) throw new Error("TPV_SESSION_OPEN_NOT_CONFIRMED");
+
+          confirmed = await refreshCashState();
+          if (confirmed?.operationalStatus !== "ABIERTA" ||
+              confirmed?.sessionId !== openedSessionId ||
+              confirmed?.authenticatedOperatorId !== authenticatedOperatorId) {
+            throw new Error("TPV_SESSION_OPEN_NOT_CONFIRMED");
+          }
+
+          const ticketResult = await call("TICKET_X", {
+            sessionId: confirmed.sessionId,
+          }, "TICKET_X_RES");
+          const ticket = ticketResult?.ticketX;
+          if (!ticket ||
+              ticket.ticketType !== "CONTROL_PARCIAL_X" ||
+              ticket.sessionId !== confirmed.sessionId ||
+              ticket.readOnly !== true ||
+              ticket.closesSession !== false) {
+            throw new Error("TPV_TICKET_X_RESULT_INCOMPLETE");
+          }
+
+          $("modalTitle").textContent = "Apertura confirmada · Ticket X";
+          $("modalBody").innerHTML = ticketXReceiptHtml(ticket);
+          $("modalConfirm").textContent = "Cerrar";
+          $("modalCancel").classList.add("hidden");
+          $("modalConfirm").onclick = closeModal;
+          $("printTicketX").onclick = () => window.print();
+          toast("Caja abierta y Ticket X de control parcial generado.");
+          return { keepOpen: true };
+        } catch (operationError) {
+          if (openedSessionId) {
+            const openingVerified = confirmed?.operationalStatus === "ABIERTA" &&
+              confirmed?.sessionId === openedSessionId;
+            $("modalTitle").textContent = openingVerified
+              ? "Apertura confirmada · Ticket X pendiente"
+              : "Apertura enviada · verificación pendiente";
+            $("modalBody").innerHTML = `
+              <p>${openingVerified
+                ? "La sesión está abierta y verificada."
+                : "La petición de apertura fue aceptada, pero falta verificar el estado de CajaActual."}</p>
+              <p>Sesión: <strong>${esc(openedSessionId)}</strong></p>
+              <p>No se pudo completar el Ticket X: ${esc(publicErrorMessage(operationError))}</p>
+              <p>No repitas la apertura. Consulta el estado y solicita Control X cuando corresponda.</p>
+            `;
+            $("modalConfirm").textContent = "Cerrar";
+            $("modalCancel").classList.add("hidden");
+            $("modalConfirm").onclick = closeModal;
+            toast("Apertura enviada; revisión del Ticket X pendiente.");
+            return { keepOpen: true };
+          }
+          throw operationError;
+        } finally {
+          setBusy(false);
+        }
       });
     } catch (e) {
       error(e);
