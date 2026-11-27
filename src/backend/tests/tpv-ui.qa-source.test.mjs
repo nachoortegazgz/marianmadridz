@@ -46,8 +46,8 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     assert.match(script, /function keyedAction/);
     assert.match(script, /sessionStorage\.setItem\(storageKey, key\)/);
     assert.match(script, /response\.status === "PENDING"/);
-    assert.match(script, /error\.outcomeUnknown = true/);
-    assert.match(script, /error\.operationMayContinue = true/);
+    assert.match(script, /outcomeUnknown:\s*true/);
+    assert.match(script, /operationMayContinue:\s*true/);
 });
 
 test("TPV fiscal quotes expose readiness blockers and keep payments disabled without backend authorization", async () => {
