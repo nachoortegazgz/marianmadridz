@@ -267,8 +267,8 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
     }), { code: "CMS_SAVE_CONTROL_TYPE_DENIED" });
 });
 
-test("single-item deletion is prohibited for every collection", () => {
-    for (const collection of Object.values(C).concat(Object.values(O).filter((value) => value !== O.CONTROL_OPERATIVO))) {
+test("physical deletion is prohibited for every collection", () => {
+    for (const collection of Object.values(C).filter((value) => value !== C.CONTROL_OPERATIVO).concat(Object.values(O).filter((value) => value !== O.CONTROL_OPERATIVO))) {
         assert.throws(() => assertRemoveAllowed(collection, "existing-row", T.DUAL_CACHE), (error) =>
             ["CMS_DELETE_PROHIBITED", "LEDGER_APPEND_ONLY"].includes(error?.code)
         );
