@@ -140,3 +140,10 @@ El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15)
 - La política se aplica en DAL y hooks Wix; la eliminación incluye filtro de condición por `sourceType`, `status` y `requestFingerprint`.
 - Los ledgers físicos/fiscales/contables/laborales no cambian de política. No se ejecutó ninguna mutación CMS real.
 - CI pendiente sobre PR; Preview/Runtime pendiente.
+
+
+## Read-back Wix — 2026-11-27
+
+- Wix devuelve el sitio como **Published**, Premium, dominio personalizado, Editor y Velo habilitado; última actualización del sitio indicada: 03:55 CET.
+- Catalog V3 y Bookings están instalados; Invoices V1. Wix Payments está instalado, pero no se ha verificado una transacción de pago.
+- La condición Published no acredita sincronización con el último commit de GitHub ni runtime E2E. No se ha publicado ni modificado Wix durante esta intervención.
