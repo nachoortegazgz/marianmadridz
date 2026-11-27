@@ -304,7 +304,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
-    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.doesNotMatch(config, /LEGACY_RUN_ID|TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, closures]) {
         assert.match(writer, /requireAdmin/);
