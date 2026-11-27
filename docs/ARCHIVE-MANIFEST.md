@@ -15,5 +15,5 @@ La documentación operativa se limita a [INDEX.md](INDEX.md) y a los documentos 
 - Se retiraron del árbol activo los documentos de milestone duplicados, páginas de redirección y dossier técnico monolítico. Las decisiones vigentes permanecen en PROJECT-CANON, STATE-NOW, RELEASE-READINESS y TPV-UNIFIED-FLOW.
 - La auditoría TPV anterior a PR #640 se conserva marcada como baseline previo a la corrección.
 - El readiness TPV antiguo se conserva en archivo como evidencia histórica, no como procedimiento vigente.
-- El diccionario CMS extenso se conserva como referencia histórica de esquemas y snapshots; sus recuentos/campos deben revalidarse antes de cualquier cambio.
+- El diccionario CMS extenso y ESQUEMA_CMS histórico se conservan en archive como evidencia; el baseline físico vigente es [ESQUEMA_CMS](../ESQUEMA_CMS.md), actualizado mediante lectura Wix read-only del 27-11-2026.
 - No se ha eliminado código ejecutable ni se ha cambiado lógica de negocio en esta limpieza documental.
