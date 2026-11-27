@@ -636,7 +636,7 @@ test("Ticket X and Z use neutral status values and explicit synthetic source met
     assert.match(closures, /fiscalLedgerWritten: false/);
     assert.match(closures, /data: \{ ticketX: ticketXResult/);
     assert.equal(closures.includes("insertTpvEvent(TPV_COLLECTIONS.TICKET_X"), false);
-    assert.match(closures, /status: "CERRADO",\\s*sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
+    assert.ok(closures.includes('status: "CERRADO",\n                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,'));
     assert.doesNotMatch(closures, /GENERADO_SINTETICO|CERRADO_SINTETICO/);
     assert.match(closures, /toMinorUnits\(input\.countedCash, "COUNTED_CASH"\)/);
 });
@@ -658,7 +658,7 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /export const cerrarSesionCaja = webMethod\(/);
     assert.match(cash, /withTpvSessionLock\(sessionId/);
     assert.match(cash, /movementType: "CIERRE"/);
-    assert.match(cash, /idempotencyKey \\+ ":CIERRE"/);
+    assert.ok(cash.includes('idempotencyKey + ":CIERRE"'));
     assert.match(cash, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA/);
     assert.match(cash, /closeTpvCajaSessionProjection/);
     assert.match(cash, /data: resultData/);
