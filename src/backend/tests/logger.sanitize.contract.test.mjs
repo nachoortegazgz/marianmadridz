@@ -16,6 +16,7 @@ test("LOGGER-SEC-01 redacts secrets and contact PII in messages, URLs, stacks an
                 resendApiKey: "resend-secret",
                 emailAddress: "person@example.com",
                 mobilePhone: "+34600111222",
+                taxId: "12345678Z",
                 nested: { client_secret: "client-secret" },
             },
             "trace-redaction"
