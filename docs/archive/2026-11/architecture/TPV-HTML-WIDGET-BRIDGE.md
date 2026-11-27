@@ -54,6 +54,27 @@ Diagnóstico actualizado:
 
 **Límite:** el merge de GitHub no acredita sincronización del Editor Wix. La verificación definitiva exige comprobar el SHA Velo instalado en Wix Draft, aplicar/guardar el contenido actualizado de `#htmlTPV.txt` en el HTML Component `#htmlTPV` y abrir Preview. No publicar ni ejecutar operaciones reales.
 
+### 2.2 bis. Incidencia Wix Editor — revisión 16658 (2026-11-27)
+
+Registro observado a las 05:35:38.861Z:
+- `WIDGET_MESSAGE_TYPE_NOT_ALLOWED`, bridgeId `wbridge-1-itid9w`.
+- El mensaje recibido por el logger solo expone `code` y `bridgeId`; no contiene `receivedType`, `receivedVersion`, `attemptedType` ni `allowedTypes`.
+- El código versionado en el merge #637 ya instrumentaba esos campos. Por tanto, el evento no acredita que el controlador versionado estuviera ejecutándose en el Editor. La hipótesis principal es desfase de sincronización del código Velo del Draft/Editor; no se puede descartar que el pipeline de logs haya reducido el objeto.
+
+Corrección de observabilidad en esta intervención:
+- El controlador emite una única señal de inicialización con `controllerBuild=TPV_BRIDGE_DIAGNOSTICS_2026-11-27`, versión de protocolo y allowlist activa.
+- Cada error incluye ese mismo identificador de build.
+- El callback usa también el segundo argumento de detalle del bridge como fallback si `error.detail` no está disponible en el wrapper de Wix.
+- No se amplía la allowlist, no se relaja la validación del protocolo y no se cambia la autorización backend.
+
+Criterio de diagnóstico en el siguiente Preview:
+1. Si no aparece `[TPV] Widget bridge initialized` con el build indicado, el código Velo del Editor no está sincronizado con esta revisión.
+2. Si aparece el build y el error incluye `receivedType`/ `allowedTypes`, comparar literalmente el tipo con el contrato activo. Solo corregir allowlist o emisor después de identificar el mensaje y confirmar su legitimidad.
+3. Si el log sigue omitiendo los campos aun apareciendo el build, investigar la serialización/ingesta de logs; no inferir que el bridge carece de detalle.
+4. Verificar por separado el contenido instalado en `#htmlTPV`; Git no demuestra que el HTML pegado en el componente Wix se haya actualizado.
+
+Estado de validación: cambio estático y test contractual añadidos; Wix Preview/Runtime pendiente. No guardar ni publicar el sitio desde esta corrección.
+
 ### 2.2 Sincronización del HTML Component
 
 `#htmlTPV.txt` es la fuente versionada del widget, pero al estar guardado como HTML pegado en un HTML Component del Editor, no se debe asumir que Git Integration actualiza ese contenido. Después de integrar la corrección:
