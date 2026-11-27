@@ -240,7 +240,8 @@ body {
   <!-- Barra de sesión -->
   <div class="bar session-bar">
     <span>Sesión: <strong id="sessionLabel">—</strong></span>
-    <span id="operatorLabel" class="status">Operador: —</span>
+    <span id="operatorLabel" class="status">Usuario conectado: —</span>
+    <span id="sessionOperatorLabel" class="status">Responsable sesión: —</span>
     <span id="cashTime" class="status">Hora: —</span>
 
     <label for="professionalSelect" class="status">Profesional:</label>
@@ -248,7 +249,7 @@ body {
       <option value="">Sin asignar</option>
     </select>
 
-    <button id="openCash" class="btn primary">Abrir caja</button>
+    <button id="openCash" class="btn primary" disabled>Abrir caja</button>
   </div>
 
   <!-- Contenido principal -->
@@ -587,11 +588,12 @@ body {
   function openModal(title, bodyHtml, onConfirm) {
     $("modalTitle").textContent = title;
     $("modalBody").innerHTML = bodyHtml;
+    $("modalConfirm").textContent = "Confirmar";
     $("modalBackdrop").classList.remove("hidden");
     $("modalConfirm").onclick = async () => {
       try {
-        await onConfirm();
-        closeModal();
+        const outcome = await onConfirm();
+        if (outcome?.keepOpen !== true) closeModal();
       } catch (e) {
         error(e);
       }
@@ -730,9 +732,14 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    const operatorId = state.session?.operatorId || state.session?.authenticatedOperatorId || "—";
-    const operatorName = state.session?.operatorDisplayName || state.session?.authenticatedDisplayName || operatorId;
-    $("operatorLabel").textContent = "Operador: " + operatorName + " · Usuario: " + operatorId;
+    const authenticatedOperatorId = state.session?.authenticatedOperatorId || "—";
+    const authenticatedOperatorName = state.session?.authenticatedDisplayName || authenticatedOperatorId;
+    $("operatorLabel").textContent = "Usuario conectado: " + authenticatedOperatorName + " · " + authenticatedOperatorId;
+    const sessionOperatorId = state.session?.operatorId || state.session?.cashierMemberId || "—";
+    const sessionOperatorName = state.session?.operatorDisplayName || sessionOperatorId;
+    $("sessionOperatorLabel").textContent = isOpen || isClosed
+      ? "Responsable sesión: " + sessionOperatorName + " · " + sessionOperatorId
+      : "Responsable sesión: pendiente de apertura";
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
@@ -1195,22 +1202,76 @@ body {
     renderTicket();
   });
 
-  /* ---------- Apertura de caja ---------- */
-  $("openCash").onclick = () => openModal("Abrir caja", `
-    <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
-    <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
-  `, async () => {
-    const openingCash = num($("openingCash").value);
-    if (!Number.isFinite(openingCash) || openingCash < 0) throw new Error("TPV_INVALID_AMOUNT");
-    const session = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
-      openingCash,
-      reason: $("openingReason").value.trim(),
-      terminalId: "TPV",
-    }, "SESSION_OPEN_RES");
-    renderSession(session);
-    await refreshCashState();
-    toast("Sesión abierta.");
-  });
+  /* ---------- Apertura de caja: fecha y sesión proceden de CajaActual ---------- */
+  $("openCash").onclick = async () => {
+    if (state.busy) return;
+    try {
+      const current = await refreshCashState();
+      if (current.operationalStatus === "ABIERTA") throw new Error("TPV_SESSION_ALREADY_OPEN");
+      if (current.canOpenSession !== true || state.capabilities.openSession !== true ||
+          state.operationalWritesAvailable !== true) throw new Error("ACCESS_DENIED");
+      if (!current.businessDate || !current.proposedSessionId || !current.authenticatedOperatorId) {
+        throw new Error("TPV_CONTEXT_REQUIRED");
+      }
+
+      openModal("Abrir caja", `
+        <label>Usuario autenticado</label>
+        <input class="field" value="${esc(current.authenticatedDisplayName || current.authenticatedOperatorId)} · ${esc(current.authenticatedOperatorId)}" readonly>
+        <label>Fecha operativa (servidor)</label>
+        <input id="openingBusinessDate" class="field" value="${esc(current.businessDate)}" readonly>
+        <label>Sesión asignada por CajaActual</label>
+        <input id="openingSessionId" class="field" value="${esc(current.proposedSessionId)}" readonly>
+        <label>Fondo inicial en efectivo</label>
+        <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
+        <label>Motivo</label>
+        <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
+      `, async () => {
+        if (state.busy) return { keepOpen: true };
+        setBusy(true);
+        try {
+          const latest = await refreshCashState();
+          if (latest.canOpenSession !== true ||
+              latest.proposedSessionId !== current.proposedSessionId ||
+              latest.authenticatedOperatorId !== current.authenticatedOperatorId) {
+            throw new Error("TPV_SESSION_STATE_CHANGED");
+          }
+          const openingCash = num($("openingCash").value);
+          if (!Number.isFinite(openingCash) || openingCash < 0) throw new Error("TPV_INVALID_AMOUNT");
+
+          const opened = await keyedAction("SESSION_OPEN", "SESSION_OPEN", {
+            openingCash,
+            reason: $("openingReason").value.trim(),
+            terminalId: "TPV",
+          }, "SESSION_OPEN_RES");
+          const confirmed = await refreshCashState();
+          if (confirmed.operationalStatus !== "ABIERTA" ||
+              confirmed.sessionId !== opened.sessionId ||
+              confirmed.authenticatedOperatorId !== current.authenticatedOperatorId) {
+            throw new Error("TPV_SESSION_OPEN_NOT_CONFIRMED");
+          }
+
+          const ticketResult = await call("TICKET_X", {
+            sessionId: confirmed.sessionId,
+          }, "TICKET_X_RES");
+          const ticket = ticketResult?.ticketX || ticketResult?.data?.ticketX;
+          if (!ticket || ticket.sessionId !== confirmed.sessionId) {
+            throw new Error("TPV_TICKET_X_NOT_CONFIRMED");
+          }
+
+          $("modalTitle").textContent = "Apertura confirmada · Ticket X";
+          $("modalBody").innerHTML = renderTicketXMarkup(ticket);
+          $("modalConfirm").textContent = "Cerrar";
+          $("modalConfirm").onclick = closeModal;
+          toast("Caja abierta. Ticket X de control parcial generado.");
+          return { keepOpen: true };
+        } finally {
+          setBusy(false);
+        }
+      });
+    } catch (e) {
+      error(e);
+    }
+  };
 
   /* ---------- Entrada / Salida de efectivo ---------- */
   function openCashMovement(type) {
@@ -1382,12 +1443,58 @@ body {
 
 
   /* ---------- Control X ---------- */
+  function renderTicketXMarkup(ticket) {
+    const generatedAt = ticket.generatedAt || ticket.timestamp;
+    const parsedDate = generatedAt ? new Date(generatedAt) : null;
+    const dateLabel = parsedDate && !Number.isNaN(parsedDate.getTime())
+      ? new Intl.DateTimeFormat("es-ES", {
+          dateStyle: "short", timeStyle: "medium", timeZone: "Europe/Madrid",
+        }).format(parsedDate)
+      : "Fecha no disponible";
+    const totals = ticket.totales || {};
+    const breakdown = ticket.desglose || {};
+    const generatedBy = ticket.generatedBy || {};
+    const sessionOperator = ticket.sessionOperator || {};
+    return `
+      <article style="font-family:monospace;border:1px dashed var(--line);padding:16px;">
+        <h3 style="text-align:center;margin:0 0 8px;">MARIAN MADRID · TICKET X</h3>
+        <p style="text-align:center;margin:0 0 12px;">CONTROL PARCIAL · NO CIERRA LA CAJA</p>
+        <div>Fecha: ${esc(ticket.businessDate || dateLabel)}</div>
+        <div>Generado: ${esc(dateLabel)}</div>
+        <div>Sesión: ${esc(ticket.sessionId || "—")}</div>
+        <div>Usuario: ${esc(generatedBy.displayName || generatedBy.operatorId || "—")}</div>
+        <div>Responsable apertura: ${esc(sessionOperator.displayName || sessionOperator.operatorId || "—")}</div>
+        <div>Apertura: ${esc(ticket.sessionOpenedAt || "—")}</div>
+        <hr>
+        <div>Fondo inicial: <strong>${money(ticket.openingCash || 0)}</strong></div>
+        <div>Efectivo esperado: <strong>${money(ticket.expectedCash || 0)}</strong></div>
+        <hr>
+        <div>Ventas: <strong>${money(totals.totalVentas || 0)}</strong></div>
+        <div>Efectivo: ${money(breakdown.EFECTIVO || 0)}</div>
+        <div>Tarjeta: ${money(breakdown.TARJETA || 0)}</div>
+        <div>Bizum: ${money(breakdown.BIZUM || 0)}</div>
+        <div>Bonos: ${money(breakdown.BONO || 0)}</div>
+        <div>Tarjeta regalo: ${money(breakdown.TARJETA_REGALO || 0)}</div>
+        <div>Otros: ${money(breakdown.OTROS || 0)}</div>
+        <hr>
+        <div>Operaciones: <strong>${esc(ticket.nOperaciones ?? 0)}</strong></div>
+        <div>Informe: ${esc(ticket.reportId || "—")}</div>
+      </article>
+    `;
+  }
+
+  function showTicketX(ticket) {
+    openModal("Control X", renderTicketXMarkup(ticket), async () => {});
+    $("modalConfirm").textContent = "Cerrar";
+    $("modalConfirm").onclick = closeModal;
+  }
+
   $("ticketX").onclick = () => runOperation(async () => {
     try {
       const result = await call("TICKET_X", { sessionId: state.session?.sessionId }, "TICKET_X_RES");
-      openModal("Control X", `
-        <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
-      `, async () => {});
+      const ticket = result?.ticketX || result?.data?.ticketX;
+      if (!ticket) throw new Error("TPV_TICKET_X_NOT_CONFIRMED");
+      showTicketX(ticket);
     } catch (e) { error(e); }
   });
 
