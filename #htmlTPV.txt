@@ -603,6 +603,11 @@ body {
             error.recoverable = sourceError.recoverable === true;
             if (sourceError.outcomeUnknown === true) error.outcomeUnknown = true;
             if (sourceError.operationMayContinue === true) error.operationMayContinue = true;
+            if (response.persisted === true || sourceError.persisted === true) error.persisted = true;
+            if (response.recoverable === true || sourceError.recoverable === true) {
+              error.recoverable = true;
+              error.operationMayContinue = true;
+            }
             reject(error);
           } else if (response.status === "PENDING") {
             const error = new Error(response.reason || "TPV_OPERATION_PENDING");
