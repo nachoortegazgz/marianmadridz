@@ -764,7 +764,6 @@ new Date(b?._createdDate || 0).getTime()
 for (const comp of compensationItems) {
 try {
 const payload = readControlPayload(comp);
-const compensationKind = _safeTrim(payload.compensationKind || payload.kind || comp?.kind).toUpperCase();
 const outcome = await _runOneCompensation(comp, traceId);
 if (outcome?.manualReconciliationRequired === true) {
 payload.status = "MANUAL_RECONCILIATION_REQUIRED";
