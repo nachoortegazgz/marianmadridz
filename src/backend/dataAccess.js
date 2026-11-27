@@ -358,46 +358,17 @@ export function saveItem(collection, item) {
     return elevatedSave(collection, item);
 }
 
-export async function removeById(collection, idOrItem, options = {}) {
+export async function removeById(collection, idOrItem) {
     const id = idOrItem && typeof idOrItem === "object"
         ? idOrItem._id || idOrItem.id
         : idOrItem;
-    const expectedControlType = options.expectedControlType;
-    if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
-
+    if (typeof id !== "string" || !id.trim()) {
+        throw dataAccessError("REMOVE_ID_REQUIRED");
+    }
     const existing = await getItem(collection, id, CONSISTENCY.STRONG);
     if (!existing) throw dataAccessError("REMOVE_TARGET_NOT_FOUND");
-    assertRemoveAllowed(collection, id, expectedControlType, existing);
-    if (collection === "ControlOperativo" && existing.controlType !== expectedControlType) {
-        throw dataAccessError("REMOVE_CONTROL_TYPE_MISMATCH");
-    }
-
-    const filter = collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV
-        ? {
-            sourceType: { $eq: existing.sourceType },
-            status: { $eq: existing.status },
-            requestFingerprint: { $eq: existing.requestFingerprint },
-        }
-        : collection === "MovimientosCaja"
-            ? {
-                recordSource: { $eq: existing.recordSource },
-                movementType: { $eq: existing.movementType },
-                traceId: { $eq: existing.traceId },
-                transactionId: { $eq: existing.transactionId },
-            }
-            : { controlType: { $eq: expectedControlType } };
-    const result = await elevatedBulkRemove(collection, [id], {
-        condition: { filter },
-    });
-    const removed = Array.isArray(result?.removedItemIds)
-        ? result.removedItemIds.includes(id)
-        : Array.isArray(result?.results) &&
-            result.results.some((entry) =>
-                entry?.itemMetadata?.id === id &&
-                entry?.itemMetadata?.success === true
-            );
-    if (!removed) throw dataAccessError("REMOVE_CONDITION_NOT_MET");
-    return { _id: id };
+    assertRemoveAllowed(collection, id);
+    throw dataAccessError("CMS_DELETE_PROHIBITED");
 }
 
 export function bulkInsert() {
