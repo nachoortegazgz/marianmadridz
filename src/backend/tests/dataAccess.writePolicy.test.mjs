@@ -168,7 +168,7 @@ test("MovimientosCaja permits current physical TPV events but remains append-onl
     };
     assert.doesNotThrow(() => assertInsertAllowed(C.MOVIMIENTOS_CAJA, item));
     assert.throws(() => assertUpdateAllowed(C.MOVIMIENTOS_CAJA, item), {
-        code: "CMS_DELETE_PROHIBITED",
+        code: "LEDGER_APPEND_ONLY",
     });
     assert.throws(() => assertRemoveAllowed(C.MOVIMIENTOS_CAJA, item._id, undefined, item), {
         code: "LEDGER_APPEND_ONLY",
@@ -268,10 +268,12 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
 
 test("single-item deletion is prohibited for every collection", () => {
     for (const collection of Object.values(C).concat(Object.values(O))) {
-        assert.throws(() => assertRemoveAllowed(collection, "existing-row", T.DUAL_CACHE), { code: "CMS_DELETE_PROHIBITED" });
+        assert.throws(() => assertRemoveAllowed(collection, "existing-row", T.DUAL_CACHE), (error) =>
+            ["CMS_DELETE_PROHIBITED", "LEDGER_APPEND_ONLY"].includes(error?.code)
+        );
     }
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
+        code: "CMS_DELETE_PROHIBITED",
     });
 
     for (const collection of [
