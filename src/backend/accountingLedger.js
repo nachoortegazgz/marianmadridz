@@ -21,6 +21,7 @@ import {
     ACCOUNTING_LEDGER_LOCK_CONFIG,
 } from "backend/internalConfig";
 import { hashSHA256, hashChain } from "backend/securityEngine";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { makeTraceId, _safeTrim } from "public/mmUtils";
 import { logger } from "backend/logger";
 
