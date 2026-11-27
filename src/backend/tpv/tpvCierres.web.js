@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvOperationalLedgerConfigured, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -34,7 +34,7 @@ export const obtenerResumenCaja = webMethod(
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     grossSales: fromMinorUnits(totals.grossSalesMinor),
                     netSales: fromMinorUnits(totals.netSalesMinor),
                     totalRefunds: fromMinorUnits(totals.totalRefundsMinor),
@@ -88,7 +88,7 @@ export const generarTicketX = webMethod(
                 if (Number.isNaN(openedAt.getTime())) throw new Error("TPV_SESSION_OPENED_AT_INVALID");
                 const issuedAt = new Date();
                 const dateParts = new Intl.DateTimeFormat("en-CA", {
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
@@ -99,7 +99,7 @@ export const generarTicketX = webMethod(
                     ticketType: "CONTROL_PARCIAL_X",
                     sessionId,
                     sessionDate,
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     openedAt: openedAt.toISOString(),
                     issuedAt: issuedAt.toISOString(),
                     cashRegisterStatus: "ABIERTA",
@@ -228,7 +228,7 @@ export const generarCierreZ = webMethod(
                             integrationStatus: "NO_ENVIADO",
                             paymentStatus: "NOT_APPLICABLE",
                             now: new Date().toISOString(),
-                            timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                            timeZone: SDK_CONFIG.TZ,
                             replayed: true,
                             fiscalLedgerWritten: false,
                         },
@@ -337,7 +337,7 @@ export const generarCierreZ = webMethod(
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     fiscalLedgerWritten: false,
                 },
                 error: null,
