@@ -32,6 +32,7 @@ test("SDK_CONFIG is the sole source for shared timeouts, cache limits and securi
     "STAFF_MAX_ENTRIES: 100",
     "SERVICES_TTL_MS: 120000",
     "SERVICES_MAX_ENTRIES: 500",
+    "DAYS_CACHE_VERSION: \"v1\"",
     "SECRET_CACHE_TTL_MS: 300000",
     "FISCAL_DAILY_MAX_PAGES: 50",
   ]) assert.ok(config.includes(value), "missing canonical setting: " + value);
