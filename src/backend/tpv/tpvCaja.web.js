@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessionProjection, initializeTpvCaja, readTpvCajaSnapshot, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
@@ -34,12 +34,12 @@ function operationalStatus(value) {
 }
 
 function responseClock() {
-    return { now: new Date().toISOString(), timeZone: TPV_RUNTIME_POLICY.TIME_ZONE };
+    return { now: new Date().toISOString(), timeZone: SDK_CONFIG.TZ };
 }
 
 function madridDayKey(date = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+        timeZone: SDK_CONFIG.TZ, year: "numeric", month: "2-digit", day: "2-digit",
     }).formatToParts(date);
     const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
     return values.year + values.month + values.day;
@@ -88,7 +88,7 @@ export const obtenerEstadoCaja = webMethod(
         const nextSessionPreview = {
             operationDate: dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8),
             sessionId: "TPV-SESSION-" + dayKey,
-            timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+            timeZone: SDK_CONFIG.TZ,
             preparedAt: new Date().toISOString(),
         };
         if (!session) {
@@ -325,7 +325,7 @@ export const registrarArqueoParcial = webMethod(
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     replayed,
                     persisted: true,
                 },
