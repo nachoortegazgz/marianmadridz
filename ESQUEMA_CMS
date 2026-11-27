@@ -635,4 +635,344 @@ Las aplicaciones instaladas confirmadas son **Bookings, Stores V3, Payments, Inv
 **Conclusión:** las correspondencias más sólidas son `CITAS_F2` con Bookings, `MapaStaff` con Staff, `CAJA_ACTUAL`/`TRANSACCIONES_TPV` con Orders y Payments, y las colecciones `StoreCatalog/*` con Stores. Los campos fiscales, contables, de trazabilidad y control operativo no tienen un identificador nativo equivalente en Wix.
 
 
+He revisado las rutas y nombres. Correcciones principales:
+
+## Correcciones canónicas
+
+| Anterior | Corrección canónica |
+|---|---|
+| `service.id` | Correcto: `service.id` |
+| `service.schedule.id` | Correcto para el ID del horario: `service.schedule.id` |
+| `service.schedule.availabilityConstraints.sessionDurations` | Correcto para duración de citas |
+| `staffMember.id` | Correcto: identidad del miembro de personal |
+| `staffMember.resourceId` | Correcto para asignarlo a servicios y eventos |
+| `booking.bookedEntity.slot.resource.id` | Correcto para el recurso de una cita |
+| `order.id` | Correcto para el pedido eCommerce |
+| `payment.id` | No debe asumirse como campo directo del pedido; se obtiene mediante las transacciones del pedido |
+| `transaction.id` | No es una ruta genérica confirmada; los pagos se consultan mediante las transacciones del pedido |
+| `product.id` | Correcto para Catalog V3 |
+| `variant.id` | Debe distinguirse del identificador de variante almacenado en `variantId` |
+| `inventoryItem.id` | Correcto para inventario V3 |
+| `location.id` | Correcto para ubicaciones |
+| `member.id` | Correcto para miembros del sitio |
+| `contact.id` | Correcto para contactos CRM |
+
+## Rutas API verificadas
+
+| Área | Ruta canónica |
+|---|---|
+| Servicio Bookings | `POST /bookings/v2/services/query` |
+| Crear servicio Bookings | `POST /bookings/v2/bulk/services/create` |
+| Obtener servicio Bookings | `GET /bookings/v2/services/{serviceId}` |
+| Crear reserva | `POST /_api/bookings-service/v2/bookings` |
+| Personal Bookings | `POST /bookings/v1/staff-members/query` |
+| Crear personal | `POST /bookings/v1/staff-members` |
+| Disponibilidad | `POST /_api/service-availability/v2/time-slots` |
+| Producto Stores V3 | `GET /stores/v3/products/{productId}` |
+| Crear producto Stores V3 | `POST /stores/v3/products-with-inventory` |
+| Transacciones de un pedido | `GET /ecom/v1/payments/orders/{orderId}` |
+| Transacciones de varios pedidos | `POST /ecom/v1/payments/list-by-ids` |
+
+## Campos que deben marcarse como no canónicos o inferidos
+
+Estos campos de las colecciones son propios, no nombres nativos confirmados de Wix:
+
+- `catalogItemId`
+- `cashMovementId`
+- `cashRegisterStatus`
+- `ticketNumber`
+- `verifactuReference`
+- `traceId`
+- `pairToken`
+- `laborRecordId`
+- `closingHash`
+- `transactionId`
+- `paymentReference`
+- `serviceIdRedeemed`
+
+Pueden guardar IDs o referencias de Wix, pero no implican que exista una sincronización automática ni que sean campos nativos equivalentes.
+
+## Correcciones específicas
+
+- `CAJA_ACTUAL.paymentId` debe relacionarse con una entrada de `orderTransactions.payments[]`, no con un supuesto campo directo `payment.id` del pedido.
+- `CAJA_ACTUAL.transactionId` debe considerarse referencia interna hasta comprobar el objeto concreto devuelto por la API de transacciones.
+- `HISTORICO_CIERRES_Z.totalCard`, `totalCash`, `totalBizum` y `totalOnline` son agregados propios; no corresponden directamente a un único campo nativo de Wix.
+- `LIBRO_ASIENTOS_CONTABLES_DETALLE.taxBase` y `taxAmount` deben relacionarse con estructuras fiscales del pedido, no con un campo simple confirmado.
+- `StoreCatalog/Products.inventory` es un objeto de catálogo; el inventario operativo se consulta mediante Inventory API.
+- `StoreCatalog/Variants.variantId` es un identificador de variante de catálogo, pero no debe sustituirse automáticamente por `_id`.
+- `Bookings/Schedule.serviceDurationInMinutes` es un campo de colección derivado; la fuente nativa de duración está en `service.schedule.availabilityConstraints.sessionDurations`.
+- `Bookings/Services._id` puede representar el ID del servicio en la colección, pero el dato nativo debe verificarse contra `service.id`.
+- `Bookings/Staff._id` y `MapaStaff.staffMemberId` deben validarse contra `staffMember.id`; `resourceId` es una identidad distinta.
+
+## Regla corregida
+
+La columna **“ID canónica nativa”** debe contener únicamente identificadores confirmados por Wix:
+
+```text
+service.id
+booking.id
+staffMember.id
+staffMember.resourceId
+order.id
+product.id
+variant.id
+inventoryItem.id
+location.id
+member.id
+contact.id
+```
+
+Los campos de caja, fiscalidad, contabilidad, trazabilidad e integración deben clasificarse como:
+
+```text
+N/A — campo interno de la colección
+```
+
+hasta que se compruebe su valor real y su correspondencia con una respuesta concreta de Wix.
+
+
+# Tablas actualizadas con nomenclatura canónica
+
+> Se separan las correspondencias confirmadas de los campos internos. `N/A` significa que no existe un dato nativo de Wix confirmado.
+
+## `ServiciosCatalogo`
+
+| Campo | Dato relacionado en Bookings | ID canónica |
+|---|---|---|
+| `serviceId` | Servicio | `service.id` |
+| `serviceName` | Nombre | `service.name` |
+| `description` | Descripción | `service.description` |
+| `serviceType` | Tipo de servicio | `service.type` |
+| `totalDuration` | Duración configurada | `service.schedule.availabilityConstraints.sessionDurations` |
+| `staffMembers` | Personal asignado | `service.staffMemberIds[]` → `staffMember.resourceId` |
+| `price` | Precio | `service.payment.fixed.price.value` |
+| `currency` | Moneda | `service.payment.fixed.price.currency` |
+| `onlinePayment` | Pago online | `service.payment.options.online` |
+| `inPersonPayment` | Pago presencial | `service.payment.options.inPerson` |
+| `hidden` | Visibilidad | `service.hidden` |
+| `image` | Imagen principal | `service.media.mainMedia` |
+| `category` | Categoría | `service.category.id` |
+| `scheduleId` | Horario del servicio | `service.schedule.id` |
+| Otros campos propios | N/A | N/A |
+
+---
+
+## `MapaStaff`
+
+| Campo | Dato relacionado en Bookings | ID canónica |
+|---|---|---|
+| `staffMemberId` | Miembro de personal | `staffMember.id` |
+| `resourceId` | Recurso de personal | `staffMember.resourceId` |
+| `name` | Nombre | `staffMember.name` |
+| `image` | Imagen | `staffMember.mainMedia` |
+| `services` | Servicios asignados | `service.staffMemberIds[]` |
+| Campos de control interno | N/A | N/A |
+
+---
+
+## `CITAS_F2`
+
+| Campo | Dato relacionado en Bookings | ID canónica |
+|---|---|---|
+| `bookingId` | Reserva | `booking.id` |
+| `serviceId` | Servicio reservado | `booking.bookedEntity.slot.serviceId` |
+| `scheduleId` | Horario | `booking.bookedEntity.slot.scheduleId` |
+| `slotStart` | Inicio | `booking.bookedEntity.slot.startDate` |
+| `slotEnd` | Fin | `booking.bookedEntity.slot.endDate` |
+| `timeZone` | Zona horaria | `booking.bookedEntity.slot.timezone` |
+| `resourceId` | Recurso asignado | `booking.bookedEntity.slot.resource.id` |
+| `contactDetails` | Datos del cliente | `booking.contactDetails` |
+| `bookingStatus` | Estado | `booking.status` |
+| `paymentStatus` | Estado del pago | `booking.paymentStatus` |
+| `revision` | Revisión | `booking.revision` |
+| `totalAmount` | Importe | `booking.totalAmount` |
+| `orderId` | Pedido asociado | `order.id` |
+| `cashMovementId` | Movimiento interno de caja | N/A |
+
+---
+
+## `COMPLEMENTOS_CATALOGO`
+
+| Campo | Dato relacionado en Stores V3 | ID canónica |
+|---|---|---|
+| `addonId` | Producto | `product.id` |
+| `name` | Nombre | `product.name` |
+| `description` | Descripción | `product.description` |
+| `sku` | SKU de variante | `variant.sku` |
+| `price` | Precio de variante | `variant.price.actualPrice.amount` |
+| `taxIncluded` | Grupo fiscal | `product.taxGroupId` |
+| `itemNature` | Tipo de producto | `product.productType` |
+| `durationMinutes` | N/A directo en Stores | N/A |
+| `codigoImpuesto` | Código fiscal propio | N/A |
+| `cuentaContableIngreso` | Cuenta contable propia | N/A |
+
+---
+
+## `CAJA_ACTUAL`
+
+| Campo | Dato relacionado en Wix | ID canónica |
+|---|---|---|
+| `orderId` | Pedido | `order.id` |
+| `checkoutId` | Checkout | `checkout.id` |
+| `bookingId` | Reserva Bookings | `booking.id` |
+| `serviceId` | Servicio Bookings | `service.id` |
+| `catalogItemId` | Elemento vendible | `catalogItem.id` |
+| `contactId` | Contacto | `contact.id` |
+| `paymentId` | Pago de pedido | `orderTransactions.payments[].id` |
+| `paymentStatus` | Estado del pedido/pago | `order.paymentStatus` |
+| `paymentMethod` | Método de pago | `orderTransactions.payments[].regularPaymentDetails.paymentMethodName` |
+| `lineItems` | Líneas del pedido | `order.lineItems[]` |
+| `currency` | Moneda | `order.currency` |
+| `ticketTotal` | Total del pedido | `order.priceSummary.total` |
+| `transactionId` | Identificador de transacción | N/A confirmado |
+| `ticketNumber` | Número interno | N/A |
+| Campos fiscales propios | N/A | N/A |
+
+---
+
+## `TRANSACCIONES_TPV`
+
+| Campo | Dato relacionado en Wix | ID canónica |
+|---|---|---|
+| `orderId` | Pedido | `order.id` |
+| `checkoutId` | Checkout | `checkout.id` |
+| `bookingId` | Reserva | `booking.id` |
+| `serviceId` | Servicio | `service.id` |
+| `catalogItemId` | Elemento vendible | `catalogItem.id` |
+| `contactId` | Contacto | `contact.id` |
+| `paymentId` | Pago | `orderTransactions.payments[].id` |
+| `paymentStatus` | Estado del pago | `order.paymentStatus` |
+| `paymentMethod` | Método de pago | `orderTransactions.payments[].regularPaymentDetails.paymentMethodName` |
+| `amount` | Importe | `order.priceSummary.total` |
+| `currency` | Moneda | `order.currency` |
+| `lineItems` | Líneas facturadas | `order.lineItems[]` |
+| `transactionId` | Transacción | N/A confirmado |
+| Campos fiscales propios | N/A | N/A |
+
+---
+
+## `CONTROL_OPERATIVO`
+
+| Campo | Dato relacionado | ID canónica |
+|---|---|---|
+| `bookingId` | Reserva | `booking.id` |
+| `serviceId` | Servicio | `service.id` |
+| `resourceId` | Recurso | `staffMember.resourceId` |
+| `orderId` | Pedido | `order.id` |
+| `refundId` | Reembolso | N/A confirmado |
+| `transactionId` | Transacción | N/A confirmado |
+| `eventId` | Evento operativo interno | N/A |
+| `traceId` | Trazabilidad propia | N/A |
+| `dedupeKey` | Idempotencia propia | N/A |
+| `payload` | Datos internos | N/A |
+
+---
+
+## `HISTORICO_CIERRES_Z`
+
+| Campo | Dato relacionado | ID canónica |
+|---|---|---|
+| `memberId` | Miembro que realiza el cierre | `member.id` |
+| `staffResourceId` | Recurso de personal | `staffMember.resourceId` |
+| `wixProductId` | Producto Stores | `product.id` |
+| `sku` | SKU de variante | `variant.sku` |
+| `stockQuantity` | Cantidad de inventario | `inventoryItem.quantity` |
+| `unitCost` | Coste del producto | N/A directo |
+| `totalCash` | Agregado de ventas en efectivo | N/A directo |
+| `totalCard` | Agregado de ventas con tarjeta | N/A directo |
+| `totalBizum` | Agregado Bizum | N/A directo |
+| `totalOnline` | Agregado de ventas online | N/A directo |
+| `totalRefunds` | Agregado de reembolsos | N/A directo |
+| `totalTaxAmount` | Agregado fiscal | N/A directo |
+| `grossSalesTotal` | Ventas brutas agregadas | N/A directo |
+| `closingHash` | Hash interno | N/A |
+| `verifactuReference` | Referencia fiscal externa | N/A |
+
+---
+
+## `LIBRO_ASIENTOS_CONTABLES_DETALLE`
+
+| Campo | Dato relacionado | ID canónica |
+|---|---|---|
+| `orderId` | Pedido | `order.id` |
+| `bookingId` | Reserva | `booking.id` |
+| `transactionId` | Transacción | N/A confirmado |
+| `refundId` | Reembolso | N/A confirmado |
+| `serviceIdRedeemed` | Servicio utilizado | `service.id` |
+| `giftCardId` | Tarjeta regalo | N/A confirmado |
+| `paymentMethod` | Método de pago | `orderTransactions.payments[].regularPaymentDetails.paymentMethodName` |
+| `amount` | Importe | `order.priceSummary.total` |
+| `totalAmount` | Total | `order.priceSummary.total` |
+| `taxBase` | Base imponible | `order.taxSummary` |
+| `taxAmount` | Impuesto | `order.taxSummary` |
+| `currency` | Moneda | `order.currency` |
+| `lineItems` | Líneas del pedido | `order.lineItems[]` |
+| Campos fiscales y contables | N/A directo | N/A |
+
+---
+
+## `Locations/Locations`
+
+| Campo | Dato relacionado en Wix Locations | ID canónica |
+|---|---|---|
+| `_id` | Ubicación | `location.id` |
+| `name` | Nombre | `location.name` |
+| `address` | Dirección | `location.address` |
+| `email` | Email | `location.email` |
+| `phone` | Teléfono | `location.phone` |
+| `timeZone` | Zona horaria | `location.timeZone` |
+| `default` | Ubicación predeterminada | `location.default` |
+| `services` | Servicios ofrecidos | `service.locations[]` |
+| `businessSchedule` | Horario comercial | N/A directo para Bookings |
+
+---
+
+## `REGISTRO_INTEGRACION`
+
+| Campo | Dato relacionado | ID canónica |
+|---|---|---|
+| `sourceItemId` | Elemento origen | `entity.id` |
+| `sourceCollection` | Colección origen | `collection.id` |
+| `eventId` | Evento de integración | N/A |
+| `eventType` | Tipo de evento | N/A |
+| `occurredAt` | Fecha del evento | N/A |
+| `deliveryStatus` | Estado de entrega | N/A |
+| `payload` | Datos del evento | N/A |
+| `traceId` | Trazabilidad | N/A |
+| `correlationId` | Correlación | N/A |
+| `idempotencyKey` | Idempotencia | N/A |
+
+---
+
+## `REGISTROS_HORARIOS_STAFF`
+
+| Campo | Dato relacionado | ID canónica |
+|---|---|---|
+| `resourceId` | Recurso de personal | `staffMember.resourceId` |
+| `memberId` | Miembro del sitio | `member.id` |
+| `staffName` | Nombre del personal | `staffMember.name` |
+| `workplaceId` | Ubicación | `location.id` |
+| `clockInAt` | Inicio de evento | `calendarEvent.start` |
+| `clockOutAt` | Fin de evento | `calendarEvent.end` |
+| `scheduledStartAt` | Inicio programado | `calendarEvent.start` |
+| `scheduledEndAt` | Fin programado | `calendarEvent.end` |
+| `workDate` | Fecha laboral | `calendarEvent.start.localDate` |
+| `recordId` | Registro interno | N/A |
+| `laborRecordId` | Registro laboral propio | N/A |
+| `recordHash` | Hash propio | N/A |
+
+---
+
+## Conclusión corregida
+
+Las correspondencias nativas más sólidas son:
+
+- `ServiciosCatalogo` ↔ `Bookings Services`
+- `MapaStaff` ↔ `Bookings Staff Members`
+- `CITAS_F2` ↔ `Bookings Bookings`
+- `CAJA_ACTUAL` y `TRANSACCIONES_TPV` ↔ `eCommerce Orders` y `Order Transactions`
+- `COMPLEMENTOS_CATALOGO` ↔ `Stores Catalog V3`
+- `REGISTROS_HORARIOS_STAFF` ↔ `Calendar Events` y recursos de Bookings
+
+Los campos fiscales, contables, de caja, trazabilidad e idempotencia se mantienen correctamente como **campos propios**, sin equivalencia nativa confirmada.
 
