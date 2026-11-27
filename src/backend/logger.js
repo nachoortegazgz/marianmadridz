@@ -27,8 +27,28 @@ const SECRET_FIELD_NAMES = new Set([
 const PII_FIELD_NAMES = new Set([
     "email", "phone", "firstname", "lastname", "name",
     "contactdetails", "contact", "address", "ip", "ipaddress",
-    "telefono", "correo", "apellidos",
+    "telefono", "correo", "apellidos", "taxid", "nif", "nie", "iban",
 ]);
+
+const SECRET_FIELD_PATTERN = /(?:password|secret|token|apikey|authorization|bearer|cookie|sessionid|fiscalkey|hmac|signature|creditcard|cardnumber|cvv|pin|privatekey)/i;
+const PII_FIELD_PATTERN = /(?:email(?:address)?|correo|(?:mobile|telephone|phone)|telefono|firstname|lastname|fullname|contactdetails|address|ipaddress|taxid|nif|nie|iban)/i;
+
+function _sanitizeText(value) {
+    return String(value)
+        .replace(/\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi, "Bearer [REDACTED_SECRET]")
+        .replace(/([?&](?:access[_-]?token|refresh[_-]?token|token|api[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|secret|signature|authorization|password)=)[^&#\s]*/gi, "$1[REDACTED_SECRET]")
+        .replace(/\b(password|secret|api[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|authorization)\s*[:=]\s*(['"]?)[^\s,;'"&]+/gi, "$1=[REDACTED_SECRET]")
+        .replace(/(https?:\/\/)[^/@\s:]+:[^/@\s]+@/gi, "$1[REDACTED]@")
+        .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]");
+}
+
+function _isSecretField(normalizedKey) {
+    return SECRET_FIELD_NAMES.has(normalizedKey) || SECRET_FIELD_PATTERN.test(normalizedKey);
+}
+
+function _isPiiField(normalizedKey) {
+    return PII_FIELD_NAMES.has(normalizedKey) || PII_FIELD_PATTERN.test(normalizedKey);
+}
 
 function _asObject(value) {
     if (value === null || value === undefined) return {};
@@ -38,7 +58,7 @@ function _asObject(value) {
 
 function _sanitizeStack(stack) {
     if (typeof stack !== "string") return stack;
-    return stack
+    return _sanitizeText(stack)
         .replace(/\/Users\/[^/\s]+/g, "/Users/[REDACTED]")
         .replace(/\/home\/[^/\s]+/g, "/home/[REDACTED]")
         .replace(/[A-Z]:\\Users\\[^\\\s]+/g, "C:\\Users\\[REDACTED]");
@@ -59,6 +79,7 @@ function _maskByKey(lowerKey, val) {
 
 function sanitizeValue(value, seen) {
     if (value === null || value === undefined) return value;
+    if (typeof value === "string") return _sanitizeText(value);
     if (typeof value !== "object") return value;
     if (seen.has(value)) return "[Circular]";
     seen.add(value);
@@ -73,12 +94,12 @@ function sanitizeValue(value, seen) {
     for (const [key, val] of Object.entries(value)) {
         const lowerKey = key.toLowerCase().replace(/[-_\s]/g, "");
 
-        if (SECRET_FIELD_NAMES.has(lowerKey)) {
+        if (_isSecretField(lowerKey)) {
             sanitized[key] = "[REDACTED_SECRET]";
             continue;
         }
 
-        if (PII_FIELD_NAMES.has(lowerKey)) {
+        if (_isPiiField(lowerKey)) {
             if (val !== null && typeof val === "object") {
                 sanitized[key] = sanitizeValue(val, seen);
             } else if (typeof val === "string") {
@@ -89,9 +110,7 @@ function sanitizeValue(value, seen) {
             continue;
         }
 
-        sanitized[key] = val !== null && typeof val === "object"
-            ? sanitizeValue(val, seen)
-            : val;
+        sanitized[key] = sanitizeValue(val, seen);
     }
 
     seen.delete(value);
@@ -108,7 +127,7 @@ function formatAndLog(level, message, context = {}, traceId) {
         timestamp: new Date().toISOString(),
         level,
         traceId: finalTraceId,
-        message: String(message),
+        message: _sanitizeText(message),
     };
 
     const logLine = JSON.stringify(logEntry);
@@ -124,7 +143,7 @@ function _buildErrorContext(error, baseContext) {
     return {
         ..._asObject(baseContext),
         name: error?.name || "Error",
-        message: error?.message,
+        message: typeof error?.message === "string" ? _sanitizeText(error.message) : error?.message,
         stack: _sanitizeStack(error?.stack),
         code: error?.code,
     };
