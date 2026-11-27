@@ -34,7 +34,7 @@ export function classifyTpvRecordNature(recordTimestamp, productionActivationAt 
  * No configuration row means development-only SYNTHETIC classification.
  */
 export async function createTpvRecordMetadata() {
-    const recordTimestamp = new Date().toISOString();
+    const recordTimestamp = new Date();
     const config = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MAPA_STAFF,
         filter: wql.eq("recordType", "CONFIG_SISTEMA"),
