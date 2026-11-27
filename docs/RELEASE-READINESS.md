@@ -20,7 +20,9 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
 | #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS; writer, persistencia real y Wix Preview/Runtime pendientes |
 | P1.1 Apertura de sesión | PARCIAL | `tpvCaja.web.js:148-189`: autorización ADMIN, guard physical y actualización CajaActual; falta evento de apertura en MovimientosCaja; CI offline PASS, runtime pendiente |
-| P1.2 Cierre de sesión | PENDIENTE | No existe `cerrarSesionCaja`; el cierre se modela en `generarCierreZ` (`tpvCierres.web.js:131-253`); Contract C bloquea cierres Z reales |
+| P1.2 Cierre de sesión | PARCIAL | `tpvCaja.web.js:cerrarSesionCaja` cierra CajaActual bajo lock, registra diferencia en MovimientosCaja y auditoría ControlOperativo con idempotencia; no genera Ticket Z ni toca ledger fiscal. CI pendiente de esta rama. |
+| P1.2-X Ticket X | HABILITADO | `tpvCierres.web.js:generarTicketX` genera snapshot no fiscal en ControlOperativo; no cierra sesión ni escribe MovimientosCaja. |
+| P1.2-E Exportación movimientos | HABILITADO | `tpvExport.web.js:exportarMovimientos` exporta MovimientosCaja por rango/ sesión en JSON o CSV, 1.000 registros por página y cursor; solo ADMIN; excluye campos fiscales. |
 | P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:392-455`; `validation.js:246-280`: guard physical y hook físico habilitados con cadena hash; CI offline PASS, runtime no ejecutado |
 | P1.4 Registro de venta | PARCIAL | `tpvVentas.web.js:234-430`; `tpvSalePreparation.js:144-208`; `dataAccess.js:310-350`; `data.js:870-890`: Catalog V3/impuestos backend, idempotencia, Draft Order opcional, insert TransaccionesTPV y hooks append-only; colección CMS creada; runtime no probado |
 | P1.5 Devolución | BLOQUEADO | `tpvDevoluciones.web.js:43-86`: valida DTO y devuelve `TPV_REFUND_PROVIDER_NOT_CONFIGURED`; no persiste; `procesarDevolucion` ausente |
