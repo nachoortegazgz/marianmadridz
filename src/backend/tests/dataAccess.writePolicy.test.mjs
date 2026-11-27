@@ -241,6 +241,7 @@ test("WEBHOOK_EVENT is neither mutable nor removable", () => {
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
         code: "CMS_DELETE_PROHIBITED",
     });
+    assert.doesNotThrow(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "cache-1", T.DUAL_CACHE));
 });
 
 test("save policy is limited to DAYS_CACHE and identified CajaActual records", () => {
@@ -267,7 +268,7 @@ test("save policy is limited to DAYS_CACHE and identified CajaActual records", (
 });
 
 test("single-item deletion is prohibited for every collection", () => {
-    for (const collection of Object.values(C).concat(Object.values(O))) {
+    for (const collection of Object.values(C).concat(Object.values(O).filter((value) => value !== O.CONTROL_OPERATIVO))) {
         assert.throws(() => assertRemoveAllowed(collection, "existing-row", T.DUAL_CACHE), (error) =>
             ["CMS_DELETE_PROHIBITED", "LEDGER_APPEND_ONLY"].includes(error?.code)
         );
