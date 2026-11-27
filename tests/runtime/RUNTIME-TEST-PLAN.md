@@ -32,18 +32,21 @@ $w.onReady(async () => {
   // 1) Ticket X: debe ejecutarse mientras la sesión siga ABIERTA.
   const ticketX = await generarTicketX({ sessionId });
   console.info("RUNTIME_GATE_TICKET_X", JSON.stringify(ticketX));
+  if (ticketX?.status !== "SUCCESS") throw new Error("ABORT: Ticket X no pasó; no ejecutar cierre");
 
   // 2) Export JSON: cursor inicial; si hasMore=true, pedir la siguiente página.
   const page1 = await exportarMovimientos({
     desde, hasta, formato: "json", sessionId, cursor: 0
   });
   console.info("RUNTIME_GATE_EXPORT_PAGE_1", JSON.stringify(page1));
+  if (page1?.status !== "SUCCESS") throw new Error("ABORT: exportación no pasó; no ejecutar cierre");
   let page2 = null;
   if (page1?.status === "SUCCESS" && page1.hasMore === true) {
     page2 = await exportarMovimientos({
       desde, hasta, formato: "json", sessionId, cursor: page1.nextCursor
     });
     console.info("RUNTIME_GATE_EXPORT_PAGE_2", JSON.stringify(page2));
+    if (page2?.status !== "SUCCESS") throw new Error("ABORT: segunda página falló; no ejecutar cierre");
   }
 
   // 3) Cierre: último, porque cambia la sesión a CERRADA.
