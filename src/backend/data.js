@@ -1081,38 +1081,31 @@ export async function ControlOperativo_beforeUpdate(item) {
 }
 
 export async function ControlOperativo_beforeRemove(itemId) {
-    const id = typeof itemId === "string"
-        ? itemId.trim()
-        : _safeTrim(itemId?._id);
+    const id = typeof itemId === "string" ? itemId.trim() : _safeTrim(itemId?._id);
     if (!id) _schemaError("ControlOperativo remove requires itemId");
-
     const original = await getItem(
         OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
         id,
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
-    if (original.controlType === "WEBHOOK_EVENT") {
-        throw createActionableError({
-            code: "WEBHOOK_EVENT_APPEND_ONLY",
-            userMessage: "Los eventos webhook son append-only y no se pueden borrar.",
-            technicalDetail: "ControlOperativo/WEBHOOK_EVENT removal denied.",
-            remediation: [
-                "Conservar la evidencia original del webhook.",
-                "Registrar un evento compensatorio o de recuperación con una nueva clave trazable.",
-                "Consultar el traceId antes de reintentar.",
-            ],
-            contextSnapshot: {
-                collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
-                controlType: original.controlType,
-                operation: "REMOVE",
-                recordId: id,
-            },
-            retryable: false,
-        });
-    }
-    return id;
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "ControlOperativo evidence and operational state are retained.",
+        remediation: [
+            "Conservar el registro original.",
+            "Actualizar su estado mediante el flujo autorizado cuando proceda.",
+            "Añadir un evento compensatorio o de resolución con trazabilidad.",
+        ],
+        contextSnapshot: {
+            collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+            controlType: original.controlType,
+            operation: "REMOVE",
+            recordId: id,
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
