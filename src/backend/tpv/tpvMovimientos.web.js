@@ -7,6 +7,7 @@ import { appendTpvAudit, assertTpvOperationalLedgerConfigured, insertTpvEvent, l
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
+import { normalizeTpvError } from "backend/tpv/tpvError";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_SALE: "VENTA",
@@ -58,7 +59,7 @@ function exportSuccess(data, traceId) {
 }
 
 function exportFailure(error, fallback, traceId) {
-    return { status: "ERROR", data: null, error: { code: String(error?.message || fallback) }, traceId };
+    return { status: "ERROR", data: null, error: normalizeTpvError(error, fallback), traceId };
 }
 
 export const registrarMovimientoCaja = webMethod(
@@ -66,11 +67,11 @@ export const registrarMovimientoCaja = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-cash-movement");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
 
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
             const paymentMethod = String(input.paymentMethod || TPV_PAYMENT_METHOD.EFECTIVO).trim().toUpperCase();
@@ -196,7 +197,7 @@ export const obtenerMovimientosCaja = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_CASH_MOVEMENTS_READ_FAILED") },
+                error: normalizeTpvError(error, "TPV_CASH_MOVEMENTS_READ_FAILED"),
                 traceId,
             };
         }
@@ -208,10 +209,11 @@ export const exportarMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-movements-export");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
+
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);
             const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
             const collections = [
@@ -262,10 +264,11 @@ export const exportarAuditoriaTPV = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-audit-export");
-        await requireCajero(traceId);
-        assertTpvOperationalLedgerConfigured("audit");
-        const operator = await resolveTpvContext(traceId);
+
         try {
+            await requireCajero(traceId);
+            assertTpvOperationalLedgerConfigured("audit");
+            const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);
             const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
             const [auditRecords, sales, movements, refunds, ticketsX, ticketsZ] = await Promise.all([
