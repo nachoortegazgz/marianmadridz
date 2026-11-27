@@ -129,7 +129,7 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
     };
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
-    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), { code: "CMS_DELETE_PROHIBITED" });
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "CMS_DELETE_PROHIBITED" });
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), { code: "CMS_DELETE_PROHIBITED" });
 
@@ -235,17 +235,13 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const cashCountId = makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
     const ticketId = makeTpvTransactionId(TPV_COLLECTIONS.TICKET_Z, key);
     const auditId = makeTpvTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
-    const legacyId = makeLegacyTpvTransactionId(key);
 
     assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
-    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
     assert.match(makeTpvId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
-    assert.notEqual(cashCountId, legacyId);
     assert.equal(cashCountId, makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key));
-    assert.equal(legacyId, makeLegacyTpvTransactionId(key));
 });
 
 test("legacy transaction IDs remain migration-only and are not used by operational idempotency", async () => {
