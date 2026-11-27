@@ -86,9 +86,6 @@ function quarterPeriod(year, quarter) {
 }
 
 function normalizeRecord(row) {
-    if (row?.recordNature !== "REAL") {
-        throw new Error("C3_EXPORT_SOURCE_RECORD_NOT_REAL");
-    }
     const recordHash = requiredString(row.hashCompleto, "C3_EXPORT_RECORD_HASH_MISSING", 64).toLowerCase();
     if (!/^[a-f0-9]{64}$/.test(recordHash)) throw new Error("C3_EXPORT_RECORD_HASH_INVALID");
 
