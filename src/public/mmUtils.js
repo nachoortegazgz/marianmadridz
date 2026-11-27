@@ -159,8 +159,14 @@ function numberOrZero(value, minimum = 0) {
 }
 
 export function _roundMoney(value, decimals = CURRENCY_CONFIG.DECIMALES) {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return 0;
+    const validType = typeof value === "number" || typeof value === "string";
+    const nonEmptyString = typeof value !== "string" || value.trim().length > 0;
+    const parsed = validType && nonEmptyString ? Number(value) : Number.NaN;
+    if (!Number.isFinite(parsed)) {
+        const error = new TypeError("INVALID_MONEY_AMOUNT");
+        error.code = "INVALID_MONEY_AMOUNT";
+        throw error;
+    }
     const factor = 10 ** Math.max(0, toFiniteNumber(decimals, CURRENCY_CONFIG.DECIMALES));
     return Math.round((parsed + Number.EPSILON) * factor) / factor;
 }
