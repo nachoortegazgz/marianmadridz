@@ -86,7 +86,7 @@ Antes de modificar cualquier archivo debe:
 8. Presentar un plan.
 9. Solicitar autorización para escribir cambios.
 
-**CON AUTORIZACION PARA DECIDIR, EJECUTAR, CONFIGURAR Y EDITAR DE FORMA AUTONOMA, SIEMPRE USANDO COMO CRITERIO LA DOCUMENTACION DE WIX Y WIX APPS ACTUALIZADA. INFORMANDO Y DOCUMENTANDO TODAS LAS DECISIONES Y ACCIONES REALIZADAS DE FORMA AUTONOMA.**
+**Autonomía limitada por gates de seguridad y release.** La IA puede investigar, auditar, preparar propuestas y realizar cambios documentales o de código no sensibles dentro del alcance autorizado. Debe solicitar confirmación expresa antes de: publicar o desplegar en producción; ejecutar cargos, capturas o reembolsos reales; emitir o rectificar documentos fiscales; modificar roles, permisos o controles de acceso; activar automatizaciones con efectos externos; alterar o eliminar datos; ejecutar migraciones destructivas; o realizar cualquier operación irreversible. Una autorización general no elimina estos gates. Toda actuación autónoma debe quedar documentada con commit, alcance, evidencia, pruebas y reversión.
 ---
 
 # 3. Objetivo general del proyecto
@@ -208,7 +208,8 @@ Wix CMS es fuente de verdad para entidades personalizadas del negocio, como:
 Las aplicaciones Wix gobiernan sus dominios nativos:
 
 - Bookings: servicios, disponibilidad, reservas, profesionales y recursos.
-- Stores Catalog V3: productos, variantes, precios e inventario.
+- Stores Catalog V3: productos, variantes, información comercial y precios del catálogo.
+- Stores Inventory Items V3: cantidades y disponibilidad de stock por variante y ubicación.
 - eCommerce: pedidos y su ciclo de vida; las transacciones asociadas se consultan/registran mediante las APIs eCommerce correspondientes.
 - Payments / eCommerce Order Billing: ejecución de cobros, capturas, anulaciones y reembolsos según proveedor y método soportado. Un registro de pago en Order Transactions no mueve dinero por sí solo.
 - Invoices V1: documentos de factura dentro de las capacidades que la API exponga y que estén disponibles para este sitio; su uso no acredita por sí mismo cumplimiento fiscal español, Veri*Factu ni validez legal/fiscal.
@@ -1299,6 +1300,30 @@ Precedencia de decisión: (1) normativa aplicable y documentación oficial vigen
 > Aislar datos sintéticos.  
 > No modificar ni publicar sin plan, autorización y evidencia suficiente.
 
+
+## Anexo de estado de validación del dossier (corte 2026-11-27)
+
+### Evidencia de integración documental
+
+- PR #623 fusionada en `main`: https://github.com/nachoortegazgz/marianmadridz/pull/623
+- Commit de cambios documentales: `0443ec8cd2bd50c1a5ff3f19bba77dc2d51be345`.
+- Merge commit: `4b4ea2fe34e803a2fa325838ebeb352e7cd1630d`.
+- CI Backend offline quality gates, run `45908306328`: **SUCCESS**. Checkout, Node setup, sincronización package/lockfile, instalación bloqueada, dependencias críticas, npm audit, Layer 1, Layer 2, suite offline completa, verificaciones SDK de cart/transactions/TPV y ESLint finalizaron correctamente.
+- Secret scanning, run `45908306358`: **SUCCESS**. Gitleaks full-history scan completado correctamente.
+- Alcance de esta evidencia: commit de PR #623 y pruebas automatizadas indicadas. No acredita Wix Preview, Wix Runtime, configuración live, permisos efectivos ni despliegue.
+
+### Gates que siguen abiertos
+
+1. **Estado de publicación:** NO PUBLICADO según última confirmación del propietario; falta un read-back independiente y fechado de Wix para elevarlo a verificación directa.
+2. **Release TPV:** NO-GO PARA PRODUCCIÓN. No se autoriza publicación ni operaciones reales.
+3. **Wix Preview / Runtime:** pendiente de sesión autenticada y ejecución segura de pruebas de aceptación. No declarar el bridge, Bookings, pagos o persistencia validados en runtime por el resultado de CI offline.
+4. **Permisos por rol:** pendiente inspección de código/configuración efectiva y matriz de pruebas positivas y negativas para ADMIN, GESTION y ESTILISTA ROL. Mantener denegación por defecto donde la allowlist no esté demostrada.
+5. **Apps instaladas:** el inventario fechado es una evidencia de contexto, no una prueba de configuración operativa ni de permisos de cada aplicación.
+6. **Fiscalidad:** Invoices V1 no acredita cumplimiento normativo. Requiere validación fiscal/legal y técnica separada antes de habilitar emisión real.
+
+### Criterio de cierre
+
+No cambiar el release a GO ni declarar el proyecto plenamente validado hasta cerrar los gates aplicables con evidencia reproducible, entorno identificado, commit probado, resultados PASS y autorización correspondiente. Los tests offline satisfactorios no sustituyen Preview, Runtime ni pruebas productivas autorizadas.
 
 ## Anexo operativo — permisos por rol y protección de auditoría (corte 2026-11-26)
 
