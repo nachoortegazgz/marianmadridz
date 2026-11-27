@@ -3,18 +3,18 @@
 **Purpose:** punto único de entrada para asistentes IA, agentes de desarrollo y revisores técnicos.  
 **Repository:** `nachoortegazgz/marianmadridz` · **Default branch:** `main`  
 **Platform:** Wix Editor clásico + Velo · **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Last documentary baseline inspected:** 2026-11-28 · **Last confirmed main HEAD at inspection:** `25b55d406b365ab8b82c70f1eb0803a5bf1f5628`  
+**Last documentary baseline inspected:** 2026-11-28 · **Last confirmed main HEAD at inspection:** `c444f7aff2ad615f8711ae51c085f78e8b8985ea`  
 **Site state:** Draft / no publicado (último read-back documentado 2026-11-27). **MVP:** NO-GO.  
 **Status of this document:** ACTIVE. It is an index and operating guide, not a substitute for contracts or evidence.
 
 ## 1. Start here — mandatory reading order
 
-1. [STATE-NOW](docs/STATE-NOW.md) — current technical state, verified CI, outstanding work and dated Wix observations. Read first on every new task.
-2. [PROJECT-CANON](docs/PROJECT-CANON.md) — architecture, authority boundaries and non-negotiable invariants.
-3. [TPV-UNIFIED-FLOW](docs/TPV-UNIFIED-FLOW.md) — TPV transaction, payment, cash, accounting/fiscal boundaries and error contract.
-4. [RELEASE-READINESS](docs/RELEASE-READINESS.md) — release gates and evidence required for GO.
-5. [ESQUEMA_CMS](docs/ESQUEMA_CMS.md) — physical Wix CMS schema snapshot; its cutoff date is explicit and it is not a live query.
-6. [docs/INDEX](docs/INDEX.md) — specialist documents, audits, ADRs, QA contracts and archive map.
+1. [STATE-NOW](STATE-NOW.md) — current technical state, verified CI, outstanding work and dated Wix observations. Read first on every new task.
+2. [PROJECT-CANON](PROJECT-CANON.md) — architecture, authority boundaries and non-negotiable invariants.
+3. [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) — TPV transaction, payment, cash, accounting/fiscal boundaries and error contract.
+4. [RELEASE-READINESS](RELEASE-READINESS.md) — release gates and evidence required for GO.
+5. [ESQUEMA_CMS](ESQUEMA_CMS.md) — physical Wix CMS schema snapshot; its cutoff date is explicit and it is not a live query.
+6. [docs/INDEX](INDEX.md) — specialist documents, audits, ADRs, QA contracts and archive map.
 
 Read only the specialist material relevant to the task after these six documents. Do not ingest the entire archive by default.
 
@@ -23,10 +23,10 @@ Read only the specialist material relevant to the task after these six documents
 - **Business objectives, priorities, acceptance criteria and authorization:** the project owner's latest explicit instructions.
 - **Wix API/SDK/Velo/Bookings/CMS/Payments contracts:** current official Wix documentation. Never infer an API contract from old code or an old dossier.
 - **External integrations:** current official documentation of the provider concerned.
-- **Architecture and project invariants:** [PROJECT-CANON](docs/PROJECT-CANON.md), subject to later explicit owner decisions.
-- **TPV-specific contracts:** [TPV-UNIFIED-FLOW](docs/TPV-UNIFIED-FLOW.md).
-- **Physical CMS schema:** [ESQUEMA_CMS](docs/ESQUEMA_CMS.md), only for its recorded Wix read-back date.
-- **Current state and evidence:** [STATE-NOW](docs/STATE-NOW.md) and [RELEASE-READINESS](docs/RELEASE-READINESS.md), each with its own date and scope.
+- **Architecture and project invariants:** [PROJECT-CANON](PROJECT-CANON.md), subject to later explicit owner decisions.
+- **TPV-specific contracts:** [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md).
+- **Physical CMS schema:** [ESQUEMA_CMS](ESQUEMA_CMS.md), only for its recorded Wix read-back date.
+- **Current state and evidence:** [STATE-NOW](STATE-NOW.md) and [RELEASE-READINESS](RELEASE-READINESS.md), each with its own date and scope.
 - **Implementation:** current code on the inspected Git commit.
 - **Behavior:** tests and runtime evidence actually executed for that commit/environment.
 - **Historical dossiers, archived ADRs, handoffs and snapshots:** context only. They do not override current instructions, official contracts or newer evidence.
@@ -94,9 +94,9 @@ CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A 
 
 ## 8. Documentation maintenance rules
 
-- [AI-INDEX](docs/AI-INDEX.md) is the map of documentation and retrieval routes.
-- [INDEX](docs/INDEX.md) is the human-facing specialist index.
-- [ARCHIVE-MANIFEST](docs/ARCHIVE-MANIFEST.md) defines historical-document policy.
+- [AI-INDEX](AI-INDEX.md) is the map of documentation and retrieval routes.
+- [INDEX](INDEX.md) is the human-facing specialist index.
+- [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md) defines historical-document policy.
 - Keep one canonical home for each fact: state in STATE-NOW, architecture in PROJECT-CANON, TPV contract in TPV-UNIFIED-FLOW, schema in ESQUEMA_CMS, release gates in RELEASE-READINESS.
 - Do not copy entire CI reports, CMS snapshots or technical contracts into multiple summaries. Link to the evidence source.
 - Archive superseded material with a clear historical warning and a link to the replacement. Do not physically delete audit evidence.
