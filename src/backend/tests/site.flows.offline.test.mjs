@@ -1166,7 +1166,7 @@ test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior
   }
 });
 
-test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and Z close', async () => {
+test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close', async () => {
   wixDataMock._reset();
   const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
   wixDataMock._store.set('CajaActual', [{
@@ -1192,19 +1192,19 @@ test('FLOW-CAJA-11 simulation cash state blocks manual writes, state display and
     transactionId: 'blocked-simulation-cash-001',
   });
   assert.equal(tx.status, 'ERROR');
-  assert.equal(tx.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal(tx.error.code, 'CAJA_SESSION_NOT_OPEN');
   assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, before);
 
   const state = await cajas.getCashierState({});
   assert.equal(state.status, 'ERROR');
-  assert.equal(state.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal(state.error.code, 'CAJA_SESSION_NOT_OPEN');
   assert.equal(state.data, null);
 
   const closing = await cajas.registerZClosingInternal(operationDate, {
     traceId: 'blocked-simulation-z-001',
   });
   assert.equal(closing.status, 'ERROR');
-  assert.equal(closing.error.code, 'CASH_REGISTER_SIMULATION_STATE');
+  assert.equal(closing.error.code, 'CAJA_SESSION_NOT_OPEN');
   assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
 
   const projection = await cajas.updateCajaActualFromMovement({
