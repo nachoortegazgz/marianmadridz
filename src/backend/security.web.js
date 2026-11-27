@@ -115,25 +115,29 @@ export const checkCajeroAccess = webMethod(
  * Marian vive solo en backend/staff.js (isMarianResource /
  * findStaffByResourceId). */
 async function _isMarianManagerIdentity(traceId) {
+    let member;
     try {
-        /* @wix/members backend: Get My Member devuelve el Member directamente. */
-        const member = await members.getCurrentMember().catch(() => null);
-        const contactId = String(member?.contactId || "").trim();
-
-        if (!contactId) {
-            return false;
-        }
-
-        /* La identidad normalizada de Bookings Staff expone contactId cuando
-         * la cuenta Wix está conectada. No comparar email: no forma parte del
-         * contrato normalizado de staff.js. Fail-closed ante cualquier duda. */
-        const marian = await findMarianStaff(traceId);
-        if (!marian) return false;
-        const marianContactId = String(marian.contactId || "").trim();
-        return Boolean(marianContactId && marianContactId === contactId);
-    } catch (error) {
-        return false;
+        member = await members.getCurrentMember();
+    } catch (cause) {
+        const error = new Error("MEMBER_IDENTITY_PROVIDER_UNAVAILABLE");
+        error.code = "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE";
+        error.traceId = traceId;
+        error.cause = cause;
+        throw error;
     }
+    if (member?.status === "ERROR") {
+        const error = new Error("MEMBER_IDENTITY_RESPONSE_INVALID");
+        error.code = "MEMBER_IDENTITY_RESPONSE_INVALID";
+        error.traceId = traceId;
+        throw error;
+    }
+    const contactId = String(member?.contactId || "").trim();
+    if (!contactId) return false;
+
+    const marian = await findMarianStaff(traceId);
+    if (!marian) return false;
+    const marianContactId = String(marian.contactId || "").trim();
+    return Boolean(marianContactId && marianContactId === contactId);
 }
 
 export const checkStaffCollaboratorAccess = webMethod(
