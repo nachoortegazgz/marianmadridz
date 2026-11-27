@@ -168,7 +168,7 @@ Esta sección fija el estado actual de integración y prevalece sobre los regist
 - Evidencia Wix read-only 2026-11-25: 24 productos, 70 servicios de precio fijo EUR, 30 registros de inventario en ubicación virtual online y 0 en ubicación física; `taxIncludedInItemPrices=false`.
 - PR #612 integra `tpvWriteV1Contract.js`: una tasa impositiva verificable, un único medio físico (EFECTIVO/TARJETA) y conciliación exacta del importe aplicado con el total Wix. `registrarVenta()` recalcula catálogo/impuestos en backend.
 - `saleReady=false`, `paymentVerified=false`, `persisted=false`. El contrato V1 no habilita persistencia. No se crean pedidos, Draft Orders, movimientos, pagos ni devoluciones. El guard de repository y el hook `MovimientosCaja_beforeInsert` siguen cerrados.
-- No crear `TransaccionesTPV`: `MovimientosCaja` sigue siendo el ledger físico canónico. No inicializar ni transferir inventario sin recuento físico.
+- `TransaccionesTPV` es el registro comercial no fiscal de intenciones/ventas pendientes y su estado de pago; no sustituye al ledger físico. `MovimientosCaja` sigue siendo el registro de movimientos del cajón y `ControlOperativo` la auditoría. El writer actual solo persiste intenciones `PENDING_PAYMENT` sintéticas; no confirma cobros. No inicializar ni transferir inventario sin recuento físico.
 - Precio final al consumidor no verificado; la venta continúa bloqueada por el requisito de precio completo con impuestos incluidos (RDL 1/2007, arts. 20.1.c y 60.2.c).
 - La consulta de `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros; `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
 
