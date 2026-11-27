@@ -43,6 +43,7 @@ import {
   SDK_CONFIG,
   MOVEMENT_TYPE,
   RECORD_TYPE,
+  TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
@@ -78,6 +79,32 @@ const _readPaymentMethod = (m) => _safeTrim(readMovementField(m, "paymentMethod"
 // MATRIZ v15: huella canonica del dominio caja/fiscal es "hash"; el helper
 // canónico readMovementHash aplica ya el contrato de aliases históricos.
 const _readRecordHash = (m) => readMovementHash(m);
+
+function _isExplicitSmokeOrSimulatedMovement(item) {
+  const recordSource = _safeTrim(item?.recordSource).toUpperCase();
+  const eventType = _safeTrim(item?.eventType).toUpperCase();
+  const movementType = _readMovementType(item).toUpperCase();
+  const projectionStatus = _safeTrim(item?.projectionStatus).toUpperCase();
+  const hash = _safeTrim(_readRecordHash(item)).toUpperCase();
+  const previousRecordHash = _safeTrim(item?.previousRecordHash).toUpperCase();
+  const source = _safeTrim(item?.source).toUpperCase();
+
+  return recordSource === "SMOKE_TEST" ||
+    [
+      TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
+      TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE,
+      TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE,
+    ].includes(recordSource) ||
+    eventType.startsWith("SIMULATED_") ||
+    eventType.endsWith("_SIMULATED") ||
+    movementType.startsWith("SIMULATED_") ||
+    /(?:^|_)SIMULAD[AO]$/.test(movementType) ||
+    projectionStatus === "SIMULATED_ONLY" ||
+    hash === "SIMULATED_HASH" ||
+    previousRecordHash === "SIMULATED_PREVIOUS_HASH" ||
+    (item?.synthetic === true && recordSource === "TPV_QA_DEVELOPMENT" &&
+      source === "TPV_FUNCTIONAL_TEST");
+}
 const _readLinkedBookingIds = (m) => _safeTrim(readMovementField(m, "linkedBookingIds"));
 const _readInvoiceNumber = (m) => _safeTrim(readMovementField(m, "numSerieFactura"));
 const _readOperationDate = (m) => _safeTrim(readMovementField(m, "fechaOperacion"));
@@ -155,6 +182,7 @@ function _initTaxAccumulator(months) {
 
 function _accumulatePage(items, state, options = {}) {
   for (const m of items) {
+    if (_isExplicitSmokeOrSimulatedMovement(m)) continue;
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
@@ -387,6 +415,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
+    if (_isExplicitSmokeOrSimulatedMovement(m)) continue;
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     const accountingAmount = Number(m.accountingAmount || 0);
     const movementType = _readMovementType(m).toUpperCase();
