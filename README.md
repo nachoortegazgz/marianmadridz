@@ -13,11 +13,12 @@ Los objetivos del proyecto son la única SSOT de decisión funcional. Las direct
 ## Estado operativo
 
 - **Release comercial:** NO-GO. Wix Site Context read-back 2026-11-27 05:37: sitio Draft, Editor clásico, Velo habilitado; `published=false`. No hay autorización de pagos reales ni remisión fiscal durante QA.
-- **TPV:** HTML `#htmlTPV` en MODO CONSULTA; `saleReady=false` por gates fiscales, de pago y presentación de precios. La tarifa personalizada y Bizum/bonos/tarjeta regalo/otros siguen deshabilitados. `registrarVenta()` puede crear una intención `PENDING_PAYMENT` sin confirmar cobro; el gate de WebMethod debe alinearse con el de la cotización.
-- **Clasificación temporal:** `recordTimestamp`/`productionActivationAt`/`recordNature` siguen documentados pero no implementados en `src/`; `sourceType` se fija como `SYNTHETIC`. P0 antes de actividad real.
-- **GitHub:** `main` en `d95c2321f5227e987b22455150fd7a62b4129fa0` (PR #638 integrada). CI run `45948074849`: 80 suites, 759 tests, 0 fallos.
-- **Wix read-back 2026-11-27:** 9 páginas estáticas y 2 dinámicas; TPV página ID `yl5th`, ruta `/blank`. CMS: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78. Sin escrituras.
+- **TPV:** HTML `#htmlTPV` en MODO CONSULTA; `saleReady=false` por gates fiscales, de pago y presentación de precios. PR #640 unifica los blockers UI/WebMethod, implementa clasificación UTC y mantiene separados `TransaccionesTPV` (intención comercial) y `MovimientosCaja` (ledger físico). No habilita cobros reales.
+- **Clasificación temporal:** implementada en backend por PR #640. El corte `productionActivationAt` está en el esquema CMS, pero no existe fecha de activación; por ello los nuevos registros continúan como `SYNTHETIC`.
+- **GitHub:** PR #638, #640 y #641 integradas en `main`. CI #640: 81 suites / 764 tests PASS; CI #641: 80 suites / 762 tests PASS. Esto acredita CI offline, no runtime Wix.
+- **Wix read-back 2026-11-27:** 9 páginas estáticas y 2 dinámicas; TPV ID `yl5th`, ruta `/blank`. CMS: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78. Se añadieron campos opcionales de clasificación a los esquemas, sin modificar registros.
 - **Wix CLI:** workflow manual `wix-tpv-preview.yml` preparado para Preview no publicador y smoke read-only. No ejecutado desde esta sesión; no acredita runtime TPV ni sincronización Git-Wix.
+- **Capa 3:** contrato de exportación trimestral y WebMethod Admin-only preparados en memoria; sin envío externo. La configuración fiscal legal y el corte real no están configurados. [Auditoría Capa 3](docs/audits/2026-11-27-capa3-export-preparation.md).
 - **Documentación canónica:** [índice](docs/INDEX.md), [estado vigente](docs/STATE-NOW.md), [flujo TPV único](docs/TPV-UNIFIED-FLOW.md), [Hito TPV-01](docs/TPV-MILESTONE-01-UNIFIED-CORE.md) y [manifiesto histórico](docs/ARCHIVE-MANIFEST.md).
 - **Pruebas online:** autorizadas por el propietario en el sitio y colecciones actuales durante desarrollo, una vez completados los gates técnicos y verificado el destino de escritura. Los datos sintéticos se resetearán antes de productionActivationAt. CI offline no acredita sincronización Git-Wix ni Runtime. TPV: `saleReady=false`, `paymentVerified=false`, `persisted=false`.
 
