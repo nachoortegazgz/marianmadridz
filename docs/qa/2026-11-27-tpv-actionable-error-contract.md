@@ -1,57 +1,60 @@
-# TPV actionable error contract — 2026-11-27
+# TPV operational policy and error contract — 2026-11-27
 
-## Decision and scope
+## Decision
 
-The TPV backend uses one public error envelope for caught WebMethod failures. The canonical formatter is `src/backend/tpv/tpvError.js`:
+PR #651 consolidates TPV errors, write guards and data integrity without a parallel runtime or environment-wide write switch.
 
-- Actionable errors preserve their stable `code`, user-facing message, remediation steps, technical detail and retryability.
-- Legacy string error codes remain stable; they are not replaced by a generic fallback code.
-- Unknown exceptions receive a safe public message, bounded technical detail and non-retryable default.
-- `errorResult` returns the common `{ status, data, error, traceId }` shape and allows operation metadata such as `persisted` and `recoverable`.
+## Public error contract
 
-The formatter is used by cashier/session, cash movement, movement/audit export, closure/ticket, catalog, payment-validation and audit-read WebMethods. The sales/refund `tpvEnvelope` delegates to the same formatter, preserving domain-specific messages while exposing the common technical-detail/retryability fields. The movement export also filters explicit simulated rows and catches its authorization failure inside the same error boundary.
+Canonical formatter: `src/backend/tpv/tpvError.js`.
 
-## Physical TPV writer routing
+- Envelope: `status`, `data`, `error`, `traceId`.
+- Stable `code`, safe user message and actionable remediation.
+- Optional metadata: `retryable`, `persisted`, `recoverable`, `auditPersisted`.
+- Browser-visible `technicalDetail` is the stable error code only. Raw `Error.message`, provider payloads, tokens, credentials and stack traces are not forwarded.
+- Unknown exceptions receive a safe fallback code/message and are non-retryable by default.
+- Sales/refund envelopes and affected cashier, catalog, movement, payment, closure, audit and export WebMethods use the same normalizer.
 
-`MovimientosCaja_beforeInsert` routes `recordSource === TPV_LEDGER_SOURCE` through the canonical physical-movement schema and returns before invoice/F1 validation. Other movement records continue through the fiscal document validation path. This prevents physical cash movements from being incorrectly blocked by invoice-only requirements.
+## Write and deletion policy
 
-## Append-only CMS hooks
+- `bulkRemove` and `assertBulkRemoveAllowed` throw `CMS_BULK_DELETE_PROHIBITED`.
+- `removeById` performs only logical retirement through conditional bulk patch for approved ephemeral controls: DUAL_CACHE, DAYS_CACHE, DISPLAY_TOKEN, SLOT_LOCK and RATE_LIMIT. It verifies the updated item ID; no CMS row is physically deleted.
+- Cron cleanup retires caches, tokens, locks and rate limits with bounded concurrency. Idempotency, system flags and audit/compensation evidence are retained rather than purged.
+- Physical cash movements, accounting entries, fiscal ledgers, closure evidence, staff-time ledgers and webhook events remain append-only. Corrections require new traceable events.
+- Commercial intents/projections can only be updated through validated, authorized backend paths.
 
-- `MovimientosCaja_beforeUpdate` and `MovimientosCaja_beforeRemove` throw `MOVIMIENTOS_CAJA_APPEND_ONLY`.
-- `LibroAsientosContablesDetalle_beforeUpdate` and `LibroAsientosContablesDetalle_beforeRemove` throw `ACCOUNTING_LEDGER_APPEND_ONLY`.
-- `HistoricoCierresZ` update/remove throw `HISTORICO_CIERRES_Z_APPEND_ONLY`.
-- `RegistrosHorariosStaff` update/remove throw `STAFF_TIME_LEDGER_APPEND_ONLY`.
-- `ControlOperativo/WEBHOOK_EVENT` rejects both update and remove with an actionable append-only error.
-- `TransaccionesTPV_beforeRemove` resolves the requested identifier, verifies that the target exists using the strong DAL read, then throws `TPV_TRANSACTIONS_APPEND_ONLY`. Both string and `{ _id }` hook arguments are accepted.
-- The errors include remediation and a sanitized context snapshot. No hook performs a delete or changes an existing ledger record.
+## TPV physical writer and reader
 
-The existing controlled update policy for pending commercial intents is unchanged; this change specifically prohibits deletion. Fiscal, accounting and physical cash ledgers remain immutable.
+- `MovimientosCaja_beforeInsert` routes `recordSource=TPV_LEDGER` through the physical-movement contract, separate from invoice/F1 validation.
+- The operational TPV reader checks movement-to-collection mapping, transaction identity, source, trace, sequence, timestamp, hash and fiscal envelope before returning a record.
+- Historical movement aliases remain readable only when the record satisfies the ledger envelope; no generic REAL/SYNTHETIC/SIMULATION environment classification is used.
+- Explicit smoke/fixture markers are filtered from fiscal and receipt reads where required. Generic `synthetic=true` or `sourceType` alone does not classify a record.
+- Accounting-ledger lock acquisition and release use versioned compare-and-set and verify the updated item ID.
 
-## Operational guard boundary
+## CMS hooks
 
-The `assertTpvOperationalLedgerConfigured("physical"|"audit")` checks and the corresponding operator-context resolution now execute inside each affected WebMethod's `try/catch`. Configuration, authorization and context-resolution failures therefore use the same normalized error contract. Authorization checks remain mandatory and are not bypassed.
+- Physical cash, accounting ledger, closure evidence and staff-time ledger reject update/remove.
+- `ControlOperativo/WEBHOOK_EVENT` rejects update/remove.
+- `TransaccionesTPV` rejects remove; validated pending-intent updates remain distinct from append-only ledger updates.
+- No hook performs physical deletion or rewrites an existing ledger record.
 
-## Fiscal read-model safety
+## Regression evidence
 
-The canonical `isExplicitSimulationLedgerRecord` classifier is applied by booking-receipt lookup, cash/fiscal chain-head readers, movement export and the fiscal aggregator. Only explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger; the runtime does not classify records by environment or by a REAL/SYNTHETIC field. `recordTimestamp` remains neutral metadata.
+CI on code HEAD `7771f4c6bb7da61ecf60bd58708b26d5331745dd`:
 
-## Regression coverage
+- Layer 1: 29 suites / 376 tests PASS.
+- Layer 2: 16 suites / 249 tests PASS.
+- Complete offline suite: 81 suites / 763 tests PASS.
+- Gitleaks full-history scan, npm audit, Wix eCommerce cart/transactions SDK contracts, TPV SDK contract and ESLint: PASS.
 
-Offline coverage now verifies:
-
-- Actionable-error metadata preservation and legacy error-code stability.
-- Generic exception fallback and trace/persistence metadata.
-- Append-only errors for physical cash, accounting ledger and commercial TPV intent deletion.
-- String and object-form `TransaccionesTPV` identifiers and missing-record behavior.
-- Placement of physical/audit configuration checks and operator resolution inside the relevant WebMethod `try` blocks.
+The suite includes tests for raw-error sanitization, append-only hooks, bulk-delete prohibition, logical retirement, cron retention, TPV ledger validation, explicit fixture markers and accounting-lock CAS.
 
 ## Validation boundary
 
-The change is code- and test-suite scoped. It does not publish the Wix site, mutate live CMS data, close or reuse an open cash session, initiate payment operations, or submit records to AEAT. CI is the authoritative executable test result for this branch. Wix Runtime E2E remains a separate gate and must not be inferred from offline tests.
+No Wix site publication, live CMS write, cash-session mutation, payment, refund, AEAT submission, terminal action or external notification was performed. CI PASS does not prove Wix Preview/Runtime behavior or Git-to-Wix synchronization.
 
+## Remaining work
 
-## Pendientes fuera del alcance de este cambio
-
-- Auditar `src/backend/eventLog.js` y todos sus consumidores para decidir y aplicar, si corresponde, el contrato global de `transactionId`. El writer legacy no queda cubierto por el cambio P0 de `cajas.web.js`.
-- Completar el mapping AEAT oficial (alta/anulación, tipo de factura, serie/número, fecha, importes y hash previo) antes de conectar `computeAeatAltaHash` o `computeAeatAnulacionHash`. No recalcular históricos.
-- Ejecutar Wix Runtime E2E con fixture/sesión sintética aislada y writer canónico. No reutilizar la caja ABIERTA ni inferir Runtime PASS de CI.
+- Audit `src/backend/eventLog.js` and every consumer before deciding/applying global mandatory `transactionId`. The legacy writer still has a `TX_<sequenceNumber>` fallback; PR #650 covers the manual fiscal writer, not this global scope.
+- Verify official AEAT alta/anulación hash mapping before connecting AEAT hash functions. Never recalculate historical records.
+- Execute Wix Preview/Runtime E2E with an isolated fixture/session and canonical writer. Do not reuse the open `CajaActual` singleton.
