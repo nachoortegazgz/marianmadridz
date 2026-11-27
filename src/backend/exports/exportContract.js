@@ -51,6 +51,7 @@ function countValue(value, code) {
 }
 
 function toMinorUnits(value, code) {
+    if (value === null || value === undefined || value === "") throw new Error(code);
     const amount = Number(value);
     if (!Number.isFinite(amount)) throw new Error(code);
     const minor = Math.round(amount * 100);
