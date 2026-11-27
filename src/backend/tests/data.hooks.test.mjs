@@ -395,7 +395,7 @@ test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash mo
   const row = { _id: 'cash-movement-real', movementType: 'VENTA', recordSource: 'INTERNAL', traceId: 'real-ledger', sequenceNumber: 1 };
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
   await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }), /Modificacion de MovimientosCaja/);
-  await assert.rejects(
+  assert.throws(
     () => H.MovimientosCaja_beforeRemove(row._id),
     (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
   );
@@ -765,7 +765,10 @@ test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, accountCode: 'bad' } }), /accountCode/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert((({ journalEntryId, ...rest }) => rest)(valid)), /requires TEXT journalEntryId/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }), /append-only/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'), /append-only/);
+  assert.throws(
+    () => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'),
+    (error) => error?.code === "ACCOUNTING_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 
