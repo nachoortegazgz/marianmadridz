@@ -17,11 +17,15 @@ Reglas de trabajo:
 
 ---
 
+## CAPA 3 — EXPORTACIÓN PARA REGISTRO EXTERNO — 2026-11-27
+
+PR #641 añade `prepareExternalRegistryPackage` (Admin-only, autorización backend y rate limit), contrato trimestral JSON versionado, checksum SHA-256, minimización de campos y lectura fiscal estricta `recordNature=REAL`. Solo prepara el paquete en memoria; no escribe CMS ni envía a SharePoint/Power Automate. La configuración fiscal legal y el corte de activación siguen ausentes, por lo que la exportación real falla cerrada. No equivale a runtime online ni a integración externa conectada. Detalle: [auditoría Capa 3](audits/2026-11-27-capa3-export-preparation.md).
+
 ## AUDITORÍA WIX / TPV / CLI — 2026-11-27
 
-**Auditoría actual:** [2026-11-27-wix-site-and-tpv-cli-audit.md](audits/2026-11-27-wix-site-and-tpv-cli-audit.md). Main `d95c2321f5227e987b22455150fd7a62b4129fa0`; PR #638 integrada. CI run `45948074849`: 80 suites / 759 tests / 0 fallos. Wix Site Context: Draft, Editor clásico, Velo activo, actualizado 05:37; `published=false`; 9 páginas estáticas y 2 dinámicas. TPV está registrado como `/blank` (ID `yl5th`), no se acredita `/tpv` como ruta actual. CMS: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78.
+**Auditoría actual:** [2026-11-27-wix-site-and-tpv-cli-audit.md](audits/2026-11-27-wix-site-and-tpv-cli-audit.md). `main` integra PR #638, #640 y #641. CI PR #640 run `45952964585`: 81 suites / 764 tests / 0 fallos; CI PR #641 run `45952999105`: 80 suites / 762 tests / 0 fallos. Wix Site Context read-back 05:37: Draft, Editor clásico, Velo activo, `published=false`; 9 páginas estáticas y 2 dinámicas. TPV `/blank` (ID `yl5th`). CMS read-back: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78. Los esquemas CMS recibieron campos opcionales de clasificación; no se mutaron registros.
 
-**TPV:** el HTML está en MODO CONSULTA; tarifa personalizada y métodos no incluidos en V1 siguen deshabilitados. `saleReady=false` por gates fiscales, de pago y presentación de precios. `registrarVenta()` puede persistir una intención `PENDING_PAYMENT` aunque la cotización no esté lista; no confirma pago ni crea movimiento físico. La clasificación temporal `recordTimestamp`/`productionActivationAt`/`recordNature` está documentada pero no implementada en `src/`; `sourceType` se fija como `SYNTHETIC`. Resolver antes de actividad real.
+**TPV:** el HTML sigue en MODO CONSULTA y `saleReady=false` por gates fiscales, de pago y presentación de precios. PR #640 implementa clasificación backend UTC (`recordTimestamp`/`productionActivationAt`/`recordNature`), metadatos de registros y alinea `registrarVenta()` con los blockers de `validarVentaBorrador()`. Sin configuración/corte de producción, los registros se clasifican `SYNTHETIC`. `TransaccionesTPV` queda como intención comercial no contable; `MovimientosCaja` es el ledger físico canónico. No hay venta, cobro ni runtime Wix certificados.
 
 **Wix CLI:** existe workflow manual `wix-tpv-preview.yml` que crea Preview no publicador y ejecuta smoke read-only. No se pudo disparar desde esta integración; el smoke no llama WebMethods ni prueba interacciones. No se ha ejecutado Preview ni Wix Runtime. No hay escrituras CMS ni publicación en esta auditoría.
 
