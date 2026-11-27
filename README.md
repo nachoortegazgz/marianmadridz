@@ -12,8 +12,8 @@
 El baseline de `main` al iniciar esta intervención es `7a7e171357090c18d01874d8deb4368344cd5af6`. Las decisiones integradas eliminan los interruptores globales de escritura fiscal/contable, sin eliminar validación fiscal, autorización, integridad, idempotencia ni concurrencia. La revisión de errores accionables e inmutabilidad TPV está en la rama `fix/tpv-actionable-errors-and-guards` y pendiente de CI/merge. La aceptación Runtime y la habilitación productiva siguen pendientes. El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
 
 - **Main (baseline de esta revisión):** `7a7e171357090c18d01874d8deb4368344cd5af6` (27-11-2026).
-- **TPV:** PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, replay con fingerprint y validación de contrato pre-insert. La integración AEAT hash y el Runtime E2E siguen pendientes. El TPV continúa en MODO CONSULTA; no se acredita venta persistida, pago, movimiento físico ni cierre Runtime.
-- **Clasificación:** `recordTimestamp` y `recordNature` los genera/deriva backend. La ausencia del singleton `MapaStaff/CONFIG_SISTEMA` y de `productionActivationAt` mantiene los registros nuevos como `SYNTHETIC`.
+- **TPV:** PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, replay con fingerprint y validación pre-insert. PR #651 prepara errores accionables, escritura sin bloqueos globales fiscales/contables, unificación de lectores y política global no-delete. CI final y Wix Runtime E2E siguen pendientes; no se declara venta/cobro/cierre online validado.
+- **Identidad de registros:** todos los entornos usan el mismo contrato TPV. No se clasifica ni filtra por `REAL`, `SYNTHETIC`, `SIMULATION` o equivalentes; `recordTimestamp` es metadato UTC neutro.
 - **Colecciones:** `TransaccionesTPV` contiene intenciones comerciales pendientes no contables; `MovimientosCaja` es el ledger físico canónico; `ControlOperativo` guarda locks/auditoría; `CajaActual` proyecta la sesión.
 - **Bookings:** lectura read-only de 11 IDs: 6 proyecciones `CitasF2` muestran CONFIRMED/PENDING mientras Bookings V2 devuelve CANCELED. Es un fallo de coherencia abierto; no se han mutado reservas.
 - **Capa 3:** PR #641 integrada; paquete trimestral determinista Admin-only en memoria. No hay transporte SharePoint/Graph/Power Automate E2E.
@@ -40,7 +40,7 @@ El baseline de `main` al iniciar esta intervención es `7a7e171357090c18d01874d8
 - CMS es SSOT transaccional; SharePoint es repositorio de evidencia, no fuente de verdad.
 - El frontend presenta/orquesta; backend/WebMethods validan permisos, identidad, catálogo, importes y reglas.
 - No aceptar clasificación temporal enviada por cliente ni exponer secretos.
-- Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se borran ni sobrescriben; correcciones mediante registros rectificativos trazables.
+- **Borrado:** prohibido a nivel DAL y hooks CMS, individual o masivo. Los registros operativos/comerciales editables se actualizan por WebMethods validados. Los ledgers fiscales, contables, laborales y cierres ya contabilizados conservan rectificación trazable en lugar de sobrescritura directa.
 - No modificar la caja singleton existente ni históricos durante QA sin una precondición de aislamiento demostrada.
 
 ## Validación
