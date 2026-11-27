@@ -226,12 +226,19 @@ export const SDK_CONFIG = Object.freeze({
     API_MS: 15000,
     CHECKOUT_MS: 20000,
     BOOKING_CREATION_MS: 25000,
+    WATCHDOG_MS: 15000,
     WEBHOOK_MS: 30000,
   }),
 
   CACHE: Object.freeze({
     STAFF_TTL_MS: 300000,
-    MAX_ENTRIES: 100,
+    STAFF_MAX_ENTRIES: 100,
+    SERVICES_TTL_MS: 120000,
+    SERVICES_MAX_ENTRIES: 500,
+  }),
+
+  SECURITY: Object.freeze({
+    SECRET_CACHE_TTL_MS: 300000,
   }),
 
   EVENTS: Object.freeze({
@@ -246,6 +253,7 @@ export const SDK_CONFIG = Object.freeze({
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
+    FISCAL_DAILY_MAX_PAGES: 50,
   }),
 
   EMAIL: Object.freeze({
