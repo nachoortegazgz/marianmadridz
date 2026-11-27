@@ -972,7 +972,7 @@ export function readControlPayload(doc) {
 }
 
 export function TransaccionesTPV_beforeInsert(item) {
-    const normalized = { ...original, ...item };
+    const normalized = { ...item };
     try {
         assertTransaccionesTPVRecord(normalized);
         return normalized;
