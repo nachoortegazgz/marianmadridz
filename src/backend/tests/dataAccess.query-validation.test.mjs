@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryItems, query, wql } from "backend/dataAccess";
+import { queryItems, query, wql, getItem } from "backend/dataAccess";
+import * as DAL from "backend/dataAccess";
 
 test("DATA-QUERY-01 rejects negative, fractional and out-of-range offsets", async () => {
     for (const offset of [-1, 1.5, 2147483648]) {
@@ -27,4 +28,24 @@ test("DATA-QUERY-03 array membership is explicit and unsupported contains helper
     assert.equal(wql.hasSome("resourceIds", ["resource-1"]).resourceIds.$hasSome[0], "resource-1");
     assert.equal(wql.hasAll("resourceIds", ["resource-1", "resource-2"]).resourceIds.$hasAll.length, 2);
     assert.equal(wql.contains, undefined);
+});
+
+
+test("DATA-QUERY-04 getItem distinguishes invalid arguments from a genuinely missing item", async () => {
+    await assert.rejects(
+        getItem("", "valid-id"),
+        { code: "DATA_COLLECTION_REQUIRED" }
+    );
+    await assert.rejects(
+        getItem("TestCollection", ""),
+        { code: "DATA_ITEM_ID_REQUIRED" }
+    );
+    await assert.rejects(
+        getItem("TestCollection", 123),
+        { code: "DATA_ITEM_ID_REQUIRED" }
+    );
+});
+
+test("DATA-QUERY-05 unused queryReferencedItems API is removed after consumer audit", () => {
+    assert.equal(DAL.queryReferencedItems, undefined);
 });
