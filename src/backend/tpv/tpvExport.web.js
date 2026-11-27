@@ -4,7 +4,6 @@ import { makeTraceId } from "public/mmUtils";
 import { BUSINESS_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_EVENT_MOVEMENT_TYPES, TPV_COLLECTIONS } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 import { normalizeTpvError } from "backend/tpv/tpvError";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 const PAGE_SIZE = 1000;
 const EXPORT_FIELDS = Object.freeze([
@@ -94,7 +93,7 @@ export const exportarMovimientos = webMethod(
                 consistency: CONSISTENCY.STRONG,
             });
             const records = page.items
-                .filter((item) => !isExplicitSimulationLedgerRecord(item))
+                
                 .filter((item) => !sessionId || item.payloadFiscal?.sessionId === sessionId)
                 .map(projectRecord);
             const contenido = formato === "csv" ? toCsv(records) : records;
