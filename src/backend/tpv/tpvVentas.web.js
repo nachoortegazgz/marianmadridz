@@ -10,6 +10,7 @@ import { BUSINESS_COLLECTIONS, FISCAL_RUNTIME_POLICY, TPV_RUNTIME_POLICY } from 
 import { CONSISTENCY, getItem, insertItem } from "backend/dataAccess";
 import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { toMinorUnits } from "backend/tpv/tpvUtils";
+import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -68,6 +69,25 @@ function preparationFailure(error, traceId) {
     );
 }
 
+function buildSaleReadiness(prepared, validated) {
+    const containsProducts = prepared.lineas.some((line) => line.tipoLinea === "PRODUCTO");
+    const writeV1Blockers = getTpvWriteV1Blockers({
+        lineas: prepared.lineas,
+        pagos: validated.pagos,
+        totalVenta: validated.totalVenta,
+    });
+    const saleReadinessBlockers = [
+        "FISCAL_CONFIG_UNVERIFIED",
+        "PAYMENT_NOT_VERIFIED",
+        "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
+        ...writeV1Blockers,
+    ];
+    if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
+    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) saleReadinessBlockers.push("FISCAL_WRITER_DISABLED");
+    if (prepared.taxIncludedInPrice !== true) saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
+    return { containsProducts, writeV1Blockers, saleReadinessBlockers };
+}
+
 /**
  * Validates a sale using current Wix Catalog V3 / Bookings prices and Wix tax
  * calculation. Client-supplied prices, taxes and totals are deliberately ignored.
@@ -94,27 +114,8 @@ export const validarVentaBorrador = webMethod(
                 desgloseImpuestos: prepared.lineas[index].desgloseImpuestos,
             }));
 
-            const containsProducts = prepared.lineas.some((line) => line.tipoLinea === "PRODUCTO");
-            const writeV1Blockers = getTpvWriteV1Blockers({
-                lineas: prepared.lineas,
-                pagos: validated.pagos,
-                totalVenta: validated.totalVenta,
-            });
-            const saleReadinessBlockers = [
-                "FISCAL_CONFIG_UNVERIFIED",
-                "PAYMENT_NOT_VERIFIED",
-                "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
-            ];
-            saleReadinessBlockers.push(...writeV1Blockers);
-            if (containsProducts) {
-                saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
-            }
-            if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-                saleReadinessBlockers.push("FISCAL_WRITER_DISABLED");
-            }
-            if (prepared.taxIncludedInPrice !== true) {
-                saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
-            }
+            const saleReadiness = buildSaleReadiness(prepared, validated);
+            const { containsProducts, writeV1Blockers, saleReadinessBlockers } = saleReadiness;
 
             return tpvOk({
                 ...validated,
@@ -203,6 +204,8 @@ async function appendSaleAudit(record, traceId) {
             currency: record.currency,
             status: record.status,
             sourceType: record.sourceType,
+            recordTimestamp: record.recordTimestamp,
+            recordNature: record.recordNature,
             requiresReconciliation: record.requiresReconciliation === true,
             requestFingerprint: record.requestFingerprint,
         },
@@ -317,6 +320,16 @@ export const registrarVenta = webMethod(
             return salePendingEnvelope(existing, { replayed: true, auditPersisted, traceId });
         }
 
+        const saleReadiness = buildSaleReadiness(prepared, validated);
+        if (saleReadiness.saleReadinessBlockers.length > 0) {
+            return tpvError(
+                "TPV_SALE_NOT_READY",
+                "La venta no supera los mismos requisitos de preparación que muestra el TPV. No se ha creado ninguna intención comercial.",
+                saleReadiness.saleReadinessBlockers,
+                { persisted: false, retryable: false, traceId, saleReady: false }
+            );
+        }
+
         try {
             return await withTpvSessionLock(sessionId, traceId, async () => {
                 const winner = await readExisting();
@@ -334,8 +347,13 @@ export const registrarVenta = webMethod(
                     throw new Error("TPV_SESSION_NOT_OPEN");
                 }
 
+                if (saleReadiness.saleReadinessBlockers.length > 0) {
+                    throw new Error("TPV_SALE_NOT_READY");
+                }
+                const recordMetadata = await createTpvRecordMetadata();
                 const draft = await createSaleDraftOrder(prepared);
                 const record = {
+                    ...recordMetadata,
                     _id: idempotencyKey,
                     sessionId,
                     orderId: draft.orderId,
@@ -356,9 +374,9 @@ export const registrarVenta = webMethod(
                     })),
                     operatorResourceId: operator.operatorResourceId,
                     operatorId: operator.operatorId,
-                    createdAt: new Date(),
+                    createdAt: new Date(recordMetadata.recordTimestamp),
                     status: "PENDING_PAYMENT",
-                    sourceType: "SYNTHETIC",
+                    sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                     requiresReconciliation: draft.requiresReconciliation,
                     draftOrderReason: draft.reason,
                     requestFingerprint,

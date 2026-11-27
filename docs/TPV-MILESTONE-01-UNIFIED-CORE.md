@@ -49,7 +49,7 @@ El hito termina con código completo y probado offline, writer canónico impleme
 - Generar secuencia y hash previo bajo lock CAS, con cadena SHA-256 determinista e idempotencia durable.
 - Resolver consistencia entre insert append-only y proyección `CajaActual`: el ledger es fuente de evidencia; la proyección debe ser idempotente, recuperable y reconciliable.
 - No asumir transacciones multi-documento en Wix Data. Diseñar recuperación si falla una proyección después del insert.
-- No crear `TransaccionesTPV`, otro ledger ni inventario paralelo. `ControlOperativo` se limita a locks/estado técnico; `CajaActual` es proyección de caja/sesión.
+- No crear un segundo ledger físico, fiscal ni inventario paralelo. `TransaccionesTPV` es la colección existente para intenciones comerciales pendientes/no contables; `MovimientosCaja` sigue siendo el ledger físico canónico; `ControlOperativo` se limita a locks/estado técnico y auditoría; `CajaActual` es proyección de caja/sesión.
 
 ### 4. Unificar hooks y políticas
 - Alinear `MovimientosCaja_beforeInsert`, `dataAccessPolicy.js` y validadores con el único contrato físico.

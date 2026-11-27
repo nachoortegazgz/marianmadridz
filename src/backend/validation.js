@@ -262,6 +262,9 @@ export function assertMovimientosCajaRequiredFields(item) {
         if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
             throw new Error("SCHEMA_VIOLATION: TPV physical recordTimestamp must be DATETIME");
         }
+        if (!["SYNTHETIC", "REAL"].includes(item.recordNature)) {
+            throw new Error("SCHEMA_VIOLATION: TPV physical recordNature invalid");
+        }
         if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
             !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
             throw new Error("SCHEMA_VIOLATION: TPV physical SHA-256 chain invalid");
@@ -368,6 +371,12 @@ export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
     }
+    if (item.recordNature !== undefined || item.recordTimestamp !== undefined) {
+        if (!["SYNTHETIC", "REAL"].includes(item.recordNature) ||
+            !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
+            throw new Error("SCHEMA_VIOLATION: CajaActual TPV record metadata invalid");
+        }
+    }
     if (item.sequenceCounters !== undefined && item.sequenceCounters !== null &&
         (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
         throw new Error("SCHEMA_VIOLATION: CajaActual.sequenceCounters must be an OBJECT");
@@ -393,6 +402,15 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
     }, "recordType");
 
     if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        const activationAt = item.productionActivationAt;
+        if (activationAt != null && activationAt !== "") {
+            const activationDate = activationAt instanceof Date
+                ? activationAt
+                : (typeof activationAt === "string" && /Z$/.test(activationAt) ? new Date(activationAt) : null);
+            if (!activationDate || Number.isNaN(activationDate.getTime())) {
+                throw new Error("SCHEMA_VIOLATION: MapaStaff.productionActivationAt must be a valid UTC DATETIME");
+            }
+        }
         const hasTaxId = item.taxId != null && String(item.taxId).trim() !== "";
         const hasLegalName = item.legalName != null && String(item.legalName).trim() !== "";
         if (!partial && (!hasTaxId || !hasLegalName)) {
@@ -497,11 +515,15 @@ export function assertCanonicalControlFields(item) {
 }
 
 export function isMutableSyntheticTpvIntent(item) {
+    const legacySynthetic = item?.sourceType === "SYNTHETIC" &&
+        item?.recordNature == null && item?.recordTimestamp == null;
+    const currentSynthetic = item?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        item?.recordNature === "SYNTHETIC";
     return Boolean(
         item &&
         typeof item === "object" &&
         !Array.isArray(item) &&
-        item.sourceType === "SYNTHETIC" &&
+        (legacySynthetic || currentSynthetic) &&
         item.status === "PENDING_PAYMENT" &&
         item.orderId == null &&
         item.requiresReconciliation === true &&
@@ -550,7 +572,12 @@ export function assertTransaccionesTPVRecord(item) {
             throw new Error("SCHEMA_VIOLATION: TransaccionesTPV minor amount invalid: " + field);
         }
     }
-    if (item.status !== "PENDING_PAYMENT" || item.sourceType !== "SYNTHETIC" ||
+    const legacySynthetic = item.sourceType === "SYNTHETIC" &&
+        item.recordNature == null && item.recordTimestamp == null;
+    const currentRecord = item.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        ["SYNTHETIC", "REAL"].includes(item.recordNature) &&
+        item.recordTimestamp instanceof Date && !Number.isNaN(item.recordTimestamp.getTime());
+    if (item.status !== "PENDING_PAYMENT" || (!legacySynthetic && !currentRecord) ||
         item.requiresReconciliation !== (item.orderId == null) ||
         !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
         typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||

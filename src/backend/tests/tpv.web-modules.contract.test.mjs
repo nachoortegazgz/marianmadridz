@@ -245,7 +245,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.doesNotMatch(sales, /procesarDevolucion/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(sales, /PENDING_PAYMENT/);
-    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.ok(sales.includes("sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE"));
+    assert.match(sales, /createTpvRecordMetadata/);
+    assert.match(sales, /TPV_SALE_NOT_READY/);
     assert.match(sales, /getMyCajeroContext/);
     assert.match(sales, /prepareTpvSaleCatalog/);
     assert.match(sales, /catalogVerified: true/);
@@ -505,13 +507,16 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
     assert.match(sales, /invalidProductIds\.join\(", "\)/);
 });
 
-test("registrarVenta persists a pending synthetic intent without creating external Wix orders", async () => {
+test("registrarVenta blocks unready intents and avoids external Wix orders", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /draftOrders|createDraftOrder|auth\.elevate/);
     assert.match(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED/);
     assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
     assert.match(sales, /status: "PENDING_PAYMENT"/);
-    assert.match(sales, /sourceType: "SYNTHETIC"/);
+    assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
+    assert.match(sales, /createTpvRecordMetadata/);
+    assert.match(sales, /TPV_SALE_NOT_READY/);
+    assert.match(sales, /saleReadinessBlockers/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
     assert.match(sales, /status: "SKIPPED", reason: record\.draftOrderReason/);
     assert.doesNotMatch(sales, /wixPay|checkout\.create|createPayment|capturePayment/);

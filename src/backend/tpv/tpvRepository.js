@@ -5,6 +5,7 @@ P1/P3 OFFICIAL REFERENCES:
 - Wix Payments API: "Processing Payments" — idempotent transaction identity
   (wixTransactionId / stable transaction key).
 */
+import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
@@ -613,6 +614,8 @@ function _sessionCajaPatch(caja, record, eventHash) {
     return {
         ...caja,
         cashRegisterStatus: "ABIERTA",
+        recordTimestamp: record.recordTimestamp,
+        recordNature: record.recordNature,
         openedAt,
         closedAt: null,
         openedBy: record.operatorId || record.cashierMemberId || null,
@@ -697,7 +700,7 @@ function assertSameRequest(existing, fingerprint) {
 function _buildTpvLedgerItem(collection, key, record, fingerprint) {
     const movementType = TPV_EVENT_MOVEMENT_TYPES[collection];
     if (!movementType) throw new Error("TPV_COLLECTION_NOT_ALLOWED");
-    const now = record.createdAt || record.generatedAt || record.occurredAt || new Date();
+    const now = record.recordTimestamp || record.createdAt || record.generatedAt || record.occurredAt || new Date();
     const timestamp = now instanceof Date ? now : new Date(now);
     if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_RECORD_TIMESTAMP_INVALID");
     const transactionId = _testTransactionId(collection, key);
@@ -743,6 +746,7 @@ function _buildTpvLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash,
         recordTimestamp: timestamp,
+        recordNature: record.recordNature,
         schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
         traceId,
         movementType,
@@ -818,6 +822,8 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
                 assertTpvCajaIntegrity(caja, { allowBootstrap: true });
                 const existing = await findByIdempotencyKey(collection, key);
                 if (existing?.sessionId === record.sessionId) return assertSameRequest(existing, fingerprint);
+                const recordMetadata = await createTpvRecordMetadata();
+                Object.assign(record, recordMetadata);
                 if (caja.closedAt == null && _sessionFromCaja(caja)) {
                     throw new Error("TPV_PREVIOUS_SESSION_NOT_CLOSED");
                 }
@@ -856,6 +862,8 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
     )) {
         throw new Error("TPV_PHYSICAL_LEDGER_CHAIN_BROKEN");
     }
+    const recordMetadata = await createTpvRecordMetadata();
+    Object.assign(record, recordMetadata);
     const physicalRecord = {
         ...record,
         sequenceNumber: previousSequence + 1,
@@ -1090,7 +1098,9 @@ export async function appendTpvAudit({
         return { item: existing, replayed: true };
     }
 
+    const recordMetadata = await createTpvRecordMetadata();
     const record = {
+        ...recordMetadata,
         _id: eventId,
         controlType: CONTROL_TYPE.TPV_AUDIT_EVENT,
         dedupeKey: key,
