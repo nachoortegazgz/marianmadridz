@@ -680,6 +680,7 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
     assert.match(exportModule, /nextCursor:/);
     assert.match(exportModule, /data: resultData/);
     assert.match(exportModule, /recordSource/);
+    assert.match(exportModule, /TPV_EVENT_MOVEMENT_TYPES\\[TPV_COLLECTIONS\\.MOVIMIENTOS_CAJA\\]/);
     assert.doesNotMatch(exportModule, /payloadFiscal:|taxAmount|taxBase|invoice/);
     assert.match(permissions, /closeSession: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /issueTicketX: staff\.rolWebsite === "ADMIN"/);
