@@ -80,10 +80,8 @@ export const generarTicketX = webMethod(
                     queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("sessionId", sessionId)),
                     queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, wql.eq("sessionId", sessionId)),
                 ]);
-                const timestamp = new Date();
                 const ticketX = {
                     sessionId,
-                    timestamp,
                     totales: {
                         totalVentas: fromMinorUnits(totals.grossSalesMinor),
                         totalEfectivo: fromMinorUnits(totals.cashMinor),
@@ -113,7 +111,10 @@ export const generarTicketX = webMethod(
                 });
                 return {
                     status: "SUCCESS",
-                    ticketX: audit.item?.payload?.ticketX || ticketX,
+                    ticketX: {
+                        ...(audit.item?.payload?.ticketX || ticketX),
+                        timestamp: audit.item?.processedAt || new Date(),
+                    },
                     replayed: audit.replayed,
                     traceId,
                 };
