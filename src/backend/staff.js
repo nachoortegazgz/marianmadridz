@@ -36,9 +36,9 @@ const log = logger;
 // =============================================================================
 // CONSTANTES
 // =============================================================================
-const CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.STAFF_TTL_MS) || 300000;
-const CACHE_MAX_ENTRIES = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 100;
-const API_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
+const CACHE_TTL_MS = SDK_CONFIG.CACHE.STAFF_TTL_MS;
+const CACHE_MAX_ENTRIES = SDK_CONFIG.CACHE.MAX_ENTRIES;
+const API_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.API_MS;
 
 // Bookings Staff Members API oficial.
 const queryStaffMembersElevated = auth.elevate(staffMembers.queryStaffMembers);
