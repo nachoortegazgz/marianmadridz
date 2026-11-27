@@ -497,11 +497,15 @@ export function assertCanonicalControlFields(item) {
 }
 
 export function isMutableSyntheticTpvIntent(item) {
+    const legacySynthetic = item?.sourceType === "SYNTHETIC" &&
+        item?.recordNature == null && item?.recordTimestamp == null;
+    const currentSynthetic = item?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        item?.recordNature === "SYNTHETIC";
     return Boolean(
         item &&
         typeof item === "object" &&
         !Array.isArray(item) &&
-        item.sourceType === "SYNTHETIC" &&
+        (legacySynthetic || currentSynthetic) &&
         item.status === "PENDING_PAYMENT" &&
         item.orderId == null &&
         item.requiresReconciliation === true &&
@@ -550,7 +554,12 @@ export function assertTransaccionesTPVRecord(item) {
             throw new Error("SCHEMA_VIOLATION: TransaccionesTPV minor amount invalid: " + field);
         }
     }
-    if (item.status !== "PENDING_PAYMENT" || item.sourceType !== "SYNTHETIC" ||
+    const legacySynthetic = item.sourceType === "SYNTHETIC" &&
+        item.recordNature == null && item.recordTimestamp == null;
+    const currentRecord = item.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        ["SYNTHETIC", "REAL"].includes(item.recordNature) &&
+        item.recordTimestamp instanceof Date && !Number.isNaN(item.recordTimestamp.getTime());
+    if (item.status !== "PENDING_PAYMENT" || (!legacySynthetic && !currentRecord) ||
         item.requiresReconciliation !== (item.orderId == null) ||
         !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
         typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||
