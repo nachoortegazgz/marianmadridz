@@ -15,13 +15,15 @@ export function normalizeTpvError(
         };
     }
 
+    const message = typeof error?.message === "string" ? error.message.trim() : "";
+    const messageIsCode = /^[A-Z][A-Z0-9_]{2,119}$/.test(message);
     const suppliedCode = typeof error === "string"
         ? error.trim()
-        : error?.code;
+        : error?.code || (messageIsCode ? message : "");
     const code = String(suppliedCode || fallbackCode).slice(0, 120);
     const technicalDetail = typeof error === "string"
         ? error
-        : error?.technicalDetail || error?.message || fallbackCode;
+        : error?.technicalDetail || message || fallbackCode;
 
     return {
         code,
