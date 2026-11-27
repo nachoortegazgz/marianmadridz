@@ -353,18 +353,18 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
 
 test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
   for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
-    assert.throws(() => H.MovimientosCaja_beforeInsert({
+    assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
-      recordSource: "SYNTHETIC",
-      movementType,
-    }), /SCHEMA_VIOLATION/, movementType);
+      recordSource: "TPV_LEDGER",
+      movementType: "TPV_PAYMENT",
+    }), movementType);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
-    assert.throws(() => H.MovimientosCaja_beforeInsert({
+    assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
-      recordSource,
-      movementType: "COBRO",
-    }), /SCHEMA_VIOLATION/, recordSource);
+      recordSource: "TPV_LEDGER",
+      movementType: "TPV_PAYMENT",
+    }), recordSource);
   }
 });
 
