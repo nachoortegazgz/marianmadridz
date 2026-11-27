@@ -9,6 +9,17 @@ import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, 
 import { wql } from "backend/dataAccess";
 import { normalizeTpvError } from "backend/tpv/tpvError";
 
+function businessDateISO(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return values.year + "-" + values.month + "-" + values.day;
+}
+
 export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
@@ -87,12 +98,7 @@ export const generarTicketX = webMethod(
                     reportId: "TPV-X-" + sessionId,
                     reportType: "CONTROL_PARCIAL",
                     sessionId,
-                    businessDate: new Intl.DateTimeFormat("en-CA", {
-                        timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                        year: "numeric",
-                        month: "2-digit",
-                        day: "2-digit",
-                    }).format(generatedAt),
+                    businessDate: businessDateISO(generatedAt),
                     generatedAt,
                     generatedBy: {
                         operatorId: operator.operatorId,
