@@ -1,7 +1,7 @@
 # Alineación del widget TPV con backend y colecciones Wix
 
 Fecha: 2026-11-27  
-Estado: IMPLEMENTACIÓN EN RAMA · CI Y RUNTIME PENDIENTES
+Estado: MERGED EN MAIN · CI PRE-MERGE PASS · RUNTIME PENDIENTE
 
 ## Objetivo
 
@@ -62,8 +62,10 @@ El widget presenta un comprobante imprimible mediante el diálogo del navegador 
 ## Validación y límites
 
 - VERIFICADO: lectura CMS de `CajaActual` y sus valores legacy; lectura de esquemas y colecciones nativas documentadas en la auditoría CMS del mismo día.
-- IMPLEMENTADO EN RAMA: cambios anteriores y pruebas contractuales añadidas.
-- PENDIENTE: CI de la PR; ejecución de pruebas; Wix Preview; prueba autenticada de apertura; lectura de Ticket X; comprobación de impresión en dispositivo real.
+- MERGED: PR #658, merge commit `af73da08156a357677131629a30a6cc5bf225bc1`.
+- CI pre-merge en HEAD `b2eb170a840862244856ae7ca391703afc225a7e`: Layer 1 29 suites / 380 PASS; Layer 2 16 / 249 PASS; suite offline 81 suites / 767 PASS; contratos Wix Cart, Order Transactions y TPV SDK PASS; ESLint, npm audit y Secret scanning PASS.
+- CI post-merge: no se obtuvo run/status asociado al merge commit; no se atribuye PASS post-merge.
+- PENDIENTE: Wix Preview; prueba autenticada de apertura; lectura de Ticket X; comprobación de impresión en dispositivo real.
 - NO EJECUTADO: no se ha abierto/cerrado caja, escrito CMS, cobrado, reembolsado, generado cierre Z, enviado a AEAT ni publicado el sitio.
 
 No declarar el TPV validado en runtime o producción hasta completar esas pruebas.
