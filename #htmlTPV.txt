@@ -601,6 +601,8 @@ body {
             error.retryable = sourceError.retryable === true;
             error.requiresReconciliation = sourceError.requiresReconciliation === true;
             error.recoverable = sourceError.recoverable === true;
+            if (sourceError.outcomeUnknown === true) error.outcomeUnknown = true;
+            if (sourceError.operationMayContinue === true) error.operationMayContinue = true;
             reject(error);
           } else if (response.status === "PENDING") {
             const error = new Error(response.reason || "TPV_OPERATION_PENDING");
