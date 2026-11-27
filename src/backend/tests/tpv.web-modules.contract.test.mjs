@@ -736,7 +736,7 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
     const actionable = createActionableError({
         code: "TPV_TEST_ACTIONABLE",
         userMessage: "No se puede completar la operación.",
-        technicalDetail: "ledger unavailable",
+        technicalDetail: "TPV_TEST_ACTIONABLE",
         remediation: ["Revisar el ledger."],
         retryable: true,
     });
