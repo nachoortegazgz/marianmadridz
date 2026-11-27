@@ -5,7 +5,8 @@
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD previo a esta actualización documental: `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- HEAD de `main` tras integrar PR #671: `25b55d406b365ab8b82c70f1eb0803a5bf1f5628`.
+- Después se integró PR #661 (`c444f7aff2ad615f8711ae51c085f78e8b8985ea`), que actualiza la estrategia de pruebas Wix Classic en `tests/runtime/RUNTIME-TEST-PLAN.md` y su auditoría asociada. No modifica la evidencia CI de PR #670.
 - PR #662–#667: endurecimiento de serialización, errores de CMS, configuración, criptografía, bookingType y transactionId; integradas en main.
 - PR #668: evidencia documental inicial de Capa 0; integrada.
 - PR #670: validación DAL, GUID de jornada, normalización de errores públicos, redacción de logs y paridad de enums frontend/backend; integrada mediante squash en `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
