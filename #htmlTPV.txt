@@ -352,7 +352,7 @@ body {
         </div>
 
         <button id="saveSale" class="btn primary" style="width:100%;margin-top:14px;min-height:52px;font-size:16px;">
-          Cobrar
+          Registrar venta pendiente
         </button>
       </section>
 
@@ -497,8 +497,10 @@ body {
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
   }
-  function publicErrorMessage(code) {
-    const key = String(code || "").trim().toUpperCase();
+  function publicErrorMessage(sourceError) {
+    const e = sourceError && typeof sourceError === "object" ? sourceError : { code: sourceError };
+    if (e.userMessage) return e.userMessage;
+    const key = String(e.code || e.message || "TPV_OPERATION_FAILED").trim().toUpperCase();
     if (key.startsWith("TPV_") && key.endsWith("_PAYMENT_TOTAL_MISMATCH")) return "El desglose de pagos no coincide con el total. Ajusta los importes hasta cubrir exactamente el total pendiente.";
     if (/^TPV_INVALID_FORMAT_/.test(key)) return "El importe no tiene un formato reconocible. Usa 12,50 o 12.50; para miles, 1.234,56. No uses formatos ambiguos como 1.234.";
     if (/^TPV_INVALID_PRECISION_/.test(key)) return "El importe admite como máximo dos decimales. Ejemplo: 12,50.";
@@ -555,9 +557,33 @@ body {
     if (/^[A-Z][A-Z0-9_]+$/.test(key)) {
       return "No se ha podido completar la operación. Código: " + key + ". Revisa el estado antes de repetirla.";
     }
-    return String(code || "Se ha producido un error.");
+    return String(e.code || e.message || "Se ha producido un error.");
   }
-  function error(msg) { toast(publicErrorMessage(msg)); }
+  function normalizeError(sourceError, fallbackCode = "TPV_OPERATION_FAILED") {
+    if (sourceError && typeof sourceError === "object") {
+      return {
+        code: String(sourceError.code || fallbackCode),
+        message: sourceError.message || null,
+        userMessage: sourceError.userMessage || null,
+        technicalDetail: sourceError.technicalDetail || null,
+        remediation: Array.isArray(sourceError.remediation) ? sourceError.remediation.filter(Boolean) : [],
+        retryable: sourceError.retryable === true,
+        recoverable: sourceError.recoverable === true,
+        requiresReconciliation: sourceError.requiresReconciliation === true,
+        outcomeUnknown: sourceError.outcomeUnknown === true,
+        operationMayContinue: sourceError.operationMayContinue === true,
+        status: sourceError.status || null
+      };
+    }
+    return { code: String(sourceError || fallbackCode), message: null, userMessage: null, technicalDetail: null, remediation: [], retryable: false, recoverable: false, requiresReconciliation: false, outcomeUnknown: false, operationMayContinue: false, status: null };
+  }
+  function error(sourceError) {
+    const e = normalizeError(sourceError);
+    let message = publicErrorMessage(e);
+    if (e.status === "PENDING" || e.outcomeUnknown || e.operationMayContinue) message += " El resultado puede estar pendiente. Consulta el estado antes de repetirla.";
+    if (e.remediation.length) message += " " + e.remediation.join(" ");
+    toast(message);
+  }
 
   /* ---------- Modales ---------- */
   function openModal(title, bodyHtml, onConfirm) {
@@ -569,7 +595,7 @@ body {
         await onConfirm();
         closeModal();
       } catch (e) {
-        error(e.message);
+        error(e);
       }
     };
   }
@@ -584,56 +610,31 @@ body {
     return new Promise((resolve, reject) => {
       const id = "req-" + crypto.randomUUID().replace(/-/g, "");
       let timer = null;
-      const cleanup = () => {
-        window.removeEventListener("message", handler);
-        if (timer) clearTimeout(timer);
+      const cleanup = () => { window.removeEventListener("message", handler); if (timer) clearTimeout(timer); };
+      const rejectStructured = (source, fallbackCode) => {
+        const normalized = normalizeError(source, fallbackCode);
+        const operationError = new Error(normalized.userMessage || normalized.message || publicErrorMessage(normalized));
+        Object.assign(operationError, normalized);
+        reject(operationError);
       };
       const handler = (event) => {
         if (event.source !== window.parent || event.origin !== PARENT_ORIGIN) return;
         const data = event.data || {};
-        if (data.type === responseType && (data.messageId === id || data.requestId === id)) {
-          cleanup();
-          const response = data.payload || {};
-          if (data.error || response.status === "ERROR") {
-            const sourceError = response.error || {};
-            const error = new Error(sourceError.message || sourceError.code || data.error || "TPV_OPERATION_FAILED");
-            error.code = sourceError.code || data.error || "TPV_OPERATION_FAILED";
-            error.retryable = sourceError.retryable === true;
-            error.requiresReconciliation = sourceError.requiresReconciliation === true;
-            error.recoverable = sourceError.recoverable === true;
-            if (sourceError.outcomeUnknown === true) error.outcomeUnknown = true;
-            if (sourceError.operationMayContinue === true) error.operationMayContinue = true;
-            if (response.persisted === true || sourceError.persisted === true) error.persisted = true;
-            if (response.recoverable === true || sourceError.recoverable === true) {
-              error.recoverable = true;
-              error.operationMayContinue = true;
-            }
-            reject(error);
-          } else if (response.status === "PENDING") {
-            const error = new Error(response.reason || "TPV_OPERATION_PENDING");
-            error.code = response.reason || "TPV_OPERATION_PENDING";
-            error.status = "PENDING";
-            error.retryable = false;
-            error.requiresReconciliation = response.requiresReconciliation === true;
-            reject(error);
-          } else {
-            resolve(response.data !== undefined ? response.data : response);
-          }
+        if (data.type !== responseType || (data.messageId !== id && data.requestId !== id)) return;
+        cleanup();
+        const response = data.payload || {};
+        if (data.error || response.error || response.status === "ERROR") {
+          rejectStructured(response.error || data.error || response, "TPV_OPERATION_FAILED");
+        } else if (response.status === "PENDING") {
+          rejectStructured({ code: response.reason || "TPV_OPERATION_PENDING", status: "PENDING", retryable: false, requiresReconciliation: response.requiresReconciliation === true, outcomeUnknown: true, operationMayContinue: true }, "TPV_OPERATION_PENDING");
+        } else {
+          resolve(response.data !== undefined ? response.data : response);
         }
       };
       window.addEventListener("message", handler);
-      timer = setTimeout(() => {
-        cleanup();
-        const error = new Error("TPV_TIMEOUT");
-        error.code = "TPV_TIMEOUT";
-        error.outcomeUnknown = true;
-        error.operationMayContinue = true;
-        error.retryable = false;
-        error.requiresReconciliation = true;
-        reject(error);
-      }, 15000);
+      timer = setTimeout(() => { cleanup(); rejectStructured({ code: "TPV_TIMEOUT", outcomeUnknown: true, operationMayContinue: true, retryable: false, requiresReconciliation: true }, "TPV_TIMEOUT"); }, 15000);
       try { postToParent({ type, payload, messageId: id, version: 1 }); }
-      catch (originError) { cleanup(); reject(originError); }
+      catch (originError) { cleanup(); rejectStructured(originError, "TPV_PARENT_ORIGIN_UNAVAILABLE"); }
     });
   }
 
@@ -713,9 +714,9 @@ body {
     `, async () => {
       if (!state.customerIdentityId) throw new Error("Selecciona un cliente o utiliza Quitar cliente.");
     });
-    $("searchCustomers").onclick = () => searchCustomers().catch((e) => error(e.message));
+    $("searchCustomers").onclick = () => searchCustomers().catch((e) => error(e));
     $("customerSearch").onkeydown = (event) => {
-      if (event.key === "Enter") searchCustomers().catch((e) => error(e.message));
+      if (event.key === "Enter") searchCustomers().catch((e) => error(e));
     };
     $("clearCustomer").onclick = () => {
       state.customerIdentityId = null;
@@ -876,7 +877,7 @@ body {
         const item = items[Number(element.dataset.index)];
         selectCatalogItem(item).catch((err) => err.message === "TPV_TIMEOUT"
           ? toast("Tiempo de espera agotado.")
-          : error(err.message));
+          : error(err));
       };
     });
   }
@@ -888,10 +889,10 @@ body {
     renderCatalog(result?.items || []);
   }
 
-  $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
-  $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e.message));
+  $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e));
+  $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e));
   $("tabPersonalizada").onclick = () => toast("Tarifa personalizada no disponible: falta clasificación fiscal autorizada.");
-    $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e.message));
+    $("refreshCatalog").onclick = () => loadCatalog("SERVICES").catch((e) => error(e));
 
   /* ---------- Preparación fiscal autoritativa ---------- */
   function saleLineRequests() {
@@ -937,7 +938,7 @@ body {
       state.saleQuote = quote;
     } catch (err) {
       if (sequence !== state.quoteSequence) return;
-      state.quoteError = err.code || err.message || "TPV_SALE_PREPARATION_FAILED";
+      state.quoteError = normalizeError(err, "TPV_SALE_PREPARATION_FAILED");
     } finally {
       if (sequence === state.quoteSequence) {
         state.quoteLoading = false;
@@ -1305,7 +1306,7 @@ body {
       openModal("Resumen de caja", `
         <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
       `, async () => {});
-    } catch (e) { error(e.message); }
+    } catch (e) { error(e); }
   };
 
   $("audit").onclick = async () => {
@@ -1330,7 +1331,7 @@ body {
           }).join("") : "<p>No hay eventos de auditoría para esta sesión.</p>"}
         </div>
       `, async () => {});
-    } catch (e) { error(e.message); }
+    } catch (e) { error(e); }
   };
   function csvCell(value) {
     let text = value === null || value === undefined
@@ -1375,13 +1376,13 @@ body {
     "CASH_MOVEMENTS_EXPORT",
     "movimientos-caja.csv",
     ["movementId", "sessionId", "movementType", "sourceType", "amount", "paymentMethod", "reason", "reference", "status", "createdAt", "currency"]
-  )).catch((e) => error(e.message));
+  )).catch((e) => error(e));
 
   $("exportAudit").onclick = () => runOperation(() => exportData(
     "AUDIT_EXPORT",
     "auditoria-tpv.csv",
     ["auditId", "action", "operatorId", "sessionId", "entityType", "entityId", "createdAt", "source", "traceId", "format", "filters", "details"]
-  )).catch((e) => error(e.message));
+  )).catch((e) => error(e));
 
 
   /* ---------- Control X ---------- */
@@ -1391,7 +1392,7 @@ body {
       openModal("Control X", `
         <pre style="white-space:pre-wrap;font-size:12px;">${esc(JSON.stringify(result, null, 2))}</pre>
       `, async () => {});
-    } catch (e) { error(e.message); }
+    } catch (e) { error(e); }
   });
 
   /* ---------- Cierre Z ---------- */
@@ -1443,12 +1444,12 @@ body {
       handshakeTimer = null;
     }
 
-    loadCatalog("SERVICES").catch((e) => error(e.message));
+    loadCatalog("SERVICES").catch((e) => error(e));
     call("CATALOG_STAFF", {}, "CATALOG_STAFF_RES").then((data) => {
       state.staff = data.items || [];
       renderProfessionals();
-    }).catch((e) => error(e.message));
-    refreshCashState().catch((e) => error(e.message));
+    }).catch((e) => error(e));
+    refreshCashState().catch((e) => error(e));
   }
 
   function sendHandshake() {
@@ -1472,7 +1473,7 @@ body {
       handshakeTimer = null;
       $("connStatus").className = "dot error";
       $("connLabel").textContent = "Origen de página no disponible";
-      error(originError.code || "TPV_PARENT_ORIGIN_UNAVAILABLE");
+      error(originError);
       return;
     }
     handshakeTimer = setTimeout(() => {
