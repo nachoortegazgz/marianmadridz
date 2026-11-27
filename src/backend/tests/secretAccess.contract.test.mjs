@@ -16,7 +16,7 @@ test("SECRET-FISCAL-01 issuer NIF cache is populated only after a successful sec
 
 test("SECRET-TIMECLOCK-01 signature verification does not downgrade a missing key to an unverified result", async () => {
     const source = await readFile(new URL("../horario.web.js", import.meta.url), "utf8");
-    const start = source.indexOf("async function _verifyTimeclockSignatures");
+    const start = source.indexOf("async function _getTimeclockIntegrity");
     const end = source.indexOf("function _validateTimeclockSequence", start);
     assert.ok(start >= 0 && end > start);
     const body = source.slice(start, end);
