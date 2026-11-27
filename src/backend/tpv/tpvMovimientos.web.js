@@ -208,7 +208,7 @@ export const exportarMovimientosCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-movements-export");
-        await requireCajero(traceId);
+        await requireAdmin(traceId);
         assertTpvOperationalLedgerConfigured("physical");
         const operator = await resolveTpvContext(traceId);
         try {
