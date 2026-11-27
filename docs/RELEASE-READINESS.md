@@ -16,7 +16,7 @@
 
 ## Estado verificado
 
-- PR #651 abierta; HEAD con CI PASS: `7771f4c6bb7da61ecf60bd58708b26d5331745dd`.
+- PR #651 abierta; código validado con CI PASS: `7771f4c6bb7da61ecf60bd58708b26d5331745dd`. Los commits posteriores solo actualizan documentación.
 - Layer 1: 29 suites / 376 tests PASS.
 - Layer 2: 16 suites / 249 tests PASS.
 - Suite completa: 81 suites / 763 tests PASS.
