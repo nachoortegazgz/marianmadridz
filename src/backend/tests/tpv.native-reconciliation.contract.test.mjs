@@ -207,7 +207,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
     assert.match(cash, /canOpenSession: operator.rolWebsite === "ADMIN"/);
     assert.match(cash, /operationalWritesAvailable: true/);
-    assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ madridDayKey\(\)/);
+    assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ dayKey/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);
     assert.match(cash, /operatorResourceId: session\.operatorResourceId/);
