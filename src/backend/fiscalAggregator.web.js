@@ -36,7 +36,7 @@ import {
 } from "backend/dataAccess";
 
 import { readMovementField, readMovementHash } from "backend/data";
-import { isExplicitSimulationLedgerRecord, isValidNifOrEuVat } from "backend/validation";
+import { isValidNifOrEuVat } from "backend/validation";
 
 import {
   BUSINESS_COLLECTIONS,
@@ -155,7 +155,6 @@ function _initTaxAccumulator(months) {
 
 function _accumulatePage(items, state, options = {}) {
   for (const m of items) {
-    if (isExplicitSimulationLedgerRecord(m)) continue;
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
@@ -388,7 +387,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
-    if (isExplicitSimulationLedgerRecord(m)) continue;
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     const accountingAmount = Number(m.accountingAmount || 0);
     const movementType = _readMovementType(m).toUpperCase();

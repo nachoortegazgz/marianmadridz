@@ -514,26 +514,6 @@ export function assertCanonicalControlFields(item) {
     return true;
 }
 
-export function isMutableSyntheticTpvIntent(item) {
-    const legacySynthetic = item?.sourceType === "SYNTHETIC" &&
-        item?.recordNature == null && item?.recordTimestamp == null;
-    const currentSynthetic = item?.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        item?.recordNature === "SYNTHETIC";
-    return Boolean(
-        item &&
-        typeof item === "object" &&
-        !Array.isArray(item) &&
-        (legacySynthetic || currentSynthetic) &&
-        item.status === "PENDING_PAYMENT" &&
-        item.orderId == null &&
-        item.requiresReconciliation === true &&
-        Array.isArray(item.paymentSelection) &&
-        item.paymentSelection.every((payment) =>
-            payment && typeof payment === "object" && payment.confirmed !== true
-        )
-    );
-}
-
 export function assertTransaccionesTPVRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: TransaccionesTPV item must be an object");

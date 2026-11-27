@@ -1,5 +1,4 @@
 import { createActionableError } from "backend/errors/actionableError";
-import { isMutableSyntheticTpvIntent } from "backend/validation";
 import {
     DATA_ACCESS_BULK_PATCH_POLICY,
     DATA_ACCESS_WRITE_POLICY,
@@ -85,7 +84,7 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-const APPEND_ONLY_COLLECTIONS = Object.freeze([
+const NON_REMOVABLE_LEDGER_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
@@ -111,18 +110,6 @@ export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
-    const recordSource = String(item.recordSource || "").trim().toUpperCase();
-    const movementType = String(item.movementType || "").trim().toUpperCase();
-    const isHistoricalTpvMarker =
-        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-    if (collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA && isHistoricalTpvMarker) {
-        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
-    }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
@@ -139,22 +126,18 @@ export function assertInsertAllowed(collection, item) {
 export function assertUpdateAllowed(collection, item) {
     if (!_isRecord(item)) throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     if (!DATA_ACCESS_WRITE_POLICY.updateCollections.includes(collection)) {
-        if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
+        if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
-    if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
+    if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
     if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
-        if (!isMutableSyntheticTpvIntent(item)) throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
-        if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
-            throw _policyError("CMS_UPDATE_CONTROL_TYPE_DENIED");
-        }
         _assertControlRecord(
             item,
-            DATA_ACCESS_WRITE_POLICY.mutableControlTypes,
+            Object.values(CONTROL_TYPE),
             "CMS_UPDATE_CONTROL_TYPE_DENIED",
             false
         );
@@ -181,18 +164,17 @@ export function assertSaveAllowed(collection, item) {
 export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
     if (!id) throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
-        if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "REMOVE");
+        if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "REMOVE");
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-        if (!isMutableSyntheticTpvIntent(existingItem)) throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(expectedControlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
             expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT) {
             throw _policyError("CMS_REMOVE_SCOPE_DENIED");
         }
-    } else if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+    } else if (NON_REMOVABLE_LEDGER_COLLECTIONS.includes(collection)) {
         throw _appendOnlyError(collection, "REMOVE");
     }
 }

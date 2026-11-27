@@ -50,7 +50,6 @@ import {
     readTaxBase,
     readTaxAmount,
 } from "backend/data";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
 
 
@@ -558,7 +557,7 @@ async function _getLastMovement() {
         .descending("sequenceNumber")
         .limit(20)
         .find(STRONG_READ);
-    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
+    return (res?.items || []).find((item) => item) || null;
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
@@ -1483,7 +1482,7 @@ async function _readCashierSessionSummary(cashRegister) {
     let page = 1;
 
     while (true) {
-        for (const movement of (res.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
+        for (const movement of (res.items || [])) {
             const method = _safeTrim(movement.paymentMethod).toUpperCase();
             if (!summary[method] || !movement._id) continue;
             summary[method].amount = _roundMoney(
@@ -1688,7 +1687,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 error: { code: "Z_MOVEMENT_PAGE_LIMIT", message: "No se puede cerrar un periodo con movimientos sin auditar." },
             };
         }
-        allMovements = allMovements.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
+        allMovements = allMovements;
         allMovements.sort((a, b) => (Number(a.sequenceNumber) || 0) - (Number(b.sequenceNumber) || 0));
 
         if (allMovements.length === 0) {
@@ -1990,7 +1989,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         let expectedPreviousHash = GENESIS_HASH;
         let hasMore = false;
         let page = 1;
-        const firstPageItems = (movements.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item));
+        const firstPageItems = (movements.items || []);
         const firstSequence = Number(firstPageItems[0]?.sequenceNumber);
         if (Number.isFinite(firstSequence) && firstSequence > 1) {
             breaks.push({
@@ -2001,7 +2000,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
             });
         }
         while (true) {
-            for (const mov of (movements.items || []).filter((item) => !isExplicitSimulationLedgerRecord(item))) {
+            for (const mov of (movements.items || [])) {
                 checked += 1;
                 const movementId = mov?._id || null;
                 const invoiceNumber = readInvoiceNumber(mov);
@@ -2161,7 +2160,7 @@ export const getMovimientoByBooking = webMethod(
             // not array fields, and substring matching could return false positives.
 
             // Simulation-marked rows are historical synthetic evidence, never a fiscal receipt.
-            items = items.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
+            items = items;
 
             if (items.length === 0) {
                 return {

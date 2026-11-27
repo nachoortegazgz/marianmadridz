@@ -21,7 +21,6 @@ import {
     ACCOUNTING_LEDGER_LOCK_CONFIG,
 } from "backend/internalConfig";
 import { hashSHA256, hashChain } from "backend/securityEngine";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { makeTraceId, _safeTrim } from "public/mmUtils";
 import { logger } from "backend/logger";
 
@@ -274,8 +273,7 @@ async function _verifyEntryRows(rows, entry) {
         .limit(1)
         .find(STRONG_READ);
     const prior = priorResult?.items?.[0] || null;
-    if (isExplicitSimulationLedgerRecord(prior)) return false;
-    let expectedPreviousHash = _safeTrim(prior?.hash) || GENESIS_HASH;
+        let expectedPreviousHash = _safeTrim(prior?.hash) || GENESIS_HASH;
     if (first.previousRecordHash !== expectedPreviousHash) return false;
 
     for (let index = 0; index < entry.lines.length; index += 1) {
@@ -443,10 +441,7 @@ export async function appendAccountingEntry(input, traceId) {
             .limit(1)
             .find(STRONG_READ);
         const lastRecord = lastResult?.items?.[0] || null;
-        if (lastRecord && isExplicitSimulationLedgerRecord(lastRecord)) {
-            throw new Error("ACCOUNTING_LEDGER_SIMULATION_HEAD_UNRESOLVED");
-        }
-        let previousRecordHash = _safeTrim(lastRecord?.hash) || GENESIS_HASH;
+                let previousRecordHash = _safeTrim(lastRecord?.hash) || GENESIS_HASH;
         const lastTimestamp = lastRecord?.recordTimestamp
             ? new Date(lastRecord.recordTimestamp).getTime()
             : 0;

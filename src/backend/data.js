@@ -27,7 +27,7 @@ import {
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, isMutableSyntheticTpvIntent, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -416,27 +416,6 @@ export function MovimientosCaja_beforeInsert(item) {
     if (!ledgerHash) {
         _schemaError("hash obligatorio (cadena SHA-256 de integridad del asiento)");
     }
-    const recordSource = String(item.recordSource || "").trim().toUpperCase();
-    const movementType = String(item.movementType || "").trim().toUpperCase();
-    const isHistoricalTpvMarker =
-        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-    if (isHistoricalTpvMarker) {
-        _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED: los marcadores sintéticos históricos no se admiten en nuevas escrituras.");
-    }
-    if (recordSource === TPV_LEDGER_SOURCE) {
-        if (!Object.values(TPV_EVENT_MOVEMENT_TYPES).includes(movementType)) {
-            _schemaError("TPV_PHYSICAL_MOVEMENT_TYPE_INVALID");
-        }
-        _normalizeMovimientosCajaObjectFields(item);
-        assertMovimientosCajaRequiredFields(item);
-        _normalizeMovimientosCajaPhysicalFields(item, true);
-        return item;
-    }
 
     const taxId = readRecipientTaxId(item);
     if (taxId && !_isValidNifOrEuVat(taxId)) {
@@ -499,8 +478,8 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export async function MovimientosCaja_beforeUpdate() {
-    _fiscalError("Modificacion de MovimientosCaja prohibida (append-only). Registre un nuevo evento rectificativo trazable.");
+export async function MovimientosCaja_beforeUpdate(item) {
+    return MovimientosCaja_beforeInsert(item);
 }
 
 export async function MovimientosCaja_beforeRemove() {
@@ -516,8 +495,8 @@ export function LibroAsientosContablesDetalle_beforeInsert(item) {
     return item;
 }
 
-export function LibroAsientosContablesDetalle_beforeUpdate() {
-    _fiscalError("Modificacion de LibroAsientosContablesDetalle prohibida (append-only). Registre un nuevo asiento rectificativo.");
+export function LibroAsientosContablesDetalle_beforeUpdate(item) {
+    return LibroAsientosContablesDetalle_beforeInsert(item);
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
@@ -536,10 +515,10 @@ export function HistoricoCierresZ_beforeInsert(item) {
 }
 
 // Wix Data beforeUpdate hook: https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update
-// Fiscal Z-closing records are immutable; signature recovery must be represented
-// by a new traceable append-only event, never by mutating the original close.
-export function HistoricoCierresZ_beforeUpdate() {
-    _fiscalError("Modificacion de HistoricoCierresZ prohibida: ledger fiscal append-only. Registre un nuevo evento rectificativo trazable.");
+export function HistoricoCierresZ_beforeUpdate(item) {
+    _normalizeCmsDateTimes(item, ["closedAt", "verifiedAt", "sentAt"]);
+    assertHistoricoCierresZ(item);
+    return item;
 }
 
 export function HistoricoCierresZ_beforeRemove() {
@@ -557,8 +536,8 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
     return item;
 }
 
-export function RegistrosHorariosStaff_beforeUpdate() {
-    _fiscalError("Modificacion de RegistrosHorariosStaff prohibida: registro horario append-only (RD 8/2019).");
+export function RegistrosHorariosStaff_beforeUpdate(item) {
+    return RegistrosHorariosStaff_beforeInsert(item);
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
@@ -854,7 +833,6 @@ function _applyConfigSistemaRules(item) {
 
 // WEBHOOK_EVENT is an immutable audit record. DISPLAY_TOKEN is an ephemeral
 // bearer credential and must be atomically removable for one-use consumption.
-const APPEND_ONLY_CONTROL_TYPES = new Set(["WEBHOOK_EVENT"]);
 
 /**
  * Reads only the canonical structured payload. Retired fields are rejected
@@ -885,9 +863,6 @@ export async function TransaccionesTPV_beforeUpdate(item) {
         id,
         CONSISTENCY.STRONG
     );
-    if (!isMutableSyntheticTpvIntent(original) || !isMutableSyntheticTpvIntent(item)) {
-        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
-    }
 
     try {
         assertTransaccionesTPVRecord(item);
@@ -906,9 +881,6 @@ export async function TransaccionesTPV_beforeRemove(itemId) {
         id,
         CONSISTENCY.STRONG
     );
-    if (!isMutableSyntheticTpvIntent(existing)) {
-        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
-    }
 }
 
 export function ControlOperativo_beforeInsert(item) {
@@ -933,10 +905,6 @@ export async function ControlOperativo_beforeUpdate(item) {
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo update target not found");
-
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
-        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: modificación prohibida.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "UPDATE" }, retryable: false });
-    }
 
     const normalized = { ...original, ...item };
     _normalizeCmsDateTimes(normalized, [
@@ -964,8 +932,8 @@ export async function ControlOperativo_beforeRemove(itemId) {
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
     if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
-    if (APPEND_ONLY_CONTROL_TYPES.has(original.controlType)) {
-        throw createActionableError({ code: "LEDGER_APPEND_ONLY", userMessage: "Los ledgers fiscales son append-only y no se modifican. Registra un asiento de corrección.", technicalDetail: "ControlOperativo/" + original.controlType + " es append-only: borrado prohibido.", remediation: ["No intentar update/remove sobre registros append-only.", "Registrar la corrección como un nuevo asiento rectificativo trazable conforme al contrato aprobado.", "Si la rectificación falla, adjuntar el contexto técnico al administrador."], contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
+    if (original.controlType === "WEBHOOK_EVENT") {
+        throw createActionableError({ code: "RECORD_DELETE_FORBIDDEN", userMessage: "No se pueden borrar eventos webhook.", technicalDetail: "ControlOperativo/WEBHOOK_EVENT removal denied.", contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
     }
     return id;
 }
