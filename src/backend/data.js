@@ -392,26 +392,6 @@ function _validateFiscalPayload(item) {
 export function MovimientosCaja_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
 
-    const recordSource = _safeTrim(item.recordSource);
-    const movementType = _safeTrim(item.movementType).toUpperCase();
-    const isHistoricalTpvMarker =
-        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        [
-            TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
-            TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE,
-            TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE,
-        ].includes(recordSource);
-
-    if (recordSource === TPV_LEDGER_SOURCE) {
-        if (isHistoricalTpvMarker) {
-            _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
-        }
-    } else if (isHistoricalTpvMarker) {
-        _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
-    }
-
     _normalizeCmsDateTimes(item, ["generationTimestamp", "recordTimestamp", "fechaEnvioAEAT"]);
 
     // Normalize the CMS's uppercase physical identifiers into the internal
@@ -1051,7 +1031,6 @@ export function ControlOperativo_beforeInsert(item) {
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
     assertCanonicalControlFields(item);
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
     // Insert recibe el registro completo: proteger el discriminador y los
     // invariantes minimos del control antes de persistirlo.
     assertControlOperativo(item);
@@ -1093,7 +1072,6 @@ export async function ControlOperativo_beforeUpdate(item) {
     _normalizeCmsDateTimes(normalized, [
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
     assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
