@@ -6,6 +6,8 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
+    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
+    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -40,6 +42,17 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function _isHistoricalTpvMarker(item) {
+    const recordSource = String(item?.recordSource || "").trim().toUpperCase();
+    const movementType = String(item?.movementType || "").trim().toUpperCase();
+
+    return Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
+        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
+}
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
     if (
@@ -114,7 +127,21 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
     }
 
+    if (
+        collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
+        _isHistoricalTpvMarker(item)
+    ) {
+        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
+    }
+
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(item.controlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
         _assertControlRecord(
             item,
             Object.values(CONTROL_TYPE),
@@ -163,6 +190,13 @@ export function assertUpdateAllowed(collection, item) {
             throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
         }
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(item.controlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
         }
@@ -207,20 +241,50 @@ export function assertSaveAllowed(collection, item) {
     }
 }
 
-export function assertRemoveAllowed(collection, id) {
-    if (!id) throw _policyError("CMS_REMOVE_ID_REQUIRED");
-    throw createActionableError({
-        code: "CMS_DELETE_PROHIBITED",
-        userMessage: "No está permitido borrar registros.",
-        technicalDetail: "Delete denied for collection: " + String(collection || "UNKNOWN"),
-        remediation: [
-            "Conservar el registro original.",
-            "Editar el registro mediante su flujo autorizado cuando el contrato lo permita.",
-            "Añadir un registro rectificativo o compensatorio cuando corresponda.",
-        ],
-        contextSnapshot: { collection, operation: "REMOVE" },
-        retryable: false,
-    });
+export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
+    if (!id) {
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        throw _policyError("CMS_TPV_TRANSACTION_DELETE_DENIED");
+    }
+
+    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
+        if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+            throw _appendOnlyError(collection, "REMOVE");
+        }
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (
+            [CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK]
+                .includes(expectedControlType)
+        ) {
+            throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
+        }
+
+        if (
+            !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
+            expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT
+        ) {
+            throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+        }
+
+        if (
+            existingItem &&
+            existingItem.controlType !== expectedControlType
+        ) {
+            throw _policyError("CMS_REMOVE_CONTROL_TYPE_MISMATCH");
+        }
+
+        return;
+    }
+
+    if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+        throw _appendOnlyError(collection, "REMOVE");
+    }
 }
 
 export function assertBulkUpdateAllowed() {
@@ -270,19 +334,67 @@ function _hasExactKeys(value, expected) {
         Object.keys(value).sort().join("|") === [...expected].sort().join("|");
 }
 
-export function assertBulkRemoveAllowed() {
-    throw createActionableError({
-        code: "CMS_BULK_DELETE_PROHIBITED",
-        userMessage: "No está permitido borrar registros.",
-        technicalDetail: "Bulk deletion is prohibited for every CMS collection.",
-        remediation: [
-            "Conservar los registros y su trazabilidad.",
-            "Marcar los elementos caducados o resueltos mediante una actualización autorizada.",
-            "Añadir un registro de cierre o compensación cuando corresponda.",
-        ],
-        contextSnapshot: { operation: "BULK_REMOVE" },
-        retryable: false,
-    });
+export function assertBulkRemoveAllowed(collection, ids, options = {}) {
+    if (
+        collection !== BUSINESS_COLLECTIONS.CONTROL_OPERATIVO ||
+        !Array.isArray(ids) ||
+        ids.length === 0 ||
+        ids.length > 1000 ||
+        ids.some((id) => typeof id !== "string" || !id.trim())
+    ) {
+        throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+    }
+
+    const filter = options?.condition?.filter;
+    const type = _exactClauseValue(filter?.controlType, "$eq");
+
+    if (
+        typeof type !== "string" ||
+        !DATA_ACCESS_WRITE_POLICY.purgeControlTypes.includes(type) ||
+        type === CONTROL_TYPE.WEBHOOK_EVENT
+    ) {
+        throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+    }
+
+    if (EXPIRY_PURGE_TYPES.has(type)) {
+        if (
+            !_hasExactKeys(filter, ["controlType", "expiresAt"]) ||
+            !_isLessThanDate(filter.expiresAt)
+        ) {
+            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+        }
+        return;
+    }
+
+    const updatedStatuses = UPDATED_AT_PURGE_STATUSES[type];
+    if (updatedStatuses) {
+        const status = _exactClauseValue(filter.status, "$eq");
+
+        if (
+            !_hasExactKeys(filter, ["controlType", "status", "_updatedDate"]) ||
+            !updatedStatuses.has(status) ||
+            !_isLessThanDate(filter._updatedDate)
+        ) {
+            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+        }
+        return;
+    }
+
+    const createdStatuses = CREATED_AT_PURGE_STATUSES[type];
+    if (createdStatuses) {
+        const status = _exactClauseValue(filter.status, "$eq");
+
+        if (
+            !_hasExactKeys(filter, ["controlType", "status", "_createdDate"]) ||
+            !createdStatuses.has(status) ||
+            !_isLessThanDate(filter._createdDate)
+        ) {
+            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+        }
+        return;
+    }
+
+    throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
 }
 
 export function assertBulkMutationDisabled(operation) {
