@@ -230,10 +230,6 @@ async function _fetchStaffByResourceId(resourceId, traceId, { fresh = false } = 
 }
 
 /**
- * Loads native staff profiles    }
-}
-
-/**
  * Loads native staff profiles and indexes resource/contact identifiers.
  */
 async function _fetchAllStaff(traceId) {
@@ -258,7 +254,6 @@ async function _fetchAllStaff(traceId) {
 }
 
 // =============================================================================
-// API PUBLICA// =============================================================================
 // API PUBLICA
 // =============================================================================
 
@@ -318,7 +313,6 @@ export async function getSiteMemberIdByContactId(contactId, traceId = null) {
 }
 
 /**
- * Ficha de Marian/**
  * Ficha de Marian (identidad canonica). Unico punto donde vive el
  * resourceId de Marian (R2/DUP-03: sin duplicaciones en consumidores).
  */
