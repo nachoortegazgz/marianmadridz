@@ -614,19 +614,16 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
 });
 
 
-test("legacy TPV runtime writers are retired while historical payload validation remains read-only", async () => {
+test("legacy TPV test runtimes and historical compatibility classifier are retired", async () => {
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    const compat = await source("tpv/tpvHistoricalCompat.js");
     const validation = await source("validation.js");
     assert.doesNotMatch(controller, /tpvTestRuntime/);
-    assert.match(validation, /backend\/tpv\/tpvHistoricalCompat/);
-    assert.match(compat, /isValidTpvTestRunPayload/);
+    assert.doesNotMatch(validation, /tpvHistoricalCompat|isValidTpvTestRunPayload/);
+    await assert.rejects(source("tpv/tpvHistoricalCompat.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntime.web.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeRepository.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeCore.js"), { code: "ENOENT" });
 });
-
-
 test("Capa 3 quarterly export is deterministic, minimized and source-gated", () => {
     const summary = {
         nifEmisor: "B12345678",
