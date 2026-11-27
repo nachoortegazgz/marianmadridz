@@ -24,7 +24,7 @@
 ## Wix/CMS — último read-back documentado
 
 - Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Editor clásico, Velo habilitado, Draft.
-- TPV page ID `yl5th`, ruta `/blank`.
+- TPV page ID `yl5th`, ruta vigente `/tpv` (read-back Wix API, 27-11-2026; `published=false`).
 - Recuentos observados: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
 - No había `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco MapaStaff consultados.
 - Lectura fechada 27-11-2026; no es consulta live actual. No se hicieron escrituras en esas auditorías.
