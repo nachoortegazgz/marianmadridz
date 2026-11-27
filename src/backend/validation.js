@@ -547,12 +547,9 @@ export function assertTransaccionesTPVRecord(item) {
             throw new Error("SCHEMA_VIOLATION: TransaccionesTPV minor amount invalid: " + field);
         }
     }
-    const legacySynthetic = item.sourceType === "SYNTHETIC" &&
-        item.recordNature == null && item.recordTimestamp == null;
-    const currentRecord = item.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        ["SYNTHETIC", "REAL"].includes(item.recordNature) &&
-        item.recordTimestamp instanceof Date && !Number.isNaN(item.recordTimestamp.getTime());
-    if (item.status !== "PENDING_PAYMENT" || (!legacySynthetic && !currentRecord) ||
+    if (typeof item.status !== "string" || !item.status.trim() || item.status.length > 40 ||
+        item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+        !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime()) ||
         item.requiresReconciliation !== (item.orderId == null) ||
         !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
         typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||
