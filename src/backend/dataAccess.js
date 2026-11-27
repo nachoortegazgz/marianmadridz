@@ -144,9 +144,6 @@ const elevatedSave = auth.elevate(items.save);
 const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
-const elevatedQueryReferencedItems = auth.elevate(
-    items.queryReferencedItems
-);
 
 async function executeQuery({
     collection,
@@ -254,34 +251,6 @@ export async function countItems(collection, filter, consistency) {
     return executeCount({ collection, filter, consistency });
 }
 
-export async function queryReferencedItems(
-    collection,
-    id,
-    fieldName,
-    consistency
-) {
-    const result = await elevatedQueryReferencedItems(
-        collection,
-        id,
-        fieldName,
-        buildOptions(consistency)
-    );
-
-    if (Array.isArray(result?.items)) return result.items;
-
-    if (Array.isArray(result?.results)) {
-        return result.results
-            .map((entry) =>
-                entry?.item ||
-                entry?.dataItem?.data ||
-                entry?.dataItem
-            )
-            .filter(Boolean);
-    }
-
-    return [];
-}
-
 function isMissingDataItemError(error) {
     const code = String(
         error?.code ||
@@ -312,10 +281,15 @@ function isMissingDataItemError(error) {
 }
 
 export async function getItem(collection, id, consistency) {
-    const normalizedCollection = String(collection || "").trim();
-    const normalizedId = String(id || "").trim();
+    if (typeof collection !== "string" || !collection.trim()) {
+        throw dataAccessError("DATA_COLLECTION_REQUIRED");
+    }
+    if (typeof id !== "string" || !id.trim()) {
+        throw dataAccessError("DATA_ITEM_ID_REQUIRED");
+    }
 
-    if (!normalizedCollection || !normalizedId) return null;
+    const normalizedCollection = collection.trim();
+    const normalizedId = id.trim();
 
     try {
         return await elevatedGet(
