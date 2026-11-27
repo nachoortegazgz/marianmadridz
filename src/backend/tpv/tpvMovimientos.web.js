@@ -40,7 +40,7 @@ function mapMovementRecord(record) {
         reason: record.reason || record.totals?.differenceReason || "",
         reference: record.saleId || record.refundId || record.reportId || record._id,
         status: record.status || null,
-        concept: String(record.operationDescription || record.reason || "Operación TPV histórica").replace(/\s*\[SINTÉTICO\]$/i, "") + " [SINTÉTICO]",
+        concept: String(record.operationDescription || record.reason || "Operación TPV histórica"),
         createdAt: record.createdAt || record.generatedAt || record._createdDate || null,
         totals: record.totals || null,
         currency: record.currency || "EUR",
