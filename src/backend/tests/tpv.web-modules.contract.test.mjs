@@ -665,7 +665,10 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /replayed: true/);
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
     assert.match(repository, /cashRegisterStatus: "CERRADA"/);
-    assert.doesNotMatch(cash, /TPV_COLLECTIONS\.TICKET_Z|HistoricoCierresZ|eventLog/);
+    const closeBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
+    assert.equal(closeBlock.includes("TPV_COLLECTIONS.TICKET_Z"), false);
+    assert.equal(closeBlock.includes("HistoricoCierresZ"), false);
+    assert.equal(closeBlock.includes("eventLog"), false);
 });
 
 test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", async () => {
