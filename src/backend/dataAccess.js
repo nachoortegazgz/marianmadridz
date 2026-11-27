@@ -379,24 +379,42 @@ export async function removeById(collection, idOrItem, options = {}) {
             [CONTROL_TYPE.DISPLAY_TOKEN]: "CONSUMED",
             [CONTROL_TYPE.SLOT_LOCK]: "RELEASED",
         }[expectedType];
-        if (retirementStatus) {
+        const expiryOnlyRetirement = expectedType === CONTROL_TYPE.RATE_LIMIT;
+        if (retirementStatus || expiryOnlyRetirement) {
             const expiresAt = existing.expiresAt instanceof Date
                 ? existing.expiresAt
                 : new Date(existing.expiresAt);
             if (!Number.isFinite(expiresAt.getTime())) {
                 throw dataAccessError("CMS_RETIREMENT_EXPIRY_REQUIRED");
             }
-            const result = await bulkPatchItems(collection, [id], [
-                { fieldPath: "status", action: "SET_FIELD", value: retirementStatus },
-                { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
-            ], { condition: { filter: {
+            const version = Number(existing.version);
+            if (expiryOnlyRetirement && (!Number.isSafeInteger(version) || version < 0)) {
+                throw dataAccessError("CMS_RETIREMENT_VERSION_REQUIRED");
+            }
+            const modifications = retirementStatus
+                ? [
+                    { fieldPath: "status", action: "SET_FIELD", value: retirementStatus },
+                    { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
+                ]
+                : [{ fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) }];
+            const conditionFilter = {
                 controlType: { $eq: expectedType },
-                expiresAt: { $eq: existing.expiresAt },
-            } } });
+                ...(expiryOnlyRetirement
+                    ? { version: { $eq: version } }
+                    : { expiresAt: { $eq: existing.expiresAt } }),
+            };
+            const result = await bulkPatchItems(collection, [id], modifications, {
+                condition: { filter: conditionFilter },
+            });
             if (!Array.isArray(result?.updatedItemIds) || !result.updatedItemIds.includes(id)) {
                 throw dataAccessError("CMS_RETIREMENT_CONFLICT");
             }
-            return { _id: id, deleted: false, retired: true, status: retirementStatus };
+            return {
+                _id: id,
+                deleted: false,
+                retired: true,
+                status: retirementStatus || existing.status || null,
+            };
         }
     }
 
