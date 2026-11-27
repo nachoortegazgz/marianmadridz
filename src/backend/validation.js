@@ -822,7 +822,7 @@ export function isValidNifOrEuVat(value) {
 
 /**
  * Identifica exclusivamente marcadores explícitos de fixtures/smoke.
- * No clasifica por sourceType, etiquetas REAL/SYNTHETIC/SIMULATION ni por huellas inválidas.
+ * No clasifica por sourceType ni por atributos genéricos del entorno o huellas inválidas.
  */
 export function isExplicitSimulationLedgerRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return false;
