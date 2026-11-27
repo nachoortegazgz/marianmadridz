@@ -369,11 +369,12 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
  // Local verification was blocked: git clone could not resolve github.com (DNS); npm view @wix/ecom@1.0.2539 timed out.
 test("every exposed TPV WebMethod checks backend role authorization before repository access", async () => {
     const protectedMethods = [
-        ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"]],
+        ["tpvCaja.web.js", ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"]],
         ["tpvMovimientos.web.js", ["registrarMovimientoCaja", "obtenerMovimientosCaja"]],
         ["tpvVentas.web.js", ["registrarVenta"]],
         ["tpvDevoluciones.web.js", ["registrarDevolucion"]],
-        ["tpvCierres.web.js", ["obtenerResumenCaja", "generarControlX", "generarCierreZ"]],
+        ["tpvCierres.web.js", ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"]],
+        ["tpvExport.web.js", ["exportarMovimientos"]],
         ["tpvPagos.web.js", ["validarDesglosePagos"]],
         ["tpvUtils.web.js", ["obtenerConfiguracionTPV"]],
         ["tpvPermisos.web.js", ["obtenerPermisosTPV"]],
@@ -403,7 +404,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
+            guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
         },
         "tpvMovimientos.web.js": {
             guarded: ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
@@ -417,13 +418,16 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
             guarded: ["registrarDevolucion"],
         },
         "tpvCierres.web.js": {
-            guarded: ["obtenerResumenCaja", "generarControlX", "generarCierreZ"],
+            guarded: ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"],
         },
         "tpvPagos.web.js": {
             guarded: ["validarDesglosePagos"],
         },
         "tpvUtils.web.js": {
             guarded: ["obtenerConfiguracionTPV"],
+        },
+        "tpvExport.web.js": {
+            guarded: ["exportarMovimientos"],
         },
         "tpvPermisos.web.js": {
             guarded: ["obtenerPermisosTPV"],

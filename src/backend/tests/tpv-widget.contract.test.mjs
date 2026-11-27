@@ -29,11 +29,12 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
 test("TPV controller imports operational WebMethods and no longer imports the separate test runtime", async () => {
     const controller = await source("src/public/tpvPageController.js");
     const modules = {
-        "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
+        "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
         "src/backend/tpv/tpvVentas.web.js": ["validarVentaBorrador", "registrarVenta"],
         "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
         "src/backend/tpv/tpvDevoluciones.web.js": ["registrarDevolucion"],
-        "src/backend/tpv/tpvCierres.web.js": ["obtenerResumenCaja", "generarControlX", "generarCierreZ"],
+        "src/backend/tpv/tpvCierres.web.js": ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"],
+        "src/backend/tpv/tpvExport.web.js": ["exportarMovimientos"],
         "src/backend/tpv/tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
         "src/backend/tpv/tpvCatalogo.web.js": ["obtenerServicios", "obtenerProductos", "obtenerStaff", "obtenerVariantesProducto", "buscarClientesTPV"],
         "src/backend/tpv/tpvUtils.web.js": ["obtenerConfiguracionTPV"],
@@ -87,7 +88,8 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerCashMovement: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
-    for (const capability of ["requestRefund", "closeSession", "issueTicketX", "issueTicketZ", "exportMovements", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
+    for (const capability of ["requestRefund", "issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
+    for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);

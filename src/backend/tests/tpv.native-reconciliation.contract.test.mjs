@@ -40,7 +40,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(controller, /profesionalId: optionalString\(line\.profesionalId, 160\)/);
     const caja = await source("tpv/tpvCaja.web.js");
     const sales = await source("tpv/tpvVentas.web.js");
-    assert.match(controller, /import \{ obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial \} from "backend\/tpv\/tpvCaja\.web"/);
+    assert.ok(controller.includes('import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial, cerrarSesionCaja } from "backend/tpv/tpvCaja.web"'));
     assert.match(caja, /export const obtenerEstadoCaja = webMethod/);
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
@@ -74,8 +74,8 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.ok(permissions.includes('openSession: staff.rolWebsite === "ADMIN"'));
     assert.ok(permissions.includes('registerCashMovement: staff.rolWebsite === "ADMIN"'));
     assert.match(permissions, /requestRefund: false/);
-    assert.match(permissions, /closeSession: false/);
-    assert.match(permissions, /issueTicketX: false/);
+    assert.ok(permissions.includes('closeSession: staff.rolWebsite === "ADMIN"'));
+    assert.ok(permissions.includes('issueTicketX: staff.rolWebsite === "ADMIN"'));
     assert.match(permissions, /issueTicketZ: false/);
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(permissions, /operationalWritesAvailable: true/);

@@ -5,11 +5,12 @@
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
+import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial, cerrarSesionCaja } from "backend/tpv/tpvCaja.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
-import { obtenerResumenCaja, generarControlX, generarCierreZ } from "backend/tpv/tpvCierres.web";
+import { obtenerResumenCaja, generarTicketX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
@@ -18,6 +19,8 @@ import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 const REQUEST_TYPES = Object.freeze([
     "CASHIER_STATE",
     "SESSION_OPEN",
+    "SESSION_CLOSE",
+    "MOVEMENTS_EXPORT",
     "CATALOG_SERVICES",
     "CATALOG_PRODUCTS",
     "CATALOG_VARIANTS",
@@ -287,6 +290,24 @@ async function dispatch(message) {
                 terminalId: optionalString(payload.terminalId, 80) || "TPV",
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
+        case "SESSION_CLOSE":
+            return cerrarSesionCaja({
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                arqueo: {
+                    contadoEfectivo: numeric(payload.contadoEfectivo, "COUNTED_CASH"),
+                    ...(payload.contadoTarjeta === undefined ? {} : { contadoTarjeta: numeric(payload.contadoTarjeta, "COUNTED_CARD") }),
+                },
+                observaciones: optionalString(payload.observaciones, 500) || "",
+                idempotencyKey: key,
+            });
+        case "MOVEMENTS_EXPORT":
+            return exportarMovimientos({
+                desde: optionalString(payload.desde, 80),
+                hasta: optionalString(payload.hasta, 80),
+                sessionId: optionalString(payload.sessionId, 160),
+                formato: optionalString(payload.formato, 8) || "json",
+                cursor: optionalString(payload.cursor, 32),
+            });
         case "CATALOG_SERVICES":
             return obtenerServicios({ limit: 100, offset: 0 });
         case "CATALOG_PRODUCTS":
@@ -397,7 +418,7 @@ async function dispatch(message) {
                 idempotencyKey: key,
             });
         case "TICKET_X":
-            return generarControlX({ sessionId: optionalString(payload.sessionId, 160) || "", idempotencyKey: key });
+            return generarTicketX({ sessionId: optionalString(payload.sessionId, 160) || "" });
         case "TICKET_Z":
             return generarCierreZ({
                 sessionId: optionalString(payload.sessionId, 160) || "",
