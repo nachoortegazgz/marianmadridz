@@ -50,8 +50,8 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
 });
 
 // CMS mutation permissions are collection- and state-specific.
-// TransaccionesTPV permits changes only to unpaid synthetic commercial intents;
-// physical, fiscal, accounting, labor and closing ledgers retain their own guards.
+// TransaccionesTPV permits constrained updates only to pending commercial intents;
+// deletion is denied by both the DAL policy and the CMS beforeRemove hook.
 
 // Logical event discriminators are not CMS collection IDs. Physical drawer events map to MovimientosCaja,
 // commercial sales to TransaccionesTPV, audit events to ControlOperativo, and sessions to CajaActual.
@@ -668,7 +668,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   ]),
   updateCollections: Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
     BUSINESS_COLLECTIONS.CITAS_F2,
