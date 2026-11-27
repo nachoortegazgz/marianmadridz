@@ -391,6 +391,27 @@ function _validateFiscalPayload(item) {
 
 export function MovimientosCaja_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+
+    const recordSource = _safeTrim(item.recordSource);
+    const movementType = _safeTrim(item.movementType).toUpperCase();
+    const isHistoricalTpvMarker =
+        Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
+        movementType.startsWith("SANDBOX_LOGICAL_") ||
+        recordSource.startsWith("SANDBOX_LOGICAL_") ||
+        [
+            TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
+            TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE,
+            TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE,
+        ].includes(recordSource);
+
+    if (recordSource === TPV_LEDGER_SOURCE) {
+        if (isHistoricalTpvMarker) {
+            _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
+        }
+    } else if (isHistoricalTpvMarker) {
+        _schemaError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
+    }
+
     _normalizeCmsDateTimes(item, ["generationTimestamp", "recordTimestamp", "fechaEnvioAEAT"]);
 
     // Normalize the CMS's uppercase physical identifiers into the internal
@@ -959,6 +980,26 @@ export async function ControlOperativo_beforeUpdate(item) {
     );
     if (!original) _schemaError("ControlOperativo update target not found");
 
+    if (original.controlType === "WEBHOOK_EVENT") {
+        throw createActionableError({
+            code: "WEBHOOK_EVENT_APPEND_ONLY",
+            userMessage: "Los eventos webhook son append-only y no se pueden modificar.",
+            technicalDetail: "ControlOperativo/WEBHOOK_EVENT updates are forbidden.",
+            remediation: [
+                "No modificar la evidencia original del webhook.",
+                "Registrar un evento compensatorio o de recuperación con una nueva clave trazable.",
+                "Consultar el traceId y conservar el payload original.",
+            ],
+            contextSnapshot: {
+                collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+                controlType: original.controlType,
+                operation: "UPDATE",
+                recordId: id,
+            },
+            retryable: false,
+        });
+    }
+
     const normalized = { ...original, ...item };
     _normalizeCmsDateTimes(normalized, [
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
@@ -986,7 +1027,23 @@ export async function ControlOperativo_beforeRemove(itemId) {
     if (!original) _schemaError("ControlOperativo remove target not found");
     if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
     if (original.controlType === "WEBHOOK_EVENT") {
-        throw createActionableError({ code: "RECORD_DELETE_FORBIDDEN", userMessage: "No se pueden borrar eventos webhook.", technicalDetail: "ControlOperativo/WEBHOOK_EVENT removal denied.", contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
+        throw createActionableError({
+            code: "WEBHOOK_EVENT_APPEND_ONLY",
+            userMessage: "Los eventos webhook son append-only y no se pueden borrar.",
+            technicalDetail: "ControlOperativo/WEBHOOK_EVENT removal denied.",
+            remediation: [
+                "Conservar la evidencia original del webhook.",
+                "Registrar un evento compensatorio o de recuperación con una nueva clave trazable.",
+                "Consultar el traceId antes de reintentar.",
+            ],
+            contextSnapshot: {
+                collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+                controlType: original.controlType,
+                operation: "REMOVE",
+                recordId: id,
+            },
+            retryable: false,
+        });
     }
     return id;
 }
