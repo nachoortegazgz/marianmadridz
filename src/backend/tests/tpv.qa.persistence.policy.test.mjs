@@ -185,7 +185,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
         collection,
         "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         CONTROL_TYPE.TPV_REFUND_LOCK
-    ), { code: "CMS_DELETE_PROHIBITED" });
+    ), { code: "CMS_REMOVE_SCOPE_DENIED" });
 });
 
 test("TPV session lock is deterministic, bounded and CAS-only", () => {
