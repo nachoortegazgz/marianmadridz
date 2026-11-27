@@ -44,3 +44,10 @@ Offline coverage now verifies:
 ## Validation boundary
 
 The change is code- and test-suite scoped. It does not publish the Wix site, mutate live CMS data, close or reuse an open cash session, initiate payment operations, or submit records to AEAT. CI is the authoritative executable test result for this branch. Wix Runtime E2E remains a separate gate and must not be inferred from offline tests.
+
+
+## Pendientes fuera del alcance de este cambio
+
+- Auditar `src/backend/eventLog.js` y todos sus consumidores para decidir y aplicar, si corresponde, el contrato global de `transactionId`. El writer legacy no queda cubierto por el cambio P0 de `cajas.web.js`.
+- Completar el mapping AEAT oficial (alta/anulación, tipo de factura, serie/número, fecha, importes y hash previo) antes de conectar `computeAeatAltaHash` o `computeAeatAnulacionHash`. No recalcular históricos.
+- Ejecutar Wix Runtime E2E con fixture/sesión sintética aislada y writer canónico. No reutilizar la caja ABIERTA ni inferir Runtime PASS de CI.
