@@ -227,7 +227,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
         if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
             throw _appendOnlyError(collection, "REMOVE");
         }
-        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+        throw _policyError("CMS_DELETE_PROHIBITED");
     }
 
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -242,7 +242,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
             !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
             expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT
         ) {
-            throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+            throw _policyError("CMS_DELETE_PROHIBITED");
         }
 
         if (
