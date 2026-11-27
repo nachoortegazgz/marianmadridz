@@ -9,17 +9,17 @@
 
 **MVP operativo: NO-GO.**
 
-La rama de trabajo `remove-global-ledger-write-gates` elimina los interruptores globales de escritura fiscal/contable; no elimina validación fiscal, autorización, integridad, idempotencia ni concurrencia. La aceptación Runtime y la habilitación productiva siguen pendientes. El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
+El baseline de `main` al iniciar esta intervención es `7a7e171357090c18d01874d8deb4368344cd5af6`. Las decisiones integradas eliminan los interruptores globales de escritura fiscal/contable, sin eliminar validación fiscal, autorización, integridad, idempotencia ni concurrencia. La revisión de errores accionables e inmutabilidad TPV está en la rama `fix/tpv-actionable-errors-and-guards` y pendiente de CI/merge. La aceptación Runtime y la habilitación productiva siguen pendientes. El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
 
-- **Main:** `f0b30c31c8ad924e42f8790338fa223716026420` (consolidación documental PR #645).
-- **TPV:** PR #640 integrada. Clasificación temporal server-side y gate de venta alineado con `validarVentaBorrador()`. El TPV continúa en MODO CONSULTA; `saleReady=false`. No se acredita venta persistida, pago, movimiento físico ni cierre Runtime.
+- **Main (baseline de esta revisión):** `7a7e171357090c18d01874d8deb4368344cd5af6` (27-11-2026).
+- **TPV:** PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, replay con fingerprint y validación de contrato pre-insert. La integración AEAT hash y el Runtime E2E siguen pendientes. El TPV continúa en MODO CONSULTA; no se acredita venta persistida, pago, movimiento físico ni cierre Runtime.
 - **Clasificación:** `recordTimestamp` y `recordNature` los genera/deriva backend. La ausencia del singleton `MapaStaff/CONFIG_SISTEMA` y de `productionActivationAt` mantiene los registros nuevos como `SYNTHETIC`.
 - **Colecciones:** `TransaccionesTPV` contiene intenciones comerciales pendientes no contables; `MovimientosCaja` es el ledger físico canónico; `ControlOperativo` guarda locks/auditoría; `CajaActual` proyecta la sesión.
 - **Bookings:** lectura read-only de 11 IDs: 6 proyecciones `CitasF2` muestran CONFIRMED/PENDING mientras Bookings V2 devuelve CANCELED. Es un fallo de coherencia abierto; no se han mutado reservas.
 - **Capa 3:** PR #641 integrada; paquete trimestral determinista Admin-only en memoria. No hay transporte SharePoint/Graph/Power Automate E2E.
 - **CMS:** último read-back documentado: CajaActual=1 ABIERTA; MovimientosCaja=5; HistoricoCierresZ=1; TransaccionesTPV=0; ControlOperativo=78 (3 recuperaciones fiscales pendientes); MapaStaff=5 sin CONFIG_SISTEMA; CitasF2=11; RegistrosHorariosStaff=0.
 - **Wix:** último read-back directo documentado: Draft, Editor clásico, 9 páginas estáticas + 2 dinámicas; TPV ID `yl5th`, ruta `/blank`. No se ha probado sincronización Git-Wix.
-- **CI:** PR #640 PASS (81 suites/764 tests); PR #641 PASS (80 suites/762 tests). Son pruebas offline; el HEAD documental actual no tiene runs asociados.
+- **CI:** PR #650 PASS (suite offline completa, SDK tests, ESLint y secret scanning según el run asociado). Las pruebas offline no acreditan Wix Runtime. La revisión `fix/tpv-actionable-errors-and-guards` aún requiere CI.
 - **Efectos externos:** no habilitar pagos reales, reembolsos, remisión fiscal/AEAT ni automatizaciones con efectos externos durante QA.
 
 ## Entrada documental canónica
