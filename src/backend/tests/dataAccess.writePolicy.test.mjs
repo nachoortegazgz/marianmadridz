@@ -299,7 +299,7 @@ test("bulk update and bulk deletion are prohibited", () => {
         });
     }
 });
-test("DATAACCESS-MOVIMIENTOS-APPEND-01 public bulk mutation APIs reject MovimientosCaja", () => {
+test("DATAACCESS-MOVIMIENTOS-APPEND-01 public bulk mutation APIs reject MovimientosCaja", async () => {
     assert.throws(
         () => bulkUpdate(C.MOVIMIENTOS_CAJA, [{ _id: "synthetic-row", totalAmount: 1 }]),
         { code: "CMS_BULK_UPDATE_SCOPE_DENIED" }
