@@ -1,31 +1,52 @@
 # Índice documental
 
-## Fuentes activas
+**Vigencia:** 2026-11-28.  
+**Entrada IA:** [AI-ENTRYPOINT](AI-ENTRYPOINT.md) · [AI-INDEX](AI-INDEX.md).
 
-- [STATE-NOW](STATE-NOW.md): estado, evidencia fechada y pendientes.
+## Documentos rectores
+
+- [STATE-NOW](STATE-NOW.md): estado, evidencia fechada y pendientes. Fuente del estado actual.
+- [PROJECT-CANON](PROJECT-CANON.md): arquitectura, autoridad e invariantes.
+- [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores.
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
-- [PROJECT-CANON](PROJECT-CANON.md): invariantes de arquitectura y seguridad.
-- [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores explícitos.
-- [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix vigente, inventario y auditoría read-only de datos.
-- [Backend TPV](../src/backend/tpv/README.md) y [backend general](../src/backend/README.md): módulos y contratos de código.
-- [Plan Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): ejecución Wix aislada.
-- [Archivo histórico](ARCHIVE-MANIFEST.md): informes y decisiones sustituidos.
+- [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix y lectura CMS; snapshot 27-11-2026, no live.
+- [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md): política y localización de documentos históricos.
 
-## Evidencia vigente (27-11-2026)
+## Código y ejecución
 
-- [Auditoría multicapa Wix/CMS](audits/2026-11-27-current-site-layer-verification.md).
-- [Alineación del widget TPV y colecciones nativas](audits/2026-11-27-tpv-widget-action-alignment.md).
-- [Auditoría integral de las 41 colecciones CMS](audits/2026-11-27-full-cms-collections-audit.md).
-- [Aceptación MVP read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md).
-- [Preparación Capa 3](audits/2026-11-27-capa3-export-preparation.md).
-- [Estado normativo RRSIF](audits/2026-11-27-rrsif-deadline-update.md).
-- [Contrato transactionId fiscal](qa/2026-11-27-p0-fiscal-transaction-contract.md).
-- [Contrato de errores TPV](qa/2026-11-27-tpv-actionable-error-contract.md).
-- [ADR transporte HtmlComponent](architecture/ADR-2026-11-26-WIX-HTMLCOMPONENT-TRANSPORT.md).
+- [Backend general](../src/backend/README.md): WebMethods, permisos, Wix Data, hooks, eventos y jobs.
+- [Backend TPV](../src/backend/tpv/README.md): módulos, colecciones y contratos TPV.
+- [Plan Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): pruebas Wix aisladas y criterios de aceptación.
 
-- [Auditoría Capa 0 y conciliación de bugs](audits/2026-11-28-capa0-bug-reconciliation.md).
-- [Auditoría Capa 0: proveedores, identidad y DAL](audits/2026-11-28-capa0-provider-error-propagation.md).
+## Evidencia y auditorías
+
+- [Verificación del sitio y capas — 27-11-2026](audits/2026-11-27-current-site-layer-verification.md).
+- [Auditoría integral de colecciones CMS — 27-11-2026](audits/2026-11-27-full-cms-collections-audit.md).
+- [Aceptación MVP read-only — 27-11-2026](audits/2026-11-27-mvp-runtime-readonly-acceptance.md).
+- [Alineación widget TPV / acciones — 27-11-2026](audits/2026-11-27-tpv-widget-action-alignment.md).
+- [Auditoría Capa 0 — 28-11-2026](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente; el nombre del archivo conserva la fecha original.
+- [Conciliación de bugs Capa 0 — 28-11-2026](audits/2026-11-28-capa0-bug-reconciliation.md): hallazgos BUG-001…020 y resultados integrados en PR #670.
+- [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md): cambios integrados y CI offline PASS.
+- [Contrato transactionId fiscal — 27-11-2026](qa/2026-11-27-p0-fiscal-transaction-contract.md).
+- [Contrato de errores TPV — 27-11-2026](qa/2026-11-27-tpv-actionable-error-contract.md).
+- [ADR transporte HtmlComponent — 26-11-2026](architecture/ADR-2026-11-26-WIX-HTMLCOMPONENT-TRANSPORT.md).
+
+## Archivo histórico
+
+- [Índice histórico de noviembre 2026](archive/2026-11/README.md).
+- [Dossier consolidado histórico](archive/2026-11/DOSSIER CONSOLIDADO.txt).
+- [Dossier de flujos Capa 1–3](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md).
+- [Base de conocimiento histórica](archive/2026-11/PROJECT-KNOWLEDGE-BASE.md).
+- [Decision log](archive/2026-11/DECISION-LOG.md).
+- [Directriz de desarrollo 20-11-2026](archive/2026-11/PROJECT-OWNER-DIRECTIVE-2026-11-20.md).
+
+Los informes, snapshots, ADRs, handoffs y QA anteriores se conservan bajo `docs/archive/2026-11/`. No se cargan todos por defecto; consultar el índice histórico y recuperar solo el documento pertinente.
 
 ## Mantenimiento
 
-STATE-NOW y RELEASE-READINESS reflejan cambios de estado. PROJECT-CANON y TPV-UNIFIED-FLOW solo cambian cuando cambia una decisión o contrato. No crear resúmenes duplicados. Los informes antiguos se conservan en `docs/archive` como evidencia histórica, nunca como instrucciones vigentes.
+- STATE-NOW se actualiza cuando cambia estado/evidencia.
+- PROJECT-CANON se modifica solo al cambiar una decisión/invariante aprobada.
+- TPV-UNIFIED-FLOW y ESQUEMA_CMS se modifican solo cuando cambia su contrato o se obtiene un nuevo read-back.
+- AI-ENTRYPOINT y AI-INDEX orientan la recuperación; no sustituyen fuentes técnicas.
+- No duplicar resúmenes ni copiar snapshots/CI completos en múltiples documentos.
+- Los históricos se conservan para trazabilidad; marcar claramente lo supersedido y enlazar su sustituto.

@@ -1,6 +1,6 @@
 # TPV — contrato único, bloqueos y errores
 
-**Vigencia:** 2026-11-27. Estado en [STATE-NOW](STATE-NOW.md); gates en [RELEASE-READINESS](RELEASE-READINESS.md).
+**Vigencia:** 2026-11-28. Estado en [STATE-NOW](STATE-NOW.md); gates en [RELEASE-READINESS](RELEASE-READINESS.md). La guía consultiva está en [AI-ENTRYPOINT](AI-ENTRYPOINT.md).
 
 ## 1. Runtime único
 
@@ -29,7 +29,12 @@ Un fallo detiene la operación afectada antes de persistir cuando corresponda; n
 | `CajaActual` | Proyección de sesión. |
 | `HistoricoCierresZ` | Evidencia de cierre inmutable. |
 
-No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo. `transactionId` obligatorio y fingerprint de replay están implementados en el writer fiscal manual de PR #650; no generalizar a todos los eventos hasta auditar `eventLog.js` y consumidores.
+No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo.
+
+Identidad transaccional:
+- PR #650 exige `transactionId` en el writer fiscal manual.
+- PR #667 exige `transactionId` (1–128 caracteres) en `registrarEventoEconomico()`, y lo usa para deduplicación y recuperación de insert incierto. Se eliminaron fallbacks por secuencia y recuperación por `traceId`.
+- El resto de writers se clasificará en una matriz por dominio: transactionId, clave de idempotencia propia o no aplicabilidad justificada. No imponer una regla ciega a eventos no económicos.
 
 ## 4. Integridad y no-borrado
 
@@ -42,7 +47,7 @@ No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo. 
 
 ## 5. Errores explícitos
 
-El normalizador común integrado en `main` es `src/backend/tpv/tpvError.js`. PR #651 está integrada y su CI completo está PASS; esto no acredita Wix Runtime.
+El normalizador común integrado en `main` es `src/backend/tpv/tpvError.js`. Su contrato se mantiene independiente de la validación Runtime.
 
 Contrato público:
 - `status`, `data`, `error` y `traceId`.
