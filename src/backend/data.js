@@ -701,22 +701,11 @@ function _clearStaleCajaClosedAt(item) {
     return item;
 }
 
-function _normalizeCajaTpvRuntime(item) {
-    const runtime = item?.conceptOperations?.tpvRuntime;
-    const snapshotSource = _safeTrim(item?.snapshotSource).toUpperCase();
-    const isTpvRuntime = runtime !== undefined || snapshotSource.startsWith("TPV");
-    if (isTpvRuntime) {
-        _schemaError("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: CajaActual no admite nuevas proyecciones TPV hasta disponer del contrato canónico.");
-    }
-    return item;
-}
-
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     _normalizeCajaSequenceCounters(item);
     _clearStaleCajaClosedAt(item);
-    _normalizeCajaTpvRuntime(item);
     assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
