@@ -84,6 +84,14 @@ test('BCORE-SLOT-04 _parseResourceIdFromSlotKey roundtrip + tamper rejection', (
   assert.strictEqual(guidFromSlotKey('basura'), '');
 });
 
+test('BCORE-SLOT-05 slot lock builder rejects a key whose epoch range cannot become valid DATETIME values', () => {
+  const malformedKey = 'slot_' + SVC.slice(0, 8) + '_' + RES_A + '_200000000000_200000000001';
+  assert.throws(
+    () => BC._buildSlotLockControl(malformedKey, 'owner-1', 60000, SVC),
+    (error) => error.code === BC.ERROR_CODES.INVALID_DATES
+  );
+});
+
 // ---------------------------------------------------------------------------
 // MUTEX LOCKS (ControlOperativo SLOT_LOCK)
 // ---------------------------------------------------------------------------
