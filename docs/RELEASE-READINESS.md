@@ -1,6 +1,6 @@
 # Release readiness — 2026-11-27
 
-<badge>NO-GO MVP operativo y comercial</badge>
+**Estado: NO-GO MVP operativo y comercial.**
 
 La salida a producción y la habilitación de cobros/remisión fiscal permanecen bloqueadas. La evidencia offline no sustituye Preview/Runtime, conciliación de datos ni validación legal.
 
