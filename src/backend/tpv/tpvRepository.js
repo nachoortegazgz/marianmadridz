@@ -315,9 +315,41 @@ function _eventAmount(record) {
 }
 
 function _isTpvLedgerItem(item) {
-    return Boolean(item && typeof item === "object" && !Array.isArray(item) &&
-        [...Object.values(TPV_EVENT_MOVEMENT_TYPES), ...Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES)]
-            .includes(item.movementType));
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object" &&
+        !Array.isArray(item.payloadFiscal) ? item.payloadFiscal : null;
+    if (!envelope) return false;
+
+    const logicalCollection = String(envelope.logicalCollection || "");
+    const expectedMovementType = TPV_EVENT_MOVEMENT_TYPES[logicalCollection] ||
+        TPV_LEGACY_EVENT_MOVEMENT_TYPES[logicalCollection];
+    const sequenceNumber = Number(item.sequenceNumber);
+    const recordTimestamp = item.recordTimestamp instanceof Date
+        ? item.recordTimestamp
+        : new Date(item.recordTimestamp);
+    const ledgerRecord = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object" &&
+        !Array.isArray(envelope.ledgerRecord);
+    const legacyRecord = envelope.sandboxRecord && typeof envelope.sandboxRecord === "object" &&
+        !Array.isArray(envelope.sandboxRecord);
+    const previousHashValid = sequenceNumber === 0 ||
+        /^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""));
+
+    return item.movementType === expectedMovementType &&
+        String(item._id || "") === String(item.transactionId || "") &&
+        Boolean(String(item.recordSource || "").trim()) &&
+        Boolean(String(item.traceId || "").trim()) &&
+        Number.isSafeInteger(sequenceNumber) && sequenceNumber >= 0 &&
+        /^[a-f0-9]{64}$/i.test(String(item.hash || "")) &&
+        previousHashValid &&
+        Number.isFinite(recordTimestamp.getTime()) &&
+        String(envelope.sourceType || "").trim().length > 0 &&
+        envelope.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        String(envelope.ledgerVersion || "").trim().length > 0 &&
+        Number.isSafeInteger(Number(envelope.schemaVersion)) &&
+        Number(envelope.schemaVersion) >= 1 &&
+        /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || "")) &&
+        (logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
+        (ledgerRecord || legacyRecord);
 }
 
 function _virtualRecord(item) {
