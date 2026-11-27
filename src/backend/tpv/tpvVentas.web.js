@@ -147,9 +147,9 @@ export const validarVentaBorrador = webMethod(
 );
 
 async function createSaleDraftOrder() {
-    // This WebMethod persists a synthetic, unpaid QA intent only. Creating a
-    // Wix Draft Order is still a real external CMS/eCommerce side effect and
-    // is not required to test the TPV commercial persistence path.
+    // This WebMethod records a pending commercial intent. Creating a Wix
+    // Draft Order is a separate external effect and is not required for this
+    // CMS persistence operation.
     return {
         orderId: null,
         requiresReconciliation: true,
