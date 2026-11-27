@@ -115,7 +115,7 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.match(html, /async function runOperation\(fn\)[\s\S]*?const result = await fn\(\);[\s\S]*?await refreshCashState\(\)/);
     assert.doesNotMatch(html, /setInterval\s*\(|refreshCatalog|id="refreshCatalog"/);
     assert.match(repository, /export async function initializeTpvCaja\(\)[\s\S]*?_getCajaActual\(\)/);
-    assert.match(repository, /const saved = await insertItem\(BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA, ledgerItem\)/);
+    assert.match(repository, /saved = await insertItem\(BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA, ledgerItem\)/);
     assert.match(repository, /await _projectPersistedTpvEvent\([\s\S]*?collection, record, item\._id, item\.hash, key, false/);
     assert.match(repository, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
     assert.match(caja, /const session = await latestTpvSession\(\)/);
