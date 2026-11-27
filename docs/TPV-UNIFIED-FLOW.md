@@ -71,7 +71,7 @@ La limpieza preproducción es una operación administrativa excepcional sobre to
 
 ## 5. Invariantes del flujo único
 
-- Wix CMS es la fuente de verdad transaccional; MovimientosCaja es el ledger físico canónico. No crear TransaccionesTPV ni otro ledger.
+- Wix CMS es la fuente de verdad transaccional; `MovimientosCaja` es el ledger físico canónico. `TransaccionesTPV` es una proyección/intención comercial pendiente de pago, no un ledger fiscal ni físico; solo los registros sintéticos no pagados pueden modificarse/eliminarse durante QA.
 - Los registros de prueba y reales comparten el mismo esquema y el mismo writer.
 - La clasificación temporal se genera y valida en backend; no se confía en valores enviados por el navegador.
 - Idempotencia durable con fingerprint; replay idéntico devuelve el resultado previo y payload distinto con la misma clave es conflicto.
