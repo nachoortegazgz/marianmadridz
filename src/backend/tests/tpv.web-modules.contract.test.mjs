@@ -657,6 +657,7 @@ test("TPV close session uses the operational ledger and a separate CajaActual pr
     assert.match(cash, /export const cerrarSesionCaja = webMethod\(/);
     assert.match(cash, /withTpvSessionLock\(sessionId/);
     assert.match(cash, /movementType: "CIERRE"/);
+    assert.match(cash, /idempotencyKey \\+ ":CIERRE"/);
     assert.match(cash, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA/);
     assert.match(cash, /closeTpvCajaSessionProjection/);
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
