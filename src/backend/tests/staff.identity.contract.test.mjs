@@ -173,14 +173,18 @@ test('STAFF-SDK-04 pagination cap never returns an apparently complete partial s
     },
   };
 
-  const byResource = await staff.findStaffByResourceId(RESOURCE_ID);
-  assert.equal(byResource, null);
+  await assert.rejects(
+    staff.findStaffByResourceId(RESOURCE_ID),
+    { code: 'STAFF_PAGINATION_LIMIT_EXCEEDED' }
+  );
   assert.equal(calls, 20);
 
   staff.invalidateStaffCache();
   calls = 0;
-  const all = await staff.listStaff();
-  assert.deepEqual(all, []);
+  await assert.rejects(
+    staff.listStaff(),
+    { code: 'STAFF_PAGINATION_LIMIT_EXCEEDED' }
+  );
   assert.equal(calls, 20);
 });
 
@@ -201,4 +205,116 @@ test('STAFF-CONFIG-01 cache limits and API timeout come only from canonical SDK_
   assert.match(source, /const CACHE_MAX_ENTRIES = SDK_CONFIG\.CACHE\.STAFF_MAX_ENTRIES;/);
   assert.match(source, /const API_TIMEOUT_MS = SDK_CONFIG\.TIMEOUTS\.API_MS;/);
   assert.doesNotMatch(source, /SDK_CONFIG\?\.CACHE|SDK_CONFIG\?\.TIMEOUTS\?\.API_MS/);
+});
+
+
+test('STAFF-SDK-05 provider outages and malformed responses are not converted to missing staff', async () => {
+  staff.invalidateStaffCache();
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => { throw Object.assign(new Error('network unavailable'), { code: 'ECONNRESET' }); },
+  };
+  await assert.rejects(
+    staff.findStaffByResourceId(RESOURCE_ID),
+    { code: 'STAFF_PROVIDER_UNAVAILABLE' }
+  );
+
+  staff.invalidateStaffCache();
+  await assert.rejects(
+    staff.listStaff(),
+    { code: 'STAFF_PROVIDER_UNAVAILABLE' }
+  );
+
+  staff.invalidateStaffCache();
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({ pagingMetadata: { hasNext: false, cursors: {} } }),
+  };
+  await assert.rejects(
+    staff.findStaffByResourceId(RESOURCE_ID),
+    { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
+  );
+
+  staff.invalidateStaffCache();
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({ staffMembers: [] }),
+  };
+  await assert.rejects(
+    staff.findStaffByResourceId(RESOURCE_ID),
+    { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
+  );
+});
+
+test('SECURITY-STAFF-01 staff provider outage propagates through authorization instead of denying as absent', async () => {
+  staff.invalidateStaffCache();
+  mocks.members._current = {
+    _id: '66666666-6666-4666-8666-666666666666',
+    contactId: CONTACT_ID,
+  };
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => { throw Object.assign(new Error('Bookings unavailable'), { code: 'ECONNRESET' }); },
+  };
+
+  const security = await import('../security.js');
+  try {
+    await assert.rejects(security.isAdmin('staff-provider-outage'), {
+      code: 'STAFF_PROVIDER_UNAVAILABLE',
+    });
+  } finally {
+    mocks.members._current = null;
+    staff.invalidateStaffCache();
+  }
+});
+
+test('SECURITY-STAFF-02 member provider outage is distinct from an unauthenticated member', async () => {
+  const security = await import('../security.js');
+  mocks.members._error = new Error('Members unavailable');
+  try {
+    await assert.rejects(security.isAdmin('member-provider-outage'), {
+      code: 'MEMBER_IDENTITY_PROVIDER_UNAVAILABLE',
+    });
+  } finally {
+    delete mocks.members._error;
+    mocks.members._current = null;
+  }
+});
+
+
+test('STAFF-SDK-06 CRM provider errors are not converted to an unlinked contact', async () => {
+  staff.invalidateStaffCache();
+  mocks.sdk['crm::contactsV5'] = {
+    getContact: async () => { throw Object.assign(new Error('CRM unavailable'), { code: 'ECONNRESET' }); },
+  };
+  await assert.rejects(
+    staff.getSiteMemberIdByContactId(CONTACT_ID),
+    { code: 'STAFF_PROVIDER_UNAVAILABLE' }
+  );
+
+  mocks.sdk['crm::contactsV5'] = {
+    getContact: async () => null,
+  };
+  await assert.rejects(
+    staff.getSiteMemberIdByContactId(CONTACT_ID),
+    { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
+  );
+});
+
+
+test('TIME-CLOCK-IDENTITY-01 horario uses centralized identity and preserves staff provider errors', async () => {
+  staff.invalidateStaffCache();
+  mocks.members._current = {
+    _id: '66666666-6666-4666-8666-666666666666',
+    contactId: CONTACT_ID,
+  };
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => { throw Object.assign(new Error('Bookings unavailable'), { code: 'ECONNRESET' }); },
+  };
+
+  const horario = await import('../horario.web.js');
+  try {
+    const result = await horario.getMyStaffContext({ traceId: 'timeclock-staff-provider-outage' });
+    assert.equal(result.status, 'ERROR');
+    assert.equal(result.error.code, 'STAFF_PROVIDER_UNAVAILABLE');
+  } finally {
+    mocks.members._current = null;
+    staff.invalidateStaffCache();
+  }
 });
