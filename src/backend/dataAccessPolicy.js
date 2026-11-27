@@ -124,6 +124,7 @@ export function assertInsertAllowed(collection, item) {
         throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         _assertControlRecord(item, Object.values(CONTROL_TYPE), "CMS_INSERT_CONTROL_TYPE_INVALID", false);
     }
     if (collection === BUSINESS_COLLECTIONS.CITAS_F2 && !item.bookingId) {
@@ -143,6 +144,7 @@ export function assertUpdateAllowed(collection, item) {
     }
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
         if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
             throw _policyError("CMS_UPDATE_CONTROL_TYPE_DENIED");
@@ -180,6 +182,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(expectedControlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
             expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT) {
             throw _policyError("CMS_REMOVE_SCOPE_DENIED");
@@ -200,7 +203,6 @@ const EXPIRY_PURGE_TYPES = new Set([
     CONTROL_TYPE.DISPLAY_TOKEN,
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.DAYS_CACHE,
-    CONTROL_TYPE.TPV_TEST_RUN,
 ]);
 const UPDATED_AT_PURGE_STATUSES = Object.freeze({
     [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
