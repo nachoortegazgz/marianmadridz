@@ -192,3 +192,10 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - `removeById` aplica condición CMS sobre `sourceType`, `status` y `requestFingerprint`, además del ID exacto, para evitar borrar un registro que haya cambiado entre lectura y eliminación.
 - Se actualizan pruebas de política y hooks. No se habilita mutabilidad para `MovimientosCaja`, contabilidad, fichajes ni cierres fiscales.
 - CI de esta rama pendiente; Wix Runtime no ejecutado; sin mutaciones CMS reales.
+
+
+## Read-back Wix actualizado — 2026-11-27 05:xx CET
+
+- `GetSiteContext`: sitio Marian Madrid Peluquería y Estética `188bed94-177c-4bc9-a9f0-35080d874f3e` figura **Published**, plan Premium, dominio personalizado, Editor y Velo habilitado. Última actualización indicada por Wix: 2026-11-27 03:55.
+- Apps confirmadas en contexto: Wix Bookings, Stores Catalog V3, Wix Payments, Wix Invoices V1, Members Area, Gift Cards, Forms & Payments, Blog y SEO.
+- Este read-back acredita estado publicado del sitio y presencia de las apps; **no acredita** que el código de `main` (incluidos los PR #634/#635 posteriores al update de Wix) esté sincronizado/desplegado. No se ha publicado ni modificado el sitio desde esta intervención.
