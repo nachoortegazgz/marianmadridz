@@ -1,6 +1,6 @@
 # Canon de arquitectura — Marian Madrid
 
-**Vigencia:** 2026-11-27. Para estado, bloqueos y siguiente sesión prevalecen [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Para el TPV prevalece [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md). Las auditorías fechadas son evidencia del instante observado, no una fuente de estado permanente.
+**Vigencia:** 2026-11-27. Para estado medible prevalecen [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Para TPV prevalece [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md).
 
 ## 1. Fuentes de verdad
 
@@ -8,8 +8,8 @@
 - Wix Bookings/Stores/Payments gobiernan sus respectivos dominios nativos.
 - Wix CMS es SSOT transaccional de las entidades propias del proyecto.
 - SharePoint es repositorio de documentos/evidencias; no gobierna ni modifica datos transaccionales de Capa 1.
-- El repositorio Git es SSOT del código fuente versionado; no acredita por sí mismo el código instalado en Wix.
-- La configuración y el estado de Runtime se consideran verificados solo mediante read-back fechado del entorno correspondiente.
+- Git es SSOT del código fuente versionado; no acredita por sí mismo el código instalado en Wix.
+- El estado Runtime se verifica mediante evidencia fechada del entorno correspondiente.
 
 ## 2. Arquitectura por capas
 
@@ -21,19 +21,20 @@
 
 ## 3. Contratos TPV vigentes
 
-- Un único código, contrato, validación y writer para desarrollo y producción. No crear runtime de negocio paralelo por entorno o naturaleza del dato.
-- `recordTimestamp` lo genera el backend en UTC. `recordNature` se deriva en backend comparándolo con `MapaStaff/CONFIG_SISTEMA.productionActivationAt`: anterior = SYNTHETIC; igual o posterior = REAL.
-- La clasificación es metadato de trazabilidad, no selector de runtime. Sin singleton/corte configurado, el sistema clasifica como SYNTHETIC; fecha inválida o configuración ambigua falla cerrada.
+- Un único código, contrato de dominio y reglas de negocio para desarrollo, pruebas y producción. Los tests pueden inyectar fixtures y adaptadores simulados en los límites de infraestructura; no constituyen un runtime de negocio alternativo.
+- `recordTimestamp` lo genera el backend en UTC. `recordNature` es metadato de trazabilidad derivado en backend; no selecciona runtime ni cambia las reglas de dominio.
+- La falta de configuración de activación o fiscal **no debe bloquear** pruebas unitarias, contractuales ni de integración que usen fixtures explícitos y dependencias simuladas. No se inventan configuraciones fiscales reales para superar esos tests.
+- La ausencia o ambigüedad de configuración sí impide clasificar como REAL, habilitar writers reales o producir efectos fiscales/contables externos. El entorno de prueba debe marcar inequívocamente sus fixtures como sintéticos.
 - `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables. `MovimientosCaja` es el ledger físico canónico. `ControlOperativo` guarda locks/auditoría; `CajaActual` es proyección de sesión.
-- `registrarVenta()` aplica los mismos blockers que `validarVentaBorrador()`; no crea intención nueva si `saleReady=false`. El replay idempotente se resuelve antes del gate.
+- `registrarVenta()` aplica las reglas de preparación antes de aceptar una operación real. Los tests deben cubrir tanto rechazo por gates reales como ejecución del mismo flujo de dominio con fixtures y puertos simulados.
 - No se infiere cobro por la existencia de una intención. Pago verificado, movimiento físico y registro fiscal son etapas separadas.
-- Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables; las correcciones se realizan con registros rectificativos trazables.
+- Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables, también cuando el dato es sintético; las correcciones se realizan con nuevos registros rectificativos trazables.
 
 ## 4. Reservas
 
 - Bookings V2 es la fuente de verdad del estado nativo de la reserva.
 - `CitasF2` es proyección propia; las divergencias se resuelven mediante reconciliación backend auditable e idempotente, no mediante estados inventados ni actualizaciones manuales sin lectura de origen.
-- La lectura del 2026-11-27 encontró 6/11 proyecciones con estado CONFIRMED/PENDING frente a Bookings V2 CANCELED. Sigue siendo un fallo abierto.
+- Las pruebas de reconciliación usan fixtures/dobles y deben cubrir estados divergentes sin modificar reservas reales.
 
 ## 5. Seguridad y fiabilidad
 
@@ -41,13 +42,14 @@
 - Webhooks, jobs, writers y reintentos deben ser idempotentes y trazables.
 - No asumir transacciones multi-documento de Wix Data; definir recuperación de proyección y reconciliación.
 - No usar REST/CMS directo para saltarse DAL, hooks, permisos o writers canónicos.
-- Simular pagos, terminales y notificaciones durante QA; no generar efectos externos reales.
+- Los adaptadores simulados deben interceptar pagos, terminales, notificaciones, AEAT y demás efectos externos en pruebas.
+- La seguridad se aplica por efecto y entorno: una prueba no necesita activar servicios reales para probar la lógica que los prepara.
 - No modificar ni borrar ledgers append-only, aunque sus registros sean sintéticos.
 
 ## 6. Capa 3
 
-PR #641 integra la preparación de un paquete trimestral determinista, checksum SHA-256, minimización de campos y lectura estricta de registros REAL con WebMethod Admin-only. El paquete se prepara en memoria. No hay transporte SharePoint/Graph/Power Automate E2E acreditado.
+La preparación del paquete puede probarse con fixtures sintéticos y transporte simulado. El envío real exige autorización, destino configurado y control de acceso; no es precondición para probar transformación, minimización, checksum o contrato.
 
 ## 7. Estado de aceptación
 
-El MVP permanece NO-GO. La evidencia actual, fallos y siguiente secuencia están centralizados en [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). No declarar runtime, E2E, despliegue o sincronización Git-Wix sin prueba específica del entorno.
+El estado medible y los defectos abiertos están en [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Distinguir pruebas estáticas, unitarias, integración simulada, Preview, Runtime y producción; no extrapolar un nivel a otro.

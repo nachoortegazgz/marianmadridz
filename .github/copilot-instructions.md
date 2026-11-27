@@ -1,17 +1,12 @@
 # Copilot instructions — Marian Madrid
 
-## Contexto y fuentes obligatorias
+## Contexto y fuentes
 
-Repositorio Wix Editor Classic / Velo JavaScript. Wix CMS es la SSOT transaccional de las entidades propias; las apps nativas Wix gobiernan sus dominios. SharePoint es solo repositorio de evidencia.
+Repositorio Wix Editor Classic / Velo JavaScript. Wix CMS es SSOT transaccional de entidades propias; las apps nativas Wix gobiernan sus dominios. SharePoint es repositorio de evidencia.
 
-Antes de cambios operativos, lee:
-- `docs/INDEX.md` (mapa de fuentes vigentes).
-- `docs/STATE-NOW.md` y `docs/RELEASE-READINESS.md` (estado y gates).
-- `docs/PROJECT-CANON.md` (arquitectura e invariantes).
-- `docs/TPV-UNIFIED-FLOW.md` y `src/backend/tpv/README.md` (TPV).
-- `src/backend/README.md` (contratos backend).
+Consultar según el cambio: `docs/INDEX.md`, `docs/STATE-NOW.md`, `docs/RELEASE-READINESS.md`, `docs/PROJECT-CANON.md`, `docs/TPV-UNIFIED-FLOW.md` y los README del módulo afectado. No es necesario releer toda la documentación para un cambio local y acotado.
 
-Estado conocido: sitio Wix Draft; MVP NO-GO; Runtime TPV no aceptado. No habilitar ni implicar cobros reales, remisión fiscal, escrituras de inventario/contabilidad ni persistencia TPV de producción. CI offline no prueba Preview ni Runtime.
+Estado conocido en la última auditoría: sitio Wix Draft; MVP operativo/comercial no aceptado; Runtime TPV no acreditado. CI offline no prueba Preview ni Runtime.
 
 ## Desarrollo y validación
 
@@ -20,8 +15,10 @@ Estado conocido: sitio Wix Draft; MVP NO-GO; Runtime TPV no aceptado. No habilit
 - Comandos habituales: `npm run lint`, `npm test`, `npm run test:layer1`, `npm run test:layer2`.
 - Suite individual: `node --no-warnings --loader ./src/backend/tests/loader.mjs ./src/backend/tests/<suite>.test.mjs`.
 - Verificadores SDK: `npm run verify:wix-ecom-cart-v2`, `npm run verify:wix-ecom-order-transactions`, `npm run verify:wix-tpv-native-sdk`.
-- Los tests nuevos se ubican en `src/backend/tests/` y se incorporan al runner/gate apropiado. No crear runners que eviten el loader canónico.
-- CI incluye sincronización package/lock, auditoría de dependencias, verificadores SDK y ESLint; no sustituye pruebas Wix.
+- Los tests se ubican en `src/backend/tests/` y se incorporan al runner/gate apropiado.
+- Ejecutar las pruebas proporcionales al cambio. No exigir Preview/Runtime para cambios de lógica cubiertos por unitarias/contrato; no etiquetar esas pruebas como Runtime.
+- La configuración productiva ausente no debe bloquear pruebas con fixtures. Usar inyección de dependencias/adaptadores simulados en los límites de infraestructura y ejercitar las mismas funciones de dominio.
+- No crear un runtime de negocio alternativo ni un bypass de seguridad para pruebas.
 
 ## Arquitectura
 
@@ -29,8 +26,8 @@ Estado conocido: sitio Wix Draft; MVP NO-GO; Runtime TPV no aceptado. No habilit
 - `src/backend/*.web.js`: API Velo; cada export usa `webMethod(Permissions...)` y autorización/propiedad se comprueban en backend.
 - `src/pages/`: código de página Wix; no renombrar archivos.
 - `src/public/`: código browser compartido y bridges HTML; importar con alias Velo `public/<module>`.
-- `src/backend/tpv/`: dominio TPV, preparación de venta, repositorios y WebMethods. Un único flujo/código; no introducir runtime paralelo.
-- `tests/runtime/`: plan de aceptación Preview/Runtime; no ejecuta APIs Wix ni limpia datos automáticamente.
+- `src/backend/tpv/`: dominio TPV, preparación de venta, repositorios y WebMethods.
+- `tests/runtime/`: procedimientos de Preview/Runtime; no ejecutan APIs Wix ni limpian datos automáticamente.
 
 La lógica de negocio, permisos, validación, catálogo, importes, impuestos e idempotencia reside en backend. Frontend solo presenta y orquesta.
 
@@ -39,24 +36,24 @@ La lógica de negocio, permisos, validación, catálogo, importes, impuestos e i
 - Wix CMS es SSOT transaccional; SharePoint no gobierna Capa 1.
 - `MovimientosCaja` es ledger físico; `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables.
 - Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se borran ni sobrescriben. Las rectificaciones son nuevos registros trazables.
-- `recordTimestamp` y `recordNature` los genera/deriva backend usando el único corte UTC `MapaStaff/CONFIG_SISTEMA.productionActivationAt`. La naturaleza es metadato, no selector de runtime.
+- `recordTimestamp` y `recordNature` los genera/deriva backend; la naturaleza es metadato, no selector de runtime.
 - El backend nunca confía en precio, impuesto, total, permiso o naturaleza enviados por el navegador.
 - Webhooks/jobs son al menos una vez: mantener idempotencia, CAS, locks, leases y recuperación.
 - No usar colecciones legacy prohibidas ni REST/CMS directo para saltarse DAL, hooks o writers.
-- No modificar pagos, reservas, caja, configuración fiscal, automatizaciones, secretos reales o servicios externos durante validación sin alcance y autorización expresos.
-- No actualizar el código de página para introducir pruebas temporales. Usar runners/fixtures versionados.
-- Mantener errores accionables y comportamiento fail-closed; no eliminar gates para facilitar pruebas.
+- No invocar pagos, remesas fiscales, notificaciones ni servicios externos reales en QA.
+- Los fixtures sintéticos no necesitan datos fiscales reales. La ausencia de configuración productiva se prueba como un caso de rechazo, no como bloqueo de toda la suite.
+- Mantener errores accionables y fail-closed para efectos productivos; no extender ese bloqueo a tests aislados que simulan sus dependencias.
 
-## Contratos técnicos que no deben perderse
+## Contratos técnicos
 
-- Los hooks CMS son invariantes server-side: beforeInsert valida/normaliza; beforeUpdate y beforeRemove protegen inmutabilidad y transiciones. Si la regla depende del estado persistido, leerlo antes de decidir.
-- Webhooks son al menos una vez: mantener claims idempotentes, claves deterministas, comparación de fingerprint/payload y CAS/leases/recovery. Replay idéntico no duplica efectos; payload conflictivo falla.
-- No intercambiar silenciosamente `resourceId` del dominio/CMS con `resource._id` del SDK o `resource.id` REST; adaptar explícitamente cada contrato.
+- Hooks CMS server-side: beforeInsert valida/normaliza; beforeUpdate y beforeRemove protegen inmutabilidad y transiciones.
+- Webhooks son al menos una vez: mantener claims idempotentes, claves deterministas, comparación de fingerprint/payload y CAS/leases/recovery.
+- No intercambiar silenciosamente `resourceId` del dominio/CMS con `resource._id` del SDK o `resource.id` REST.
 - Importes TPV en céntimos enteros o helpers decimales canónicos; nunca usar importes del navegador como autoridad. Cantidades positivas enteras.
-- Métodos de pago V1 admitidos: `EFECTIVO` y `TARJETA`; Bizum, split tender, bonos y tarjetas regalo siguen bloqueados.
-- Una intención sintética `TransaccionesTPV` solo puede corregirse/eliminarse si cumple simultáneamente `sourceType=SYNTHETIC`, `status=PENDING_PAYMENT`, `orderId=null`, `requiresReconciliation=true` y todos los pagos siguen sin confirmar. Cualquier otro caso requiere su contrato de inmutabilidad/rectificación; nunca limpiar por lote.
-- Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se sobrescriben ni borran, aunque sean sintéticos.
+- Métodos de pago V1 admitidos: `EFECTIVO` y `TARJETA`; los demás siguen fuera del contrato hasta que exista decisión de producto.
+- Las intenciones sintéticas solo se corrigen según su contrato de estado y reconciliación. Nunca limpiar por lote.
+- Los ledgers append-only no se sobrescriben ni borran, aunque sean sintéticos.
 
 ## Documentación
 
-Mantener solo las fuentes activas enlazadas desde `docs/INDEX.md`. Actualizar STATE-NOW/RELEASE-READINESS cuando cambie el estado; PROJECT-CANON/TPV-UNIFIED-FLOW solo cuando cambien decisiones o contratos. La evidencia histórica se archiva y no se presenta como estado actual.
+Mantener las fuentes activas enlazadas desde `docs/INDEX.md`. Actualizar STATE-NOW/RELEASE-READINESS cuando cambie el estado; PROJECT-CANON/TPV-UNIFIED-FLOW solo cuando cambien decisiones o contratos. No copiar gates productivos a instrucciones de pruebas unitarias.

@@ -1,8 +1,6 @@
 # TPV backend — mapa operativo vigente
 
-**Main:** `f0b30c31c8ad924e42f8790338fa223716026420` al consolidar la sesión.  
-**PR #640:** clasificación temporal y gate de venta integrados.  
-**Estado:** CI offline PASS; Wix Runtime no aceptado; release NO-GO.
+**Estado:** CI offline PASS histórico; Wix Runtime no aceptado; release operativo/comercial NO-GO. Consultar [STATE-NOW](../../../docs/STATE-NOW.md) para el estado fechado y no tomar SHAs de este documento como estado actual.
 
 ## Módulos por responsabilidad
 
@@ -24,20 +22,21 @@
 - `ControlOperativo`: locks, deduplicación y auditoría técnica.
 - `HistoricoCierresZ`: cierres con contrato de integridad propio.
 
-## Gates y límites
+## Gates y límites por contexto
 
-- La naturaleza temporal se deriva en `tpvRecordNature.js`; no aceptar valores del cliente.
-- Sin singleton `MapaStaff/CONFIG_SISTEMA` y `productionActivationAt`, los registros válidos se clasifican SYNTHETIC.
-- `registrarVenta` no crea intención nueva cuando `saleReady=false`; los replays idempotentes se resuelven antes del gate.
-- El TPV actual permanece MODO CONSULTA/`saleReady=false`; no se ha acreditado venta persistida, pago o movimiento físico Runtime.
+- La naturaleza temporal se deriva en backend; no aceptar valores del cliente.
+- La falta de configuración productiva no debe bloquear unitarias, contratos ni integración simulada. Probar con fixtures sintéticos y adaptadores simulados, invocando las mismas funciones de dominio.
+- Los tests deben cubrir explícitamente configuración ausente/inválida y recorrido válido con fixture. No fabricar configuración fiscal real para conseguir un PASS.
+- `registrarVenta` no crea intención nueva cuando `saleReady=false` para la operación evaluada; los replays idempotentes se resuelven antes del gate.
+- El TPV actual permanece MODO CONSULTA/`saleReady=false` según la última evidencia Runtime; este bloqueo productivo no impide desarrollar ni probar el dominio aislado.
 - No activar pagos, Draft Orders, reembolsos, writers fiscales ni efectos externos durante QA.
-- No mutar ni reutilizar `CajaActual` ABIERTA ni ledgers históricos para pruebas.
+- No mutar ni reutilizar `CajaActual` ABIERTA ni ledgers históricos compartidos para pruebas persistentes. Para pruebas Wix con escritura, usar ámbito aislado y writer canónico; en unitarias/contrato usar repositorios simulados.
 
 ## Validación
 
-- PR #640: 81 suites / 764 tests PASS offline.
+- CI histórico: 81 suites / 764 tests PASS offline (PR #640).
 - Clasificación: pruebas de corte ausente, anterior, igualdad, posterior y timestamps inválidos.
-- No ejecutado: Wix Preview/Runtime, UI E2E, permisos reales de rol, persistencia online, concurrencia Wix, hardware y recuperación.
-- Los tests offline y contratos no sustituyen aceptación Runtime.
+- No acreditado en la última auditoría: Wix Preview/Runtime, UI E2E, permisos reales de rol, persistencia online, concurrencia Wix, hardware y recuperación.
+- Los tests offline acreditan su nivel concreto; no sustituyen aceptación Runtime ni requieren habilitar producción.
 
 La autoridad de flujo es [docs/TPV-UNIFIED-FLOW.md](../../../docs/TPV-UNIFIED-FLOW.md); el estado de aceptación es [docs/STATE-NOW.md](../../../docs/STATE-NOW.md).

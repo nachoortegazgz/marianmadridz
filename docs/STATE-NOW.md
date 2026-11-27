@@ -1,83 +1,71 @@
 # Estado actual del proyecto — 2026-11-27
 
-**Estado global: NO-GO MVP operativo/comercial.** Esta página es la referencia de continuidad para la siguiente sesión. Sustituye estados narrativos anteriores; las auditorías fechadas se conservan como evidencia histórica, no como instrucciones actuales.
+**Estado global: NO-GO MVP operativo/comercial; desarrollo y QA sintético habilitados.** Esta página resume la última evidencia fechada. Las auditorías históricas describen el momento observado, no son instrucciones actuales.
 
 ## 1. Baseline Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`.
-- `main`: `f0b30c31c8ad924e42f8790338fa223716026420` (PR #645, documentación de aceptación read-only).
-- PR #639, #640, #641, #643, #644 y #645 integradas.
-- PR #640: clasificación temporal TPV y gate de venta integrados. CI: 81 suites, 764 tests, 0 fallos.
-- PR #641: preparación de paquete de registro externo Capa 3 integrada. CI: 80 suites, 762 tests, 0 fallos.
-- No hay ejecuciones de workflow asociadas al HEAD documental actual. Las ejecuciones anteriores acreditan los commits de sus PR, no el estado Wix Runtime.
-- No se ha demostrado que el SHA de `main` esté sincronizado con el código cargado en Wix Editor/Preview.
+- La documentación y el código deben referenciar el HEAD real de `main`; no reutilizar SHAs históricos como estado actual sin read-back.
+- PR #640: clasificación temporal TPV y gate de venta integrados. CI histórico: 81 suites, 764 tests, 0 fallos.
+- PR #641: preparación de paquete Capa 3 integrada. CI histórico: 80 suites, 762 tests, 0 fallos.
+- Las ejecuciones CI acreditan únicamente los commits y suites ejecutados; no acreditan Wix Runtime.
 
 ## 2. Wix y CMS — último read-back documentado 2026-11-27
 
 - Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Editor clásico, Velo habilitado, estado Draft (`published=false`).
 - 9 páginas estáticas y 2 dinámicas. TPV: ID `yl5th`, ruta `/blank`.
 - Apps leídas: Bookings, Forms & Payments, Gift Cards, Invoices V1, Members Area, Payments, Stores Catalog V3, Blog y SEO.
-- CMS: `CajaActual=1` (ABIERTA); `MovimientosCaja=5`; `HistoricoCierresZ=1`; `TransaccionesTPV=0`; `ControlOperativo=78` (3 compensaciones `FISCAL_LEDGER/PENDING_RECOVERY`, attempts=0); `MapaStaff=5`; `CitasF2=11`; `LibroAsientosContablesDetalle=3`; `RegistrosHorariosStaff=0`.
-- `MapaStaff` contiene 1 GESTORIA, 1 TERCERO y 3 STAFF. No existe registro `recordType=CONFIG_SISTEMA`; ninguno de los cinco registros contiene `productionActivationAt`.
-- No se realizaron escrituras CMS en las auditorías read-only citadas. La caja ABIERTA y los ledgers existentes no son fixtures de QA.
-
-Fuente: [aceptación MVP read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md) y [auditoría multicapa](audits/2026-11-27-current-site-layer-verification.md).
+- CMS: `CajaActual=1` (ABIERTA); `MovimientosCaja=5`; `HistoricoCierresZ=1`; `TransaccionesTPV=0`; `ControlOperativo=78`; `MapaStaff=5`; `CitasF2=11`; `LibroAsientosContablesDetalle=3`; `RegistrosHorariosStaff=0`.
+- No existe registro `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco registros MapaStaff consultados.
+- La caja ABIERTA y los ledgers existentes no son fixtures de QA. No se realizaron escrituras CMS en las auditorías read-only citadas.
 
 ## 3. TPV — estado de código integrado
 
-- PR #640 está integrada en `main`.
-- `src/backend/tpv/tpvRecordNature.js` deriva la naturaleza en backend con timestamp UTC de servidor y el único corte `MapaStaff/CONFIG_SISTEMA.productionActivationAt`.
-- Regla: instante anterior al corte = `SYNTHETIC`; igual o posterior = `REAL`. Sin singleton/corte configurado, los registros válidos se clasifican `SYNTHETIC`; fechas inválidas o configuración ambigua fallan cerradas.
-- Los metadatos se conectan a eventos físicos TPV, proyección de sesión, auditoría e intención comercial.
-- `registrarVenta()` vuelve a calcular preparación y aplica los mismos `saleReadinessBlockers` que `validarVentaBorrador()`. Si no está lista, devuelve `TPV_SALE_NOT_READY` y no crea intención nueva. El replay idempotente se resuelve antes del gate.
-- `TransaccionesTPV`: intención comercial pendiente/no contable. `MovimientosCaja`: ledger físico canónico. No fusionar dominios ni duplicar ledgers.
-- El widget sigue en MODO CONSULTA y `saleReady=false` por configuración fiscal, pago no verificado, presentación de precio final y otros gates. No hay venta, cobro ni movimiento físico aceptados en Runtime.
-- `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`, `ACCOUNTING_LEDGER_WRITES_ENABLED=false`, `ALLOW_SIMULATION_RECORDS=false` y writer de jornada deshabilitado permanecen fail-closed según la auditoría.
+- `recordTimestamp` y `recordNature` se generan/derivan en backend. La clasificación temporal es metadato, no selector de runtime.
+- La ausencia de corte/configuración real debe permitir probar el dominio con fixtures sintéticos y puertos simulados. No habilita clasificación REAL ni writers productivos.
+- `registrarVenta()` aplica los blockers de preparación para operaciones reales; el replay idempotente se resuelve antes del gate.
+- `TransaccionesTPV`: intención comercial pendiente/no contable. `MovimientosCaja`: ledger físico canónico.
+- El widget sigue en MODO CONSULTA y no hay venta/cobro/movimiento físico aceptados en Runtime según la última evidencia.
+- Los writers fiscales/contables y de jornada constaban deshabilitados en la auditoría. Su estado actual requiere read-back; no se presupone que haya cambiado.
 
-## 4. Reservas / Bookings — fallo funcional abierto
+## 4. Reservas / Bookings
 
-- 11/11 IDs de `CitasF2` existen en Bookings V2.
-- 5 estados coinciden; 6 proyecciones `CONFIRMED/PENDING` contradicen el estado nativo `CANCELED`.
-- No se debe recrear, reconfirmar ni actualizar manualmente estas reservas.
-- Próximo trabajo: reconciliación backend controlada, idempotente y auditable que lea Bookings V2 y actualice solo la proyección `CitasF2`; después, relectura comparativa 11/11. Issue #523.
+- Última lectura: 11/11 IDs de `CitasF2` existen en Bookings V2; 6 proyecciones CONFIRMED/PENDING contradicen estado nativo CANCELED.
+- Issue #523: reconciliación backend controlada, idempotente y auditable pendiente. No recrear ni reconfirmar reservas; desarrollar y probar la reconciliación primero con fixtures.
 
-## 5. Capa 3 — estado
+## 5. Capa 3
 
-- PR #641 integrada: preparación determinista de paquete trimestral, checksum SHA-256, minimización de campos y lectura estricta de registros `recordNature=REAL`; WebMethod Admin-only con autorización y rate limit.
-- El paquete se prepara en memoria. No existe transporte conectado a SharePoint/Graph ni Power Automate E2E.
-- Sin configuración fiscal válida y sin corte real, la exportación fiscal real debe fallar cerrada.
+- PR #641 prepara paquete trimestral determinista, checksum SHA-256, minimización de campos y lectura estricta de registros REAL.
+- La transformación y el checksum deben probarse con fixtures sintéticos. Transporte SharePoint/Graph/Power Automate real no acreditado.
 
-## 6. Otros bloqueos verificados
+## 6. Principio operativo para evitar bloqueos de QA
 
-- Tres compensaciones fiscales en `ControlOperativo` permanecen `PENDING_RECOVERY`; requieren correlación con la operación fuente, no cambio manual de estado.
-- Concurrencia de `CajaActual`: lock/CAS implementado y CI offline histórico; concurrencia real en Wix Runtime no probada.
-- Jornada laboral: cero fichajes en el read-back y writer deshabilitado.
-- Siete automatizaciones ACTIVE del inventario read-only eran PREINSTALLED y con `disableStatusChange=true`; no se modificaron.
-- Wix Preview workflow manual no ejecutado; el smoke actual es read-only y no invoca WebMethods ni interacciones.
+- La falta de datos, series o configuración fiscal productiva no bloquea unitarias, contratos ni integración simulada.
+- Probar tanto el comportamiento fail-closed ante configuración ausente como el recorrido válido del dominio usando fixtures explícitos y adaptadores simulados.
+- Las pruebas de Wix Runtime que escriban requieren un ámbito aislado y writer canónico; las pruebas read-only no requieren preparar sesión de caja.
+- Ningún test sintético activa cobros, remesas, notificaciones ni servicios externos reales.
+- Los gates de producción se mantienen en producción. No convertirlos en precondiciones globales de desarrollo.
 
-## 7. Decisiones e invariantes vigentes
+## 7. Invariantes
 
-- Un único código, contrato, validación y writer para desarrollo y producción; los tests usan fixtures/dobles, no un runtime de negocio paralelo.
-- La naturaleza del registro es metadato derivado por backend, nunca selector de flujo.
-- Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia/exportación.
+- Un único código y reglas de dominio para desarrollo y producción; fixtures y dobles solo sustituyen dependencias de infraestructura.
+- Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - Frontend sin lógica de negocio ni autoridad de permisos.
 - Autorización, validación y secretos exclusivamente en backend.
 - Procesos asíncronos/webhooks idempotentes.
-- Ledgers físicos, fiscales, contables, laborales y cierres append-only son inmutables, también cuando el dato es sintético; corrección mediante nuevos registros trazables.
-- No activar pagos reales, reembolsos, remisión AEAT, writers fiscales ni notificaciones externas durante QA.
+- Ledgers físicos, fiscales, contables, laborales y cierres append-only son inmutables; rectificación mediante nuevos registros trazables.
+- No usar REST/CMS directo para saltarse DAL, hooks o writers.
 
-## 8. Siguiente sesión — orden de ejecución
+## 8. Siguiente trabajo
 
-1. **Bookings P1:** implementar reconciliación segura de las seis proyecciones divergentes; tests de cancelación, replay, concurrencia e idempotencia; ejecutar read-back antes/después. No mutar reservas nativas.
-2. **TPV P0:** revisar el código integrado de PR #640 y cerrar pruebas unitarias/integración del clasificador y del gate WebMethod. Preparar un fixture de sesión realmente aislado, sin tocar `CajaActual` singleton ni `MovimientosCaja` existentes.
-3. **Runtime:** ejecutar Wix CLI Preview con build fingerprint y smoke; después ampliar un runner autenticado que interactúe con UI y llame flujos de aplicación de forma segura. No confundir smoke HTTP con E2E.
-4. **Capa 3:** completar contrato de transporte con tenant SharePoint aislado, permisos mínimos, idempotencia y read-back de evidencia; sin enviar documentos reales.
-5. **Fiscal/compensaciones:** resolver configuración legal y las tres compensaciones desde sus operaciones fuente; mantener writers deshabilitados hasta superar gates.
-6. **Toolchain/deuda:** auditar versiones SDK y toolchain (incluido ESLint 8 EOL y transitivas deprecated) en una PR aislada con CI y changelog. No actualizar dependencias en bloque ni editar `wix.lock` manualmente.
+1. Resolver las divergencias Bookings/CitasF2 mediante reconciliación backend y pruebas con fixtures.
+2. Completar pruebas unitarias/contrato del clasificador, gate de venta, bridge e idempotencia.
+3. Preparar integración Wix aislada con fingerprint, identidad de prueba y adaptadores sin efectos externos.
+4. Completar pruebas Capa 3 con fixtures y transporte simulado; después validar tenant SharePoint de pruebas.
+5. Resolver configuración fiscal y compensaciones para habilitación productiva, sin bloquear el desarrollo del resto de módulos.
 
-## 9. Límites de esta consolidación
+## 9. Estado de evidencia
 
-- Verificado en GitHub: PRs integradas, commits y resultados CI declarados en los PR de código.
-- Verificado por read-back Wix en auditorías fechadas: Site Context, recuentos CMS, Booking Reader V2 y Automation V2.
-- No verificado: Wix Preview/Runtime de WebMethods, UI E2E, concurrencia online, sincronización SHA Git-Wix, hardware de pago, SharePoint/Power Automate E2E ni producción.
-- El HEAD documental `f0b30c31c8ad924e42f8790338fa223716026420` no tiene runs de workflow asociados.
+- Los recuentos CMS y el estado Draft proceden del read-back fechado 2026-11-27.
+- CI, Wix Preview/Runtime, sincronización SHA Git-Wix, hardware de pago y SharePoint E2E requieren ejecuciones específicas.
+- Los datos de esta página son una instantánea fechada; no deben tratarse como lecturas actuales sin nueva verificación.

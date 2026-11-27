@@ -2,27 +2,24 @@
 
 **Estado:** núcleo de clasificación/gates integrado; TPV funcional Runtime pendiente.  
 **Última consolidación:** 2026-11-27.  
-**Autoridad:** este documento define el flujo TPV; el estado medible está en [STATE-NOW](STATE-NOW.md) y los gates en [RELEASE-READINESS](RELEASE-READINESS.md).
+**Autoridad:** este documento define el flujo TPV; el estado medible está en [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md).
 
-## 1. Arquitectura obligatoria
+## 1. Arquitectura y pruebas
 
-Un único código, contrato de dominio, validación, autorización, WebMethods y writer para desarrollo y producción. No existe un runtime TPV alternativo por Sandbox/Live, sintético/real, Preview/Published o test-run. Los tests usan fixtures y dobles de infraestructura, pero ejercitan las mismas funciones de dominio.
+Un único código y reglas de dominio para desarrollo, pruebas y producción. Los tests usan fixtures y adaptadores de infraestructura simulados para aislar CMS, pagos, terminales, fiscalidad y notificaciones; deben invocar las mismas funciones de dominio y contratos. No crear un runtime de negocio paralelo.
 
-Frontend: presentación y orquestación; solo envía identificadores y datos de interacción mínimos. Backend: identidad, autorización, catálogo, importes, impuestos, validación, idempotencia, persistencia y clasificación.
+Frontend: presentación y orquestación. Backend: identidad, autorización, catálogo, importes, impuestos, validación, idempotencia, persistencia y clasificación.
 
-## 2. Clasificación temporal implementada
+**Regla anti-bloqueo:** la falta de configuración fiscal real, serie productiva, corte de activación o datos comerciales reales no puede impedir probar el código mediante tests unitarios, contractuales o integración simulada. Cada test declara su fixture sintético y simula los puertos externos. No se deben falsear ni insertar configuraciones productivas para conseguir un PASS.
 
-PR #640 integra `src/backend/tpv/tpvRecordNature.js`.
+## 2. Clasificación temporal
 
 - `recordTimestamp`: instante UTC generado en backend.
-- `productionActivationAt`: corte UTC único leído de la configuración existente `MapaStaff` con `recordType=CONFIG_SISTEMA`.
-- `recordNature`: metadato persistido derivado; anterior al corte = `SYNTHETIC`, igual o posterior = `REAL`.
-- El navegador no suministra ni puede elegir timestamp, corte o naturaleza.
-- Ausencia de singleton/corte: se mantiene `SYNTHETIC`.
-- Configuración duplicada, fecha inválida o timestamp inválido: rechazo fail-closed.
-- La clasificación no cambia motor, permisos, esquema, validaciones, writer ni efectos externos. No reclasifica registros históricos.
-
-El read-back CMS del 2026-11-27 encontró cinco registros MapaStaff, pero ninguno `CONFIG_SISTEMA` y ninguno con `productionActivationAt`. Por ello no se ha fijado el corte real y los nuevos registros continúan clasificados como sintéticos.
+- `recordNature`: metadato de trazabilidad derivado en backend; no es selector de flujo ni de runtime.
+- Los fixtures de test se marcan explícitamente como sintéticos desde el contexto de test confiable, nunca mediante un campo controlado por navegador.
+- La ausencia de configuración de activación no bloquea tests de dominio: los tests inyectan reloj/configuración de fixture o prueban expresamente el comportamiento sin configuración.
+- En operaciones reales, sin configuración única y válida no se permite atribuir naturaleza REAL ni activar efectos productivos. Configuración ambigua o fechas inválidas deben seguir produciendo rechazo donde el contrato lo exija.
+- No reclasificar registros históricos.
 
 ## 3. Contratos de persistencia
 
@@ -39,41 +36,36 @@ No duplicar ledgers ni trasladar intenciones comerciales a movimientos físicos.
 ## 4. Preparación y registro de venta
 
 - `validarVentaBorrador()` resuelve catálogo/impuestos en backend y devuelve `saleReadinessBlockers`.
-- `registrarVenta()` vuelve a resolver catálogo e impuestos y aplica los mismos bloqueos antes de crear una intención nueva.
-- Si existen bloqueos, devuelve `TPV_SALE_NOT_READY`, `persisted=false` y no crea intención nueva.
-- El replay idempotente de una intención existente se resuelve antes del gate para no duplicar efectos.
-- Draft Orders, Wix Payments, capturas, reembolsos y terminales externos no se invocan en QA.
-- `saleReady=false` sigue siendo el estado actual del widget; la corrección del gate no habilita ventas.
+- `registrarVenta()` vuelve a resolver catálogo e impuestos y aplica los mismos bloqueos antes de aceptar una operación real.
+- Si existen bloqueos de negocio/producción, la operación real devuelve `TPV_SALE_NOT_READY` y no crea intención nueva.
+- El replay idempotente se resuelve antes del gate para no duplicar efectos.
+- Los tests deben cubrir dos comportamientos diferenciados: (a) gates reales activos y rechazo correcto; (b) recorrido de dominio con fixtures sintéticos y adaptadores simulados, sin cobro ni efecto externo. No se desactiva el gate de producción para conseguir el segundo caso.
+- Draft Orders, Wix Payments, capturas, reembolsos y terminales externos se sustituyen por dobles simulados durante QA.
 
 ## 5. Contrato V1 de preparación
 
 - Cantidades enteras positivas e importes en unidades menores.
-- Catálogo y precio resueltos por backend con Wix Catalog V3/Bookings.
-- Impuestos calculados en backend con APIs Wix; no aceptar importes del cliente.
+- Catálogo y precio resueltos por backend o fixture controlado de test.
+- Impuestos calculados por backend o por fixture fiscal explícito; nunca aceptar importes del navegador como autoridad.
 - V1 admite una única tasa fiscal verificable y un solo medio físico: EFECTIVO o TARJETA.
-- Bizum, split tender, bonos, tarjetas regalo y descuentos no configurados permanecen fuera del contrato V1.
+- Bizum, split tender, bonos, tarjetas regalo y descuentos no configurados permanecen fuera del contrato V1. Sus tests de rechazo no deben bloquear pruebas de los medios admitidos.
 - `writeContractV1.eligible=true` no equivale a `saleReady=true`, pago verificado o persistencia.
 
-## 6. Gates aún abiertos
+## 6. Gates por contexto
 
-1. Configuración fiscal canónica/legal, serie, numeración y reglas aprobadas.
-2. Presentación del precio final al consumidor y política de inventario físico.
-3. Evidencia de pago simulado fiable, con proveedor/terminal simulado y sin cobros reales.
-4. Contrato físico completo de MovimientosCaja, cadena hash/sequence, idempotencia y recuperación.
-5. Sesión de caja sintética aislada; no reutilizar `CajaActual` ABIERTA ni históricos existentes.
-6. Wix Preview/Runtime del bridge y WebMethods, permisos, concurrencia, idempotencia y recuperación.
-7. Read-back que confirme persistencia y proyección sin divergencias.
+| Contexto | Qué debe bloquear | Qué no debe bloquear |
+|---|---|---|
+| Unitario/contractual | Contratos inválidos y entradas fuera de esquema | Configuración fiscal/serie real, CMS real, pagos reales |
+| Integración simulada | Inconsistencias del dominio y del repositorio simulado | Credenciales, terminal, AEAT, notificaciones o SharePoint real |
+| Wix Preview/Runtime aislado | Permisos incorrectos, persistencia no aislada y efectos externos no interceptados | Datos comerciales reales, caja productiva, cobros o remesas reales |
+| Producción | Configuración legal incompleta, permisos, pagos no verificados y controles de integridad | Ningún gate obligatorio de producción se elimina |
 
-No retirar gates ni activar writers por configuración ficticia. Las pruebas deben usar el mismo flujo de dominio y un adaptador simulado sin efectos externos.
+La falta de datos fiscales reales no es un defecto de un test de lógica. Es un bloqueo de habilitación productiva. Registrar como tal, sin propagarlo a suites que usan fixtures.
 
-## 7. Pruebas y estado
+## 7. Integridad
 
-- PR #640 integrada; CI offline: 81 suites / 764 tests / 0 fallos.
-- Tests de clasificación UTC: sin corte, antes, igualdad, después y fechas inválidas.
-- Tests contractuales del gate `registrarVenta` y de ausencia de efectos eCommerce externos.
-- No se ha ejecutado Wix Preview/Runtime E2E, ni una venta real/sintética persistida, ni pago, ni movimiento físico, ni cierre.
-- El estado de aceptación vigente se mantiene en [RELEASE-READINESS](RELEASE-READINESS.md).
+Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se sobrescriben ni eliminan, incluso si contienen registros sintéticos. Las rectificaciones se realizan mediante nuevos registros trazables. Los tests persistentes deben usar un tenant/colección de pruebas aislado y writer canónico; nunca reutilizar la sesión `CajaActual` existente ni históricos compartidos.
 
-## 8. Seguridad e integridad
+## 8. Estado de pruebas
 
-Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se sobrescriben ni eliminan, incluso si contienen registros sintéticos. Las rectificaciones se realizan mediante nuevos registros trazables. No alterar la sesión `CajaActual` existente ni los históricos para preparar QA.
+CI offline acredita únicamente las suites ejecutadas. Wix Preview/Runtime, persistencia online, concurrencia online y sincronización Git-Wix requieren evidencia específica del entorno. Los tests simulados no se etiquetan como Runtime E2E.
