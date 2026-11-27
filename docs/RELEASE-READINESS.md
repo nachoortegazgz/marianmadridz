@@ -81,3 +81,23 @@ El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15)
 - No ejecutar `abrirSesionCaja()` hasta implementar/verificar la clasificación única `recordNature = recordTimestamp < productionActivationAt ? SYNTHETIC : REAL` y confirmar el campo/corte CMS. La implementación actual no persiste esos metadatos; apertura modifica la proyección `CajaActual`.
 - Gates runtime ejecutados: 0/3. No se generó JSON porque no se abrió una sesión de naturaleza acreditada. La paginación multi-page sigue sin ejercitar.
 - Corrección requerida al plan PR #629: el read-back de `MovimientosCaja` debe filtrar por `movementType === "CIERRE"` y `payloadFiscal.sessionId`, no por `sessionId` raíz (según `_buildTpvLedgerItem()`).
+
+
+
+## Auditoría CMS y disponibilidad pública — 2026-11-27
+
+| Proceso/colección | Read-back Wix | Evaluación |
+|---|---:|---|
+| Reservas `CitasF2` | 11; 11 con traceId; 9 NOT_PAID, 2 PENDING_LEDGER; cashMovementId vacío en 11 | Persistencia de reservas acreditada; conciliación de pagos/caja pendiente |
+| Control `ControlOperativo` | 78 | Persisten locks, idempotencia, webhooks y compensaciones; cobertura E2E no exhaustiva |
+| Integración `RegistroIntegracion` | 3 QA simulados, NOT_SENT | Persistencia de evidencia; entrega externa no probada |
+| Ledger físico `MovimientosCaja` | 5; 3 QA_DEVELOPMENT, 2 sin source; 5 sin recordTimestamp/hash/previousRecordHash | Integridad/contrato de muestra histórica no acreditados |
+| Contabilidad `LibroAsientosContablesDetalle` | 3 simulados | No acredita asientos reales |
+| Cierre `HistoricoCierresZ` | 1 Z_SIMULATED, NOT_SIGNED, NOT_SENT | Solo simulación; cierre fiscal real no acreditado |
+| Caja `CajaActual` | 1 ABIERTA; último update 2026-11-21 | Estado potencialmente obsoleto; conciliar antes de nuevas pruebas |
+| Jornada `RegistrosHorariosStaff` | 0 | Sin persistencia actual acreditada |
+| Ventas `TransaccionesTPV` | 0 | No usar como ledger paralelo; `MovimientosCaja` es el ledger físico canónico |
+
+- Disponibilidad pública: cuatro hosts HTTP/HTTPS con/sin www redirigen a `https://www.marianmadrid.es/` y muestran contenido propio (TinyFish run `08925334-d5c9-448e-b8df-4cd31466b8ac`). Una primera ejecución observó placeholder Wix; la prueba posterior contradijo esa observación. Dashboard muestra dominio conectado y asignado al sitio; GetSiteContext indica Draft. Revalidar en una sesión posterior antes de declarar estabilidad.
+- No afirmar persistencia completa de todos los detalles: el read-back acredita existencia/campos de muestras, no todos los flujos ni cada escritura. Gates TPV Runtime siguen sin JSON de evidencia.
+- GO bloqueado hasta: completar auditoría de enlaces internos; conciliar CajaActual; tratar históricamente sin alterar los 5 movimientos incompletos; ejecutar pruebas Preview de caja/ventas/cierre y verificar read-after-write; validar fichajes; completar contrato/configuración fiscal.
