@@ -12,7 +12,7 @@ El propietario establece un único código, contrato, validación y writer para 
 
 **Fase 2 Wix Apps (2026-11-27):** Bookings y Data hooks alineados con documentación oficial; Catalog V3 usa variante/precio correctos y disponibilidad por defecto, sin consulta de cantidades por ubicación. APIs Payments Create Transaction/Create Card Token sin referencias activas en `src/`.
 **Idempotencia:** venta, movimiento, cierre y Ticket X usan claves/IDs deterministas; cierre corregido a `sessionId-CIERRE` para impedir duplicados si cambia el messageId. Ubicación física única detectada; default location no acreditado por la respuesta de Locations.
-**Validación:** CI offline de esta PR pendiente; Wix Runtime no ejecutado. Inventario por ubicación concreta requiere confirmar la ubicación predeterminada si se desea mostrar cantidades exactas.
+**Validación:** CI offline PR #628 PASS (80 suites/759 tests, 0 fallos; run `45926525032`); Wix Runtime no ejecutado. Inventario por ubicación concreta requiere confirmar la ubicación predeterminada si se desea mostrar cantidades exactas.
 
 ## 1. Estado ejecutivo
 
