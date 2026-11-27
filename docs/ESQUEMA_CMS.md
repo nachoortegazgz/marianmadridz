@@ -27,7 +27,7 @@ Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE 
 | CajaActual | NATIVE | 20 | 83 | 1 |
 | CitasF2 | NATIVE | 60 | 29 | 11 |
 | ComplementosCatalogo | NATIVE | 144 | 17 | 36 |
-| ControlOperativo | NATIVE | 95 | 34 | 78 |
+| ControlOperativo | NATIVE | 95 | 34 | 81 |
 | HistoricoCierresZ | NATIVE | 44 | 66 | 1 |
 | LibroAsientosContablesDetalle | NATIVE | 9 | 103 | 3 |
 | MapaStaff | NATIVE | 136 | 44 | 5 |
@@ -36,7 +36,7 @@ Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE 
 | RegistrosHorariosStaff | NATIVE | 2 | 47 | 0 |
 | ServiciosCatalogo | NATIVE | 204 | 43 | 95 |
 | TransaccionesTPV | NATIVE | 7 | 27 | 0 |
-| **Total NATIVE** | | | **628** | **238** |
+| **Total NATIVE** | | | **628** | **241** |
 
 ### Colecciones Wix Apps
 
@@ -102,7 +102,7 @@ sku:TEXT!, taxIncluded:BOOLEAN!, durationMinutes:NUMBER, tipoImpositivo:NUMBER, 
 ~~~
 
 ### ControlOperativo — CONTROL_OPERATIVO
-Revisión 95 · 34 campos · 78 items · permisos CMS ADMIN para read/insert/update/remove.
+Revisión 95 · 34 campos · 81 items · permisos CMS ADMIN para read/insert/update/remove.
 
 ~~~text
 eventType:TEXT, recordNature:TEXT, recordTimestamp:DATETIME, controlType:TEXT!, dedupeKey:TEXT!, traceId:TEXT!, status:TEXT, eventId:TEXT, expiresAt:DATETIME, bookingId:TEXT, resourceId:TEXT, serviceId:TEXT, dateYmd:TEXT, attempts:NUMBER, surface:TEXT, requesterKey:TEXT, requestCount:NUMBER, windowStart:DATETIME, payload:OBJECT!, version:NUMBER, heartbeatAt:DATETIME, ownerToken:TEXT, _id:TEXT, _createdDate:DATETIME, transactionId:TEXT, orderId:TEXT, _updatedDate:DATETIME, _owner:TEXT, refundId:TEXT, kind:TEXT, processedAt:DATETIME, operationDescription:TEXT, lastError:TEXT, totalAmount:NUMBER
@@ -179,7 +179,7 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 | CajaActual | 1 singleton ABIERTA. Apertura 300 EUR; cashAmount/expectedCash 320 EUR; countedCash 0; difference 0; salesCount 2. snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS. |
 | CitasF2 | 11 items: 10 CONFIRMED, 1 PENDING; 9 NOT_PAID, 2 PENDING_LEDGER; 3 DUAL_F1, 3 DUAL_F2 y 5 SIMPLE. |
 | ComplementosCatalogo | 36 items. |
-| ControlOperativo | 78 items; 3 PENDING_RECOVERY, 53 COMPLETED y 4 ACTIVE; 18 items no tienen status informado. Hay 3 controles COMPENSATION. |
+| ControlOperativo | 81 items: 9 SLOT_LOCK liberados, 6 IDEMPOTENCY completados, 6 DAYS_CACHE (1 INVALIDATED y 5 sin status), 4 RATE_LIMIT activos, 15 WEBHOOK_EVENT completados, 33 WEBHOOK_CLAIM completados, 5 TPV_FUNCTIONAL_TEST completados y 3 COMPENSATION PENDING_RECOVERY. |
 | HistoricoCierresZ | 1 item SIMULATED / Z_SIMULATED; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required en el esquema actual. |
 | LibroAsientosContablesDetalle | 3 items; los 3 tienen projectionStatus=SIMULATED_ONLY. |
 | MapaStaff | 5 items: STAFF=3, TERCERO=1, GESTORIA=1. No existe item CONFIG_SISTEMA en el conjunto leído. |
@@ -198,6 +198,8 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 5. MapaStaff: un item contiene la clave no declarada email. No existe CONFIG_SISTEMA en los cinco items leídos, aunque el esquema sí contiene los campos para recordType, taxId, legalName, productionActivationAt y configuración fiscal.
 6. TransaccionesTPV: la colección está vacía y su esquema no declara transactionId. No confundir sessionId/requestFingerprint de la intención TPV con transactionId del movimiento fiscal en MovimientosCaja.
 7. RegistrosHorariosStaff: la colección existe y su esquema está definido, pero no hay items.
+
+8. ControlOperativo: auditoría Wix consistente del 2026-11-27 (81/81 items; revisión 95). Se detectaron 6 WEBHOOK_EVENT históricos con eventType/processedAt solo en payload, 6 WEBHOOK_CLAIM históricos con ownerToken y aliases payload.attempt/payload.leaseExpiresAt sin attempts/expiresAt top-level, y 3 SLOT_LOCK históricos liberados sin payload.slotStart/slotEnd. Los registros afectados son terminales; WEBHOOK_EVENT es append-only. No se modificaron ni migraron. Los writers actuales ya emiten los campos canónicos y sus hooks los validan; se endureció además la creación/validación de locks de reserva para rechazar intervalos ausentes o inválidos. No se detectaron tipos superiores incorrectos ni campos raíz desconocidos. resourceId vacío en DAYS_CACHE es intencional porque la clave representa un conjunto de recursos.
 
 Los datos actuales son anteriores al despliegue oficial de producción de 2027 y, por la política del proyecto, son sintéticos. Los marcadores explícitos no son uniformes: por ejemplo, solo tres de los cinco movimientos indican recordSource=TPV_QA_DEVELOPMENT. No inferir naturaleza real a partir de la ausencia de marcador.
 
