@@ -6,8 +6,10 @@
 
 - Repositorio: `nachoortegazgz/marianmadridz`.
 - La documentación y el código deben referenciar el HEAD real de `main`; no reutilizar SHAs históricos como estado actual sin read-back.
+- Baseline de `main` al iniciar la revisión: `7a7e171357090c18d01874d8deb4368344cd5af6`.
 - PR #640: clasificación temporal TPV y gate de venta integrados. CI histórico: 81 suites, 764 tests, 0 fallos.
 - PR #641: preparación de paquete Capa 3 integrada. CI histórico: 80 suites, 762 tests, 0 fallos.
+- PR #650: identidad transaccional fiscal obligatoria, fingerprint de replay y contrato mínimo de movimiento fiscal integrados; CI PASS. AEAT hash y Runtime E2E continúan pendientes.
 - Las ejecuciones CI acreditan únicamente los commits y suites ejecutados; no acreditan Wix Runtime.
 
 ## 2. Wix y CMS — último read-back documentado 2026-11-27
@@ -24,10 +26,11 @@
 - `recordTimestamp` y `recordNature` se generan/derivan en backend. La clasificación temporal es metadato, no selector de runtime.
 - La ausencia de corte/configuración real debe permitir probar el dominio con fixtures sintéticos y puertos simulados. No habilita clasificación REAL ni writers productivos.
 - `registrarVenta()` aplica los blockers de preparación para operaciones reales; el replay idempotente se resuelve antes del gate.
-- `TransaccionesTPV`: intención comercial pendiente/no contable. `MovimientosCaja`: ledger físico canónico.
+- `TransaccionesTPV`: intención comercial pendiente/no contable; se permite únicamente la transición controlada de estado definida por contrato y se prohíbe el borrado en DAL y hook CMS. `MovimientosCaja`: ledger físico canónico append-only.
 - El widget sigue en MODO CONSULTA y no hay venta/cobro/movimiento físico aceptados en Runtime según la última evidencia.
-- Cambio de código en rama `remove-global-ledger-write-gates`: retirados los interruptores globales `FISCAL_RUNTIME_POLICY` de los writers fiscales/contables, la preparación de venta y el cron de recuperación. Los writers siguen ejecutando validación fiscal, autorización, contratos, locks, idempotencia e integridad; no equivale a certificar configuración fiscal ni Runtime.
+- Los interruptores globales `FISCAL_RUNTIME_POLICY` fueron retirados de los writers fiscales/contables, la preparación de venta y el cron de recuperación. Los gates de configuración y las garantías de autorización, contratos, locks, idempotencia e integridad permanecen en el punto de escritura. Los writers siguen ejecutando validación fiscal, autorización, contratos, locks, idempotencia e integridad; no equivale a certificar configuración fiscal ni Runtime.
 - El writer de jornada conserva su control específico hasta disponer de idempotencia y serialización validadas.
+- Revisión actual en rama `fix/tpv-actionable-errors-and-guards`: normalización de errores TPV, guards operativos dentro de `try/catch` y denegación de borrado de `TransaccionesTPV` tanto en DAL como en hook. Pendiente de CI y merge; no implica Runtime PASS.
 
 ## 4. Reservas / Bookings
 
