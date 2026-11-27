@@ -781,3 +781,11 @@ test('PERSIST-05 booking privacy metadata reaches the CitasF2 writer', async () 
   const core = await readFile(new URL('../booking/bookingCore.js', import.meta.url), 'utf8');
   assert.match(core, /privacyNoticeAcceptedAt:\s*p\.privacyNoticeAcceptedAt/);
 });
+
+
+test('BOOKING-AMOUNT-01 booking writer does not coerce invalid totalAmount to zero', async () => {
+  const source = await readFile(new URL('../booking/bookingCore.js', import.meta.url), 'utf8');
+  assert.match(source, /const rawTotalAmount = p\\.totalAmount !== undefined/);
+  assert.match(source, /const totalAmount = _roundMoney\\(rawTotalAmount\\)/);
+  assert.doesNotMatch(source, /Number\\([\\s\\S]{0,180}p\\.totalAmount[\\s\\S]{0,180}\\)\\s*\\|\\|\\s*0/);
+});
