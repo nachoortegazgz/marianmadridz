@@ -1,4 +1,5 @@
 import test from "node:test";
+import { buildQuarterlyRegistryPackage } from "../exports/exportContract.js";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
@@ -614,4 +615,114 @@ test("legacy TPV runtime writers are retired while historical payload validation
     await assert.rejects(source("tpv/tpvTestRuntime.web.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeRepository.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeCore.js"), { code: "ENOENT" });
+});
+
+
+test("Capa 3 quarterly export is deterministic, minimized and source-gated", () => {
+    const summary = {
+        nifEmisor: "B12345678",
+        totalOperaciones: 1,
+        totalOperacionesFiscales: 1,
+        conteo: { ventas: 1, reembolsos: 0, propinas: 0, ajustes: 0 },
+        borradorIva: { estado: "REVISION_PROFESIONAL_REQUERIDA", baseImponibleRegistrada: 100, cuotaIvaRegistrada: 21 },
+        totales: {
+            totalVentasBrutas: 121,
+            totalReembolsos: 0,
+            totalFacturadoNeto: 121,
+            totalPropinasSeparadas: 0,
+            totalAjustesSeparados: 0,
+        },
+        desgloseFormaPago: { efectivo: 121, tarjeta: 0, bizum: 0, online: 0 },
+    };
+    const rows = [{
+        recordNature: "REAL",
+        invoiceNumber: "MM-2026-0001",
+        fechaExpedicion: "2026-10-01",
+        tipoFactura: "BORRADOR_INTERNO",
+        movementType: "VENTA",
+        operationNature: "VENTA",
+        taxTreatment: "DEVENGADO",
+        paymentMethod: "efectivo",
+        taxableAmount: 100,
+        taxRate: "21%",
+        taxAmount: 21,
+        totalAmount: 121,
+        hashCompleto: "a".repeat(64),
+        fechaHoraRegistro: new Date("2026-10-01T10:00:00.000Z"),
+        transactionId: "tx-0001",
+        concepto: "must not be exported",
+        customerName: "must not be exported",
+    }];
+    const input = {
+        year: 2026,
+        quarter: 4,
+        generatedAt: new Date("2026-11-27T06:00:00.000Z"),
+        traceId: "c3-test-1",
+        summary,
+        rows,
+    };
+    const first = buildQuarterlyRegistryPackage(input);
+    const second = buildQuarterlyRegistryPackage(input);
+    assert.equal(first.manifest.exportId, "MM-C3-ACCOUNTING-2026-Q4-V1.0.0");
+    assert.equal(first.manifest.artifactId, second.manifest.artifactId);
+    assert.equal(first.manifest.contentChecksum, second.manifest.contentChecksum);
+    assert.equal(first.manifest.recordCount, 1);
+    assert.equal(first.manifest.deliveryStatus, "PREPARED_NOT_DELIVERED");
+    assert.equal(first.manifest.period.periodStart, "2026-10-01");
+    assert.equal(first.manifest.period.periodEndExclusive, "2027-01-01");
+    assert.equal(first.content.records[0].taxableAmountMinor, 10000);
+    assert.equal(first.content.records[0].taxRateBasisPoints, 2100);
+    assert.equal(first.content.records[0].taxAmountMinor, 2100);
+    assert.equal(first.content.records[0].totalAmountMinor, 12100);
+    assert.equal(JSON.stringify(first).includes("must not be exported"), false);
+});
+
+test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
+    const summary = {
+        nifEmisor: "B12345678",
+        totalOperaciones: 0,
+        totalOperacionesFiscales: 0,
+        conteo: { ventas: 0, reembolsos: 0, propinas: 0, ajustes: 0 },
+        borradorIva: { estado: "REVISION_PROFESIONAL_REQUERIDA", baseImponibleRegistrada: 0, cuotaIvaRegistrada: 0 },
+        totales: {
+            totalVentasBrutas: 0, totalReembolsos: 0, totalFacturadoNeto: 0,
+            totalPropinasSeparadas: 0, totalAjustesSeparados: 0,
+        },
+        desgloseFormaPago: { efectivo: 0, tarjeta: 0, bizum: 0, online: 0 },
+    };
+    const row = {
+        recordNature: "SYNTHETIC",
+        invoiceNumber: "QA-1",
+        fechaExpedicion: "2026-10-01",
+        tipoFactura: "BORRADOR_INTERNO",
+        movementType: "VENTA",
+        operationNature: "VENTA",
+        taxTreatment: "DEVENGADO",
+        paymentMethod: "efectivo",
+        taxableAmount: 10,
+        taxRate: "21%",
+        taxAmount: 2.1,
+        totalAmount: 12.1,
+        hashCompleto: "b".repeat(64),
+        fechaHoraRegistro: new Date("2026-10-01T10:00:00.000Z"),
+        transactionId: "qa-1",
+    };
+    assert.throws(() => buildQuarterlyRegistryPackage({
+        year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
+        summary, rows: [row],
+    }), /C3_EXPORT_SOURCE_RECORD_NOT_REAL/);
+    assert.throws(() => buildQuarterlyRegistryPackage({
+        year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
+        summary, rows: [{ ...row, recordNature: "REAL", fechaExpedicion: "2026-02-31" }],
+    }), /C3_EXPORT_ISSUE_DATE_INVALID/);
+});
+
+test("Capa 3 export WebMethod is admin-only and has no delivery or write side effects", async () => {
+    const service = await source("exports/exportService.web.js");
+    assert.match(service, /webMethod\(\s*Permissions\.Admin/);
+    assert.match(service, /await requireAdmin\(traceId\)/);
+    assert.match(service, /getQuarterlyTaxSummaryInternal/);
+    assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
+    assert.match(service, /buildQuarterlyRegistryPackage/);
+    assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph/);
 });
