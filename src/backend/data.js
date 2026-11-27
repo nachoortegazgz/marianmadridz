@@ -595,7 +595,7 @@ export function HistoricoCierresZ_beforeInsert(item) {
 export function HistoricoCierresZ_beforeUpdate(item) {
     throw createActionableError({
         code: "HISTORICO_CIERRES_Z_APPEND_ONLY",
-        userMessage: "No se puede modificar un cierre Z histórico.",
+        userMessage: "Los cierres Z históricos son append-only y no se pueden modificar.",
         technicalDetail: "HistoricoCierresZ es un registro de cierre append-only.",
         remediation: [
             "Conservar el cierre original y su evidencia.",
@@ -629,7 +629,7 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
 export function RegistrosHorariosStaff_beforeUpdate(item) {
     throw createActionableError({
         code: "STAFF_TIME_LEDGER_APPEND_ONLY",
-        userMessage: "No se puede modificar un registro horario.",
+        userMessage: "Los registros horarios son append-only y no se pueden modificar.",
         technicalDetail: "RegistrosHorariosStaff es un ledger laboral append-only.",
         remediation: [
             "Registrar una rectificación horaria trazable.",
