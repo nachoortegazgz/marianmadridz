@@ -12,10 +12,12 @@ Los objetivos del proyecto son la única SSOT de decisión funcional. Las direct
 
 ## Estado operativo
 
-- **Release comercial:** NO-GO. El Site Context read-back más reciente (2026-11-25 17:53 CET) identifica el sitio como Draft. El propietario autoriza pruebas online durante desarrollo; no hay actividad real declarada ni autorización de pagos reales o remisión fiscal.
-- **Modelo TPV:** un único código, contrato y writer para desarrollo y producción. Los registros comparten formato; recordNature se deriva en backend comparando recordTimestamp con productionActivationAt. Los registros anteriores al corte son sintéticos y los posteriores reales. La marca es metadato, no un selector de runtime. La migración sigue pendiente.
-- **GitHub:** PR #612 integrada en `main` (`239fd8207d228bde56e9908055166980a87d4989`); preparación y contrato previo V1 integrados, pero sin writer operativo.
-- **Wix Site Context (read-back 2026-11-25 17:53 CET):** sitio Draft; Velo habilitado; Editor; Premium; Wix Stores Catalog V3, Bookings, Payments e Invoices V1 instalados; EUR / Europe-Madrid. La sincronización Git-Wix no está verificada.
+- **Release comercial:** NO-GO. Wix Site Context read-back 2026-11-27 05:37: sitio Draft, Editor clásico, Velo habilitado; `published=false`. No hay autorización de pagos reales ni remisión fiscal durante QA.
+- **TPV:** HTML `#htmlTPV` en MODO CONSULTA; `saleReady=false` por gates fiscales, de pago y presentación de precios. La tarifa personalizada y Bizum/bonos/tarjeta regalo/otros siguen deshabilitados. `registrarVenta()` puede crear una intención `PENDING_PAYMENT` sin confirmar cobro; el gate de WebMethod debe alinearse con el de la cotización.
+- **Clasificación temporal:** `recordTimestamp`/`productionActivationAt`/`recordNature` siguen documentados pero no implementados en `src/`; `sourceType` se fija como `SYNTHETIC`. P0 antes de actividad real.
+- **GitHub:** `main` en `d95c2321f5227e987b22455150fd7a62b4129fa0` (PR #638 integrada). CI run `45948074849`: 80 suites, 759 tests, 0 fallos.
+- **Wix read-back 2026-11-27:** 9 páginas estáticas y 2 dinámicas; TPV página ID `yl5th`, ruta `/blank`. CMS: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78. Sin escrituras.
+- **Wix CLI:** workflow manual `wix-tpv-preview.yml` preparado para Preview no publicador y smoke read-only. No ejecutado desde esta sesión; no acredita runtime TPV ni sincronización Git-Wix.
 - **Documentación canónica:** [índice](docs/INDEX.md), [estado vigente](docs/STATE-NOW.md), [flujo TPV único](docs/TPV-UNIFIED-FLOW.md), [Hito TPV-01](docs/TPV-MILESTONE-01-UNIFIED-CORE.md) y [manifiesto histórico](docs/ARCHIVE-MANIFEST.md).
 - **Pruebas online:** autorizadas por el propietario en el sitio y colecciones actuales durante desarrollo, una vez completados los gates técnicos y verificado el destino de escritura. Los datos sintéticos se resetearán antes de productionActivationAt. CI offline no acredita sincronización Git-Wix ni Runtime. TPV: `saleReady=false`, `paymentVerified=false`, `persisted=false`.
 
