@@ -644,7 +644,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 /*
  * Central CMS write allowlist. TransaccionesTPV permits constrained updates only;
  * append-only ledgers and TPV commercial intents are excluded from removal.
- * Only scoped ControlOperativo purges are permitted by the policy below.
+ * No physical bulk deletion is permitted; ephemeral controls are retired by CAS.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([
@@ -688,17 +688,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DUAL_CACHE,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SLOT_LOCK,
-  ]),
-  purgeControlTypes: Object.freeze([
-    CONTROL_TYPE.ALERT,
-    CONTROL_TYPE.COMPENSATION,
-    CONTROL_TYPE.DAYS_CACHE,
-    CONTROL_TYPE.DISPLAY_TOKEN,
-    CONTROL_TYPE.DUAL_CACHE,
-    CONTROL_TYPE.IDEMPOTENCY,
-    CONTROL_TYPE.RATE_LIMIT,
-    CONTROL_TYPE.SLOT_LOCK,
-    CONTROL_TYPE.SYSTEM_FLAG,
   ]),
 });
 
