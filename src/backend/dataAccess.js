@@ -421,8 +421,8 @@ export function bulkRemove(collection, ids) {
     }
     return Promise.resolve({
         removed: 0,
-        skipped: count,
-        failed: 0,
+        skipped: 0,
+        failed: count,
         errors: [{
             code: "CMS_BULK_DELETE_PROHIBITED",
             message: "Los registros se conservan; no se ha ejecutado ningún borrado.",
