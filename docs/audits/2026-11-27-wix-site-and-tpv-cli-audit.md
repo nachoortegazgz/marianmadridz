@@ -1,3 +1,5 @@
+> **Baseline histórico — anterior a PR #640 (2026-11-27).** Este informe registra los gaps detectados antes de integrar clasificación temporal y gate de venta. No usar sus conclusiones de implementación como estado actual. La implementación posterior está descrita en [TPV-UNIFIED-FLOW](../TPV-UNIFIED-FLOW.md), [STATE-NOW](../STATE-NOW.md) y [RELEASE-READINESS](../RELEASE-READINESS.md). El estado read-only posterior está en [aceptación MVP](2026-11-27-mvp-runtime-readonly-acceptance.md).
+
 # Auditoría Wix, TPV y Wix CLI — 2026-11-27
 
 **Resultado ejecutivo: NO-GO funcional para TPV; sitio Wix en Draft; CI offline PASS; Wix Preview/Runtime NO EJECUTADO.**  
