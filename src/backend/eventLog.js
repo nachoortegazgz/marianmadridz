@@ -66,7 +66,7 @@ import {
 } from "backend/internalConfig";
 
 import { readFiscalPayload, readMovementField, readMovementHash } from "backend/data";
-import { assertFiscalMovementInputEnums, isValidNifOrEuVat } from "backend/validation";
+import { assertFiscalMovementInputEnums, isValidNifOrEuVat, isExplicitSimulationLedgerRecord } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
@@ -301,7 +301,7 @@ async function _getLastCashEvent() {
         .descending("sequenceNumber")
         .limit(20)
         .find({ consistencyMode: "strong" });
-    return (res?.items || []).find((item) => item) || null;
+    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
 }
 
 // ============================================================================
