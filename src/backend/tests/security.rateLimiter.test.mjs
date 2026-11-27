@@ -223,3 +223,16 @@ test("SEC-CRYPTO-02 computes standard HMAC-SHA256 vectors", async () => {
         "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
     );
 });
+
+test("SEC-CRYPTO-03 rejects empty SHA-256 input instead of returning a sentinel digest", async () => {
+    await assert.rejects(() => hashSHA256(""), { message: "HASH_INPUT_REQUIRED" });
+    await assert.rejects(() => hashSHA256(null), { message: "HASH_INPUT_REQUIRED" });
+    await assert.rejects(() => hashSHA256(undefined), { message: "HASH_INPUT_REQUIRED" });
+});
+
+test("SEC-CRYPTO-04 rejects missing HMAC key or payload instead of returning a sentinel digest", async () => {
+    await assert.rejects(() => hmacSha256Hex("", "payload"), { message: "HMAC_KEY_REQUIRED" });
+    await assert.rejects(() => hmacSha256Hex(null, "payload"), { message: "HMAC_KEY_REQUIRED" });
+    await assert.rejects(() => hmacSha256Hex("key", ""), { message: "HMAC_PAYLOAD_REQUIRED" });
+    await assert.rejects(() => hmacSha256Hex("key", null), { message: "HMAC_PAYLOAD_REQUIRED" });
+});

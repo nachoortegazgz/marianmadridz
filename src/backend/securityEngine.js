@@ -57,7 +57,7 @@ export async function hashSHA256(input) {
     const value = _toString(input);
 
     if (!value) {
-        return ZERO_HASH;
+        throw new TypeError("HASH_INPUT_REQUIRED");
     }
 
     try {
@@ -77,8 +77,11 @@ export async function hmacSha256Hex(key, payload) {
     const keyValue = _toString(key);
     const payloadValue = _toString(payload);
 
-    if (!keyValue || !payloadValue) {
-        return ZERO_HASH;
+    if (!keyValue) {
+        throw new TypeError("HMAC_KEY_REQUIRED");
+    }
+    if (!payloadValue) {
+        throw new TypeError("HMAC_PAYLOAD_REQUIRED");
     }
 
     try {
