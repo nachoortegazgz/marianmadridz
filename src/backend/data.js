@@ -499,8 +499,23 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export async function MovimientosCaja_beforeUpdate(item) {
-    return MovimientosCaja_beforeInsert(item);
+export function MovimientosCaja_beforeUpdate(item) {
+    throw createActionableError({
+        code: "MOVIMIENTOS_CAJA_APPEND_ONLY",
+        userMessage: "No se puede modificar un movimiento de caja.",
+        technicalDetail: "MovimientosCaja es un ledger append-only.",
+        remediation: [
+            "Registrar una devolución o ajuste compensatorio.",
+            "Usar el flujo TPV correspondiente.",
+            "Conservar el registro histórico original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function MovimientosCaja_beforeRemove() {
@@ -531,7 +546,21 @@ export function LibroAsientosContablesDetalle_beforeInsert(item) {
 }
 
 export function LibroAsientosContablesDetalle_beforeUpdate(item) {
-    return LibroAsientosContablesDetalle_beforeInsert(item);
+    throw createActionableError({
+        code: "ACCOUNTING_LEDGER_APPEND_ONLY",
+        userMessage: "No se puede modificar un asiento contable.",
+        technicalDetail: "El libro contable es append-only.",
+        remediation: [
+            "Registrar una rectificación formal.",
+            "No modificar el asiento original.",
+            "Consultar el traceId en los registros técnicos.",
+        ],
+        contextSnapshot: {
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
