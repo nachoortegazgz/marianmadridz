@@ -34,6 +34,22 @@ function isoDate(value, code) {
     return date.toISOString();
 }
 
+function dateOnly(value, code) {
+    const normalized = requiredString(value, code, 10);
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(normalized)) throw new Error(code);
+    const date = new Date(normalized + "T00:00:00.000Z");
+    if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== normalized) {
+        throw new Error(code);
+    }
+    return normalized;
+}
+
+function countValue(value, code) {
+    const count = Number(value);
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error(code);
+    return count;
+}
+
 function toMinorUnits(value, code) {
     const amount = Number(value);
     if (!Number.isFinite(amount)) throw new Error(code);
@@ -77,7 +93,7 @@ function normalizeRecord(row) {
 
     return {
         invoiceNumber: requiredString(row.invoiceNumber, "C3_EXPORT_INVOICE_NUMBER_MISSING", 100),
-        issueDate: requiredString(row.fechaExpedicion, "C3_EXPORT_ISSUE_DATE_MISSING", 10),
+        issueDate: dateOnly(row.fechaExpedicion, "C3_EXPORT_ISSUE_DATE_INVALID"),
         invoiceType: requiredString(row.tipoFactura, "C3_EXPORT_INVOICE_TYPE_MISSING", 40),
         movementType: requiredString(row.movementType, "C3_EXPORT_MOVEMENT_TYPE_MISSING", 40),
         operationNature: requiredString(row.operationNature, "C3_EXPORT_OPERATION_NATURE_MISSING", 40),
@@ -104,13 +120,13 @@ function normalizeSummary(summary) {
 
     return {
         issuerTaxId: requiredString(summary?.nifEmisor, "C3_EXPORT_ISSUER_TAX_ID_MISSING", 32),
-        operationCount: Number(summary?.totalOperaciones),
-        fiscalOperationCount: Number(summary?.totalOperacionesFiscales),
+        operationCount: countValue(summary?.totalOperaciones, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
+        fiscalOperationCount: countValue(summary?.totalOperacionesFiscales, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
         counts: {
-            sales: Number(counts.ventas || 0),
-            refunds: Number(counts.reembolsos || 0),
-            tips: Number(counts.propinas || 0),
-            adjustments: Number(counts.ajustes || 0),
+            sales: countValue(counts.ventas ?? 0, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
+            refunds: countValue(counts.reembolsos ?? 0, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
+            tips: countValue(counts.propinas ?? 0, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
+            adjustments: countValue(counts.ajustes ?? 0, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
         },
         totalsMinor: {
             grossSales: toMinorUnits(totals.totalVentasBrutas, "C3_EXPORT_SUMMARY_INVALID"),
