@@ -73,7 +73,7 @@ CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A 
 
 ## 6. Current known baseline (read STATE-NOW before acting)
 
-- Main HEAD observed on 2026-11-28: `25b55d406b365ab8b82c70f1eb0803a5bf1f5628` (PR #671 documentation merge).
+- Main HEAD observed on 2026-11-28: `910ad3faa6e543c23e81b2902726d4d8cd43087f` (PR #675 integrated).
 - PR #670 hardening is integrated. Its offline CI reported 88 suites / 794 tests with zero failures. PR #675 is also integrated and supersedes that baseline with 89 suites / 804 tests PASS, SDK checks, ESLint, npm audit and Gitleaks PASS on its validated HEAD. See STATE-NOW for exact runs and SHAs.
 - Capa 0 remains **EN EJECUCIÓN**. PR #675 resolved provider-error masking across Bookings Staff, CRM/Members, identity and DAL; `queryReferencedItems()` was removed after a zero-consumer audit. Remaining items: secret-provider error propagation (including fiscal-emitter consumer), confirming all staff resource IDs are service providers, money conversion contracts, currency-key duplication, global writer/idempotency matrix, dead-code audit and Runtime validation.
 - Wix Local Editor/Preview E2E, Wix Runtime acceptance and production are not accredited by the cited offline CI.
