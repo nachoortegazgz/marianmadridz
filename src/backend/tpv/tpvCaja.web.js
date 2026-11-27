@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessionProjection, initializeTpvCaja, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessionProjection, readTpvCajaSnapshot, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -82,29 +82,7 @@ export const obtenerEstadoCaja = webMethod(
         await requireCajero(traceId);
 
         const operator = await resolveTpvContext(traceId);
-        const cajaResult = await initializeTpvCaja();
-        const caja = cajaResult.item;
-        const runtime = caja.conceptOperations?.tpvRuntime &&
-            typeof caja.conceptOperations.tpvRuntime === "object"
-            ? caja.conceptOperations.tpvRuntime
-            : {};
-        const canonicalProjection =
-            caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
-            runtime.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-            runtime.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
-            runtime.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
-            Number(runtime.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
-            Boolean(String(runtime.sessionId || "").trim()) &&
-            /^[a-f0-9]{64}$/i.test(String(runtime.eventHash || ""));
-        const cajaActual = {
-            singletonKey: caja.singletonKey || null,
-            projectionStatus: canonicalProjection ? "CANONICAL" : "LEGACY_UNVERIFIED",
-            cashRegisterStatus: caja.cashRegisterStatus || "DESCONOCIDO",
-            snapshotSource: caja.snapshotSource || null,
-            sessionId: canonicalProjection ? runtime.sessionId : null,
-            openedAt: canonicalProjection ? caja.openedAt || null : null,
-            openedBy: canonicalProjection ? caja.openedBy || null : null,
-        };
+        const cajaActual = await readTpvCajaSnapshot();
         const session = await latestTpvSession();
         const dayKey = madridDayKey();
         const nextSessionPreview = {
