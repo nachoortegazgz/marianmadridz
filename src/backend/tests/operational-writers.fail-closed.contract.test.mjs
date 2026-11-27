@@ -97,8 +97,8 @@ test("P0-CMS-02 fiscal identity consumers follow the live MapaStaff schema", asy
 });
 
 
-test("P0-FISCAL-TX-04 transaction and recovery writers enforce the canonical identity contract", () => {
-  const cajas = read("src/backend/cajas.web.js");
+test("P0-FISCAL-TX-04 transaction and recovery writers enforce the canonical identity contract", async () => {
+  const cajas = await read("cajas.web.js");
   const transactionGuard = cajas.indexOf('const transactionId = _safeTrim(payload?.transactionId);');
   const fiscalConfigGuard = cajas.indexOf('await validateFiscalConfig(traceId);', transactionGuard);
   assert.ok(transactionGuard >= 0);
