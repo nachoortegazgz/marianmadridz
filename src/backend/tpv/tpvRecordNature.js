@@ -9,7 +9,7 @@ function validUtcInstant(value) {
         return Number.isNaN(date.getTime()) ? null : date;
     }
     if (typeof value !== "string" ||
-        !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,3})?Z$/.test(value)) {
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) {
         return null;
     }
     const date = new Date(value);
