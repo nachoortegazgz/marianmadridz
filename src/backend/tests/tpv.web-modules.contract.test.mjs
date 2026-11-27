@@ -299,7 +299,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
-    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY|TPV_SYNTHETIC_LEDGER/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
@@ -483,7 +483,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
     assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
     assert.match(repository, /sequenceNumber: previousSequence \+ 1/);
-    assert.doesNotMatch(validation, /historicalTpvLedgerRecord|recordNature|SYNTHETIC|REAL/);
+    assert.doesNotMatch(validation, /historicalTpvLedgerRecord|recordNature|SYNTHETIC|REAL|TPV_TEST_RUN/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
     assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
