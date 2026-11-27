@@ -339,6 +339,15 @@ export const cerrarSesionCaja = webMethod(
             return await withTpvSessionLock(sessionId, traceId, async () => {
                 const current = await latestTpvSession();
                 if (!current || current.sessionId !== sessionId) throw new Error("TPV_SESSION_MISMATCH");
+                if (current.status === "CERRADA") {
+                    const priorClosures = await queryTpvRecords(
+                        TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+                        wql.and(wql.eq("sessionId", sessionId), wql.eq("movementType", "CIERRE"))
+                    );
+                    if (!priorClosures.some((record) => record.idempotencyKey === idempotencyKey + ":CIERRE")) {
+                        throw new Error("TPV_SESSION_CLOSED");
+                    }
+                }
                 const summary = await buildTpvSessionSummary(current);
                 const expectedCashMinor = Number(summary.expectedCashMinor || 0);
                 const differenceMinor = countedCashMinor - expectedCashMinor;
