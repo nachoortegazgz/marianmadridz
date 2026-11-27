@@ -419,7 +419,7 @@ export const getEstadoJornada = webMethod(
             };
         } catch (error) {
             log.error("getEstadoJornada failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -561,7 +561,7 @@ export const calcularHorasTrabajadas = webMethod(
             };
         } catch (error) {
             log.error("calcularHorasTrabajadas failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -674,7 +674,7 @@ export const getHistorialFichajes = webMethod(
             return { status: "OK", data: { items, total: items.length }, traceId };
         } catch (error) {
             log.error("getHistorialFichajes failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -907,7 +907,7 @@ export const getResumenHoras = webMethod(
             };
         } catch (error) {
             log.error("getResumenHoras failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
