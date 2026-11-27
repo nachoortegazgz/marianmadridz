@@ -538,6 +538,10 @@ body {
       TPV_PREVIOUS_SESSION_NOT_CLOSED: "Existe una sesión anterior sin cierre. Consulta el estado antes de abrir otra.",
       TPV_SESSION_ALREADY_CLOSED_TODAY: "La sesión de hoy ya está cerrada y no puede volver a abrirse.",
       TPV_SESSION_REQUIRED: "No hay una sesión de caja seleccionada. Actualiza el estado de caja y abre una sesión antes de operar.",
+      TPV_SESSION_ALREADY_OPEN: "Ya existe una sesión abierta. No se ha creado otra caja.",
+      TPV_SESSION_STATE_CHANGED: "El estado de caja o el usuario cambió mientras se preparaba la apertura. Actualiza el estado y vuelve a intentarlo.",
+      TPV_SESSION_OPEN_NOT_CONFIRMED: "La apertura se ha enviado, pero no se ha podido confirmar la sesión. Consulta el estado de caja antes de repetirla.",
+      TPV_TICKET_X_NOT_CONFIRMED: "La caja está abierta, pero no se ha podido confirmar el Ticket X. Usa Control X para volver a solicitar el informe.",
       TPV_SESSION_NOT_OPEN: "No existe una sesión de caja abierta. Consulta el estado y abre una sesión cuando el backend autorice la operación.",
       TPV_SESSION_CLOSED: "La sesión está cerrada. Abre una nueva sesión para continuar.",
       TPV_SESSION_MISMATCH: "La sesión seleccionada ya no es la sesión activa. Actualiza el estado de caja y vuelve a seleccionar la sesión.",
@@ -1250,12 +1254,27 @@ body {
             throw new Error("TPV_SESSION_OPEN_NOT_CONFIRMED");
           }
 
-          const ticketResult = await call("TICKET_X", {
-            sessionId: confirmed.sessionId,
-          }, "TICKET_X_RES");
-          const ticket = ticketResult?.ticketX || ticketResult?.data?.ticketX;
-          if (!ticket || ticket.sessionId !== confirmed.sessionId) {
-            throw new Error("TPV_TICKET_X_NOT_CONFIRMED");
+          let ticket;
+          try {
+            const ticketResult = await call("TICKET_X", {
+              sessionId: confirmed.sessionId,
+            }, "TICKET_X_RES");
+            ticket = ticketResult?.ticketX || ticketResult?.data?.ticketX;
+            if (!ticket || ticket.sessionId !== confirmed.sessionId) {
+              throw new Error("TPV_TICKET_X_NOT_CONFIRMED");
+            }
+          } catch (ticketError) {
+            $("modalTitle").textContent = "Caja abierta · Ticket X pendiente";
+            $("modalBody").innerHTML = `
+              <p>La apertura de caja está confirmada.</p>
+              <p>Sesión: <strong>${esc(confirmed.sessionId)}</strong></p>
+              <p>No se pudo generar el Ticket X: ${esc(publicErrorMessage(ticketError))}</p>
+              <p>La caja permanece abierta. Usa Control X para volver a solicitar el informe.</p>
+            `;
+            $("modalConfirm").textContent = "Cerrar";
+            $("modalConfirm").onclick = closeModal;
+            toast("Caja abierta; Ticket X pendiente de generación.");
+            return { keepOpen: true };
           }
 
           $("modalTitle").textContent = "Apertura confirmada · Ticket X";
