@@ -296,7 +296,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución interna</button>
+          <button id="refund" class="btn danger">Devolución no habilitada</button>
           <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
