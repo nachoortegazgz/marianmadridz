@@ -236,8 +236,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
-    // Purga los registros DUAL_CACHE expirados que puedan permanecer en CMS.
-    // No existe writer activo para este tipo; retirar tras verificar cero filas.
+    // Límite de registros DUAL_CACHE expirados a retirar lógicamente por ejecución.
+    // La evidencia CMS se conserva; el estado/TTL se invalida mediante CAS.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
