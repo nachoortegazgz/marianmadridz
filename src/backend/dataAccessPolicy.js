@@ -1,4 +1,5 @@
 import { createActionableError } from "backend/errors/actionableError";
+import { isMutableSyntheticTpvIntent } from "backend/validation";
 import {
     DATA_ACCESS_BULK_PATCH_POLICY,
     DATA_ACCESS_WRITE_POLICY,
@@ -86,7 +87,6 @@ function _isRecord(value) {
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
@@ -143,7 +143,10 @@ export function assertUpdateAllowed(collection, item) {
         throw _policyError("CMS_UPDATE_COLLECTION_DENIED");
     }
     if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "UPDATE");
-    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
+        if (!isMutableSyntheticTpvIntent(item)) throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
+    } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!item._id) throw _policyError("CMS_UPDATE_ID_REQUIRED");
         if (item.controlType === CONTROL_TYPE.WEBHOOK_EVENT) {
@@ -181,7 +184,9 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
         if (APPEND_ONLY_COLLECTIONS.includes(collection)) throw _appendOnlyError(collection, "REMOVE");
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
-    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        if (!isMutableSyntheticTpvIntent(existingItem)) throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
+    } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(expectedControlType)) throw _policyError("CMS_TPV_HISTORICAL_RUNTIME_WRITE_DENIED");
         if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
             expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT) {
