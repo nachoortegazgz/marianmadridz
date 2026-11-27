@@ -513,7 +513,7 @@ test("registrarVenta blocks unready intents and avoids external Wix orders", asy
     assert.match(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED/);
     assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
     assert.match(sales, /status: "PENDING_PAYMENT"/);
-    assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\\.SOURCE_TYPE/);
+    assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.match(sales, /createTpvRecordMetadata/);
     assert.match(sales, /TPV_SALE_NOT_READY/);
     assert.match(sales, /saleReadinessBlockers/);
