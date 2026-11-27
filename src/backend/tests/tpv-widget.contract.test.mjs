@@ -304,3 +304,85 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     assert.equal(contextMessage.messageId, "tpv-ready-12345678");
     bridge.destroy();
 });
+
+
+test("TPV widget buttons are capability-aligned with authenticated backend operations and native collections", async () => {
+    const [html, controller, caja, cierres, permissions, catalog, config, repository] = await Promise.all([
+        source("%23htmlTPV.txt"),
+        source("src/public/tpvPageController.js"),
+        source("src/backend/tpv/tpvCaja.web.js"),
+        source("src/backend/tpv/tpvCierres.web.js"),
+        source("src/backend/tpv/tpvPermisos.web.js"),
+        source("src/backend/tpv/tpvCatalogo.web.js"),
+        source("src/backend/internalConfig.js"),
+        source("src/backend/tpv/tpvRepository.js"),
+    ]);
+
+    // Opening is a fresh read of CajaActual. The server issues the date/session
+    // preview and revalidates it before creating the canonical session projection.
+    assert.match(html, /Apertura de caja: preflight autoritativo desde CajaActual/);
+    assert.match(html, /Usuario autenticado: /);
+    assert.match(html, /Operador de sesión: /);
+    assert.match(html, /call\("CASHIER_STATE", \{\}, "CASHIER_STATE_RES"\)/);
+    assert.match(html, /expectedSessionId,/);
+    assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
+    assert.match(controller, /expectedSessionId,/);
+    assert.match(caja, /const cajaActual = await readTpvCajaSnapshot\(\)/);
+    assert.match(caja, /nextSessionPreview/);
+    assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
+    assert.match(repository, /export async function readTpvCajaSnapshot\(\)/);
+    assert.match(repository, /projectionStatus: session \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
+    assert.match(repository, /function _isLegacyUnverifiedProjection\(caja\)/);
+    assert.match(repository, /function _assertTpvCajaLockable\(caja, allowLegacyProjection = false\)/);
+    assert.match(repository, /allowLegacyProjection = false/);
+    assert.match(caja, /withTpvSessionLock\(sessionId, traceId, async \(\) => \{[\s\S]*?\{ allowLegacyProjection: true \}\)/);
+    assert.match(repository, /monetarySnapshotReused: false/);
+    assert.match(repository, /posPaymentStatus: null/);
+    assert.match(repository, /transactionId: null/);
+    assert.match(repository, /ticketTotal: null/);
+
+    // The operator is a Wix-authenticated member; permissions are server-owned.
+    assert.match(permissions, /readCatalog: true/);
+    assert.match(permissions, /searchCustomers: true/);
+    assert.match(permissions, /readCashSummary: true/);
+    assert.match(permissions, /readAudit: true/);
+    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /printReceipt: false/);
+    assert.match(html, /SESSION_REQUIRED_CAPABILITIES/);
+    assert.match(html, /printLast: "printReceipt"/);
+    assert.match(html, /ticketX: "issueTicketX"/);
+    assert.match(html, /cashSummary: "readCashSummary"/);
+    assert.match(html, /audit: "readAudit"/);
+
+    // Ticket X is a non-closing snapshot, with session, date and operator data;
+    // its audit evidence is stored in ControlOperativo, not a fictional ledger.
+    assert.match(cierres, /ticketType: "CONTROL_PARCIAL_X"/);
+    assert.match(cierres, /sessionDate,/);
+    assert.match(cierres, /openedAt: openedAt\.toISOString\(\)/);
+    assert.match(cierres, /issuedByMemberId: operator\.operatorId/);
+    assert.match(cierres, /readOnly: true, closesSession: false/);
+    assert.match(cierres, /action: "TICKET_X_GENERATED"/);
+    assert.match(html, /ticketXReceiptHtml/);
+    assert.match(html, /Imprimir \/ Guardar PDF/);
+    assert.match(html, /INFORMATIVO · NO CIERRA LA CAJA/);
+
+    // Native source ownership: Bookings for services/staff, Stores Catalog V3
+    // for products, native Contacts for customer search; custom ledgers for TPV.
+    assert.match(catalog, /from "@wix\/bookings"/);
+    assert.match(catalog, /from "@wix\/stores"/);
+    assert.match(config, /CAJA_ACTUAL: "CajaActual"/);
+    assert.match(config, /MOVIMIENTOS_CAJA: "MovimientosCaja"/);
+    assert.match(config, /TRANSACCIONES_TPV: "TransaccionesTPV"/);
+    assert.match(config, /CONTROL_OPERATIVO: "ControlOperativo"/);
+    assert.match(config, /HISTORICO_CIERRES_Z: "HistoricoCierresZ"/);
+    assert.match(repository, /BUSINESS_COLLECTIONS\.CAJA_ACTUAL/);
+    assert.match(repository, /BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA/);
+    assert.match(repository, /BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
+    assert.match(repository, /OPERATIONAL_COLLECTIONS\.CONTROL_OPERATIVO/);
+
+    // No apparent payment controls can be mistaken for real or persisted payments.
+    assert.match(html, /Efectivo \(no habilitado\)/);
+    assert.match(html, /Tarjeta \(no habilitada\)/);
+    assert.match(html, /Cobros deshabilitados/);
+    assert.doesNotMatch(html, /window\.print\(\);[\s\S]{0,150}state\.lastSale/);
+});
