@@ -329,7 +329,8 @@ export const cerrarSesionCaja = webMethod(
             const countedCardMinor = arqueo.contadoTarjeta === undefined || arqueo.contadoTarjeta === null
                 ? null
                 : toMinorUnits(arqueo.contadoTarjeta, "COUNTED_CARD");
-            const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
+            // One canonical closure claim per session: retries cannot create a second CIERRE movement.
+            const closeIdempotencyKey = sessionId + "-CIERRE";
             const observations = String(input.observaciones || "").trim().slice(0, 500);
             const session = await latestTpvSession();
             if (!session || session.sessionId !== sessionId) {
@@ -386,7 +387,7 @@ export const cerrarSesionCaja = webMethod(
                 const closedAt = new Date();
                 const { item: movement, replayed: movementReplayed } = await insertTpvEvent(
                     TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
-                    idempotencyKey + ":CIERRE",
+                    closeIdempotencyKey,
                     {
                         sessionId,
                         movementType: "CIERRE",
