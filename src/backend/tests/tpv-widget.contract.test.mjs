@@ -121,6 +121,10 @@ test("TPV bridge permits the context response and retries READY until a valid co
     const html = await source("%23htmlTPV.txt");
 
     assert.match(controller, /allowedTypes:\s*\[MESSAGE_TYPES\.READY,\s*MESSAGE_TYPES\.CONTEXT,\s*\.\.\.REQUEST_TYPES\]/);
+    assert.match(controller, /receivedType: typeof detail\.receivedType/);
+    assert.match(controller, /attemptedType: typeof detail\.attemptedType/);
+    assert.match(controller, /allowedTypes,/);
+    assert.match(controller, /causeCode: typeof detail\.causeCode/);
     assert.match(controller, /handshakeTimeoutMs:\s*65000/);
     assert.match(bridge, /allowedTypes: Array\.from\(allowedTypes\)/);
     assert.match(bridge, /receivedType: extracted\.type \?\? null,[\s\S]{0,180}allowedTypes: Array\.from\(allowedTypes\)/);

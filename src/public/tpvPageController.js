@@ -508,9 +508,19 @@ export function initializeTpvPage(widget) {
             }
         },
         onError: (error) => {
+            const detail = error?.detail && typeof error.detail === "object" ? error.detail : {};
+            const allowedTypes = Array.isArray(detail.allowedTypes)
+                ? detail.allowedTypes.slice(0, 40).map((type) => String(type).slice(0, 40))
+                : [];
             console.error("[TPV] Widget bridge error", {
-                code: String(error?.code || "WIDGET_BRIDGE_ERROR"),
-                bridgeId: String(error?.bridgeId || ""),
+                code: String(error?.code || "WIDGET_BRIDGE_ERROR").slice(0, 80),
+                bridgeId: String(error?.bridgeId || "").slice(0, 80),
+                receivedType: typeof detail.receivedType === "string" ? detail.receivedType.slice(0, 40) : null,
+                receivedVersion: detail.receivedVersion ?? null,
+                attemptedType: typeof detail.attemptedType === "string" ? detail.attemptedType.slice(0, 40) : null,
+                allowedTypes,
+                causeCode: typeof detail.causeCode === "string" ? detail.causeCode.slice(0, 80) : null,
+                causeDetailCode: typeof detail.causeDetail?.code === "string" ? detail.causeDetail.code.slice(0, 80) : null,
             });
         },
     });
