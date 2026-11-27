@@ -127,7 +127,7 @@ test("FISCAL-CHAIN-09 CajaActual projections and TPV Sandbox share the fiscal lo
   assert.ok(assertBeforeRead > acquire);
   assert.ok(write > assertBeforeRead);
   assert.ok(assertBeforeWrite > assertBeforeRead && assertBeforeWrite < write);
-  assert.match(cajas, /_updateCajaActual\(lockedExisting\.items\[0\], traceId, ledgerLock\)/);
+  assert.match(cajas, /_updateCajaActual\(existingMovement, traceId, ledgerLock\)/);
   assert.match(cajas, /_updateCajaActual\(saved, traceId, ledgerLock\)/);
   assert.match(cajas, /updateCajaActualFromMovement\(movement, traceId, sharedLock = null\)/);
   assert.match(eventLog, /updateCajaActualFromMovement\(savedMovement, traceId, ledgerLock\)/);
