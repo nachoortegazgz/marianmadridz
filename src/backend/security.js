@@ -117,36 +117,26 @@ async function _resolveStaffByIdentity(memberInfo, traceId) {
     const currentMemberId = _safeString(memberInfo?.memberId);
     if (!currentMemberId) return null;
 
-    try {
-        const candidate = await findStaffByContactId(contactId, traceId);
-        if (!candidate?.resourceId ||
-            candidate.memberId !== currentMemberId) {
-            log.warn("Staff identity does not match current Wix member", {
-                traceId,
-                resourceId: candidate?.resourceId || null,
-            });
-            return null;
-        }
-
-        // Re-resolve using the Bookings resourceId, never the staffMember _id.
-        const staff = await findStaffByResourceId(candidate.resourceId, traceId, { fresh: true });
-        if (!staff ||
-            staff.resourceId !== candidate.resourceId ||
-            staff.memberId !== currentMemberId) {
-            log.warn("Bookings resource identity mismatch", {
-                traceId,
-                resourceId: candidate.resourceId,
-            });
-            return null;
-        }
-        return staff;
-    } catch (error) {
-        log.error("Active staff lookup failed", {
+    const candidate = await findStaffByContactId(contactId, traceId);
+    if (!candidate?.resourceId || candidate.memberId !== currentMemberId) {
+        log.warn("Staff identity does not match current Wix member", {
             traceId,
-            message: error?.message || String(error),
+            resourceId: candidate?.resourceId || null,
         });
         return null;
     }
+
+    const staff = await findStaffByResourceId(candidate.resourceId, traceId, { fresh: true });
+    if (!staff ||
+        staff.resourceId !== candidate.resourceId ||
+        staff.memberId !== currentMemberId) {
+        log.warn("Bookings resource identity mismatch", {
+            traceId,
+            resourceId: candidate.resourceId,
+        });
+        return null;
+    }
+    return staff;
 }
 
 function _readStaffRole(staff) {
@@ -433,35 +423,35 @@ export async function rateLimiter(
 // =============================================================================
 
 async function _getCurrentMemberInfo(traceId = null) {
+    let response;
     try {
-        const response = await members.getCurrentMember();
-        const member = response?.member || response;
-
-        if (!member) {
-            return null;
-        }
-
-        const memberId = _safeString(
-            member._id || member.id || member.memberId
-        );
-        const contactId = _safeString(member.contactId);
-        const email = _safeString(
-            member.loginEmail || member.contactDetails?.email
-        ).toLowerCase();
-
-        return {
-            memberId,
-            contactId,
-            email,
-        };
-    } catch (error) {
+        response = await members.getCurrentMember();
+    } catch (cause) {
+        const error = new Error("MEMBER_IDENTITY_PROVIDER_UNAVAILABLE");
+        error.code = "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE";
+        error.traceId = traceId || null;
+        error.cause = cause;
         log.error("Current member lookup failed", {
             traceId,
-            message: error?.message || String(error),
+            errorCode: error.code,
         });
-
-        return null;
+        throw error;
     }
+
+    const member = response?.member || response;
+    if (!member) return null;
+    if (member.status === "ERROR") {
+        const error = new Error("MEMBER_IDENTITY_RESPONSE_INVALID");
+        error.code = "MEMBER_IDENTITY_RESPONSE_INVALID";
+        error.traceId = traceId || null;
+        throw error;
+    }
+
+    const memberId = _safeString(member._id || member.id || member.memberId);
+    const contactId = _safeString(member.contactId);
+    const email = _safeString(member.loginEmail || member.contactDetails?.email).toLowerCase();
+
+    return { memberId, contactId, email };
 }
 
 // =============================================================================
