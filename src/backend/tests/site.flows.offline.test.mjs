@@ -1203,7 +1203,7 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
     traceId: 'blocked-simulation-z-001',
   });
   assert.equal(closing.status, 'ERROR');
-  assert.equal(closing.error.code, 'CAJA_SESSION_NOT_OPEN');
+  assert.equal(closing.error.code, 'NO_MOVEMENTS');
   assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
 
   const projection = await cajas.updateCajaActualFromMovement({
