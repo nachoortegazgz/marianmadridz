@@ -19,12 +19,10 @@ import {
     BUSINESS_COLLECTIONS,
     CONTROL_TYPE,
     ACCOUNTING_LEDGER_LOCK_CONFIG,
-    FISCAL_RUNTIME_POLICY,
 } from "backend/internalConfig";
 import { hashSHA256, hashChain } from "backend/securityEngine";
 import { makeTraceId, _safeTrim } from "public/mmUtils";
 import { logger } from "backend/logger";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 const log = logger;
 const CONTROL_COL = BUSINESS_COLLECTIONS.CONTROL_OPERATIVO;
@@ -351,12 +349,6 @@ async function _markEntryClaim(claim, status, payloadPatch = {}) {
  * No account mapping is enabled until the PGC rule set is formally approved.
  */
 export async function appendAccountingEntry(input, traceId) {
-    if (FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED !== true) {
-        return { status: "ERROR", data: null, error: { code: "ACCOUNTING_LEDGER_WRITES_DISABLED" } };
-    }
-    if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(input)) {
-        return { status: "ERROR", data: null, error: { code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION" } };
-    }
     const normalized = _normalizeEntry(input, traceId);
     if (!normalized.ok) {
         return { status: "ERROR", data: null, error: { code: normalized.code } };
