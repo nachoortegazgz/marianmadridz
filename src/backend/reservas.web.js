@@ -141,7 +141,7 @@ function _normalizeServiceLookupKey(value) {
         .replace(/^-+|-+$/g, "");
 }
 
-const DAYS_CACHE_VERSION = String(SDK_CONFIG?.CACHE?.DAYS_CACHE_VERSION || "v1");
+const DAYS_CACHE_VERSION = SDK_CONFIG.CACHE.DAYS_CACHE_VERSION;
 const STAFF_RESOURCE_TYPE_ID = API.STAFF_RESOURCE_TYPE_ID;
 
 const serviceCatalogRAM = new Map();
