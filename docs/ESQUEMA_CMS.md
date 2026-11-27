@@ -36,7 +36,7 @@ Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE 
 | RegistrosHorariosStaff | NATIVE | 2 | 47 | 0 |
 | ServiciosCatalogo | NATIVE | 204 | 43 | 95 |
 | TransaccionesTPV | NATIVE | 7 | 27 | 0 |
-| **Total NATIVE** | | | **583** | **238** |
+| **Total NATIVE** | | | **628** | **238** |
 
 ### Colecciones Wix Apps
 
@@ -179,7 +179,7 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 | CajaActual | 1 singleton ABIERTA. Apertura 300 EUR; cashAmount/expectedCash 320 EUR; countedCash 0; difference 0; salesCount 2. snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS. |
 | CitasF2 | 11 items: 10 CONFIRMED, 1 PENDING; 9 NOT_PAID, 2 PENDING_LEDGER; 3 DUAL_F1, 3 DUAL_F2 y 5 SIMPLE. |
 | ComplementosCatalogo | 36 items. |
-| ControlOperativo | 78 items; 3 PENDING_RECOVERY, 53 COMPLETED y 4 ACTIVE. Hay 3 controles COMPENSATION. |
+| ControlOperativo | 78 items; 3 PENDING_RECOVERY, 53 COMPLETED y 4 ACTIVE; 18 items no tienen status informado. Hay 3 controles COMPENSATION. |
 | HistoricoCierresZ | 1 item SIMULATED / Z_SIMULATED; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required en el esquema actual. |
 | LibroAsientosContablesDetalle | 3 items; los 3 tienen projectionStatus=SIMULATED_ONLY. |
 | MapaStaff | 5 items: STAFF=3, TERCERO=1, GESTORIA=1. No existe item CONFIG_SISTEMA en el conjunto leído. |
