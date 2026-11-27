@@ -11,6 +11,10 @@ The TPV backend uses one public error envelope for caught WebMethod failures. Th
 
 The formatter is used by cashier/session, cash movement, movement/audit export, closure/ticket, catalog, payment-validation and audit-read WebMethods. The sales/refund `tpvEnvelope` delegates to the same formatter, preserving domain-specific messages while exposing the common technical-detail/retryability fields. The movement export also filters explicit simulated rows and catches its authorization failure inside the same error boundary.
 
+## Physical TPV writer routing
+
+`MovimientosCaja_beforeInsert` routes `recordSource === TPV_LEDGER_SOURCE` through the canonical physical-movement schema and returns before invoice/F1 validation. Other movement records continue through the fiscal document validation path. This prevents physical cash movements from being incorrectly blocked by invoice-only requirements.
+
 ## Append-only CMS hooks
 
 - `MovimientosCaja_beforeUpdate` and `MovimientosCaja_beforeRemove` throw `MOVIMIENTOS_CAJA_APPEND_ONLY`.
@@ -29,7 +33,7 @@ The `assertTpvOperationalLedgerConfigured("physical"|"audit")` checks and the co
 
 ## Fiscal read-model safety
 
-The canonical `isExplicitSimulationLedgerRecord` classifier is now applied by booking-receipt lookup, cash/fiscal chain-head readers, movement export and the fiscal aggregator. Explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
+The canonical `isExplicitSimulationLedgerRecord` classifier is applied by booking-receipt lookup, cash/fiscal chain-head readers, movement export and the fiscal aggregator. Only explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger; the runtime does not classify records by environment or by a REAL/SYNTHETIC field. `recordTimestamp` remains neutral metadata.
 
 ## Regression coverage
 
