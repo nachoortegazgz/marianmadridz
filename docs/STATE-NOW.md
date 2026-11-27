@@ -130,4 +130,6 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - Reembolso y Ticket Z real siguen bloqueados por Contract A (pagos) y Contract C (fiscal), respectivamente.
 - Hito TPV-01 completado en PR propuesta: tres módulos de runtime retirados; compatibilidad histórica extraída y escrituras legacy denegadas.
 - Tres gates operativos: PASS estático en PR #626; Wix Runtime: PENDIENTE_HUMANO. CI offline PR #627: PASS, 80 suites/759 tests; ejecución local no realizada.
+- Runtime gates (2026-11-27): PENDIENTE_HUMANO; TinyFish bloqueado por login Wix y Wix MCP rechazó el dominio del sitio con HTTP 403.
+- Plan reproducible: `tests/runtime/RUNTIME-TEST-PLAN.md` (PR #629); no se invocaron gates ni se mutaron registros durante los intentos.
 - P1 cerrada en delegable para el alcance aprobado; bloqueos externos: Contract A (pagos) y Contract C (fiscal).
