@@ -331,6 +331,9 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(repository, /export async function readTpvCajaSnapshot\(\)/);
     assert.match(repository, /projectionStatus: session \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
     assert.match(repository, /function _isLegacyUnverifiedProjection\(caja\)/);
+    assert.match(repository, /function _assertTpvCajaLockable\(caja, allowLegacyProjection = false\)/);
+    assert.match(repository, /allowLegacyProjection = false/);
+    assert.match(caja, /withTpvSessionLock\(sessionId, traceId, async \(\) => \{[\s\S]*?\{ allowLegacyProjection: true \}\)/);
     assert.match(repository, /monetarySnapshotReused: false/);
     assert.match(repository, /posPaymentStatus: null/);
     assert.match(repository, /transactionId: null/);
