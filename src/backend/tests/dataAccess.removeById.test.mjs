@@ -36,7 +36,7 @@ test("removeById fails closed when the persisted controlType differs", async () 
         removeById(COLLECTION, "control-target", {
             expectedControlType: CONTROL_TYPE.DUAL_CACHE,
         }),
-        { code: "REMOVE_CONTROL_TYPE_MISMATCH" }
+        { code: "CMS_REMOVE_CONTROL_TYPE_MISMATCH" }
     );
 
     assert.equal(wixDataMock._store.get(COLLECTION)[0].controlType, CONTROL_TYPE.DISPLAY_TOKEN);
