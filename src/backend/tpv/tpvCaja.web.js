@@ -397,7 +397,6 @@ export const cerrarSesionCaja = webMethod(
                         countedCardMinor,
                         differenceMinor,
                         observations,
-                        replayed: movementReplayed || projection.replayed,
                     },
                 });
                 return {
