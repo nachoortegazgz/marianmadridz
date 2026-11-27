@@ -232,6 +232,15 @@ test('STAFF-SDK-05 provider outages and malformed responses are not converted to
     staff.findStaffByResourceId(RESOURCE_ID),
     { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
   );
+
+  staff.invalidateStaffCache();
+  mocks.sdk['bookings::staffMembers'] = {
+    queryStaffMembers: async () => ({ staffMembers: [] }),
+  };
+  await assert.rejects(
+    staff.findStaffByResourceId(RESOURCE_ID),
+    { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
+  );
 });
 
 test('SECURITY-STAFF-01 staff provider outage propagates through authorization instead of denying as absent', async () => {
