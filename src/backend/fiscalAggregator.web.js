@@ -227,6 +227,9 @@ async function _fetchQuarterMovements(months, options = {}) {
       .hasSome("fiscalPeriod", months)
       .gt("sequenceNumber", 0)
       .ne("recordSource", "SMOKE_TEST")
+      .ne("movementType", "SIMULATED_PAYMENT")
+      .ne("movementType", "SIMULATED_TPV_PAYMENT")
+      .ne("eventType", "SIMULATED_PAYMENT")
       .ascending("sequenceNumber")
       .limit(pageSize)
       .find(),
