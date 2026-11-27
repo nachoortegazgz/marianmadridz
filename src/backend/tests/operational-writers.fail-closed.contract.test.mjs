@@ -124,3 +124,23 @@ test("P0-FISCAL-TX-04 transaction and recovery writers enforce the canonical ide
   assert.ok(insertCall > validationCall, "contract validation must precede CMS insert");
   assert.match(cajas, /FISCAL_MOVEMENT_INCOMPLETE/);
 });
+
+test("P0-FISCAL-PERIOD-01 closed-period lookup propagates CMS failures", async () => {
+  const [cajas, dataAccess] = await Promise.all([
+    read("cajas.web.js"),
+    read("dataAccess.js"),
+  ]);
+
+  const start = cajas.indexOf("async function _assertPeriodNotClosed(");
+  const end = cajas.indexOf("\nfunction _resolveFiscalBase", start);
+  assert.ok(start >= 0 && end > start, "period guard must exist");
+  const guard = cajas.slice(start, end);
+
+  assert.match(guard, /await dalGet\(HISTORICO_CIERRES_Z_COL, `Z_\$\{operationDate\}`, "strong"\);/);
+  assert.doesNotMatch(guard, /\.catch\s*\(/,
+    "CMS outage or permission errors must not be interpreted as an open fiscal period");
+
+  assert.match(dataAccess, /if \(isMissingDataItemError\(error\)\) return null;/);
+  assert.match(dataAccess, /if \(isMissingDataItemError\(error\)\) return null;\s*throw error;/,
+    "DAL returns null only for a genuine missing item and propagates other Wix Data failures");
+});

@@ -557,7 +557,7 @@ async function _getLastMovement() {
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
-    const existingZ = await dalGet(HISTORICO_CIERRES_Z_COL, `Z_${operationDate}`, "strong").catch(() => null);
+    const existingZ = await dalGet(HISTORICO_CIERRES_Z_COL, `Z_${operationDate}`, "strong");
     if (existingZ) {
         log.error("PERIOD_CLOSED: Intento de insertar movimiento en periodo cerrado", { operationDate, traceId });
         throw new Error("PERIOD_CLOSED: No se pueden insertar movimientos en un periodo con cierre Z");
