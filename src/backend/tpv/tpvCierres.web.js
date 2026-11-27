@@ -112,7 +112,7 @@ export const generarTicketX = webMethod(
                     entityType: "TICKET_X",
                     entityId: "TPV-X-" + sessionId,
                     traceId,
-                    payload: { ticketX, closesSession: false, fiscalLedgerWritten: false },
+                    payload: { ticketX, readOnly: true, closesSession: false, fiscalLedgerWritten: false },
                 });
                 const ticketXResult = {
                     ...(audit.item?.payload?.ticketX || ticketX),
