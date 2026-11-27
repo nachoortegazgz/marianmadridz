@@ -110,9 +110,7 @@ function sanitizeValue(value, seen) {
             continue;
         }
 
-        sanitized[key] = val !== null && typeof val === "object"
-            ? sanitizeValue(val, seen)
-            : val;
+        sanitized[key] = sanitizeValue(val, seen);
     }
 
     seen.delete(value);
