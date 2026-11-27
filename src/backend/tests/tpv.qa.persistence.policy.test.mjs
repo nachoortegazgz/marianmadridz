@@ -11,7 +11,6 @@ import {
     TPV_COLLECTIONS,
     TPV_LEDGER_SOURCE,
     TPV_RUNTIME_POLICY,
-    TPV_HISTORICAL_POLICY,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
@@ -26,12 +25,11 @@ import {
     makeTpvSessionLockId,
     makeTpvTransactionId,
     makeTpvId,
-    makeLegacyTpvTransactionId,
     assertTpvCajaIntegrity,
 
 } from "../tpv/tpvUtils.js";
 
-test("TPV runtime policy is neutral and historical markers are isolated", async () => {
+test("TPV runtime policy uses the same contract independent of environment labels", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "TPV");
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_LEDGER_V3");
@@ -72,19 +70,15 @@ test("CajaActual integrity accepts only the neutral v3 contract", () => {
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(activeCaja));
 
-    const historicalCaja = {
-        cashRegisterStatus: "SIMULACION",
-        snapshotSource: TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
-        traceId: TPV_HISTORICAL_POLICY.LEGACY_RUN_ID,
-        conceptOperations: { tpvSandbox: {
-            sourceType: TPV_HISTORICAL_POLICY.SOURCE_TYPE,
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            ledgerVersion: TPV_HISTORICAL_POLICY.LEDGER_VERSION,
-            schemaVersion: TPV_HISTORICAL_POLICY.SCHEMA_VERSION,
-            sandboxRunId: TPV_HISTORICAL_POLICY.LEGACY_RUN_ID,
+    const sameContractCaja = {
+        ...activeCaja,
+        cashRegisterStatus: "CERRADA",
+        conceptOperations: { tpvRuntime: {
+            ...activeCaja.conceptOperations.tpvRuntime,
+            sessionId: "SESSION-CLOSED",
         } },
     };
-    assert.throws(() => assertTpvCajaIntegrity(historicalCaja), /TPV_CASH_REGISTER_INTEGRITY_FAILED/);
+    assert.doesNotThrow(() => assertTpvCajaIntegrity(sameContractCaja));
 });
 
 test("CajaActual operational projections use neutral metadata and ignore historical fields", async () => {
@@ -129,9 +123,9 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
     };
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
-    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), { code: "LEDGER_APPEND_ONLY" });
     assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "CMS_DELETE_PROHIBITED" });
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "ledger-row"), { code: "CMS_DELETE_PROHIBITED" });
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
@@ -244,10 +238,11 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     assert.equal(cashCountId, makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key));
 });
 
-test("legacy transaction IDs remain migration-only and are not used by operational idempotency", async () => {
+test("operational idempotency never derives identifiers from environment labels", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
+    const utilities = await readFile(new URL("../tpv/tpvUtils.js", import.meta.url), "utf8");
     assert.match(repository, /_isTpvLedgerItem/);
-    assert.doesNotMatch(repository, /makeLegacyTpvTransactionId/);
+    assert.doesNotMatch(utilities, /makeLegacyTpvTransactionId|TPVSANDBOX/);
 });
 
 test("TPV runtime uses a neutral contract and client idempotency keys are bounded", () => {
