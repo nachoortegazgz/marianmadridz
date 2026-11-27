@@ -73,6 +73,8 @@ export const wql = Object.freeze({
     in: (field, values) => fieldClause(field, "$in", asArray(values)),
     hasSome: (field, values) =>
         fieldClause(field, "$hasSome", asArray(values)),
+    hasAll: (field, values) =>
+        fieldClause(field, "$hasAll", asArray(values)),
     startsWith: (field, value) =>
         fieldClause(field, "$startsWith", value),
     and: (...clauses) => ({ $and: clauses.filter(Boolean) }),
@@ -590,6 +592,7 @@ class QueryBuilder {
     lte(field, value) { return this._add(wql.lte(field, value)); }
     in(field, values) { return this._add(wql.in(field, values)); }
     hasSome(field, values) { return this._add(wql.hasSome(field, values)); }
+    hasAll(field, values) { return this._add(wql.hasAll(field, values)); }
     startsWith(field, value) {
         return this._add(wql.startsWith(field, value));
     }
