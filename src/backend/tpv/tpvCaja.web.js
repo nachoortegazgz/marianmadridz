@@ -45,6 +45,11 @@ function madridDayKey(date = new Date()) {
     return values.year + values.month + values.day;
 }
 
+function madridDateISO(date = new Date()) {
+    const dayKey = madridDayKey(date);
+    return dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8);
+}
+
 export const inicializarCaja = webMethod(
     Permissions.SiteMember,
     async () => {
@@ -93,12 +98,16 @@ export const obtenerEstadoCaja = webMethod(
                     operationalWritesAvailable: true,
                     operationalWritesUnavailableReason: null,
                     sessionId: null,
+                    proposedSessionId: "TPV-SESSION-" + madridDayKey(),
+                    businessDate: madridDateISO(),
                     operatorId: null,
                     actorId: null,
                     operatorResourceId: null,
                     authenticatedOperatorId: operator.operatorId,
                     authenticatedActorId: operator.actorId,
                     authenticatedDisplayName: operator.operatorDisplayName,
+                    authenticatedOperatorResourceId: operator.operatorResourceId,
+                    authenticatedRole: operator.rolWebsite,
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     ...responseClock(),
@@ -128,6 +137,11 @@ export const obtenerEstadoCaja = webMethod(
                 operatorResourceId: session.operatorResourceId || null,
                 authenticatedOperatorId: operator.operatorId,
                 authenticatedActorId: operator.actorId,
+                authenticatedDisplayName: operator.operatorDisplayName,
+                authenticatedOperatorResourceId: operator.operatorResourceId,
+                authenticatedRole: operator.rolWebsite,
+                proposedSessionId: "TPV-SESSION-" + madridDayKey(),
+                businessDate: madridDateISO(session.openedAt || new Date()),
                 openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
                 expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
                 cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
