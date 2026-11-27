@@ -437,15 +437,7 @@ export function bulkRemove(collection, ids) {
         ids.some((id) => typeof id !== "string" || !id.trim())) {
         throw dataAccessError("BULK_REMOVE_IDS_INVALID");
     }
-    return Promise.resolve({
-        removed: 0,
-        skipped: 0,
-        failed: count,
-        errors: [{
-            code: "CMS_BULK_DELETE_PROHIBITED",
-            message: "Los registros se conservan; no se ha ejecutado ningún borrado.",
-        }],
-    });
+    throw dataAccessError("CMS_BULK_DELETE_PROHIBITED");
 }
 
 function buildBulkPatchCondition(filter) {
