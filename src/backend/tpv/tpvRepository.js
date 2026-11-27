@@ -393,8 +393,19 @@ export async function readTpvCajaSnapshot() {
     const caja = await _getCajaActual();
     if (!caja) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
     const session = _sessionFromCaja(caja);
+    const runtime = getTpvRuntimeState(caja);
+    const canonicalBootstrap =
+        caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+        caja.cashRegisterStatus === "CERRADA" &&
+        runtime.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+        runtime.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+        runtime.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+        Number(runtime.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+        !String(runtime.sessionId || "").trim();
+    const legacyOpenable = _isLegacyUnverifiedProjection(caja);
     return {
-        projectionStatus: session ? "CANONICAL" : "LEGACY_UNVERIFIED",
+        projectionStatus: session ? "CANONICAL" : (canonicalBootstrap ? "CANONICAL_BOOTSTRAP" : "LEGACY_UNVERIFIED"),
+        canStartSession: canonicalBootstrap || legacyOpenable,
         cashRegisterStatus: caja.cashRegisterStatus || "DESCONOCIDO",
         snapshotSource: caja.snapshotSource || null,
         sessionId: session?.sessionId || null,
