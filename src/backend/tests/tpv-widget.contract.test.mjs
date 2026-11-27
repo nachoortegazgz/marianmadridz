@@ -332,7 +332,9 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
     assert.match(repository, /export async function readTpvCajaSnapshot\(\)/);
-    assert.match(repository, /projectionStatus: session \? "CANONICAL" : "LEGACY_UNVERIFIED"/);
+    assert.match(repository, /projectionStatus: session \? "CANONICAL" : \(canonicalBootstrap \? "CANONICAL_BOOTSTRAP" : "LEGACY_UNVERIFIED"\)/);
+    assert.match(repository, /canStartSession: canonicalBootstrap \|\| legacyOpenable/);
+    assert.match(caja, /cajaActual\.canStartSession === true/);
     assert.match(repository, /function _isLegacyUnverifiedProjection\(caja\)/);
     assert.match(repository, /function _assertTpvCajaLockable\(caja, allowLegacyProjection = false\)/);
     assert.match(repository, /allowLegacyProjection = false/);
