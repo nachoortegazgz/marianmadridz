@@ -363,7 +363,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
 
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
-    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Reintento idempotente (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
+    totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
@@ -740,16 +740,16 @@ test('FLOW-CAJA-02 payload incorrecto => rechazos deterministas sin contaminar l
   await setupFiscalSecrets();
   const before = (wixDataMock._store.get('MovimientosCaja') || []).length;
 
-  const neg = await cajas.registerManualTransaction({ totalAmount: -5, paymentMethod: 'EFECTIVO' });
+  const neg = await cajas.registerManualTransaction({ totalAmount: -5, paymentMethod: 'EFECTIVO', transactionId: 'flow-caja-invalid-amount' });
   assert.strictEqual(neg.status, 'ERROR');
   assert.strictEqual(neg.error.code, 'INVALID_AMOUNT');
 
-  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, tipoFactura: 'F2', paymentMethod: 'ONLINE-CRYPTO' });
+  const badMethod = await cajas.registerManualTransaction({ totalAmount: 10, tipoFactura: 'F2', paymentMethod: 'ONLINE-CRYPTO', transactionId: 'flow-caja-invalid-payment' });
   assert.strictEqual(badMethod.status, 'ERROR');
   assert.strictEqual(badMethod.error.code, 'INVALID_PAYMENT_METHOD');
 
   // > umbral NIF tercero sin recipientTaxId (Ley 11/2021 / Alcabala control)
-  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA', channelType: 'ONLINE' });
+  const big = await cajas.registerManualTransaction({ totalAmount: 5000, paymentMethod: 'TRANSFERENCIA', channelType: 'ONLINE', transactionId: 'flow-caja-recipient-tax-id' });
   assert.strictEqual(big.status, 'ERROR');
   assert.strictEqual(big.error.code, 'RECIPIENT_TAX_ID_REQUIRED');
 
