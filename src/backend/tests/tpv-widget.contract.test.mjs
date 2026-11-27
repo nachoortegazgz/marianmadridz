@@ -124,6 +124,26 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.match(caja, /await buildTpvSessionSummary\(session\)/);
 });
 
+test("TPV open session revalidates CajaActual preview and generates a partial X ticket", async () => {
+    const html = await source("%23htmlTPV.txt");
+    const caja = await source("src/backend/tpv/tpvCaja.web.js");
+    const cierres = await source("src/backend/tpv/tpvCierres.web.js");
+
+    assert.match(html, /nextSessionPreview/);
+    assert.match(html, /expectedSessionId/);
+    assert.match(html, /latest\?\.canOpenSession !== true/);
+    assert.match(html, /latest\?\.authenticatedOperatorId !== authenticatedOperatorId/);
+    assert.match(html, /const ticketResult = await call\("TICKET_X"/);
+    assert.match(html, /ticketXReceiptHtml\(ticket\)/);
+    assert.match(html, /ticket\.closesSession !== false/);
+    assert.match(html, /No repitas la apertura/);
+    assert.match(caja, /input\.expectedSessionId/);
+    assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
+    assert.match(cierres, /ticketType: "CONTROL_PARCIAL_X"/);
+    assert.match(cierres, /issuedByMemberId: operator\.operatorId/);
+    assert.match(cierres, /readOnly: true,[\s\S]*?closesSession: false/);
+});
+
 test("TPV HTML component JavaScript parses without syntax errors", async () => {
     const html = await source("%23htmlTPV.txt");
     const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
