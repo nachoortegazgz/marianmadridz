@@ -141,7 +141,7 @@ export const obtenerEstadoCaja = webMethod(
                 authenticatedOperatorResourceId: operator.operatorResourceId,
                 authenticatedRole: operator.rolWebsite,
                 proposedSessionId: "TPV-SESSION-" + madridDayKey(),
-                businessDate: madridDateISO(session.openedAt || new Date()),
+                businessDate: madridDateISO(new Date(session.openedAt || Date.now())),
                 openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
                 expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
                 cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
