@@ -32,7 +32,7 @@ test("P0-FISCAL-01 writers use domain validation instead of a global disable swi
   assert.match(cajas, /dalInsert\(HISTORICO_CIERRES_Z_COL/);
 
   assert.match(eventLog, /assertFiscalMovementInputEnums\(input\)/);
-  assert.match(eventLog, /await validateFiscalConfig\(traceId\)/);
+  assert.match(eventLog, /_getFiscalSystemConfig\(traceId\)/);
   assert.match(eventLog, /acquireFiscalLedgerLock\(traceId\)/);
   assert.match(eventLog, /dalInsert\(MOVIMIENTOS_CAJA_COL/);
 
