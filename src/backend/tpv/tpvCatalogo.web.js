@@ -7,6 +7,7 @@ import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { toMinorUnits as toMinorUnitsStrict } from "backend/tpv/tpvUtils";
 
+import { normalizeTpvError } from "backend/tpv/tpvError";
 const getCatalogVersionElevated = auth.elevate(catalogVersioning.getCatalogVersion);
 const queryServicesElevated = auth.elevate(services.queryServices);
 const queryProductsElevated = auth.elevate(productsV3.queryProducts);
@@ -85,7 +86,7 @@ export const buscarClientesTPV = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_CUSTOMER_SEARCH_FAILED") },
+                error: normalizeTpvError(error, "TPV_CUSTOMER_SEARCH_FAILED"),
                 traceId,
             };
         }
@@ -118,7 +119,7 @@ export const obtenerReservasClienteTPV = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_CUSTOMER_BOOKINGS_FAILED") },
+                error: normalizeTpvError(error, "TPV_CUSTOMER_BOOKINGS_FAILED"),
                 traceId,
             };
         }
@@ -154,11 +155,12 @@ export const obtenerServicios = webMethod(
                 data: { items, pagingMetadata: result?.pagingMetadata || null },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_SERVICES_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_SERVICES_READ_FAILED"),
+                traceId,
             };
         }
     }
@@ -183,7 +185,7 @@ export const obtenerStaff = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: String(error?.message || "TPV_STAFF_READ_FAILED") },
+                error: normalizeTpvError(error, "TPV_STAFF_READ_FAILED"),
                 traceId,
             };
         }
@@ -238,11 +240,12 @@ export const obtenerProductos = webMethod(
                 },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_STORES_PRODUCTS_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_STORES_PRODUCTS_READ_FAILED"),
+                traceId,
             };
         }
     }
@@ -302,11 +305,12 @@ export const obtenerVariantesProducto = webMethod(
                 },
                 error: null,
             };
-        } catch (_) {
+        } catch (error) {
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "TPV_PRODUCT_VARIANTS_READ_FAILED" },
+                error: normalizeTpvError(error, "TPV_PRODUCT_VARIANTS_READ_FAILED"),
+                traceId,
             };
         }
     }

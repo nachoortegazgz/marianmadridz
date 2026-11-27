@@ -156,3 +156,10 @@ La documentación oficial consultada distingue:
 - **Pendiente:** Wix CLI Preview, sincronización Git-Wix, runtime TPV, resto de páginas con interacción, reservas reales/sintéticas, carrito/checkout, pagos, hardware y cierre Z.
 - **Mutaciones realizadas:** ninguna. **Publicación:** ninguna.
 
+
+
+## Addendum — decisión de política TPV 2026-11-27 (PR #651)
+
+La auditoría inicial describe el estado previo a esta rama y queda superada en los puntos de política de entorno y gates globales. La implementación actual elimina `recordNature`/`productionActivationAt` como clasificador, deja de excluir filas por marcadores SIMULATED/SYNTHETIC, unifica el lector operativo e histórico y elimina el hard gate global `TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED`. Las escrituras siguen sometidas a autorización, idempotencia, locks, validación de catálogo/impuestos, contrato de movimiento, hashes y datos fiscales obligatorios. Los fallos devuelven códigos de dominio y detalle técnico.
+
+La política de datos prohíbe borrado individual y masivo. Las intenciones comerciales y proyecciones editables se actualizan mediante validación backend. Los ledgers ya contabilizados y evidencia laboral/cierres no se sobrescriben directamente; se corrigen con registros rectificativos por exigencia de trazabilidad y cumplimiento. Esta rama no acredita Wix Runtime E2E ni publicación.

@@ -1,56 +1,51 @@
-# Canon de arquitectura — Marian Madrid
+# Canon de arquitectura
 
-**Vigencia:** 2026-11-27. Para estado medible prevalecen [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Para TPV prevalece [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md).
+**Vigencia:** 2026-11-27. El estado se consulta en [STATE-NOW](STATE-NOW.md); los gates en [RELEASE-READINESS](RELEASE-READINESS.md); el contrato TPV en [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md).
 
-## 1. Fuentes de verdad
+## Fuentes de verdad
 
-- La documentación oficial vigente de Wix y de cada Wix App gobierna contratos de plataforma.
-- Wix Bookings/Stores/Payments gobiernan sus respectivos dominios nativos.
-- Wix CMS es SSOT transaccional de las entidades propias del proyecto.
-- SharePoint es repositorio de documentos/evidencias; no gobierna ni modifica datos transaccionales de Capa 1.
-- Git es SSOT del código fuente versionado; no acredita por sí mismo el código instalado en Wix.
-- El estado Runtime se verifica mediante evidencia fechada del entorno correspondiente.
+- Documentación oficial vigente de Wix y de las integraciones: contratos de plataforma.
+- Wix Apps: fuente de verdad de sus dominios nativos.
+- Wix CMS: SSOT transaccional de las entidades propias.
+- Git: SSOT del código versionado; no prueba qué código está instalado en Wix.
+- SharePoint: custodia documental/evidencia; no modifica ni gobierna Capa 1.
 
-## 2. Arquitectura por capas
+## Capas y responsabilidades
 
-- **Capa 1 — operación:** Wix Apps y CMS, backend Velo/WebMethods, eventos y jobs.
-- **Capa 2 — control y consolidación:** validación, conciliación, ledgers y preparación de información derivada sin alterar la fuente nativa.
-- **Capa 3 — documentación/evidencia:** preparación y entrega controlada de paquetes a SharePoint/Power Automate; nunca gobierna ni reescribe Capa 1.
-- El frontend presenta y orquesta. La lógica de negocio, permisos, validación, clasificación y acceso a datos reside en backend.
-- Los secretos se gestionan mediante Wix Secrets Manager o almacén seguro; nunca en frontend ni repositorio.
+- Capa 1: operación Wix Apps, CMS, Velo/WebMethods, eventos y jobs.
+- Capa 2: validación, conciliación, ledgers y proyecciones.
+- Capa 3: preparación y entrega controlada de evidencia; nunca reescribe Capa 1.
+- Frontend: presentación y orquestación. Backend: negocio, autorización, validación y acceso a datos.
+- Secretos solo en almacén seguro; nunca en frontend ni repositorio.
 
-## 3. Contratos TPV vigentes
+## Invariantes
 
-- Un único código, contrato de dominio y reglas de negocio para desarrollo, pruebas y producción. Los tests pueden inyectar fixtures y adaptadores simulados en los límites de infraestructura; no constituyen un runtime de negocio alternativo.
-- `recordTimestamp` lo genera el backend en UTC. `recordNature` es metadato de trazabilidad derivado en backend; no selecciona runtime ni cambia las reglas de dominio.
-- La falta de configuración de activación o fiscal **no debe bloquear** pruebas unitarias, contractuales ni de integración que usen fixtures explícitos y dependencias simuladas. No se inventan configuraciones fiscales reales para superar esos tests.
-- La ausencia o ambigüedad de configuración sí impide clasificar como REAL, habilitar writers reales o producir efectos fiscales/contables externos. El entorno de prueba debe marcar inequívocamente sus fixtures como sintéticos.
-- `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables. `MovimientosCaja` es el ledger físico canónico. `ControlOperativo` guarda locks/auditoría; `CajaActual` es proyección de sesión.
-- `registrarVenta()` aplica las reglas de preparación antes de aceptar una operación real. Los tests deben cubrir tanto rechazo por gates reales como ejecución del mismo flujo de dominio con fixtures y puertos simulados.
-- No se infiere cobro por la existencia de una intención. Pago verificado, movimiento físico y registro fiscal son etapas separadas.
-- Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables, también cuando el dato es sintético; las correcciones se realizan con nuevos registros rectificativos trazables.
-- No se utilizan interruptores globales que deshabiliten writers por entorno. Cada operación atraviesa el mismo código y sus validaciones de dominio, autorización, configuración, idempotencia y concurrencia; los datos sintéticos se identifican por metadatos, no por un runtime alternativo.
+1. Un único código y contrato de dominio en todos los entornos. Fixtures y adaptadores simulados sustituyen dependencias externas, no el runtime de negocio.
+2. No usar interruptores globales que bloqueen writers por entorno. La operación concreta valida configuración, identidad, permisos, esquema, importes, secuencias, hashes, idempotencia y concurrencia que le correspondan.
+3. Una condición incumplida devuelve error explícito y estable; no se omite validación ni se convierte en éxito parcial silencioso.
+4. Wix CMS se escribe mediante DAL, hooks y writers canónicos. Prohibido saltárselos con REST/CMS directo.
+5. No se borra ningún registro, individual ni masivamente. Los crons de retención no pueden ejecutar purgas físicas.
+6. Los datos operativos/comerciales editables admiten actualización validada. Los ledgers fiscales, contables, laborales y cierres contabilizados conservan evidencia inmutable; correcciones mediante nuevos registros/eventos rectificativos trazables.
+7. Webhooks, jobs, writers y reintentos son idempotentes y trazables. No asumir transacciones multi-documento de Wix Data; definir recuperación.
+8. No confiar en identidad, rol, precios, impuestos, totales o permisos aportados por navegador.
+9. No clasificar negocio por entorno ni por etiquetas cliente-controladas. `recordTimestamp` es metadato UTC generado en backend. Los marcadores explícitos de smoke/simulación, si existen, solo identifican fixtures de prueba y nunca acreditan operaciones reales.
+10. No habilitar pagos, AEAT, notificaciones ni servicios externos en pruebas; interceptarlos mediante adaptadores simulados.
 
-## 4. Reservas
+## TPV y fiscalidad
 
-- Bookings V2 es la fuente de verdad del estado nativo de la reserva.
-- `CitasF2` es proyección propia; las divergencias se resuelven mediante reconciliación backend auditable e idempotente, no mediante estados inventados ni actualizaciones manuales sin lectura de origen.
-- Las pruebas de reconciliación usan fixtures/dobles y deben cubrir estados divergentes sin modificar reservas reales.
+- `TransaccionesTPV`: intención comercial; no acredita cobro ni movimiento físico.
+- `MovimientosCaja`: ledger físico canónico.
+- `ControlOperativo`: locks, idempotencia técnica y auditoría.
+- `CajaActual`: proyección de sesión.
+- Pago verificado, movimiento físico y registro fiscal son etapas distintas.
+- `transactionId` es obligatorio en el writer fiscal manual cubierto por PR #650. No asumir obligatoriedad global hasta auditar `eventLog.js` y todos sus consumidores.
+- El hash interno no se denomina hash AEAT. No conectar ni recalcular históricos sin mapping oficial y contrato de datos confirmado.
 
-## 5. Seguridad y fiabilidad
+## Reservas y Capa 3
 
-- Comprobar autorización en cada WebMethod; no confiar en rol, identidad, precios, impuestos, totales o clasificación enviados por el cliente.
-- Webhooks, jobs, writers y reintentos deben ser idempotentes y trazables.
-- No asumir transacciones multi-documento de Wix Data; definir recuperación de proyección y reconciliación.
-- No usar REST/CMS directo para saltarse DAL, hooks, permisos o writers canónicos.
-- Los adaptadores simulados deben interceptar pagos, terminales, notificaciones, AEAT y demás efectos externos en pruebas.
-- La seguridad se aplica por efecto y entorno: una prueba no necesita activar servicios reales para probar la lógica que los prepara.
-- No modificar ni borrar ledgers append-only, aunque sus registros sean sintéticos.
+- Bookings V2 gobierna el estado nativo; `CitasF2` es proyección reconciliable por backend, con trazabilidad e idempotencia.
+- Capa 3 prepara paquetes minimizados y verificables. El transporte real exige tenant, permisos y aceptación específicos.
 
-## 6. Capa 3
+## Evidencia
 
-La preparación del paquete puede probarse con fixtures sintéticos y transporte simulado. El envío real exige autorización, destino configurado y control de acceso; no es precondición para probar transformación, minimización, checksum o contrato.
-
-## 7. Estado de aceptación
-
-El estado medible y los defectos abiertos están en [STATE-NOW](STATE-NOW.md) y [RELEASE-READINESS](RELEASE-READINESS.md). Distinguir pruebas estáticas, unitarias, integración simulada, Preview, Runtime y producción; no extrapolar un nivel a otro.
+Separar pruebas estáticas, unitarias, integración simulada, Wix Preview, Wix Runtime y producción. No extrapolar PASS entre niveles. La evidencia debe identificar commit, entorno, alcance y resultado.

@@ -4,10 +4,10 @@
 
 ## Módulos por responsabilidad
 
-- `tpvRecordNature.js`: timestamp UTC server-side, lectura del corte de activación y clasificación SYNTHETIC/REAL.
+- `tpvRecordNature.js`: compatibilidad de nombre; únicamente genera `recordTimestamp` UTC. No lee corte de activación ni clasifica registros.
 - `tpvSalePreparation.js` / `tpvSalePreparationCore.js`: resolución de catálogo, normalización, importes e impuestos.
 - `tpvWriteV1Contract.js`: elegibilidad de preescritura V1 (una tasa, EFECTIVO/TARJETA, total conciliado); no confirma pago ni persistencia.
-- `tpvVentas.web.js`: WebMethods de preparación y registro de intención comercial; `registrarVenta` impone los mismos blockers del preflight.
+- `tpvVentas.web.js`: WebMethods de preparación y registro de intención comercial; no aplica bloqueos globales fiscales/contables. Mantiene requisitos de catálogo, pago, inventario, presentación al consumidor y contrato de datos.
 - `tpvRepository.js`: persistencia de eventos físicos, proyección de sesión, idempotencia, lock y auditoría.
 - `tpvCaja.web.js`, `tpvMovimientos.web.js`, `tpvCierres.web.js`, `tpvDevoluciones.web.js`, `tpvExport.web.js`: operaciones de caja/movimientos/cierres/devoluciones/exportación según contratos individuales.
 - `tpvPermisos.web.js` / `tpvOperatorContext.js`: contexto de operador y permisos; autorización siempre backend.
@@ -17,7 +17,7 @@
 ## Colecciones
 
 - `TransaccionesTPV`: intención comercial pendiente/no contable.
-- `MovimientosCaja`: ledger físico canónico append-only.
+- `MovimientosCaja`: ledger físico canónico; no se borra. Las operaciones contabilizadas se corrigen mediante eventos compensatorios trazables.
 - `CajaActual`: proyección de sesión.
 - `ControlOperativo`: locks, deduplicación y auditoría técnica.
 - `HistoricoCierresZ`: cierres con contrato de integridad propio.

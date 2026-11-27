@@ -48,7 +48,7 @@ PENDIENTES:
 - Verificar operaciones de dataAccess en CI y runtime del sitio aislado.
 =============================================================================
 */
-import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, bulkRemove as dalBulkRemove } from "backend/dataAccess";
+import { query as dalQuery, getItem as dalGet, insertItem as dalInsert, updateItem as dalUpdate, removeById as dalRemoveById } from "backend/dataAccess";
 import { bookings, extendedBookings } from "@wix/bookings";
 import { orders } from "@wix/ecom";
 import { auth } from "@wix/essentials";
@@ -105,32 +105,31 @@ Math.max(30, SDK_CONFIG.JOBS.AUDIT_RETENTION_DAYS);
 // outcome. Never purge in-flight, retryable, or unknown-result transactions.
 const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
 
-function _summarizeBulkRemove(response) {
-    if (Array.isArray(response?.results)) {
-        let removed = 0, skipped = 0, failed = 0;
-        const errors = [];
-        for (const entry of response.results) {
-            const metadata = entry?.itemMetadata || {};
-            if (metadata.success === true) { removed++; continue; }
-            const error = metadata.error || {};
-            const code = String(error.code || "REMOVE_FAILED");
-            if (code === "WDE0193") { skipped++; continue; }
-            failed++;
-            if (errors.length < 10) errors.push({
-                item: metadata.id || null,
-                code,
-                message: error.description || error.message || "UNKNOWN",
-            });
-        }
-        return { removed, skipped, failed, errors };
+async function _retireControlRows(collection, rows, expectedControlType) {
+    const result = { retired: 0, failed: 0, errors: [] };
+    const batchSize = 10;
+    for (let offset = 0; offset < (rows || []).length; offset += batchSize) {
+        const batch = rows.slice(offset, offset + batchSize);
+        const outcomes = await Promise.allSettled(batch.map((item) =>
+            dalRemoveById(collection, item._id, { expectedControlType })
+        ));
+        outcomes.forEach((outcome, index) => {
+            if (outcome.status === "fulfilled" && outcome.value?.retired === true) {
+                result.retired++;
+                return;
+            }
+            result.failed++;
+            if (result.errors.length < 10) {
+                result.errors.push({
+                    id: batch[index]?._id || null,
+                    code: outcome.status === "rejected"
+                        ? outcome.reason?.code || outcome.reason?.message || "CONTROL_RETIRE_FAILED"
+                        : "CONTROL_RETIRE_NOT_CONFIRMED",
+                });
+            }
+        });
     }
-    const errors = Array.isArray(response?.errors) ? response.errors : [];
-    return {
-        removed: Number(response?.removed) || 0,
-        skipped: Number(response?.skipped) || 0,
-        failed: Number.isFinite(Number(response?.failed)) ? Number(response.failed) : errors.length,
-        errors,
-    };
+    return result;
 }
 
 
@@ -156,46 +155,26 @@ const ORDER_RECONCILIATION_MARKER_TTL_HOURS = 72;
 * Retorna removed, failed y muestras de errores.
 */
 export async function cleanExpiredLocks() {
-const traceId = makeTraceId("cron-locks");
-const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
-
-try {
-const now = new Date();
-const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const res = await dalQuery(collection)
-.eq("controlType", CONTROL_TYPE.SLOT_LOCK)
-.lt("expiresAt", now)
-.limit(100)
-.find({ consistencyMode: "strong" });
-
-const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-if (ids.length > 0) {
-const removal = await dalBulkRemove(collection, ids, {
-condition: { filter: {
-controlType: { $eq: CONTROL_TYPE.SLOT_LOCK },
-expiresAt: { $lt: now },
-} },
-});
-const summary = _summarizeBulkRemove(removal);
-result.removed = summary.removed;
-result.skipped = summary.skipped;
-result.failed = summary.failed;
-result.errors = summary.errors.slice(0, 5);
-}
-
-log.info("cleanExpiredLocks completed", {
-removed: result.removed,
-skipped: result.skipped,
-failed: result.failed,
-traceId,
-});
-} catch (err) {
-log.error("cleanExpiredLocks failed", { error: err?.message, traceId });
-result.failed += 1;
-result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-}
-
-return result;
+    const traceId = makeTraceId("cron-locks");
+    const result = { removed: 0, retired: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const now = new Date();
+        const res = await dalQuery(collection)
+            .eq("controlType", CONTROL_TYPE.SLOT_LOCK)
+            .gt("expiresAt", new Date(0))
+            .lt("expiresAt", now)
+            .limit(100)
+            .find({ consistencyMode: "strong" });
+        const retired = await _retireControlRows(collection, res?.items || [], CONTROL_TYPE.SLOT_LOCK);
+        Object.assign(result, retired);
+        log.info("cleanExpiredLocks completed", { retired: result.retired, failed: result.failed, traceId });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ code: err?.code || err?.message || "CRON_LOCK_RETIRE_FAILED" });
+        log.error("cleanExpiredLocks failed", { error: err?.message, traceId });
+    }
+    return result;
 }
 
 // =============================================================================
@@ -206,46 +185,26 @@ return result;
  * on bulkRemove so a row renewed by a concurrent request is not deleted.
  */
 export async function cleanExpiredRateLimits() {
-const traceId = makeTraceId("cron-rate-limits");
-const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
-
-try {
-const now = new Date();
-const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const res = await dalQuery(collection)
-.eq("controlType", CONTROL_TYPE.RATE_LIMIT)
-.lt("expiresAt", now)
-.limit(500)
-.find({ consistencyMode: "strong" });
-
-const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-if (ids.length > 0) {
-const removal = await dalBulkRemove(collection, ids, {
-condition: { filter: {
-controlType: { $eq: CONTROL_TYPE.RATE_LIMIT },
-expiresAt: { $lt: now },
-} },
-});
-const summary = _summarizeBulkRemove(removal);
-result.removed = summary.removed;
-result.skipped = summary.skipped;
-result.failed = summary.failed;
-result.errors = summary.errors.slice(0, 5);
-}
-
-log.info("cleanExpiredRateLimits completed", {
-removed: result.removed,
-skipped: result.skipped,
-failed: result.failed,
-traceId,
-});
-} catch (err) {
-log.error("cleanExpiredRateLimits failed", { error: err?.message, traceId });
-result.failed += 1;
-result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-}
-
-return result;
+    const traceId = makeTraceId("cron-rate-limits");
+    const result = { removed: 0, retired: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const now = new Date();
+        const res = await dalQuery(collection)
+            .eq("controlType", CONTROL_TYPE.RATE_LIMIT)
+            .gt("expiresAt", new Date(0))
+            .lt("expiresAt", now)
+            .limit(500)
+            .find({ consistencyMode: "strong" });
+        const retired = await _retireControlRows(collection, res?.items || [], CONTROL_TYPE.RATE_LIMIT);
+        Object.assign(result, retired);
+        log.info("cleanExpiredRateLimits completed", { retired: result.retired, failed: result.failed, traceId });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ code: err?.code || err?.message || "CRON_RATE_LIMIT_RETIRE_FAILED" });
+        log.error("cleanExpiredRateLimits failed", { error: err?.message, traceId });
+    }
+    return result;
 }
 
 // =============================================================================
@@ -257,46 +216,27 @@ return result;
  * rows are deliberately excluded.
  */
 export async function cleanExpiredDisplayTokens() {
-const traceId = makeTraceId("cron-display-tokens");
-const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
-
-try {
-const now = new Date();
-const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const res = await dalQuery(collection)
-.eq("controlType", CONTROL_TYPE.DISPLAY_TOKEN)
-.lt("expiresAt", now)
-.limit(500)
-.find({ consistencyMode: "strong" });
-const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-
-if (ids.length) {
-const removal = await dalBulkRemove(collection, ids, {
-condition: { filter: {
-controlType: { $eq: CONTROL_TYPE.DISPLAY_TOKEN },
-expiresAt: { $lt: now },
-} },
-});
-const summary = _summarizeBulkRemove(removal);
-result.removed = summary.removed;
-result.skipped = summary.skipped;
-result.failed = summary.failed;
-result.errors = summary.errors.slice(0, 10);
-}
-
-log.info("cleanExpiredDisplayTokens completed", {
-removed: result.removed,
-skipped: result.skipped,
-failed: result.failed,
-traceId,
-});
-} catch (err) {
-log.error("cleanExpiredDisplayTokens failed", { error: err?.message, traceId });
-result.failed += 1;
-result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-}
-
-return result;
+    const traceId = makeTraceId("cron-display-tokens");
+    const result = { removed: 0, retired: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const now = new Date();
+        const res = await dalQuery(collection)
+            .eq("controlType", CONTROL_TYPE.DISPLAY_TOKEN)
+            .eq("status", "ACTIVE")
+            .gt("expiresAt", new Date(0))
+            .lt("expiresAt", now)
+            .limit(500)
+            .find({ consistencyMode: "strong" });
+        const retired = await _retireControlRows(collection, res?.items || [], CONTROL_TYPE.DISPLAY_TOKEN);
+        Object.assign(result, retired);
+        log.info("cleanExpiredDisplayTokens completed", { retired: result.retired, failed: result.failed, traceId });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ code: err?.code || err?.message || "CRON_DISPLAY_TOKEN_RETIRE_FAILED" });
+        log.error("cleanExpiredDisplayTokens failed", { error: err?.message, traceId });
+    }
+    return result;
 }
 
 // =============================================================================
@@ -306,63 +246,35 @@ return result;
 * CRON-09/10: contadores precisos. Solo incrementa tras éxito confirmado.
 */
 export async function cleanupExpiredDualCache() {
-const traceId = makeTraceId("cron-dual-cache");
-const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
-
-try {
-const now = new Date();
-const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const batchSize = Math.max(
-1,
-Math.min(SDK_CONFIG.JOBS.DUAL_CACHE_CLEANUP_LIMIT, 500)
-);
-
-// Drain bounded batches so a backlog of expired slot-pair cache rows does
-// not persist for several hourly runs. The remove condition rechecks expiry
-// at write time and cannot delete a row refreshed by a concurrent request.
-for (let batch = 0; batch < 10; batch++) {
-const res = await dalQuery(collection)
-.eq("controlType", CONTROL_TYPE.DUAL_CACHE)
-.lt("expiresAt", now)
-.limit(batchSize)
-.find({ consistencyMode: "strong" });
-const ids = (res?.items || []).map((item) => item._id).filter(Boolean);
-if (!ids.length) break;
-
-const removal = await dalBulkRemove(collection, ids, {
-condition: {
-filter: {
-controlType: { $eq: CONTROL_TYPE.DUAL_CACHE },
-expiresAt: { $lt: now },
-},
-},
-});
-const summary = _summarizeBulkRemove(removal);
-result.removed += summary.removed;
-result.skipped += summary.skipped;
-result.failed += summary.failed;
-if (result.errors.length < 10) {
-result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
-}
-if (summary.removed === 0) break;
-}
-
-log.info("cleanupExpiredDualCache completed", {
-removed: result.removed,
-skipped: result.skipped,
-failed: result.failed,
-traceId,
-});
-} catch (err) {
-log.error("cleanupExpiredDualCache failed", {
-error: err?.message,
-traceId,
-});
-result.failed += 1;
-result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
-}
-
-return result;
+    const traceId = makeTraceId("cron-dual-cache");
+    const result = { removed: 0, retired: 0, skipped: 0, failed: 0, errors: [] };
+    try {
+        const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
+        const batchSize = Math.max(1, Math.min(SDK_CONFIG.JOBS.DUAL_CACHE_CLEANUP_LIMIT, 500));
+        for (let batch = 0; batch < 10; batch++) {
+            const res = await dalQuery(collection)
+                .eq("controlType", CONTROL_TYPE.DUAL_CACHE)
+                .gt("expiresAt", new Date(0))
+                .lt("expiresAt", new Date())
+                .limit(batchSize)
+                .find({ consistencyMode: "strong" });
+            const rows = res?.items || [];
+            if (!rows.length) break;
+            const retired = await _retireControlRows(collection, rows, CONTROL_TYPE.DUAL_CACHE);
+            result.retired += retired.retired;
+            result.failed += retired.failed;
+            if (result.errors.length < 10) {
+                result.errors.push(...retired.errors.slice(0, 10 - result.errors.length));
+            }
+            if (retired.retired === 0) break;
+        }
+        log.info("cleanupExpiredDualCache completed", { retired: result.retired, failed: result.failed, traceId });
+    } catch (err) {
+        result.failed++;
+        result.errors.push({ code: err?.code || err?.message || "CRON_DUAL_CACHE_RETIRE_FAILED" });
+        log.error("cleanupExpiredDualCache failed", { error: err?.message, traceId });
+    }
+    return result;
 }
 
 // =============================================================================
@@ -868,44 +780,34 @@ return result;
 */
 export async function cleanExpiredDaysCache() {
     const traceId = makeTraceId("cron-days-cache");
-    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+    const result = { removed: 0, retired: 0, skipped: 0, failed: 0, errors: [] };
     try {
-        const now = new Date();
         const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
         const batchSize = Math.max(1, Math.min(SDK_CONFIG.JOBS.DAYS_CACHE_CLEANUP_LIMIT, 500));
-        const candidates = [];
-        for (let page = 0; page < 10; page++) {
+        for (let batch = 0; batch < 10; batch++) {
             const res = await dalQuery(collection)
                 .eq("controlType", CONTROL_TYPE.DAYS_CACHE)
-                .lt("expiresAt", now)
+                .gt("expiresAt", new Date(0))
+                .lt("expiresAt", new Date())
                 .ascending("expiresAt")
                 .limit(batchSize)
-                .skip(page * batchSize)
                 .find({ consistencyMode: "strong" });
             const rows = res?.items || [];
-            candidates.push(...rows.map((item) => item._id).filter(Boolean));
-            if (rows.length < batchSize) break;
-        }
-        for (let offset = 0; offset < candidates.length; offset += 500) {
-            const ids = candidates.slice(offset, offset + 500);
-            const removal = await dalBulkRemove(collection, ids, {
-                condition: { filter: {
-                    controlType: { $eq: CONTROL_TYPE.DAYS_CACHE },
-                    expiresAt: { $lt: now },
-                } },
-            });
-            const summary = _summarizeBulkRemove(removal);
-            result.removed += summary.removed;
-            result.skipped += summary.skipped;
-            result.failed += summary.failed;
-            if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
+            if (!rows.length) break;
+            const retired = await _retireControlRows(collection, rows, CONTROL_TYPE.DAYS_CACHE);
+            result.retired += retired.retired;
+            result.failed += retired.failed;
+            if (result.errors.length < 10) {
+                result.errors.push(...retired.errors.slice(0, 10 - result.errors.length));
+            }
+            if (retired.retired === 0) break;
         }
         log.info("cleanExpiredDaysCache completed", {
-            removed: result.removed, skipped: result.skipped, failed: result.failed, traceId,
+            retired: result.retired, failed: result.failed, traceId,
         });
     } catch (err) {
         result.failed++;
-        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+        result.errors.push({ code: err?.code || err?.message || "CRON_DAYS_CACHE_RETIRE_FAILED" });
         log.error("cleanExpiredDaysCache failed", { error: err?.message, traceId });
     }
     return result;
@@ -1657,8 +1559,8 @@ return result;
  * excluded from this 24h purge. WEBHOOK_EVENT is a separate immutable ledger.
  */
 export async function cleanExpiredBookingControl() {
-    const traceId = makeTraceId("cron-booking-control-purge");
-    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+    const traceId = makeTraceId("cron-booking-control-retention");
+    const result = { removed: 0, retained: 0, skipped: 0, failed: 0, errors: [] };
     try {
         const cutoff = new Date(Date.now() - IDEMPOTENCY_RETENTION_MS);
         const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
@@ -1687,56 +1589,34 @@ export async function cleanExpiredBookingControl() {
             [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
             [CONTROL_TYPE.SYSTEM_FLAG]: new Set(["COMPLETED", "RECONCILED", "RESOLVED"]),
         };
-        const groups = new Map();
         for (const item of candidates) {
             const payload = readControlPayload(item);
             const payloadStatus = _safeTrim(payload.status).toUpperCase();
             const rootStatus = _safeTrim(item.status).toUpperCase();
-            const status = rootStatus;
             const terminalAt = new Date(
                 payload.terminalAt || payload.completedAt || payload.reconciledAt ||
                 payload.resolvedAt || item?._updatedDate || ""
             );
             if (
                 !rootStatus ||
-                (payloadStatus && rootStatus && payloadStatus !== rootStatus) ||
-                !eligibleStatuses[item.controlType]?.has(status) ||
+                (payloadStatus && rootStatus !== payloadStatus) ||
+                !eligibleStatuses[item.controlType]?.has(rootStatus) ||
                 !Number.isFinite(terminalAt.getTime()) ||
                 terminalAt.getTime() > cutoff.getTime()
             ) {
                 result.skipped++;
                 continue;
             }
-            const key = item.controlType + ":" + status;
-            if (!groups.has(key)) groups.set(key, {
-                controlType: item.controlType, status, ids: [],
-            });
-            groups.get(key).ids.push(item._id);
-        }
-        for (const group of groups.values()) {
-            for (let offset = 0; offset < group.ids.length; offset += 500) {
-                const ids = group.ids.slice(offset, offset + 500);
-                const removal = await dalBulkRemove(collection, ids, {
-                    condition: { filter: {
-                        controlType: { $eq: group.controlType },
-                        status: { $eq: group.status },
-                        _updatedDate: { $lt: cutoff },
-                    } },
-                });
-                const summary = _summarizeBulkRemove(removal);
-                result.removed += summary.removed;
-                result.skipped += summary.skipped;
-                result.failed += summary.failed;
-                if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
-            }
+            // Retention never authorizes deletion: keep terminal control evidence.
+            result.retained++;
         }
         log.info("cleanExpiredBookingControl completed", {
-            removed: result.removed, skipped: result.skipped, failed: result.failed,
+            retained: result.retained, skipped: result.skipped, failed: result.failed,
             retentionHours: 24, traceId,
         });
     } catch (err) {
         result.failed++;
-        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+        result.errors.push({ code: err?.code || err?.message || "CRON_BOOKING_CONTROL_RETENTION_FAILED" });
         log.error("cleanExpiredBookingControl failed", { error: err?.message, traceId });
     }
     return result;
@@ -1756,19 +1636,17 @@ export async function cleanExpiredBookingControl() {
 * y quedan fuera de este job.
 */
 export async function cleanAuditLogs() {
-    const traceId = makeTraceId("cron-audit-purge");
-    const result = { removed: 0, skipped: 0, failed: 0, errors: [] };
+    const traceId = makeTraceId("cron-audit-retention");
+    const result = { removed: 0, retained: 0, skipped: 0, failed: 0, errors: [] };
     try {
         const cutoff = new Date(Date.now() - AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
         const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-        const purgeGroups = [
+        const retentionGroups = [
             { controlType: CONTROL_TYPE.ALERT, statuses: ["COMPLETED", ...PURGABLE_TERMINAL_ALERT_STATUSES] },
-            // FAILED compensation may still require fiscal or booking recovery.
             { controlType: CONTROL_TYPE.COMPENSATION, statuses: [CONTROL_STATUS.EXECUTED] },
         ];
-        for (const group of purgeGroups) {
+        for (const group of retentionGroups) {
             for (const status of group.statuses) {
-                const candidates = [];
                 for (let page = 0; page < 10; page++) {
                     const res = await dalQuery(collection)
                         .eq("controlType", group.controlType)
@@ -1779,34 +1657,19 @@ export async function cleanAuditLogs() {
                         .skip(page * 500)
                         .find({ consistencyMode: "strong" });
                     const rows = res?.items || [];
-                    candidates.push(...rows.map((item) => item._id).filter(Boolean));
+                    result.retained += rows.length;
                     if (rows.length < 500) break;
-                }
-                for (let offset = 0; offset < candidates.length; offset += 500) {
-                    const ids = candidates.slice(offset, offset + 500);
-                    const removal = await dalBulkRemove(collection, ids, {
-                        condition: { filter: {
-                            controlType: { $eq: group.controlType },
-                            status: { $eq: status },
-                            _createdDate: { $lt: cutoff },
-                        } },
-                    });
-                    const summary = _summarizeBulkRemove(removal);
-                    result.removed += summary.removed;
-                    result.skipped += summary.skipped;
-                    result.failed += summary.failed;
-                    if (result.errors.length < 10) result.errors.push(...summary.errors.slice(0, 10 - result.errors.length));
                 }
             }
         }
         log.info("cleanAuditLogs completed", {
-            removed: result.removed, skipped: result.skipped, failed: result.failed,
+            retained: result.retained, skipped: result.skipped, failed: result.failed,
             retentionDays: AUDIT_RETENTION_DAYS, traceId,
         });
     } catch (err) {
         result.failed++;
         log.error("cleanAuditLogs failed", { error: err?.message, traceId });
-        result.errors.push({ query: "main", error: err?.message || "UNKNOWN" });
+        result.errors.push({ code: err?.code || err?.message || "CRON_AUDIT_RETENTION_FAILED" });
     }
     return result;
 }

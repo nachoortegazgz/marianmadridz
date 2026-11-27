@@ -252,7 +252,7 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pending-intent mutation', async () => {
+test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits validated commercial-intent updates', async () => {
   const item = {
     _id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
     sessionId: 'TPV-SESSION-20261125',
@@ -278,7 +278,8 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
     operatorId: '0114748d-2806-3928-9b97-ff0d09853759',
     createdAt: new Date('2026-11-25T10:00:00.000Z'),
     status: 'PENDING_PAYMENT',
-    sourceType: 'SYNTHETIC',
+    sourceType: 'TPV',
+    recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
     requiresReconciliation: true,
     draftOrderReason: 'DRAFT_ORDER_API_UNAVAILABLE',
     requestFingerprint: 'a'.repeat(64),
@@ -290,20 +291,29 @@ test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pen
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [item]);
   const updatedIntent = { ...item, draftOrderReason: "QA_RESETTABLE" };
   assert.equal(await H.TransaccionesTPV_beforeUpdate(updatedIntent), updatedIntent);
+  const paidIntent = await H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" });
+  assert.equal(paidIntent.status, "PAID");
   await assert.rejects(
-    () => H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" }),
-    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
+    () => H.TransaccionesTPV_beforeRemove(item._id),
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY" && error?.retryable === false
   );
-  await assert.doesNotReject(() => H.TransaccionesTPV_beforeRemove(item._id));
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove({ _id: item._id }),
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
+  );
   wixDataMock._reset();
 
-  const real = { ...item, sourceType: "REAL" };
-  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [real]);
+  const alternate = { ...item, sourceType: "TPV" };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [alternate]);
   await assert.rejects(
-    () => H.TransaccionesTPV_beforeRemove(real._id),
-    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
+    () => H.TransaccionesTPV_beforeRemove(alternate._id),
+    (error) => error?.code === "TPV_TRANSACTIONS_APPEND_ONLY"
   );
   wixDataMock._reset();
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove("missing-tpv-intent"),
+    /TransaccionesTPV remove target not found/
+  );
 });
 
 test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields', () => {
@@ -318,7 +328,6 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
     amount: 10,
     totalAmount: 10,
     recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
-    recordNature: 'SYNTHETIC',
     schemaVersion: '3',
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
     paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
@@ -342,23 +351,22 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
   assert.equal(item.tipoFactura, undefined);
 });
 
-test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
+test('HOOK-CAJA-TPV-02 rejects legacy and environment-labelled TPV discriminators on new inserts', () => {
   for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
-      recordSource: "SYNTHETIC",
+      recordSource: "TPV_LEDGER",
       movementType,
-    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, movementType);
+    }), /SCHEMA_VIOLATION/);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource,
-      movementType: "COBRO",
-    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, recordSource);
+      movementType: "TPV_PAYMENT",
+    }), /SCHEMA_VIOLATION/);
   }
 });
-
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
   const item = {
     ...cajaBase(),
@@ -383,8 +391,18 @@ test('HOOK-CAJA-03 preserves append-only integrity for non-TPV synthetic cash mo
   wixDataMock._reset();
   const row = { _id: 'cash-movement-real', movementType: 'VENTA', recordSource: 'INTERNAL', traceId: 'real-ledger', sequenceNumber: 1 };
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
-  await assert.rejects(() => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }), /Modificacion de MovimientosCaja/);
-  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /Borrado de MovimientosCaja/);
+  assert.throws(
+    () => H.MovimientosCaja_beforeUpdate({ ...row, totalAmount: 99 }),
+    (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.MovimientosCaja_beforeRemove(row._id),
+    (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.LibroAsientosContablesDetalle_beforeRemove(),
+    (error) => error?.code === "ACCOUNTING_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 test('HOOK-CAJA-05 rejects write without hash (ledger integrity)', () => {
@@ -523,7 +541,7 @@ test("HOOK-MAPASTAFF-02 CONFIG_SISTEMA uses the physical MapaStaff schema and pr
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
-  assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /SINGLETON_PROTECTED/);
+  assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /CMS_DELETE_PROHIBITED/);
 });
 
 test("HOOK-MAPASTAFF-03 TERCERO and GESTORIA use live fiscal fields; email remains optional until configured", () => {
@@ -599,7 +617,7 @@ test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session c
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
 
-test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state and allow recovery fields only', async () => {
+test('HOOK-CIERREZ-01 validates inserts and keeps historical closures append-only', async () => {
   wixDataMock._reset();
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
@@ -634,15 +652,18 @@ test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state a
   };
   assert.throws(
     () => H.HistoricoCierresZ_beforeUpdate(signatureRecoveryAttempt),
-    /append-only/
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
   );
 
   const illegalUpdate = { ...closing, _id: 'Z_2026-11-11', totalCash: 999 };
   assert.throws(
     () => H.HistoricoCierresZ_beforeUpdate(illegalUpdate),
-    /append-only/
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
   );
-  assert.throws(() => H.HistoricoCierresZ_beforeRemove('x'), /append-only/);
+  assert.throws(
+    () => H.HistoricoCierresZ_beforeRemove('x'),
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 // -----------------------------------------------------------------------------
@@ -681,8 +702,14 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
 });
 
 test('HOOK-CLOCK-02 preserves append-only integrity for timeclock records', () => {
-  assert.throws(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }), /append-only/);
-  assert.throws(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'), /append-only/);
+  assert.throws(
+    () => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }),
+    (error) => error?.code === "STAFF_TIME_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'),
+    (error) => error?.code === "STAFF_TIME_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
@@ -746,8 +773,14 @@ test('HOOK-ACCOUNTING-LEDGER-01 validates complete inserts and preserves append-
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, creditAmount: 1 } }), /debit\/credit/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert({ ...valid, desgloseDetallado: { ...valid.desgloseDetallado, accountCode: 'bad' } }), /accountCode/);
   assert.throws(() => H.LibroAsientosContablesDetalle_beforeInsert((({ journalEntryId, ...rest }) => rest)(valid)), /requires TEXT journalEntryId/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }), /append-only/);
-  assert.throws(() => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'), /append-only/);
+  assert.throws(
+    () => H.LibroAsientosContablesDetalle_beforeUpdate({ _id: 'synthetic-accounting-1' }),
+    (error) => error?.code === "ACCOUNTING_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.LibroAsientosContablesDetalle_beforeRemove('synthetic-accounting-1'),
+    (error) => error?.code === "ACCOUNTING_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 
@@ -788,32 +821,35 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
-test('HOOK-CAJA-04 preserves historical TPV rows as append-only records', async () => {
-  const runId = IC.TPV_HISTORICAL_POLICY.LEGACY_RUN_ID;
+test('HOOK-CAJA-04 preserves canonical TPV rows as append-only records', async () => {
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
+    transactionId: 'TPV-HOOK-TRANSACTION-001',
+    traceId: 'trace-tpv-hook-001',
+    movementType: 'TPV_PAYMENT',
+    recordSource: 'TPV_LEDGER',
+    sequenceNumber: 1,
     hash: 'a'.repeat(64),
-    sequenceNumber: 0,
-    transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
-    traceId: 'TPV:' + runId + ':SESSION-TEST',
-    movementType: 'SIMULATED_TPV_PAYMENT',
-    recordSource: 'TPV_SANDBOX_SYNTHETIC',
     payloadFiscal: {
-      sandboxRunId: runId,
-      requestFingerprint: 'f'.repeat(64),
+      sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
+      siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
+      ledgerVersion: IC.TPV_RUNTIME_POLICY.LEDGER_VERSION,
+      schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+      sessionId: 'SESSION-HOOK-001',
       logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
-      idempotencyKey: 'SANDBOX-PAYMENT-1',
-      sandboxRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
-      isSynthetic: true,
-      realPayment: false,
-      externalSideEffects: false,
+      idempotencyKey: 'TPV-HOOK-IDEMPOTENCY-001',
+      requestFingerprint: 'f'.repeat(64),
     },
+    lineItems: { ledgerRecord: [] },
   };
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
-  await assert.rejects(
+  assert.throws(
     () => H.MovimientosCaja_beforeUpdate({ ...row, payloadFiscal: { ...row.payloadFiscal, sandboxRecord: { amountMinor: 7500 } } }),
-    /append-only/
+    (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
   );
-  await assert.rejects(() => H.MovimientosCaja_beforeRemove(row._id), /append-only/);
+  assert.throws(
+    () => H.MovimientosCaja_beforeRemove(row._id),
+    (error) => error?.code === "MOVIMIENTOS_CAJA_APPEND_ONLY" && error?.retryable === false
+  );
 });

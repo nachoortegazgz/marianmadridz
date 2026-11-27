@@ -12,6 +12,12 @@ import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backen
 import { toMinorUnits } from "backend/tpv/tpvUtils";
 import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
+import { logger } from "backend/logger";
+import { normalizeTpvError } from "backend/tpv/tpvError";
+
+function _safeTpvErrorCode(error, fallbackCode) {
+    return normalizeTpvError(error, fallbackCode).code;
+}
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,7 +52,7 @@ const PREPARATION_MESSAGES = Object.freeze({
 });
 
 function preparationFailure(error, traceId) {
-    const code = String(error?.code || error?.message || "TPV_SALE_PREPARATION_FAILED");
+    const code = _safeTpvErrorCode(error, "TPV_SALE_PREPARATION_FAILED");
     const invalidProductIds = Array.isArray(error?.invalidProductIds) ? error.invalidProductIds : [];
     const message = (PREPARATION_MESSAGES[code] ||
         "No se ha podido preparar la venta con los datos actuales del catálogo y la configuración fiscal de Wix.")
@@ -77,13 +83,11 @@ function buildSaleReadiness(prepared, validated) {
         totalVenta: validated.totalVenta,
     });
     const saleReadinessBlockers = [
-        "FISCAL_CONFIG_UNVERIFIED",
         "PAYMENT_NOT_VERIFIED",
         "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
         ...writeV1Blockers,
     ];
     if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
-    if (prepared.taxIncludedInPrice !== true) saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
     return { containsProducts, writeV1Blockers, saleReadinessBlockers };
 }
 
@@ -149,9 +153,9 @@ export const validarVentaBorrador = webMethod(
 );
 
 async function createSaleDraftOrder() {
-    // This WebMethod persists a synthetic, unpaid QA intent only. Creating a
-    // Wix Draft Order is still a real external CMS/eCommerce side effect and
-    // is not required to test the TPV commercial persistence path.
+    // This WebMethod records a pending commercial intent. Creating a Wix
+    // Draft Order is a separate external effect and is not required for this
+    // CMS persistence operation.
     return {
         orderId: null,
         requiresReconciliation: true,
@@ -159,7 +163,7 @@ async function createSaleDraftOrder() {
     };
 }
 
-function salePendingEnvelope(record, { replayed, auditPersisted = true, traceId }) {
+function salePendingEnvelope(record, { replayed, auditPersisted = true, auditErrorCode = null, traceId }) {
     return tpvPending("TPV_PAYMENT_PROVIDER_NOT_CONFIGURED", {
         orderId: record.orderId || null,
         idempotencyKey: record._id,
@@ -172,13 +176,14 @@ function salePendingEnvelope(record, { replayed, auditPersisted = true, traceId 
         solution: "Contract A",
         sourceType: record.sourceType,
         auditPersisted,
+        auditErrorCode,
         resolutionAttempts: [
             { step: "operator-authorization", status: "VERIFIED" },
             { step: "catalog-and-tax-recalculation", status: "VERIFIED" },
             { step: "draft-order", status: "SKIPPED", reason: record.draftOrderReason },
             { step: "commercial-transaction", status: "PERSISTED" },
             { step: "payment-provider", status: "BLOCKED", reason: "Contract A" },
-            { step: "operational-audit", status: auditPersisted ? "PERSISTED" : "PENDING" },
+            { step: "operational-audit", status: auditPersisted ? "PERSISTED" : "PENDING", ...(auditErrorCode ? { errorCode: auditErrorCode } : {}) },
         ],
         traceId,
     });
@@ -204,7 +209,6 @@ async function appendSaleAudit(record, traceId) {
             status: record.status,
             sourceType: record.sourceType,
             recordTimestamp: record.recordTimestamp,
-            recordNature: record.recordNature,
             requiresReconciliation: record.requiresReconciliation === true,
             requestFingerprint: record.requestFingerprint,
         },
@@ -220,7 +224,7 @@ export const registrarVenta = webMethod(
             operator = await getMyCajeroContext(traceId);
         } catch (error) {
             return tpvError(
-                String(error?.code || "TPV_CASHIER_NOT_AUTHORIZED"),
+                _safeTpvErrorCode(error, "TPV_CASHIER_NOT_AUTHORIZED"),
                 "El usuario actual no está autorizado como operador TPV.",
                 ["Accede con un miembro vinculado a un operador TPV autorizado."],
                 { persisted: false, retryable: false, traceId }
@@ -315,8 +319,13 @@ export const registrarVenta = webMethod(
                 return tpvError("TPV_IDEMPOTENCY_CONFLICT", "La clave idempotente ya pertenece a otra venta.", ["No reutilices la clave con líneas, sesión u operador diferentes."], { persisted: true, retryable: false, traceId });
             }
             let auditPersisted = true;
-            try { await appendSaleAudit(existing, traceId); } catch { auditPersisted = false; }
-            return salePendingEnvelope(existing, { replayed: true, auditPersisted, traceId });
+            let auditErrorCode = null;
+            try { await appendSaleAudit(existing, traceId); } catch (error) {
+                auditPersisted = false;
+                auditErrorCode = _safeTpvErrorCode(error, "TPV_AUDIT_APPEND_FAILED");
+                logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: existing._id, errorCode: auditErrorCode });
+            }
+            return salePendingEnvelope(existing, { replayed: true, auditPersisted, auditErrorCode, traceId });
         }
 
         const saleReadiness = buildSaleReadiness(prepared, validated);
@@ -337,8 +346,13 @@ export const registrarVenta = webMethod(
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
                     let auditPersisted = true;
-                    try { await appendSaleAudit(winner, traceId); } catch { auditPersisted = false; }
-                    return salePendingEnvelope(winner, { replayed: true, auditPersisted, traceId });
+                    let auditErrorCode = null;
+                    try { await appendSaleAudit(winner, traceId); } catch (error) {
+                        auditPersisted = false;
+                        auditErrorCode = String(error?.code || error?.message || "TPV_AUDIT_APPEND_FAILED");
+                        logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: winner._id, errorCode: auditErrorCode });
+                    }
+                    return salePendingEnvelope(winner, { replayed: true, auditPersisted, auditErrorCode, traceId });
                 }
 
                 const currentSession = await latestOpenTpvSession();
@@ -397,9 +411,15 @@ export const registrarVenta = webMethod(
                                     entityType: "DRAFT_ORDER",
                                     entityId: draft.orderId,
                                     traceId,
-                                    payload: { sessionId, idempotencyKey, errorCode: String(error?.code || error?.message || "INSERT_FAILED") },
+                                    payload: { sessionId, idempotencyKey, errorCode: _safeTpvErrorCode(error, "INSERT_FAILED") },
                                 });
-                            } catch { /* orphan remains explicitly traceable by the failed insert response */ }
+                            } catch (auditError) {
+                                logger.error("TPV_DRAFT_ORPHAN_AUDIT_FAILED", {
+                                    traceId,
+                                    transactionId: idempotencyKey,
+                                    errorCode: _safeTpvErrorCode(auditError, "TPV_DRAFT_ORPHAN_AUDIT_FAILED"),
+                                });
+                            }
                         }
                         throw error;
                     }
@@ -412,12 +432,17 @@ export const registrarVenta = webMethod(
                 }
 
                 let auditPersisted = true;
-                try { await appendSaleAudit(saved, traceId); } catch { auditPersisted = false; }
-                return salePendingEnvelope(saved, { replayed: false, auditPersisted, traceId });
+                let auditErrorCode = null;
+                try { await appendSaleAudit(saved, traceId); } catch (error) {
+                    auditPersisted = false;
+                    auditErrorCode = String(error?.code || error?.message || "TPV_AUDIT_APPEND_FAILED");
+                    logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: saved._id, errorCode: auditErrorCode });
+                }
+                return salePendingEnvelope(saved, { replayed: false, auditPersisted, auditErrorCode, traceId });
             });
         } catch (error) {
             return tpvError(
-                String(error?.code || error?.message || "TPV_SALE_PERSISTENCE_FAILED"),
+                _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED"),
                 "No se ha podido completar el registro comercial de la venta.",
                 ["Conserva la clave idempotente y el traceId; consulta TransaccionesTPV antes de repetir la operación."],
                 { persisted: false, retryable: false, traceId }

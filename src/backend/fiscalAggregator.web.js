@@ -48,6 +48,7 @@ import {
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
 import { requireCajero, requireAdmin, rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { createActionableError } from "backend/errors/actionableError";
 
 import { _toPublicError } from "backend/responseUtils";
@@ -78,6 +79,7 @@ const _readPaymentMethod = (m) => _safeTrim(readMovementField(m, "paymentMethod"
 // MATRIZ v15: huella canonica del dominio caja/fiscal es "hash"; el helper
 // canónico readMovementHash aplica ya el contrato de aliases históricos.
 const _readRecordHash = (m) => readMovementHash(m);
+
 const _readLinkedBookingIds = (m) => _safeTrim(readMovementField(m, "linkedBookingIds"));
 const _readInvoiceNumber = (m) => _safeTrim(readMovementField(m, "numSerieFactura"));
 const _readOperationDate = (m) => _safeTrim(readMovementField(m, "fechaOperacion"));
@@ -155,7 +157,6 @@ function _initTaxAccumulator(months) {
 
 function _accumulatePage(items, state, options = {}) {
   for (const m of items) {
-    if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
     const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
@@ -226,7 +227,6 @@ async function _fetchQuarterMovements(months, options = {}) {
     dalQuery(MOVIMIENTOS_CAJA_COL)
       .hasSome("fiscalPeriod", months)
       .gt("sequenceNumber", 0)
-      .ne("recordSource", "SMOKE_TEST")
       .ascending("sequenceNumber")
       .limit(pageSize)
       .find(),
@@ -253,7 +253,7 @@ async function _fetchQuarterMovements(months, options = {}) {
     log.warn("_fetchQuarterMovements: reached maxPages limit", { months, limit, traceId });
   }
 
-  return { items: allItems, reachedMaxPages, totalPages: page - 1 };
+  return { items: allItems.filter((item) => !isExplicitSimulationLedgerRecord(item)), reachedMaxPages, totalPages: page - 1 };
 }
 
 function _getFiscalFetchLimitError(fetchResult, traceId, months, reportType) {
@@ -296,7 +296,7 @@ export async function getQuarterlyTaxSummaryInternal(year, quarter, options = {}
   if (incompleteResult) return incompleteResult;
 
   const state = _initTaxAccumulator(months);
-  _accumulatePage(fetchResult.items, state, { requireRealRecords: options.requireRealRecords === true });
+  _accumulatePage(fetchResult.items, state);
 
   // Sin fallback BXXXXXXXX (prohibido inventar NIF). Si falta el singleton
   // fiscal, el error se propaga al wrapper webMethod (TAX_SUMMARY_FAIL).
@@ -397,7 +397,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
     libroFilas.push({
       orden: orderIndex++,
-      recordNature: _safeTrim(m.recordNature).toUpperCase(),
       invoiceNumber: _readInvoiceNumber(m),
       fechaExpedicion: _readOperationDate(m),
       tipoFactura: isRefund ? "R1" : "BORRADOR_INTERNO",

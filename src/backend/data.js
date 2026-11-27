@@ -16,16 +16,13 @@ STANDARDS: G10 ASCII Strict. Cero suppressAuth. Historical fields are read-only;
 
 import {
     BUSINESS_COLLECTIONS,
+    TPV_LEDGER_SOURCE,
     CATALOG_ENTRY_TYPE,
     CONTROL_TYPE,
     FISCAL_ROLE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
     normalizeMovementKeys,
     OPERATIONAL_COLLECTIONS,
-    TPV_LEDGER_SOURCE,
-    TPV_EVENT_MOVEMENT_TYPES,
-    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
-    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
@@ -391,12 +388,22 @@ function _validateFiscalPayload(item) {
 
 export function MovimientosCaja_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
+
     _normalizeCmsDateTimes(item, ["generationTimestamp", "recordTimestamp", "fechaEnvioAEAT"]);
 
     // Normalize the CMS's uppercase physical identifiers into the internal
     // domain names before validation. The final persisted item is converted
     // back to the exact CMS field IDs at the end of this hook.
     _normalizeMovimientosCajaPhysicalFields(item, false);
+
+    const recordSource = _safeTrim(item.recordSource);
+    if (recordSource === TPV_LEDGER_SOURCE) {
+        normalizeMovementKeys(item);
+        _normalizeMovimientosCajaObjectFields(item);
+        assertMovimientosCajaRequiredFields(item);
+        _normalizeMovimientosCajaPhysicalFields(item, true);
+        return item;
+    }
 
     // BLOQUE DE INTEGRIDAD (v13.0, HOOK-CAJA-01/02/05): las guardas duras de
     // trazabilidad y cadena de hash se evaluan PRIMERO, antes que cualquier
@@ -478,12 +485,41 @@ export function MovimientosCaja_beforeInsert(item) {
     return item;
 }
 
-export async function MovimientosCaja_beforeUpdate(item) {
-    return MovimientosCaja_beforeInsert(item);
+export function MovimientosCaja_beforeUpdate(item) {
+    throw createActionableError({
+        code: "MOVIMIENTOS_CAJA_APPEND_ONLY",
+        userMessage: "No se puede modificar un movimiento de caja.",
+        technicalDetail: "MovimientosCaja es un ledger append-only.",
+        remediation: [
+            "Registrar una devolución o ajuste compensatorio.",
+            "Usar el flujo TPV correspondiente.",
+            "Conservar el registro histórico original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
-export async function MovimientosCaja_beforeRemove() {
-    _fiscalError("Borrado de MovimientosCaja prohibido: ledger append-only.");
+export function MovimientosCaja_beforeRemove() {
+    throw createActionableError({
+        code: "MOVIMIENTOS_CAJA_APPEND_ONLY",
+        userMessage: "No se puede borrar un movimiento de caja.",
+        technicalDetail: "MovimientosCaja es un ledger append-only.",
+        remediation: [
+            "Registrar una devolución o ajuste compensatorio.",
+            "Usar el flujo TPV correspondiente.",
+            "Conservar el registro histórico original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 export function LibroAsientosContablesDetalle_beforeInsert(item) {
@@ -496,11 +532,38 @@ export function LibroAsientosContablesDetalle_beforeInsert(item) {
 }
 
 export function LibroAsientosContablesDetalle_beforeUpdate(item) {
-    return LibroAsientosContablesDetalle_beforeInsert(item);
+    throw createActionableError({
+        code: "ACCOUNTING_LEDGER_APPEND_ONLY",
+        userMessage: "No se puede modificar un asiento contable.",
+        technicalDetail: "El libro contable es append-only.",
+        remediation: [
+            "Registrar una rectificación formal.",
+            "No modificar el asiento original.",
+            "Consultar el traceId en los registros técnicos.",
+        ],
+        contextSnapshot: {
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
-    _fiscalError("Borrado de LibroAsientosContablesDetalle prohibido: ledger contable append-only.");
+    throw createActionableError({
+        code: "ACCOUNTING_LEDGER_APPEND_ONLY",
+        userMessage: "No se puede borrar un asiento contable.",
+        technicalDetail: "El libro contable es append-only.",
+        remediation: [
+            "Registrar una rectificación formal.",
+            "No modificar el asiento original.",
+            "Consultar el traceId en los registros técnicos.",
+        ],
+        contextSnapshot: {
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -516,13 +579,40 @@ export function HistoricoCierresZ_beforeInsert(item) {
 
 // Wix Data beforeUpdate hook: https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update
 export function HistoricoCierresZ_beforeUpdate(item) {
-    _normalizeCmsDateTimes(item, ["closedAt", "verifiedAt", "sentAt"]);
-    assertHistoricoCierresZ(item);
-    return item;
+    throw createActionableError({
+        code: "HISTORICO_CIERRES_Z_APPEND_ONLY",
+        userMessage: "Los cierres Z históricos son append-only y no se pueden modificar.",
+        technicalDetail: "HistoricoCierresZ es un registro de cierre append-only.",
+        remediation: [
+            "Conservar el cierre original y su evidencia.",
+            "Registrar cualquier corrección mediante un asiento o evento rectificativo trazable.",
+            "No alterar importes, firma ni fecha del cierre original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function HistoricoCierresZ_beforeRemove() {
-    _fiscalError("Borrado de HistoricoCierresZ prohibido: registro fiscal append-only");
+    throw createActionableError({
+        code: "HISTORICO_CIERRES_Z_APPEND_ONLY",
+        userMessage: "Los cierres Z históricos son append-only y no se pueden borrar.",
+        technicalDetail: "HistoricoCierresZ conserva la evidencia de cierre y su cadena de auditoría.",
+        remediation: [
+            "Conservar el cierre original y su evidencia.",
+            "Registrar cualquier corrección mediante un asiento o evento rectificativo trazable.",
+            "No eliminar ni reconstruir el cierre histórico.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -537,11 +627,40 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
 }
 
 export function RegistrosHorariosStaff_beforeUpdate(item) {
-    return RegistrosHorariosStaff_beforeInsert(item);
+    throw createActionableError({
+        code: "STAFF_TIME_LEDGER_APPEND_ONLY",
+        userMessage: "Los registros horarios son append-only y no se pueden modificar.",
+        technicalDetail: "RegistrosHorariosStaff es un ledger laboral append-only.",
+        remediation: [
+            "Registrar una rectificación horaria trazable.",
+            "Conservar el registro original y su firma.",
+            "No sobrescribir la evidencia de jornada.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
-    _fiscalError("Borrado de RegistrosHorariosStaff prohibido: registro horario append-only (RD 8/2019)");
+    throw createActionableError({
+        code: "STAFF_TIME_LEDGER_APPEND_ONLY",
+        userMessage: "Los registros horarios son append-only y no se pueden borrar.",
+        technicalDetail: "RegistrosHorariosStaff conserva la evidencia laboral de jornada.",
+        remediation: [
+            "Registrar una rectificación horaria trazable.",
+            "Conservar el registro original y su firma.",
+            "No sobrescribir ni eliminar la evidencia de jornada.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -588,22 +707,11 @@ function _clearStaleCajaClosedAt(item) {
     return item;
 }
 
-function _normalizeCajaTpvRuntime(item) {
-    const runtime = item?.conceptOperations?.tpvRuntime;
-    const snapshotSource = _safeTrim(item?.snapshotSource).toUpperCase();
-    const isTpvRuntime = runtime !== undefined || snapshotSource.startsWith("TPV");
-    if (isTpvRuntime) {
-        _schemaError("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: CajaActual no admite nuevas proyecciones TPV hasta disponer del contrato canónico.");
-    }
-    return item;
-}
-
 export function CajaActual_beforeInsert(item) {
     if (!item || typeof item !== "object") return item;
     _normalizeCmsDateTimes(item, ["openedAt", "closedAt", "lastMovementAt"]);
     _normalizeCajaSequenceCounters(item);
     _clearStaleCajaClosedAt(item);
-    _normalizeCajaTpvRuntime(item);
     assertCajaActualRecord(item);
     const key = _safeTrim(item.singletonKey || item._id);
     if (key !== "CAJA_PRINCIPAL") {
@@ -661,7 +769,18 @@ export async function CajaActual_beforeUpdate(item) {
 }
 
 export function CajaActual_beforeRemove() {
-    throw new Error("SINGLETON_PROTECTED: No se puede eliminar el estado de caja");
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "CajaActual is a required operational singleton.",
+        remediation: [
+            "Conservar el singleton y actualizar su estado mediante el flujo de caja.",
+            "No crear un segundo singleton.",
+            "Registrar cualquier corrección mediante una actualización trazable.",
+        ],
+        contextSnapshot: { collection: BUSINESS_COLLECTIONS.CAJA_ACTUAL, operation: "REMOVE" },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -788,12 +907,19 @@ export function MapaStaff_beforeUpdate(item) {
     return item;
 }
 
-export function MapaStaff_beforeRemove(item) {
-    if (_safeTrim(item?._id) === "CONFIG_SISTEMA_FISCAL" ||
-        _safeTrim(item?.recordType).toUpperCase() === "CONFIG_SISTEMA") {
-        _fiscalError("SINGLETON_PROTECTED: No se puede eliminar CONFIG_SISTEMA_FISCAL");
-    }
-    return item;
+export function MapaStaff_beforeRemove() {
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "MapaStaff identity and fiscal configuration records are retained.",
+        remediation: [
+            "Actualizar el registro existente mediante el flujo autorizado.",
+            "Conservar la identidad y trazabilidad previas.",
+            "Añadir un nuevo registro cuando la operación represente una nueva entidad.",
+        ],
+        contextSnapshot: { collection: BUSINESS_COLLECTIONS.MAPA_STAFF, operation: "REMOVE" },
+        retryable: false,
+    });
 }
 
 const MAPA_STAFF_CONFIG_FORBIDDEN_FIELDS = [
@@ -846,9 +972,10 @@ export function readControlPayload(doc) {
 }
 
 export function TransaccionesTPV_beforeInsert(item) {
+    const normalized = { ...item };
     try {
-        assertTransaccionesTPVRecord(item);
-        return item;
+        assertTransaccionesTPVRecord(normalized);
+        return normalized;
     } catch (error) {
         _schemaError(error?.message || "TPV_COMMERCIAL_RECORD_INVALID");
     }
@@ -863,6 +990,7 @@ export async function TransaccionesTPV_beforeUpdate(item) {
         id,
         CONSISTENCY.STRONG
     );
+    if (!original) _schemaError("TransaccionesTPV update target not found");
 
     try {
         assertTransaccionesTPVRecord(item);
@@ -873,14 +1001,40 @@ export async function TransaccionesTPV_beforeUpdate(item) {
 }
 
 export async function TransaccionesTPV_beforeRemove(itemId) {
-    const id = _safeTrim(itemId);
-    if (!id) _schemaError("TransaccionesTPV remove requires _id");
+    const id = typeof itemId === "string"
+        ? itemId.trim()
+        : _safeTrim(itemId?._id);
+
+    if (!id) {
+        _schemaError("TransaccionesTPV remove requires _id");
+    }
 
     const existing = await getItem(
         BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
         id,
         CONSISTENCY.STRONG
     );
+
+    if (!existing) {
+        _schemaError("TransaccionesTPV remove target not found");
+    }
+
+    throw createActionableError({
+        code: "TPV_TRANSACTIONS_APPEND_ONLY",
+        userMessage: "No se puede borrar una transacción TPV.",
+        technicalDetail: "TransaccionesTPV conserva la intención comercial y su trazabilidad.",
+        remediation: [
+            "Registrar una devolución formal cuando corresponda.",
+            "No eliminar la transacción original.",
+            "Usar el flujo TPV de devoluciones.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+            operation: "REMOVE",
+            recordId: id,
+        },
+        retryable: false,
+    });
 }
 
 export function ControlOperativo_beforeInsert(item) {
@@ -888,7 +1042,6 @@ export function ControlOperativo_beforeInsert(item) {
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
     assertCanonicalControlFields(item);
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(item.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
     // Insert recibe el registro completo: proteger el discriminador y los
     // invariantes minimos del control antes de persistirlo.
     assertControlOperativo(item);
@@ -906,11 +1059,30 @@ export async function ControlOperativo_beforeUpdate(item) {
     );
     if (!original) _schemaError("ControlOperativo update target not found");
 
+    if (original.controlType === "WEBHOOK_EVENT") {
+        throw createActionableError({
+            code: "WEBHOOK_EVENT_APPEND_ONLY",
+            userMessage: "Los eventos webhook son append-only y no se pueden modificar.",
+            technicalDetail: "ControlOperativo/WEBHOOK_EVENT updates are forbidden.",
+            remediation: [
+                "No modificar la evidencia original del webhook.",
+                "Registrar un evento compensatorio o de recuperación con una nueva clave trazable.",
+                "Consultar el traceId y conservar el payload original.",
+            ],
+            contextSnapshot: {
+                collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+                controlType: original.controlType,
+                operation: "UPDATE",
+                recordId: id,
+            },
+            retryable: false,
+        });
+    }
+
     const normalized = { ...original, ...item };
     _normalizeCmsDateTimes(normalized, [
         "expiresAt", "windowStart", "processedAt", "heartbeatAt",
     ]);
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
     assertCanonicalControlFields(normalized);
     if (normalized.controlType !== original.controlType) {
         _fiscalError("ControlOperativo.controlType es inmutable");
@@ -920,22 +1092,31 @@ export async function ControlOperativo_beforeUpdate(item) {
 }
 
 export async function ControlOperativo_beforeRemove(itemId) {
-    const id = typeof itemId === "string"
-        ? itemId.trim()
-        : _safeTrim(itemId?._id);
+    const id = typeof itemId === "string" ? itemId.trim() : _safeTrim(itemId?._id);
     if (!id) _schemaError("ControlOperativo remove requires itemId");
-
     const original = await getItem(
         OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
         id,
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("ControlOperativo remove target not found");
-    if ([CONTROL_TYPE.TPV_TEST_RUN, CONTROL_TYPE.TPV_TEST_SESSION_LOCK].includes(original.controlType)) _schemaError("TPV_HISTORICAL_RUNTIME_WRITE_DISABLED");
-    if (original.controlType === "WEBHOOK_EVENT") {
-        throw createActionableError({ code: "RECORD_DELETE_FORBIDDEN", userMessage: "No se pueden borrar eventos webhook.", technicalDetail: "ControlOperativo/WEBHOOK_EVENT removal denied.", contextSnapshot: { collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO, controlType: original.controlType, operation: "REMOVE" }, retryable: false });
-    }
-    return id;
+    throw createActionableError({
+        code: "CMS_DELETE_PROHIBITED",
+        userMessage: "No está permitido borrar registros.",
+        technicalDetail: "ControlOperativo evidence and operational state are retained.",
+        remediation: [
+            "Conservar el registro original.",
+            "Actualizar su estado mediante el flujo autorizado cuando proceda.",
+            "Añadir un evento compensatorio o de resolución con trazabilidad.",
+        ],
+        contextSnapshot: {
+            collection: OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO,
+            controlType: original.controlType,
+            operation: "REMOVE",
+            recordId: id,
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================

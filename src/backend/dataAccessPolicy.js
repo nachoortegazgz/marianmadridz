@@ -6,8 +6,6 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
-    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -42,17 +40,6 @@ function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function _isHistoricalTpvMarker(item) {
-    const recordSource = String(item?.recordSource || "").trim().toUpperCase();
-    const movementType = String(item?.movementType || "").trim().toUpperCase();
-
-    return Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
-}
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
     if (
@@ -125,13 +112,6 @@ export function assertBulkPatchAllowed(collection, modifications, conditionFilte
 export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
-    }
-
-    if (
-        collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        _isHistoricalTpvMarker(item)
-    ) {
-        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
 
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -239,15 +219,15 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
 
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        throw _policyError("CMS_DELETE_PROHIBITED");
+    }
+
     if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
             throw _appendOnlyError(collection, "REMOVE");
         }
-        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    }
-
-    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-        return;
+        throw _policyError("CMS_DELETE_PROHIBITED");
     }
 
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
@@ -262,7 +242,7 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
             !DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType) ||
             expectedControlType === CONTROL_TYPE.WEBHOOK_EVENT
         ) {
-            throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+            throw _policyError("CMS_DELETE_PROHIBITED");
         }
 
         if (
@@ -285,109 +265,8 @@ export function assertBulkUpdateAllowed() {
     throw _policyError("CMS_BULK_UPDATE_SCOPE_DENIED");
 }
 
-const EXPIRY_PURGE_TYPES = new Set([
-    CONTROL_TYPE.SLOT_LOCK,
-    CONTROL_TYPE.RATE_LIMIT,
-    CONTROL_TYPE.DISPLAY_TOKEN,
-    CONTROL_TYPE.DUAL_CACHE,
-    CONTROL_TYPE.DAYS_CACHE,
-]);
-
-const UPDATED_AT_PURGE_STATUSES = Object.freeze({
-    [CONTROL_TYPE.IDEMPOTENCY]: new Set(["COMPLETED", "FAILED_FINAL"]),
-    [CONTROL_TYPE.SYSTEM_FLAG]: new Set(["COMPLETED", "RECONCILED", "RESOLVED"]),
-});
-
-const CREATED_AT_PURGE_STATUSES = Object.freeze({
-    [CONTROL_TYPE.ALERT]: new Set(["COMPLETED", "CLOSED", "RESOLVED"]),
-    [CONTROL_TYPE.COMPENSATION]: new Set(["EXECUTED"]),
-});
-
-function _exactClauseValue(clause, operator) {
-    if (
-        !_isRecord(clause) ||
-        Object.keys(clause).length !== 1 ||
-        !Object.prototype.hasOwnProperty.call(clause, operator)
-    ) {
-        return undefined;
-    }
-
-    return clause[operator];
-}
-
-function _isLessThanDate(clause) {
-    const value = _exactClauseValue(clause, "$lt");
-    return value instanceof Date &&
-        Number.isFinite(value.getTime()) &&
-        value.getTime() <= Date.now();
-}
-
-function _hasExactKeys(value, expected) {
-    return _isRecord(value) &&
-        Object.keys(value).sort().join("|") === [...expected].sort().join("|");
-}
-
-export function assertBulkRemoveAllowed(collection, ids, options = {}) {
-    if (
-        collection !== BUSINESS_COLLECTIONS.CONTROL_OPERATIVO ||
-        !Array.isArray(ids) ||
-        ids.length === 0 ||
-        ids.length > 1000 ||
-        ids.some((id) => typeof id !== "string" || !id.trim())
-    ) {
-        throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-    }
-
-    const filter = options?.condition?.filter;
-    const type = _exactClauseValue(filter?.controlType, "$eq");
-
-    if (
-        typeof type !== "string" ||
-        !DATA_ACCESS_WRITE_POLICY.purgeControlTypes.includes(type) ||
-        type === CONTROL_TYPE.WEBHOOK_EVENT
-    ) {
-        throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-    }
-
-    if (EXPIRY_PURGE_TYPES.has(type)) {
-        if (
-            !_hasExactKeys(filter, ["controlType", "expiresAt"]) ||
-            !_isLessThanDate(filter.expiresAt)
-        ) {
-            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-        }
-        return;
-    }
-
-    const updatedStatuses = UPDATED_AT_PURGE_STATUSES[type];
-    if (updatedStatuses) {
-        const status = _exactClauseValue(filter.status, "$eq");
-
-        if (
-            !_hasExactKeys(filter, ["controlType", "status", "_updatedDate"]) ||
-            !updatedStatuses.has(status) ||
-            !_isLessThanDate(filter._updatedDate)
-        ) {
-            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-        }
-        return;
-    }
-
-    const createdStatuses = CREATED_AT_PURGE_STATUSES[type];
-    if (createdStatuses) {
-        const status = _exactClauseValue(filter.status, "$eq");
-
-        if (
-            !_hasExactKeys(filter, ["controlType", "status", "_createdDate"]) ||
-            !createdStatuses.has(status) ||
-            !_isLessThanDate(filter._createdDate)
-        ) {
-            throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
-        }
-        return;
-    }
-
-    throw _policyError("CMS_BULK_REMOVE_SCOPE_DENIED");
+export function assertBulkRemoveAllowed() {
+    throw _policyError("CMS_BULK_DELETE_PROHIBITED");
 }
 
 export function assertBulkMutationDisabled(operation) {

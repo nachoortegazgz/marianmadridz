@@ -30,10 +30,8 @@ import {
     TIPO_FACTURA,
     TPV_LEDGER_SOURCE,
     TPV_EVENT_MOVEMENT_TYPES,
-    TPV_HISTORICAL_POLICY,
     TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
-import { isValidTpvTestRunPayload } from "backend/tpv/tpvHistoricalCompat";
 
 // =============================================================================
 // ASSERT VALID ENUM (unica funcion de validacion generica)
@@ -262,9 +260,6 @@ export function assertMovimientosCajaRequiredFields(item) {
         if (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
             throw new Error("SCHEMA_VIOLATION: TPV physical recordTimestamp must be DATETIME");
         }
-        if (!["SYNTHETIC", "REAL"].includes(item.recordNature)) {
-            throw new Error("SCHEMA_VIOLATION: TPV physical recordNature invalid");
-        }
         if (!/^[a-f0-9]{64}$/i.test(String(item.hash || "")) ||
             !/^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""))) {
             throw new Error("SCHEMA_VIOLATION: TPV physical SHA-256 chain invalid");
@@ -371,11 +366,9 @@ export function assertCajaActualRecord(item) {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error("SCHEMA_VIOLATION: CajaActual item must be an object");
     }
-    if (item.recordNature !== undefined || item.recordTimestamp !== undefined) {
-        if (!["SYNTHETIC", "REAL"].includes(item.recordNature) ||
-            !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime())) {
-            throw new Error("SCHEMA_VIOLATION: CajaActual TPV record metadata invalid");
-        }
+    if (item.recordTimestamp !== undefined &&
+        (!(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime()))) {
+        throw new Error("SCHEMA_VIOLATION: CajaActual.recordTimestamp must be DATETIME");
     }
     if (item.sequenceCounters !== undefined && item.sequenceCounters !== null &&
         (typeof item.sequenceCounters !== "object" || Array.isArray(item.sequenceCounters))) {
@@ -552,12 +545,9 @@ export function assertTransaccionesTPVRecord(item) {
             throw new Error("SCHEMA_VIOLATION: TransaccionesTPV minor amount invalid: " + field);
         }
     }
-    const legacySynthetic = item.sourceType === "SYNTHETIC" &&
-        item.recordNature == null && item.recordTimestamp == null;
-    const currentRecord = item.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
-        ["SYNTHETIC", "REAL"].includes(item.recordNature) &&
-        item.recordTimestamp instanceof Date && !Number.isNaN(item.recordTimestamp.getTime());
-    if (item.status !== "PENDING_PAYMENT" || (!legacySynthetic && !currentRecord) ||
+    if (typeof item.status !== "string" || !item.status.trim() || item.status.length > 40 ||
+        item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
+        !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime()) ||
         item.requiresReconciliation !== (item.orderId == null) ||
         !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
         typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||
@@ -628,44 +618,6 @@ export function assertControlOperativo(item) {
         }
     }
 
-    if (item.controlType === CONTROL_TYPE.TPV_TEST_RUN) {
-        const payload = item.payload;
-        const expiresAt = new Date(item.expiresAt);
-        if (!/^TPVTR[a-f0-9]{31}$/i.test(String(item._id || "")) ||
-            !["OPEN", "CLOSED"].includes(String(item.status || "")) ||
-            !Number.isSafeInteger(Number(item.version)) || Number(item.version) < 0 ||
-            Number(item.version) !== payload.events.length - 1 ||
-            !item.expiresAt || Number.isNaN(expiresAt.getTime()) ||
-            expiresAt.getTime() <= Date.parse(payload.activeUntil || "")) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN root contract invalid");
-        }
-        if (payload.sourceType !== "SYNTHETIC" ||
-            payload.processingMode !== "INTERNAL" ||
-            payload.reconciliationStatus !== "NOT_RECONCILED" ||
-            payload.isSynthetic !== true ||
-            payload.realPayment !== false ||
-            payload.externalSideEffects !== false ||
-            payload.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
-            !String(payload.sessionId || "").trim() ||
-            !String(payload.actorId || "").trim() ||
-            !String(payload.operatorId || "").trim() ||
-            payload.schemaVersion !== 1 ||
-            payload.ledgerVersion !== "TPV_TEST_RUNTIME_V1" ||
-            !Array.isArray(payload.events) ||
-            !payload.idempotencyIndex ||
-            typeof payload.idempotencyIndex !== "object" ||
-            Array.isArray(payload.idempotencyIndex) ||
-            !/^[a-f0-9]{64}$/i.test(String(payload.eventHash || ""))) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN synthetic envelope invalid");
-        }
-        if (!isValidTpvTestRunPayload(payload, {
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            sessionId: payload.sessionId,
-            actorId: payload.actorId,
-        })) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN event chain invalid");
-        }
-    }
 
     // DISPLAY_TOKEN stores its policy metadata inside the required OBJECT payload.
     if (item.controlType === CONTROL_TYPE.DISPLAY_TOKEN) {
@@ -869,51 +821,40 @@ export function isValidNifOrEuVat(value) {
 }
 
 /**
- * Identifica exclusivamente filas de simulacion marcadas de forma explicita.
- * No clasifica como simulacion una fila solo por tener una huella invalida:
- * esos registros deben seguir provocando una alerta de integridad.
+ * Identifica exclusivamente marcadores explícitos de fixtures/smoke.
+ * No clasifica por sourceType ni por atributos genéricos del entorno o huellas inválidas.
  */
 export function isExplicitSimulationLedgerRecord(item) {
-    if (!item || typeof item !== "object") return false;
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
     const upper = (value) => String(value ?? "").trim().toUpperCase();
     const recordSource = upper(item.recordSource);
     const eventType = upper(item.eventType);
     const movementType = upper(item.movementType);
+    const projectionStatus = upper(item.projectionStatus);
+    const source = upper(item.source);
     const accountCode = upper(item.desgloseDetallado?.accountCode);
     const hash = upper(item.hash);
     const previousRecordHash = upper(item.previousRecordHash);
-    const projectionStatus = upper(item.projectionStatus);
-    const source = upper(item.source);
-    const simulatedMovementType = movementType.startsWith("SIMULATED_") ||
-        /(?:^|_)SIMULAD[AO]$/.test(movementType);
-    // Explicit legacy TPV-QA markers observed in CMS on 2026-11-23.
-    // Keep the triple condition for MovimientosCaja; a bare synthetic=true
-    // flag is not sufficient to hide a malformed financial record.
-    const legacyTpvDevelopmentRecord = item.synthetic === true &&
+
+    const legacyTpvDevelopmentFixture = item.synthetic === true &&
         recordSource === "TPV_QA_DEVELOPMENT" &&
         source === "TPV_FUNCTIONAL_TEST";
-    const envelope = item.payloadFiscal && typeof item.payloadFiscal === "object"
-        ? item.payloadFiscal
-        : {};
-    const historicalTpvLedgerRecord = recordSource === TPV_LEDGER_SOURCE &&
-        envelope.sourceType === TPV_HISTORICAL_POLICY.SOURCE_TYPE &&
-        envelope.ledgerVersion === TPV_HISTORICAL_POLICY.LEDGER_VERSION &&
-        [1, TPV_HISTORICAL_POLICY.SCHEMA_VERSION].includes(Number(envelope.schemaVersion)) &&
-        Number(item.sequenceNumber) === 0 &&
-        envelope.externalSideEffects === false &&
-        (envelope.isSynthetic === true || envelope.realPayment === false);
-    const tpvLedgerSource = historicalTpvLedgerRecord ||
-        [TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE, TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE].includes(recordSource);
-    return tpvLedgerSource ||
-        recordSource === "SMOKE_TEST" ||
+
+    return recordSource === "SMOKE_TEST" ||
         eventType.startsWith("SIMULATED_") ||
         eventType.endsWith("_SIMULATED") ||
-        simulatedMovementType ||
+        movementType.startsWith("SIMULATED_") ||
+        /(?:^|_)SIMULAD[AO]$/.test(movementType) ||
         projectionStatus === "SIMULATED_ONLY" ||
-        legacyTpvDevelopmentRecord ||
+        legacyTpvDevelopmentFixture ||
         accountCode === "SIMULATED" ||
         hash === "SIMULATED_HASH" ||
         previousRecordHash === "SIMULATED_PREVIOUS_HASH";
 }
 
+/**
+ * Identifica exclusivamente filas de simulacion marcadas de forma explicita.
+ * No clasifica como simulacion una fila solo por tener una huella invalida:
+ * esos registros deben seguir provocando una alerta de integridad.
+ */
 

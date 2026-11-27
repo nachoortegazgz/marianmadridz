@@ -103,24 +103,35 @@ test('CRON-PARITY-02 crons.js exports cover the two previously-missing jobs', ()
   assert.strictEqual(typeof CR.cleanExpiredBookingControl, 'function');
 });
 
-test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache drains expired rows only', async () => {
+test('CRON-DUAL-CACHE-01 cleanupExpiredDualCache retires expired rows and preserves evidence', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const now = new Date();
+  const base = (id, expiresAt) => ({
+    _id: id, controlType: IC.CONTROL_TYPE.DUAL_CACHE,
+    dedupeKey: `dual:${id}`, traceId: `trace:${id}`, payload: {},
+    expiresAt,
+  });
   wixDataMock._seed(C, [
-    { _id: 'dual-expired-1', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() - 2000) },
-    { _id: 'dual-expired-2', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() - 1000) },
-    { _id: 'dual-active', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() + 60000) },
-    { _id: 'tx-preserve', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, expiresAt: new Date(now.getTime() - 60000) },
-    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 60000) },
+    base('dual-expired-1', new Date(now.getTime() - 2000)),
+    base('dual-expired-2', new Date(now.getTime() - 1000)),
+    base('dual-active', new Date(now.getTime() + 60000)),
+    { _id: 'tx-preserve', controlType: IC.CONTROL_TYPE.IDEMPOTENCY, dedupeKey: 'tx-preserve', traceId: 'trace:tx', payload: {}, expiresAt: new Date(now.getTime() - 60000) },
+    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, dedupeKey: 'webhook-preserve', traceId: 'trace:webhook', payload: {}, eventId: 'event-1', eventType: 'BOOKING_CONFIRMED', processedAt: now, expiresAt: new Date(now.getTime() - 60000) },
   ]);
   const result = await CR.cleanupExpiredDualCache();
-  assert.equal(result.removed, 2);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retired, 2);
   assert.equal(result.failed, 0);
-  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
-  assert.deepStrictEqual(remaining, ['dual-active', 'tx-preserve', 'webhook-preserve']);
+  const rows = wixDataMock._store.get(C) || [];
+  assert.equal(rows.length, 5, 'no CMS record is physically deleted');
+  for (const id of ['dual-expired-1', 'dual-expired-2']) {
+    const row = rows.find((item) => item._id === id);
+    assert.equal(row.status, 'INVALIDATED');
+    assert.equal(new Date(row.expiresAt).getTime(), 0);
+  }
+  assert.ok(new Date(rows.find((item) => item._id === 'dual-active').expiresAt).getTime() > Date.now());
 });
-
 test('CRON-DUAL-RESCHEDULE-01 legacy reconciler must not rewrite dual-reschedule journals', async () => {
   wixDataMock._reset();
   let nativeReads = 0;
@@ -295,95 +306,109 @@ test('CRON-PAYMENT-RECOVERY-01 repairs CitasF2 from the existing paid ORDER move
   delete mocks.sdk['@wix/ecom::orders'];
 });
 
-test('CRON-DISPLAY-01 cleanExpiredDisplayTokens removes only expired display tokens', async () => {
+test('CRON-DISPLAY-01 cleanExpiredDisplayTokens retires only expired display tokens', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const now = new Date();
+  const token = (id, expiresAt) => ({
+    _id: id, controlType: IC.CONTROL_TYPE.DISPLAY_TOKEN,
+    dedupeKey: `display:${id}`, traceId: `trace:${id}`,
+    status: 'ACTIVE', version: 0, bookingId: '11111111-1111-4111-8111-111111111111',
+    attempts: 0, payload: { maxAttempts: 3 }, expiresAt,
+  });
   wixDataMock._seed(C, [
-    { _id: 'display-expired', controlType: IC.CONTROL_TYPE.DISPLAY_TOKEN, expiresAt: new Date(now.getTime() - 1000) },
-    { _id: 'display-active', controlType: IC.CONTROL_TYPE.DISPLAY_TOKEN, expiresAt: new Date(now.getTime() + 60000) },
-    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 60000) },
+    token('display-expired', new Date(now.getTime() - 1000)),
+    token('display-active', new Date(now.getTime() + 60000)),
+    { _id: 'webhook-preserve', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, dedupeKey: 'webhook', traceId: 'trace:webhook', payload: {}, eventId: 'event-1', eventType: 'BOOKING_CONFIRMED', processedAt: now, expiresAt: new Date(now.getTime() - 60000) },
   ]);
   const result = await CR.cleanExpiredDisplayTokens();
-  assert.equal(result.removed, 1);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retired, 1);
   assert.equal(result.failed, 0);
-  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
-  assert.deepStrictEqual(remaining, ['display-active', 'webhook-preserve']);
+  const rows = wixDataMock._store.get(C) || [];
+  assert.equal(rows.length, 3);
+  assert.equal(rows.find((row) => row._id === 'display-expired').status, 'CONSUMED');
+  assert.equal(new Date(rows.find((row) => row._id === 'display-expired').expiresAt).getTime(), 0);
+  assert.equal(rows.find((row) => row._id === 'display-active').status, 'ACTIVE');
 });
-
-test('CRON-LOCK-01 cleanExpiredLocks conditionally purges only still-expired SLOT_LOCK rows', async () => {
+test('CRON-LOCK-01 cleanExpiredLocks retires only still-expired SLOT_LOCK rows', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const now = new Date();
+  const lock = (id, expiresAt, version) => ({
+    _id: id, controlType: IC.CONTROL_TYPE.SLOT_LOCK,
+    dedupeKey: `lock:${id}`, traceId: `trace:${id}`,
+    payload: {}, resourceId: '11111111-1111-4111-8111-111111111111',
+    status: 'ACTIVE', expiresAt, version,
+  });
   wixDataMock._seed(C, [
-    { _id: 'lock-expired', controlType: IC.CONTROL_TYPE.SLOT_LOCK, expiresAt: new Date(now.getTime() - 1000), version: 2 },
-    { _id: 'lock-active', controlType: IC.CONTROL_TYPE.SLOT_LOCK, expiresAt: new Date(now.getTime() + 60000), version: 4 },
-    { _id: 'dual-expired', controlType: IC.CONTROL_TYPE.DUAL_CACHE, expiresAt: new Date(now.getTime() - 1000) },
-    { _id: 'webhook-expired', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, expiresAt: new Date(now.getTime() - 1000) },
+    lock('lock-expired', new Date(now.getTime() - 1000), 2),
+    lock('lock-active', new Date(now.getTime() + 60000), 4),
+    { _id: 'dual-expired', controlType: IC.CONTROL_TYPE.DUAL_CACHE, dedupeKey: 'dual', traceId: 'trace:dual', payload: {}, expiresAt: new Date(now.getTime() - 1000) },
+    { _id: 'webhook-expired', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, dedupeKey: 'webhook', traceId: 'trace:webhook', payload: {}, eventId: 'event-1', eventType: 'BOOKING_CONFIRMED', processedAt: now, expiresAt: new Date(now.getTime() - 1000) },
   ]);
-
   const result = await CR.cleanExpiredLocks();
-  assert.equal(result.removed, 1);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retired, 1);
   assert.equal(result.skipped, 0);
   assert.equal(result.failed, 0);
-  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
-  assert.deepStrictEqual(remaining, ['dual-expired', 'lock-active', 'webhook-expired']);
+  const rows = wixDataMock._store.get(C) || [];
+  assert.equal(rows.length, 4);
+  assert.equal(rows.find((row) => row._id === 'lock-expired').status, 'RELEASED');
+  assert.equal(new Date(rows.find((row) => row._id === 'lock-expired').expiresAt).getTime(), 0);
+  assert.equal(rows.find((row) => row._id === 'lock-active').status, 'ACTIVE');
 });
-
-test('CRON-RL-01 cleanExpiredRateLimits removes only expired RATE_LIMIT rows', async () => {
+test('CRON-RL-01 cleanExpiredRateLimits retires only expired RATE_LIMIT rows with version CAS', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const now = new Date();
+  const rate = (id, expiresAt, version) => ({
+    _id: id, controlType: IC.CONTROL_TYPE.RATE_LIMIT,
+    dedupeKey: `rate:${id}`, traceId: `trace:${id}`,
+    status: IC.CONTROL_STATUS.ACTIVE, payload: {}, requestCount: 1, expiresAt, version,
+  });
   wixDataMock._seed(C, [
-    {
-      _id: 'rl-expired',
-      controlType: IC.CONTROL_TYPE.RATE_LIMIT,
-      status: IC.CONTROL_STATUS.ACTIVE,
-      expiresAt: new Date(now.getTime() - 1000),
-      version: 2,
-    },
-    {
-      _id: 'rl-active',
-      controlType: IC.CONTROL_TYPE.RATE_LIMIT,
-      status: IC.CONTROL_STATUS.ACTIVE,
-      expiresAt: new Date(now.getTime() + 60000),
-      version: 4,
-    },
-    {
-      _id: 'webhook-old',
-      controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT,
-      status: IC.CONTROL_STATUS.CLOSED,
-      expiresAt: new Date(now.getTime() - 60000),
-      version: 1,
-    },
+    rate('rl-expired', new Date(now.getTime() - 1000), 2),
+    rate('rl-active', new Date(now.getTime() + 60000), 4),
+    { _id: 'webhook-old', controlType: IC.CONTROL_TYPE.WEBHOOK_EVENT, dedupeKey: 'webhook', traceId: 'trace:webhook', payload: {}, eventId: 'event-1', eventType: 'BOOKING_CONFIRMED', processedAt: now, status: 'CLOSED', expiresAt: new Date(now.getTime() - 60000), version: 1 },
   ]);
-
   const result = await CR.cleanExpiredRateLimits();
-  assert.equal(result.removed, 1);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retired, 1);
   assert.equal(result.failed, 0);
-
-  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
-  assert.deepStrictEqual(remaining, ['rl-active', 'webhook-old']);
+  const rows = wixDataMock._store.get(C) || [];
+  assert.equal(rows.length, 3);
+  assert.equal(new Date(rows.find((row) => row._id === 'rl-expired').expiresAt).getTime(), 0);
+  assert.equal(rows.find((row) => row._id === 'rl-active').status, 'ACTIVE');
 });
-
-
-test('CRON-DAYS-CACHE-01 cleanExpiredDaysCache conditionally drains expired rows', async () => {
+test('CRON-DAYS-CACHE-01 cleanExpiredDaysCache retires expired rows and preserves evidence', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const now = new Date();
+  const cache = (id, expiresAt, type = IC.CONTROL_TYPE.DAYS_CACHE) => ({
+    _id: id, controlType: type, dedupeKey: `cache:${id}`,
+    traceId: `trace:${id}`, payload: {}, expiresAt,
+  });
   wixDataMock._seed(C, [
-    { _id: 'days-expired-1', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() - 2000) },
-    { _id: 'days-expired-2', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() - 1000) },
-    { _id: 'days-active', controlType: IC.CONTROL_TYPE.DAYS_CACHE, expiresAt: new Date(now.getTime() + 60000) },
-    { _id: 'rate-expired', controlType: IC.CONTROL_TYPE.RATE_LIMIT, expiresAt: new Date(now.getTime() - 60000) },
+    cache('days-expired-1', new Date(now.getTime() - 2000)),
+    cache('days-expired-2', new Date(now.getTime() - 1000)),
+    cache('days-active', new Date(now.getTime() + 60000)),
+    cache('rate-expired', new Date(now.getTime() - 60000), IC.CONTROL_TYPE.RATE_LIMIT),
   ]);
   const result = await CR.cleanExpiredDaysCache();
-  assert.equal(result.removed, 2);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retired, 2);
   assert.equal(result.skipped, 0);
   assert.equal(result.failed, 0);
-  assert.deepStrictEqual((wixDataMock._store.get(C) || []).map((row) => row._id).sort(), ['days-active', 'rate-expired']);
+  const rows = wixDataMock._store.get(C) || [];
+  assert.equal(rows.length, 4);
+  for (const id of ['days-expired-1', 'days-expired-2']) {
+    const row = rows.find((item) => item._id === id);
+    assert.equal(row.status, 'INVALIDATED');
+    assert.equal(new Date(row.expiresAt).getTime(), 0);
+  }
+  assert.ok(new Date(rows.find((row) => row._id === 'days-active').expiresAt).getTime() > Date.now());
 });
-
 test('CRON-Z-ENTRY-01 cron uses a backend-only internal closing entry point', () => {
   const cronSource = fs.readFileSync(backendPath('crons.js'), 'utf8').replace(/\r\n/g, '\n');
   const cashSource = fs.readFileSync(backendPath('cajas.web.js'), 'utf8').replace(/\r\n/g, '\n');
@@ -417,7 +442,7 @@ test('CRON-Z-02 verifyNightlyZClosing raises MANUAL_REQUIRED alert when no close
   assert.strictEqual(alerts.length, 1, 'exactly one deduped manual-required alert expected');
 });
 
-test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after 24 hours', async () => {
+test('CRON-CONTROL-01 retains terminal idempotency and system-flag evidence after 24 hours', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
   const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
@@ -441,45 +466,20 @@ test('CRON-CONTROL-01 purges only terminal transactions and resolved flags after
     { _id: 'flag-completion-retry-old', controlType: IC.CONTROL_TYPE.SYSTEM_FLAG, payload: { status: 'COMPLETION_RETRY_REQUIRED' }, _updatedDate: old },
     { _id: 'compensation-old', controlType: IC.CONTROL_TYPE.COMPENSATION, status: 'EXECUTED', _updatedDate: old },
   ]);
-
   const result = await CR.cleanExpiredBookingControl();
-  assert.equal(result.removed, 5);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retained, 5);
   assert.equal(result.failed, 0);
-  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
-  assert.deepStrictEqual(remaining, [
-    'compensation-old',
-    'dedupe-claim-old',
-    'flag-completion-retry-old',
-    'flag-repair-old',
-    'flag-status-conflict',
-    'ledger-idempotency-old',
-    'tx-completed-recent',
-    'tx-in-progress-old',
-    'tx-payload-only-old',
-    'tx-retryable-old',
-    'tx-unknown-old',
-    'webhook-old',
-  ]);
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id);
+  assert.equal(remaining.length, 17);
+  assert.ok(remaining.includes('tx-completed-old'));
+  assert.ok(remaining.includes('flag-resolved-old'));
 });
-
-test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', async () => {
+test('CRON-AUDIT-01 cleanAuditLogs retains terminal audit evidence past retention', async () => {
   wixDataMock._reset();
   const old = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000);
   const recent = new Date();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-  // [CRON-AUDIT-01] ALERT operativas nacen OPEN; logs INFO/WARNING se
-  // almacenan como COMPLETED. Solo estados terminales con retencion vencida
-  // son purgables. Se siembra por tanto:
-  //  a1 ALERT CLOSED antigua -> purgable
-  //  a3 ALERT RESOLVED antigua -> purgable
-  //  a5 ALERT COMPLETED antigua (INFO/WARNING audit) -> purgable
-  //  a2 ALERT OPEN reciente -> sobrevive (no terminal Y no retenida)
-  //  c1 COMP EXECUTED antigua -> purgable
-  //  c2 COMP PENDING antigua -> sobrevive (no terminal)
-  //  c3 COMP FAILED antigua -> sobrevive (recuperacion ambigua)
-  //  w1 WEBHOOK_EVENT antigua CLOSED -> sobrevive SIEMPRE (ADR-05)
-  //  l1 SLOT_LOCK antigua -> sobrevive (no es tipo purgable)
-  //  a4 ALERT CLOSED reciente -> sobrevive (dentro de retencion)
   wixDataMock._seed(C, [
     { _id: 'a1', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.CLOSED, _createdDate: old },
     { _id: 'a3', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.RESOLVED, _createdDate: old },
@@ -493,16 +493,12 @@ test('CRON-AUDIT-01 cleanAuditLogs purges only terminal rows past retention', as
     { _id: 'a4', controlType: IC.CONTROL_TYPE.ALERT, status: IC.CONTROL_STATUS.CLOSED, _createdDate: recent },
   ]);
   const result = await CR.cleanAuditLogs();
-  assert.equal(result.removed, 4);
+  assert.equal(result.removed, 0);
+  assert.equal(result.retained, 4);
   assert.equal(result.failed, 0);
-  const remaining = (wixDataMock._store.get(C) || []).map((r) => r._id).sort();
-  // [CRON-AUDIT-FIX-01] WEBHOOK_EVENT w1 is NEVER purged: append-only ledger
-  // per ADR-05 (hook ControlOperativo_beforeRemove blocks it; cron aligned).
-  assert.deepStrictEqual(remaining, ['a2', 'a4', 'c2', 'c3', 'l1', 'w1'],
-    'terminal ALERT and EXECUTED compensation rows are purged; FAILED and WEBHOOK_EVENT remain');
+  const remaining = (wixDataMock._store.get(C) || []).map((row) => row._id).sort();
+  assert.deepStrictEqual(remaining, ['a1', 'a2', 'a3', 'a4', 'a5', 'c1', 'c2', 'c3', 'l1', 'w1']);
 });
-
-
 test('CRON-DUAL-RECONCILE-02 only reconciles a fully consistent dual pair and unique ledger movement', async () => {
   wixDataMock._reset();
   const C = IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;

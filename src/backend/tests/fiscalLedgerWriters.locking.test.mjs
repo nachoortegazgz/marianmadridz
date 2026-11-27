@@ -155,7 +155,7 @@ test("FISCAL-CHAIN-10 shared fiscal lock uses canonical version/expiry CAS for r
   assert.match(lock, /fieldPath: "version", action: "INCREMENT_FIELD"/);
   assert.doesNotMatch(lock, /ownerToken:/);
 
-  assert.match(config, /allowedConditionFields: Object\.freeze\(\["controlType", "version", "expiresAt"\]\)/);
+  assert.match(config, /allowedConditionFields: Object\.freeze\(\["controlType", "version", "status", "expiresAt"\]\)/);
   assert.match(config, /expiresAt: Object\.freeze\(\["SET_FIELD"\]\)/);
   assert.match(config, /heartbeatAt: Object\.freeze\(\["SET_FIELD"\]\)/);
   assert.match(config, /payload: Object\.freeze\(\["SET_FIELD"\]\)/);

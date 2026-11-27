@@ -133,7 +133,8 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
     assert.match(movements, /affectsPhysicalCash: true/);
     assert.match(movements, /normalizeClientIdempotencyKey\(input\.idempotencyKey\)/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
-    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY/);
+    assert.match(config, /TPV_LEGACY_EVENT_MOVEMENT_TYPES/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
 });
 

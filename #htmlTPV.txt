@@ -1009,8 +1009,6 @@ body {
       const blockers = quote.saleReadinessBlockers || [];
       const messages = [];
             if (blockers.includes("WIX_TAX_REGION_EXCLUDES_TAX")) messages.push("Wix trata los precios del catálogo como importes sin IVA; se calcula el impuesto por separado.");
-      if (blockers.includes("FISCAL_CONFIG_UNVERIFIED")) messages.push("Configuración fiscal no verificada.");
-      if (blockers.includes("FISCAL_WRITER_DISABLED")) messages.push("Registro fiscal deshabilitado.");
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
       if (blockers.includes("TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE")) messages.push("La tasa impositiva de alguna línea no puede verificarse.");
       if (blockers.includes("TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED")) messages.push("La venta combina varias tasas de IVA; la escritura V1 solo admite una.");

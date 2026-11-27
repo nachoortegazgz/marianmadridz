@@ -11,7 +11,6 @@ import {
     TPV_COLLECTIONS,
     TPV_LEDGER_SOURCE,
     TPV_RUNTIME_POLICY,
-    TPV_HISTORICAL_POLICY,
     CONTROL_TYPE,
     OPERATIONAL_COLLECTIONS,
 } from "../internalConfig.js";
@@ -26,12 +25,11 @@ import {
     makeTpvSessionLockId,
     makeTpvTransactionId,
     makeTpvId,
-    makeLegacyTpvTransactionId,
     assertTpvCajaIntegrity,
 
 } from "../tpv/tpvUtils.js";
 
-test("TPV runtime policy is neutral and historical markers are isolated", async () => {
+test("TPV runtime policy uses the same contract independent of environment labels", async () => {
     const source = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
     assert.equal(TPV_RUNTIME_POLICY.SOURCE_TYPE, "TPV");
     assert.equal(TPV_RUNTIME_POLICY.LEDGER_VERSION, "TPV_LEDGER_V3");
@@ -41,8 +39,6 @@ test("TPV runtime policy is neutral and historical markers are isolated", async 
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_REAL_PAYMENTS, undefined);
     assert.equal(TPV_RUNTIME_POLICY.ALLOW_NATIVE_WRITES, undefined);
     assert.equal(TPV_RUNTIME_POLICY.CAPABILITIES, undefined);
-    assert.equal(TPV_HISTORICAL_POLICY.SOURCE_TYPE, "SYNTHETIC");
-    assert.equal(TPV_HISTORICAL_POLICY.LEDGER_VERSION, "TPV_SYNTHETIC_LEDGER_V1");
     assert.doesNotMatch(source, /TPV_RUNTIME_POLICY[\\s\\S]*?ALLOW_REAL_PAYMENTS|TPV_RUNTIME_POLICY[\\s\\S]*?ALLOW_NATIVE_WRITES/);
 });
 
@@ -74,19 +70,15 @@ test("CajaActual integrity accepts only the neutral v3 contract", () => {
     };
     assert.doesNotThrow(() => assertTpvCajaIntegrity(activeCaja));
 
-    const historicalCaja = {
-        cashRegisterStatus: "SIMULACION",
-        snapshotSource: TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE,
-        traceId: TPV_HISTORICAL_POLICY.LEGACY_RUN_ID,
-        conceptOperations: { tpvSandbox: {
-            sourceType: TPV_HISTORICAL_POLICY.SOURCE_TYPE,
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            ledgerVersion: TPV_HISTORICAL_POLICY.LEDGER_VERSION,
-            schemaVersion: TPV_HISTORICAL_POLICY.SCHEMA_VERSION,
-            sandboxRunId: TPV_HISTORICAL_POLICY.LEGACY_RUN_ID,
+    const sameContractCaja = {
+        ...activeCaja,
+        cashRegisterStatus: "CERRADA",
+        conceptOperations: { tpvRuntime: {
+            ...activeCaja.conceptOperations.tpvRuntime,
+            sessionId: "SESSION-CLOSED",
         } },
     };
-    assert.throws(() => assertTpvCajaIntegrity(historicalCaja), /TPV_CASH_REGISTER_INTEGRITY_FAILED/);
+    assert.doesNotThrow(() => assertTpvCajaIntegrity(sameContractCaja));
 });
 
 test("CajaActual operational projections use neutral metadata and ignore historical fields", async () => {
@@ -101,8 +93,8 @@ test("CajaActual operational projections use neutral metadata and ignore histori
     assert.match(utilities, /export function getTpvRuntimeState\(caja\)/);
     assert.match(utilities, /caja\?\.conceptOperations\?\.tpvRuntime/);
     assert.doesNotMatch(utilities, /tpvSandbox/);
-    assert.match(repository, /_isCanonicalTpvLedgerItem/);
-    assert.match(repository, /_isHistoricalTpvLedgerItem/);
+    assert.match(repository, /_isTpvLedgerItem/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
 });
 
 test("logical TPV entities cannot be newly persisted until the canonical ledger is implemented", () => {
@@ -131,9 +123,9 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
     };
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
-    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), /LEDGER_APPEND_ONLY/);
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "real-ledger-row"), /LEDGER_APPEND_ONLY/);
+    assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "ledger-row"), { code: "LEDGER_APPEND_ONLY" });
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
@@ -193,7 +185,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
         collection,
         "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         CONTROL_TYPE.TPV_REFUND_LOCK
-    ), /DATA_ACCESS_ERROR/);
+    ), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("TPV session lock is deterministic, bounded and CAS-only", () => {
@@ -229,7 +221,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), /DATA_ACCESS_ERROR/);
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
@@ -237,23 +229,20 @@ test("MovimientosCaja transaction IDs are unique across logical TPV event collec
     const cashCountId = makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
     const ticketId = makeTpvTransactionId(TPV_COLLECTIONS.TICKET_Z, key);
     const auditId = makeTpvTransactionId(TPV_COLLECTIONS.AUDITORIA, key);
-    const legacyId = makeLegacyTpvTransactionId(key);
 
     assert.match(cashCountId, /^TPV_[a-f0-9]{64}$/);
-    assert.match(legacyId, /^TPVSANDBOX_[a-f0-9]{64}$/);
     assert.match(makeTpvId("SALE", key), /^TPV-SALE-/);
     assert.notEqual(cashCountId, ticketId);
     assert.notEqual(cashCountId, auditId);
     assert.notEqual(ticketId, auditId);
-    assert.notEqual(cashCountId, legacyId);
     assert.equal(cashCountId, makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key));
-    assert.equal(legacyId, makeLegacyTpvTransactionId(key));
 });
 
-test("legacy transaction IDs remain migration-only and are not used by operational idempotency", async () => {
+test("operational idempotency never derives identifiers from environment labels", async () => {
     const repository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
-    assert.match(repository, /_isCanonicalTpvLedgerItem/);
-    assert.doesNotMatch(repository, /makeLegacyTpvTransactionId/);
+    const utilities = await readFile(new URL("../tpv/tpvUtils.js", import.meta.url), "utf8");
+    assert.match(repository, /_isTpvLedgerItem/);
+    assert.doesNotMatch(utilities, /makeLegacyTpvTransactionId|TPVSANDBOX/);
 });
 
 test("TPV runtime uses a neutral contract and client idempotency keys are bounded", () => {
@@ -293,24 +282,12 @@ test("TPV runtime uses a neutral contract and client idempotency keys are bounde
     assert.equal(payload.allowNativePayments, undefined);
     assert.equal(payload.allowNativeRefunds, undefined);
 
-    for (const field of [
-        "isSynthetic",
-        "realPayment",
-        "realPayments",
-        "processingMode",
-        "reconciliationStatus",
-        "sandboxRunId",
-        "legacyRunId",
-        "sourceType",
-        "ledgerVersion",
-        "schemaVersion",
-        "recordSource",
-    ]) {
-        assert.throws(
-            () => makeTpvPayload({ [field]: "legacy-value" }),
-            /TPV_OPERATIONAL_METADATA_FORBIDDEN/,
-            "operational payload must reject legacy metadata field: " + field
-        );
+    const neutralPayload = makeTpvPayload({ isSynthetic: true, realPayment: false, processingMode: "SIMULATION" });
+    assert.equal(neutralPayload.isSynthetic, undefined);
+    assert.equal(neutralPayload.realPayment, undefined);
+    assert.equal(neutralPayload.processingMode, undefined);
+    for (const field of ["sourceType", "ledgerVersion", "schemaVersion", "recordSource"]) {
+        assert.throws(() => makeTpvPayload({ [field]: "client-value" }), /TPV_BACKEND_METADATA_FORBIDDEN/);
     }
     assert.throws(() => makeTpvPayload(null), /TPV_INVALID_PAYLOAD/);
     assert.throws(() => makeTpvPayload([]), /TPV_INVALID_PAYLOAD/);

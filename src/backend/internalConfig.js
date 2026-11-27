@@ -50,8 +50,8 @@ export const STAFF_CLOCKING_CONFIG = Object.freeze({
 });
 
 // CMS mutation permissions are collection- and state-specific.
-// TransaccionesTPV permits changes only to unpaid synthetic commercial intents;
-// physical, fiscal, accounting, labor and closing ledgers retain their own guards.
+// TransaccionesTPV permits constrained updates only to pending commercial intents;
+// deletion is denied by both the DAL policy and the CMS beforeRemove hook.
 
 // Logical event discriminators are not CMS collection IDs. Physical drawer events map to MovimientosCaja,
 // commercial sales to TransaccionesTPV, audit events to ControlOperativo, and sessions to CajaActual.
@@ -68,17 +68,7 @@ export const TPV_COLLECTIONS = Object.freeze({
 });
 
 // Read-only mapping for previously persisted logical collection discriminators.
-export const TPV_LEGACY_COLLECTIONS = Object.freeze({
-  VENTAS: "SANDBOX_LOGICAL_VENTAS",
-  VENTA_LINEAS: "SANDBOX_LOGICAL_VENTA_LINEAS",
-  PAGOS: "SANDBOX_LOGICAL_PAGOS",
-  REEMBOLSOS: "SANDBOX_LOGICAL_REEMBOLSOS",
-  MOVIMIENTOS_CAJA: "SANDBOX_LOGICAL_MOVIMIENTOS_CAJA",
-  SESIONES_CAJA: "SANDBOX_LOGICAL_SESIONES_CAJA",
-  TICKET_X: "SANDBOX_LOGICAL_TICKET_X",
-  TICKET_Z: "SANDBOX_LOGICAL_TICKET_Z",
-  AUDITORIA: "SANDBOX_LOGICAL_AUDITORIA",
-});
+
 
 export const TPV_PAYMENT_METHOD = Object.freeze({
   EFECTIVO: "EFECTIVO",
@@ -102,14 +92,6 @@ export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
   [TPV_COLLECTIONS.TICKET_X]: "TPV_TICKET_X",
   [TPV_COLLECTIONS.TICKET_Z]: "TPV_TICKET_Z",
   [TPV_COLLECTIONS.AUDITORIA]: "TPV_AUDIT",
-  [TPV_LEGACY_COLLECTIONS.VENTAS]: "TPV_SALE",
-  [TPV_LEGACY_COLLECTIONS.VENTA_LINEAS]: "TPV_SALE_LINE",
-  [TPV_LEGACY_COLLECTIONS.PAGOS]: "TPV_PAYMENT",
-  [TPV_LEGACY_COLLECTIONS.REEMBOLSOS]: "TPV_REFUND",
-  [TPV_LEGACY_COLLECTIONS.MOVIMIENTOS_CAJA]: "TPV_CASH_MOVEMENT",
-  [TPV_LEGACY_COLLECTIONS.TICKET_X]: "TPV_TICKET_X",
-  [TPV_LEGACY_COLLECTIONS.TICKET_Z]: "TPV_TICKET_Z",
-  [TPV_LEGACY_COLLECTIONS.AUDITORIA]: "TPV_AUDIT",
 });
 
 export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
@@ -121,20 +103,11 @@ export const TPV_LEGACY_EVENT_MOVEMENT_TYPES = Object.freeze({
   [TPV_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
   [TPV_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
   [TPV_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
-  [TPV_LEGACY_COLLECTIONS.VENTAS]: "SIMULATED_TPV_SALE",
-  [TPV_LEGACY_COLLECTIONS.VENTA_LINEAS]: "SIMULATED_TPV_SALE_LINE",
-  [TPV_LEGACY_COLLECTIONS.PAGOS]: "SIMULATED_TPV_PAYMENT",
-  [TPV_LEGACY_COLLECTIONS.REEMBOLSOS]: "SIMULATED_TPV_REFUND",
-  [TPV_LEGACY_COLLECTIONS.MOVIMIENTOS_CAJA]: "SIMULATED_TPV_CASH_MOVEMENT",
-  [TPV_LEGACY_COLLECTIONS.TICKET_X]: "SIMULATED_TPV_TICKET_X",
-  [TPV_LEGACY_COLLECTIONS.TICKET_Z]: "SIMULATED_TPV_TICKET_Z",
-  [TPV_LEGACY_COLLECTIONS.AUDITORIA]: "SIMULATED_TPV_AUDIT",
 });
 
 /**
  * Runtime contract for the single TPV business flow.
- * Historical synthetic markers are deliberately kept in TPV_HISTORICAL_POLICY
- * and must never be emitted by operational writers.
+ * Legacy movement aliases remain read-compatibility values only.
  */
 export const TPV_CATALOG_APP_IDS = Object.freeze({
   WIX_STORES: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
@@ -160,17 +133,7 @@ export const TPV_RUNTIME_POLICY = Object.freeze({
  * TPV flow. Never use these values to authorize, write, reconcile or filter
  * current operational transactions.
  */
-export const TPV_HISTORICAL_POLICY = Object.freeze({
-  SOURCE_TYPE: "SYNTHETIC",
-  LEDGER_VERSION: "TPV_SYNTHETIC_LEDGER_V1",
-  SCHEMA_VERSION: 2,
-  PROCESSING_MODE: "INTERNAL",
-  RECONCILIATION_STATUS: "NOT_RECONCILED",
-  LEGACY_RUN_ID: "TPVSANDBOX-DEV-20261120-01",
-  CASH_REGISTER_SOURCE: "TPV_SYNTHETIC",
-  LEGACY_CASH_REGISTER_SOURCE: "TPV_SANDBOX_INITIALIZED",
-  LEGACY_LEDGER_SOURCE: "TPV_SANDBOX_SYNTHETIC",
-});
+
 
 export const CATALOG_ENTRY_TYPE = Object.freeze({
   SERVICE: "SERVICE",
@@ -272,8 +235,8 @@ export const SDK_CONFIG = Object.freeze({
 
   JOBS: Object.freeze({
     AUDIT_RETENTION_DAYS: 90,
-    // Purga los registros DUAL_CACHE expirados que puedan permanecer en CMS.
-    // No existe writer activo para este tipo; retirar tras verificar cero filas.
+    // Límite de registros DUAL_CACHE expirados a retirar lógicamente por ejecución.
+    // La evidencia CMS se conserva; el estado/TTL se invalida mediante CAS.
     DUAL_CACHE_CLEANUP_LIMIT: 500,
     DAYS_CACHE_CLEANUP_LIMIT: 500,
     FISCAL_RECOVERY_BATCH_SIZE: 25,
@@ -586,11 +549,40 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         expiresAt: Object.freeze(["SET_FIELD"]),
       }),
     }),
+    [CONTROL_TYPE.DUAL_CACHE]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.DAYS_CACHE]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.DISPLAY_TOKEN]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["SET_FIELD", "INCREMENT_FIELD"]),
+      }),
+    }),
     [CONTROL_TYPE.SLOT_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType"]),
       anyConditionFields: Object.freeze(["version", "expiresAt"]),
-      allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
       fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
         expiresAt: Object.freeze(["SET_FIELD"]),
         heartbeatAt: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
@@ -650,9 +642,9 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
 
 
 /*
- * Central CMS write allowlist. Append-only ledgers are excluded from update/remove;
- * bulk update and business-collection deletion remain fail-closed. Only scoped
- * ControlOperativo purges are permitted by the policy below.
+ * Central CMS write allowlist. TransaccionesTPV permits constrained updates only;
+ * append-only ledgers and TPV commercial intents are excluded from removal.
+ * No physical bulk deletion is permitted; ephemeral controls are retired by CAS.
  */
 export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   insertCollections: Object.freeze([
@@ -667,7 +659,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   updateCollections: Object.freeze([
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
     BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
@@ -678,35 +669,25 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   removeCollections: Object.freeze([
-    BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
-    BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
   ]),
-  bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  bulkRemoveCollections: Object.freeze([]),
   mutableControlTypes: Object.freeze([
     CONTROL_TYPE.ALERT,
     CONTROL_TYPE.COMPENSATION,
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+    CONTROL_TYPE.DAYS_CACHE,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
     CONTROL_TYPE.DISPLAY_TOKEN,
     CONTROL_TYPE.DUAL_CACHE,
-    CONTROL_TYPE.IDEMPOTENCY,
-    CONTROL_TYPE.SLOT_LOCK,
-  ]),
-  purgeControlTypes: Object.freeze([
-    CONTROL_TYPE.ALERT,
-    CONTROL_TYPE.COMPENSATION,
-    CONTROL_TYPE.DAYS_CACHE,
-    CONTROL_TYPE.DISPLAY_TOKEN,
-    CONTROL_TYPE.DUAL_CACHE,
-    CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.RATE_LIMIT,
     CONTROL_TYPE.SLOT_LOCK,
-    CONTROL_TYPE.SYSTEM_FLAG,
   ]),
 });
 

@@ -1,83 +1,45 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-    isValidTpvTestRunPayload,
-    stableTpvTestSerialize,
-    TPV_TEST_GENESIS_HASH,
-} from "../tpv/tpvHistoricalCompat.js";
-import {
-    assertInsertAllowed,
-    assertUpdateAllowed,
-    assertRemoveAllowed,
-    assertBulkPatchAllowed,
-} from "../dataAccessPolicy.js";
-import { CONTROL_TYPE, OPERATIONAL_COLLECTIONS } from "../internalConfig.js";
+import { readFile } from "node:fs/promises";
+import { isExplicitSimulationLedgerRecord } from "../validation.js";
 
-function historicalPayload() {
-    return {
-        sourceType: "SYNTHETIC",
-        processingMode: "INTERNAL",
-        reconciliationStatus: "NOT_RECONCILED",
-        isSynthetic: true,
-        realPayment: false,
-        externalSideEffects: false,
-        siteId: "site",
-        sessionId: "legacy-session",
-        actorId: "legacy-actor",
-        schemaVersion: 1,
-        ledgerVersion: "TPV_TEST_RUNTIME_V1",
-        events: [],
-        idempotencyIndex: {},
-        openedAt: "2026-11-25T09:00:00.000Z",
-        activeUntil: "2026-11-25T21:00:00.000Z",
-        eventHash: TPV_TEST_GENESIS_HASH,
-    };
-}
+test("TPV filters only explicit smoke fixtures, not generic environment labels", async () => {
+    const fixtures = [
+        { recordSource: "SMOKE_TEST" },
+        { movementType: "SIMULATED_TPV_PAYMENT" },
+        { movementType: "VENTA_POS_SIMULADA" },
+        { eventType: "TPV_SALE_SIMULATED" },
+        { projectionStatus: "SIMULATED_ONLY" },
+        { synthetic: true, recordSource: "TPV_QA_DEVELOPMENT", source: "TPV_FUNCTIONAL_TEST" },
+        { desgloseDetallado: { accountCode: "SIMULATED" } },
+        { hash: "SIMULATED_HASH" },
+    ];
+    for (const fixture of fixtures) {
+        assert.equal(isExplicitSimulationLedgerRecord(fixture), true);
+    }
 
-test("historical TPV serialization is stable and key-order independent", () => {
-    assert.equal(
-        stableTpvTestSerialize({ b: 2, a: 1 }),
-        stableTpvTestSerialize({ a: 1, b: 2 })
+    const ordinaryRecords = [
+        { recordSource: "TPV_SYNTHETIC", movementType: "TPV_PAYMENT" },
+        { sourceType: "SYNTHETIC", movementType: "TPV_PAYMENT" },
+        { synthetic: true, movementType: "SALE" },
+        { realPayment: false, movementType: "TPV_PAYMENT" },
+        { movementType: "TPV_PAYMENT", hash: "invalid" },
+    ];
+    for (const record of ordinaryRecords) {
+        assert.equal(isExplicitSimulationLedgerRecord(record), false);
+    }
+
+    const [config, repository] = await Promise.all([
+        readFile(new URL("../internalConfig.js", import.meta.url), "utf8"),
+        readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8"),
+    ]);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem|TPV_HISTORICAL_POLICY/);
+    assert.match(repository, /item\.transactionId/);
+    assert.match(repository, /item\.hash/);
+    assert.match(repository, /envelope\.siteId/);
+    await assert.rejects(
+        readFile(new URL("../tpv/tpvHistoricalCompat.js", import.meta.url), "utf8"),
+        { code: "ENOENT" }
     );
-});
-
-test("historical TPV payloads remain readable", () => {
-    const payload = historicalPayload();
-    assert.equal(isValidTpvTestRunPayload(payload, {
-        siteId: payload.siteId,
-        sessionId: payload.sessionId,
-        actorId: payload.actorId,
-    }), true);
-    assert.equal(isValidTpvTestRunPayload(payload, {
-        siteId: "other",
-        sessionId: payload.sessionId,
-        actorId: payload.actorId,
-    }), false);
-});
-
-test("retired TPV historical runtime records are read-only", () => {
-    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-    const item = {
-        _id: "TPVTR" + "a".repeat(31),
-        controlType: CONTROL_TYPE.TPV_TEST_RUN,
-        dedupeKey: "legacy",
-        traceId: "legacy",
-        status: "OPEN",
-        version: 0,
-        payload: historicalPayload(),
-    };
-
-    assert.throws(() => assertInsertAllowed(collection, item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertUpdateAllowed(collection, item), /DATA_ACCESS_ERROR/);
-    assert.throws(
-        () => assertRemoveAllowed(collection, item._id, CONTROL_TYPE.TPV_TEST_RUN),
-        /DATA_ACCESS_ERROR/
-    );
-    assert.throws(() => assertBulkPatchAllowed(collection, [
-        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-    ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_TEST_RUN },
-        version: { $eq: 0 },
-        status: { $eq: "OPEN" },
-    }), /DATA_ACCESS_ERROR/);
 });

@@ -1,21 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyTpvRecordNature } from "../tpv/tpvRecordNature.js";
+import { createTpvRecordMetadata } from "../tpv/tpvRecordNature.js";
 
-test("no activation cutoff classifies records as synthetic", () => {
-    assert.equal(classifyTpvRecordNature("2026-11-27T00:00:00.000Z", null), "SYNTHETIC");
+test("TPV metadata uses one neutral server timestamp without classifying record nature", () => {
+    const metadata = createTpvRecordMetadata({
+        createdAt: "2026-11-27T12:00:00.000Z",
+    });
+
+    assert.equal(metadata.recordTimestamp.toISOString(), "2026-11-27T12:00:00.000Z");
+    assert.deepEqual(Object.keys(metadata), ["recordTimestamp"]);
+    assert.equal(Object.isFrozen(metadata), true);
+    assert.equal(Object.hasOwn(metadata, "recordNature"), false);
+    assert.equal(Object.hasOwn(metadata, "isSynthetic"), false);
 });
-test("timestamp before cutoff is synthetic", () => {
-    assert.equal(classifyTpvRecordNature("2026-11-27T04:59:59.999Z", "2026-11-27T05:00:00.000Z"), "SYNTHETIC");
-});
-test("timestamp exactly at cutoff is real", () => {
-    assert.equal(classifyTpvRecordNature("2026-11-27T05:00:00.000Z", "2026-11-27T05:00:00.000Z"), "REAL");
-});
-test("timestamp after cutoff is real", () => {
-    assert.equal(classifyTpvRecordNature("2026-11-27T05:00:00.001Z", "2026-11-27T05:00:00.000Z"), "REAL");
-});
-test("invalid timestamp or cutoff is rejected", () => {
-    assert.throws(() => classifyTpvRecordNature("invalid", null), /TPV_RECORD_TIMESTAMP_INVALID/);
-    assert.throws(() => classifyTpvRecordNature("2026-02-31T05:00:00.000Z", null), /TPV_RECORD_TIMESTAMP_INVALID/);
-    assert.throws(() => classifyTpvRecordNature("2026-11-27T05:00:00Z", "invalid"), /TPV_PRODUCTION_ACTIVATION_AT_INVALID/);
+
+test("TPV metadata rejects invalid timestamps", () => {
+    assert.throws(
+        () => createTpvRecordMetadata({ createdAt: "invalid" }),
+        { message: "TPV_RECORD_TIMESTAMP_INVALID" }
+    );
 });

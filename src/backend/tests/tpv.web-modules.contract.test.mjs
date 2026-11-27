@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 import { validateSaleDraft } from "../tpv/tpvValidation.js";
+import { normalizeTpvError, errorResult } from "../tpv/tpvError.js";
+import { createActionableError } from "../errors/actionableError.js";
 
 const backendRoot = new URL("../", import.meta.url);
 const repoRoot = new URL("../../../", import.meta.url);
@@ -248,7 +250,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /PENDING_PAYMENT/);
     assert.ok(sales.includes("sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE"));
     assert.match(sales, /createTpvRecordMetadata/);
+    assert.doesNotMatch(sales, /recordNature|SYNTHETIC|REAL/);
     assert.match(sales, /TPV_SALE_NOT_READY/);
+    assert.doesNotMatch(sales, /FISCAL_CONFIG_UNVERIFIED/);
     assert.match(sales, /getMyCajeroContext/);
     assert.match(sales, /prepareTpvSaleCatalog/);
     assert.match(sales, /catalogVerified: true/);
@@ -291,16 +295,16 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const policy = await source("dataAccessPolicy.js");
     const config = await source("internalConfig.js");
     assert.doesNotMatch(policy, /TPV_RUNTIME_POLICY|TPV_SANDBOX_SYNTHETIC|_isSyntheticTpvRecord/);
-    assert.match(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.doesNotMatch(policy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(policy, /APPEND_ONLY_COLLECTIONS/);
     assert.match(config, /TPV_RUNTIME_POLICY/);
     assert.match(config, /SOURCE_TYPE: "TPV"/);
-    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY|TPV_SYNTHETIC_LEDGER/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8"), /obtenerConfiguracionTPV/);
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
-    assert.match(config, /LEGACY_RUN_ID: "TPVSANDBOX-DEV-/);
+    assert.doesNotMatch(config, /LEGACY_RUN_ID|TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_EVENT_MOVEMENT_TYPES/);
     for (const writer of [cash, movements, closures]) {
         assert.match(writer, /requireAdmin/);
@@ -454,37 +458,37 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(config, /SOURCE_TYPE: "TPV"/);
     assert.match(config, /LEDGER_VERSION: "TPV_LEDGER_V3"/);
     assert.match(config, /SCHEMA_VERSION: 3/);
-    assert.match(config, /TPV_HISTORICAL_POLICY/);
+    assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY|TPV_SYNTHETIC_LEDGER/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured/);
-    assert.match(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
+    assert.doesNotMatch(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
-    assert.match(repository, /_isCanonicalTpvLedgerItem/);
-    assert.match(repository, /_isHistoricalTpvLedgerItem/);
+    assert.match(repository, /_isTpvLedgerItem/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
     assert.doesNotMatch(repository, /sequenceNumber: 0|cashRegisterStatus: "SIMULACION"|CONFIRMADA_SINTETICA|CONFIRMADO_SINTETICO/);
     assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
-    assert.match(repository, /filter\(_isHistoricalTpvLedgerItem\)/);
-    assert.match(repository, /filter\(_isCanonicalTpvLedgerItem\)/);
+    assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
+    assert.doesNotMatch(repository, /_isCanonicalTpvLedgerItem/);
     assert.match(repository, /export async function queryHistoricalTpvLedgerRecords\(/);
-    assert.match(repository, /const records = \[\.\.\.currentSource\.items, \.\.\.legacy\.items, \.\.\.previous\.items\]/);
+    assert.match(repository, /return queryTpvOperationalLedgerRecords\(options\)/);
     assert.match(repository, /export async function queryTpvOperationalLedgerRecords\(/);
     assert.match(utilities, /export function makeTpvPayload/);
     assert.doesNotMatch(utilities, /makeSyntheticPayload|allowNativePayments|allowNativeRefunds/);
-    assert.match(utilities, /TPV_OPERATIONAL_METADATA_FORBIDDEN/);
-    assert.match(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.match(utilities, /TPV_BACKEND_METADATA_FORBIDDEN/);
+    assert.doesNotMatch(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
-    assert.match(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
+    assert.doesNotMatch(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
     assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
     assert.match(repository, /sequenceNumber: previousSequence \+ 1/);
-    assert.match(validation, /historicalTpvLedgerRecord/);
+    assert.doesNotMatch(validation, /historicalTpvLedgerRecord|recordNature|SYNTHETIC|REAL|TPV_TEST_RUN/);
     assert.match(movements, /queryTpvOperationalLedgerRecords\(\{ limit: 1000 \}\)/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_SALE|CONFIRMADA_SINTETICA/);
     assert.doesNotMatch(movements, /queryHistoricalTpvLedgerRecords/);
     assert.doesNotMatch(movements, /SIMULATED_TPV_REFUND|CONFIRMADO_SINTETICO/);
-    assert.match(movements, /\[SINTÉTICO\]/);
+    assert.doesNotMatch(movements, /\[SINTÉTICO\]/);
     assert.doesNotMatch(movements, /syntheticOnly: true/);
 });
 
@@ -564,7 +568,7 @@ test("TPV envelope helpers expose the complete status/data/error contract", asyn
     const envelope = await source("tpv/tpvEnvelope.js");
     assert.match(envelope, /status: "SUCCESS",[\s\S]*?data,[\s\S]*?error: null/);
     assert.match(envelope, /status: "PENDING",[\s\S]*?data: null,[\s\S]*?error: null/);
-    assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: toPublicShape\(actionable\)/);
+    assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: normalizeTpvError\(actionable\)/);
 });
 
 
@@ -610,19 +614,16 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
 });
 
 
-test("legacy TPV runtime writers are retired while historical payload validation remains read-only", async () => {
+test("legacy TPV test runtimes and historical compatibility classifier are retired", async () => {
     const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
-    const compat = await source("tpv/tpvHistoricalCompat.js");
     const validation = await source("validation.js");
     assert.doesNotMatch(controller, /tpvTestRuntime/);
-    assert.match(validation, /backend\/tpv\/tpvHistoricalCompat/);
-    assert.match(compat, /isValidTpvTestRunPayload/);
+    assert.doesNotMatch(validation, /tpvHistoricalCompat|isValidTpvTestRunPayload/);
+    await assert.rejects(source("tpv/tpvHistoricalCompat.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntime.web.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeRepository.js"), { code: "ENOENT" });
     await assert.rejects(source("tpv/tpvTestRuntimeCore.js"), { code: "ENOENT" });
 });
-
-
 test("Capa 3 quarterly export is deterministic, minimized and source-gated", () => {
     const summary = {
         nifEmisor: "B12345678",
@@ -640,7 +641,6 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
         desgloseFormaPago: { efectivo: 121, tarjeta: 0, bizum: 0, online: 0 },
     };
     const rows = [{
-        recordNature: "REAL",
         invoiceNumber: "MM-2026-0001",
         fechaExpedicion: "2026-10-01",
         tipoFactura: "BORRADOR_INTERNO",
@@ -682,7 +682,7 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
     assert.equal(JSON.stringify(first).includes("must not be exported"), false);
 });
 
-test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
+test("Capa 3 export rejects incomplete fiscal source rows", () => {
     const summary = {
         nifEmisor: "B12345678",
         totalOperaciones: 0,
@@ -696,7 +696,6 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
         desgloseFormaPago: { efectivo: 0, tarjeta: 0, bizum: 0, online: 0 },
     };
     const row = {
-        recordNature: "SYNTHETIC",
         invoiceNumber: "QA-1",
         fechaExpedicion: "2026-10-01",
         tipoFactura: "BORRADOR_INTERNO",
@@ -714,11 +713,11 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
     };
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
-        summary, rows: [row],
-    }), /C3_EXPORT_SOURCE_RECORD_NOT_REAL/);
+        summary, rows: [{ ...row, hashCompleto: "" }],
+    }), /C3_EXPORT_RECORD_HASH_MISSING/);
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
-        summary, rows: [{ ...row, recordNature: "REAL", fechaExpedicion: "2026-02-31" }],
+        summary, rows: [{ ...row, fechaExpedicion: "2026-02-31" }],
     }), /C3_EXPORT_ISSUE_DATE_INVALID/);
 });
 
@@ -730,4 +729,80 @@ test("Capa 3 export WebMethod is admin-only and has no delivery or write side ef
     assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
     assert.match(service, /buildQuarterlyRegistryPackage/);
     assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph/);
+});
+
+
+test("TPV error normalization preserves actionable metadata and legacy error codes", async () => {
+    const actionable = createActionableError({
+        code: "TPV_TEST_ACTIONABLE",
+        userMessage: "No se puede completar la operación.",
+        technicalDetail: "TPV_TEST_ACTIONABLE",
+        remediation: ["Revisar el ledger."],
+        retryable: true,
+    });
+    assert.deepEqual(normalizeTpvError(actionable), {
+        code: "TPV_TEST_ACTIONABLE",
+        userMessage: "No se puede completar la operación.",
+        remediation: ["Revisar el ledger."],
+        technicalDetail: "TPV_TEST_ACTIONABLE",
+        retryable: true,
+    });
+
+    const legacy = normalizeTpvError("TPV_SESSION_REQUIRED", "TPV_FALLBACK");
+    assert.equal(legacy.code, "TPV_SESSION_REQUIRED");
+    assert.equal(legacy.retryable, false);
+    assert.equal(legacy.technicalDetail, "TPV_SESSION_REQUIRED");
+
+    const legacyException = normalizeTpvError(new Error("TPV_SESSION_REQUIRED"), "TPV_OPERATION_FAILED");
+    assert.equal(legacyException.code, "TPV_SESSION_REQUIRED");
+
+    const generic = normalizeTpvError(new Error("database timeout"), "TPV_CASH_MOVEMENT_FAILED");
+    assert.equal(generic.code, "TPV_CASH_MOVEMENT_FAILED");
+    assert.equal(generic.userMessage, "No se pudo completar la operación TPV.");
+    assert.equal(generic.technicalDetail, "TPV_CASH_MOVEMENT_FAILED");
+    const unknownRetryability = normalizeTpvError(
+        Object.assign(new Error("network timeout"), { retryable: true }),
+        "TPV_CASH_MOVEMENT_FAILED"
+    );
+    assert.equal(unknownRetryability.retryable, false);
+
+    const result = errorResult(actionable, "TPV_FALLBACK", "trace-test", { persisted: true });
+    assert.equal(result.status, "ERROR");
+    assert.equal(result.error.code, "TPV_TEST_ACTIONABLE");
+    assert.equal(result.traceId, "trace-test");
+    assert.equal(result.persisted, true);
+
+    const { error: createTpvErrorEnvelope } = await import("../tpv/tpvEnvelope.js");
+    const envelope = createTpvErrorEnvelope(
+        "TPV_ENVELOPE_TEST",
+        "No se pudo completar la operación.",
+        ["Revisar el traceId."],
+        { technicalDetail: "service unavailable", retryable: true }
+    );
+    assert.equal(envelope.error.code, "TPV_ENVELOPE_TEST");
+    assert.equal(envelope.error.technicalDetail, "TPV_ENVELOPE_TEST");
+    assert.equal(envelope.error.retryable, true);
+});
+
+test("TPV operational ledger assertions and operator resolution are inside WebMethod try blocks", async () => {
+    const cases = [
+        ["tpv/tpvCaja.web.js", ["abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"]],
+        ["tpv/tpvMovimientos.web.js", ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"]],
+        ["tpv/tpvCierres.web.js", ["generarTicketX", "generarCierreZ"]],
+    ];
+    for (const [path, methods] of cases) {
+        const content = await source(path);
+        for (const method of methods) {
+            const start = content.indexOf("export const " + method);
+            assert.notEqual(start, -1, path + ":" + method + " exists");
+            const tryIndex = content.indexOf("try {", start);
+            const guardIndex = content.indexOf("assertTpvOperationalLedgerConfigured(", start);
+            const contextIndex = content.indexOf("resolveTpvContext(traceId)", start);
+            const nextMethod = content.indexOf("export const ", start + 1);
+            assert.ok(tryIndex > start && guardIndex > tryIndex && (nextMethod === -1 || guardIndex < nextMethod),
+                path + ":" + method + " operational guard must be caught");
+            assert.ok(contextIndex > tryIndex && (nextMethod === -1 || contextIndex < nextMethod),
+                path + ":" + method + " context resolution must be caught");
+        }
+    }
 });

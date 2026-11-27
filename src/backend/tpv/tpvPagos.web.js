@@ -3,13 +3,14 @@ import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
 
+import { normalizeTpvError } from "backend/tpv/tpvError";
 export const validarDesglosePagos = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-payment-validation");
-        await requireCajero(traceId);
 
         try {
+            await requireCajero(traceId);
             if (!Array.isArray(input.payments) || input.payments.length === 0) {
                 throw new Error("TPV_PAYMENTS_REQUIRED");
             }
@@ -39,7 +40,7 @@ export const validarDesglosePagos = webMethod(
                 traceId,
             };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_PAYMENT_VALIDATION_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: normalizeTpvError(error, "TPV_PAYMENT_VALIDATION_FAILED"), traceId };
         }
     }
 );

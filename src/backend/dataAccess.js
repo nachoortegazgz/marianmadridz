@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
-import { BUSINESS_COLLECTIONS } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE } from "backend/internalConfig";
 import {
     assertControlOperativo,
     assertCanonicalControlFields,
@@ -29,7 +29,6 @@ import {
     assertUpdateAllowed,
     assertSaveAllowed,
     assertRemoveAllowed,
-    assertBulkRemoveAllowed,
     assertBulkUpdateAllowed,
     assertBulkMutationDisabled,
 } from "backend/dataAccessPolicy";
@@ -139,7 +138,6 @@ const elevatedSave = auth.elevate(items.save);
 const elevatedQuery = auth.elevate(items.query);
 const elevatedBulkPatch = auth.elevate(items.bulkPatch);
 const elevatedBulkUpdate = auth.elevate(items.bulkUpdate);
-const elevatedBulkRemove = auth.elevate(items.bulkRemove);
 const elevatedQueryReferencedItems = auth.elevate(
     items.queryReferencedItems
 );
@@ -364,42 +362,64 @@ export async function removeById(collection, idOrItem, options = {}) {
     const id = idOrItem && typeof idOrItem === "object"
         ? idOrItem._id || idOrItem.id
         : idOrItem;
-    const expectedControlType = options.expectedControlType;
-    if (!id) throw dataAccessError("REMOVE_ID_REQUIRED");
-
+    if (typeof id !== "string" || !id.trim()) {
+        throw dataAccessError("REMOVE_ID_REQUIRED");
+    }
     const existing = await getItem(collection, id, CONSISTENCY.STRONG);
     if (!existing) throw dataAccessError("REMOVE_TARGET_NOT_FOUND");
-    assertRemoveAllowed(collection, id, expectedControlType, existing);
-    if (collection === "ControlOperativo" && existing.controlType !== expectedControlType) {
-        throw dataAccessError("REMOVE_CONTROL_TYPE_MISMATCH");
+
+    if (collection === OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) {
+        const expectedType = options.expectedControlType;
+        if (!expectedType || existing.controlType !== expectedType) {
+            throw dataAccessError("CONTROL_TYPE_MISMATCH");
+        }
+        const retirementStatus = {
+            [CONTROL_TYPE.DUAL_CACHE]: "INVALIDATED",
+            [CONTROL_TYPE.DAYS_CACHE]: "INVALIDATED",
+            [CONTROL_TYPE.DISPLAY_TOKEN]: "CONSUMED",
+            [CONTROL_TYPE.SLOT_LOCK]: "RELEASED",
+        }[expectedType];
+        const expiryOnlyRetirement = expectedType === CONTROL_TYPE.RATE_LIMIT;
+        if (retirementStatus || expiryOnlyRetirement) {
+            const expiresAt = existing.expiresAt instanceof Date
+                ? existing.expiresAt
+                : new Date(existing.expiresAt);
+            if (!Number.isFinite(expiresAt.getTime())) {
+                throw dataAccessError("CMS_RETIREMENT_EXPIRY_REQUIRED");
+            }
+            const version = Number(existing.version);
+            if (expiryOnlyRetirement && (!Number.isSafeInteger(version) || version < 0)) {
+                throw dataAccessError("CMS_RETIREMENT_VERSION_REQUIRED");
+            }
+            const modifications = retirementStatus
+                ? [
+                    { fieldPath: "status", action: "SET_FIELD", value: retirementStatus },
+                    { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) },
+                ]
+                : [{ fieldPath: "expiresAt", action: "SET_FIELD", value: new Date(0) }];
+            const conditionFilter = {
+                controlType: { $eq: expectedType },
+                ...(expiryOnlyRetirement
+                    ? { version: { $eq: version } }
+                    : { expiresAt: { $eq: existing.expiresAt } }),
+            };
+            const result = await bulkPatchItems(collection, [id], modifications, {
+                condition: { filter: conditionFilter },
+            });
+            if (!Array.isArray(result?.updatedItemIds) || !result.updatedItemIds.includes(id)) {
+                throw dataAccessError("CMS_RETIREMENT_CONFLICT");
+            }
+            return {
+                _id: id,
+                deleted: false,
+                retired: true,
+                status: retirementStatus || existing.status || null,
+            };
+        }
     }
 
-    const filter = collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV
-        ? {
-            sourceType: { $eq: existing.sourceType },
-            status: { $eq: existing.status },
-            requestFingerprint: { $eq: existing.requestFingerprint },
-        }
-        : collection === "MovimientosCaja"
-            ? {
-                recordSource: { $eq: existing.recordSource },
-                movementType: { $eq: existing.movementType },
-                traceId: { $eq: existing.traceId },
-                transactionId: { $eq: existing.transactionId },
-            }
-            : { controlType: { $eq: expectedControlType } };
-    const result = await elevatedBulkRemove(collection, [id], {
-        condition: { filter },
-    });
-    const removed = Array.isArray(result?.removedItemIds)
-        ? result.removedItemIds.includes(id)
-        : Array.isArray(result?.results) &&
-            result.results.some((entry) =>
-                entry?.itemMetadata?.id === id &&
-                entry?.itemMetadata?.success === true
-            );
-    if (!removed) throw dataAccessError("REMOVE_CONDITION_NOT_MET");
-    return { _id: id };
+    assertRemoveAllowed(collection, id);
+    throw dataAccessError("CMS_DELETE_PROHIBITED");
 }
 
 export function bulkInsert() {
@@ -411,9 +431,13 @@ export function bulkUpdate(collection, records, options = {}) {
     return elevatedBulkUpdate(collection, records, options);
 }
 
-export function bulkRemove(collection, ids, options) {
-    assertBulkRemoveAllowed(collection, ids, options);
-    return elevatedBulkRemove(collection, ids, options);
+export function bulkRemove(collection, ids) {
+    const count = Array.isArray(ids) ? ids.length : 0;
+    if (!Array.isArray(ids) || count === 0 || count > 1000 ||
+        ids.some((id) => typeof id !== "string" || !id.trim())) {
+        throw dataAccessError("BULK_REMOVE_IDS_INVALID");
+    }
+    throw dataAccessError("CMS_BULK_DELETE_PROHIBITED");
 }
 
 function buildBulkPatchCondition(filter) {

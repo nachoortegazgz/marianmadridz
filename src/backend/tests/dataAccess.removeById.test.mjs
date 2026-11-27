@@ -10,73 +10,65 @@ function seedControl(controlType, id = "control-target") {
     wixDataMock._seed(COLLECTION, [{
         _id: id,
         controlType,
-        dedupeKey: "synthetic-dedupe",
-        traceId: "synthetic-trace",
-        payload: {},
+        dedupeKey: "operational-key",
+        traceId: "trace-operational",
+        status: "ACTIVE",
+        ...(controlType === CONTROL_TYPE.DISPLAY_TOKEN ? {
+            bookingId: "11111111-1111-4111-8111-111111111111",
+            attempts: 0,
+        } : {}),
+        expiresAt: new Date(Date.now() + 60000),
+        payload: controlType === CONTROL_TYPE.DISPLAY_TOKEN ? { maxAttempts: 3 } : {},
     }]);
 }
 
 test.beforeEach(() => wixDataMock._reset());
 
-test("removeById deletes only when the persisted controlType matches", async () => {
+test("retiring a dual cache changes state and never deletes the record", async () => {
     seedControl(CONTROL_TYPE.DUAL_CACHE);
-
     const result = await removeById(COLLECTION, "control-target", {
         expectedControlType: CONTROL_TYPE.DUAL_CACHE,
     });
-
-    assert.deepEqual(result, { _id: "control-target" });
-    assert.equal(wixDataMock._store.get(COLLECTION).length, 0);
+    assert.equal(result.deleted, false);
+    assert.equal(result.retired, true);
+    assert.equal(result.status, "INVALIDATED");
+    const rows = wixDataMock._store.get(COLLECTION);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].status, "INVALIDATED");
+    assert.equal(new Date(rows[0].expiresAt).getTime(), 0);
 });
 
-test("removeById fails closed when the persisted controlType differs", async () => {
+test("retiring a display token marks it consumed and never deletes it", async () => {
     seedControl(CONTROL_TYPE.DISPLAY_TOKEN);
-
-    await assert.rejects(
-        removeById(COLLECTION, "control-target", {
-            expectedControlType: CONTROL_TYPE.DUAL_CACHE,
-        }),
-        { code: "REMOVE_CONTROL_TYPE_MISMATCH" }
-    );
-
-    assert.equal(wixDataMock._store.get(COLLECTION)[0].controlType, CONTROL_TYPE.DISPLAY_TOKEN);
+    const result = await removeById(COLLECTION, "control-target", {
+        expectedControlType: CONTROL_TYPE.DISPLAY_TOKEN,
+    });
+    assert.equal(result.deleted, false);
+    assert.equal(result.status, "CONSUMED");
+    assert.equal(wixDataMock._store.get(COLLECTION).length, 1);
 });
 
-test("removeById fails closed when the target does not exist", async () => {
-    wixDataMock._seed(COLLECTION, []);
-
+test("retirement fails closed when persisted controlType differs", async () => {
+    seedControl(CONTROL_TYPE.DISPLAY_TOKEN);
     await assert.rejects(
-        removeById(COLLECTION, "missing-control", {
-            expectedControlType: CONTROL_TYPE.DUAL_CACHE,
-        }),
+        removeById(COLLECTION, "control-target", { expectedControlType: CONTROL_TYPE.DUAL_CACHE }),
+        { code: "CONTROL_TYPE_MISMATCH" }
+    );
+});
+
+test("non-retirable records are never deleted", async () => {
+    seedControl(CONTROL_TYPE.WEBHOOK_EVENT);
+    await assert.rejects(
+        removeById(COLLECTION, "control-target", { expectedControlType: CONTROL_TYPE.WEBHOOK_EVENT }),
+        { code: "CMS_DELETE_PROHIBITED" }
+    );
+    assert.equal(wixDataMock._store.get(COLLECTION).length, 1);
+});
+
+test("missing records are reported explicitly", async () => {
+    wixDataMock._seed(COLLECTION, []);
+    await assert.rejects(
+        removeById(COLLECTION, "missing-control", { expectedControlType: CONTROL_TYPE.DUAL_CACHE }),
         { code: "REMOVE_TARGET_NOT_FOUND" }
     );
-});
-
-test("conditional delete prevents a type change between strong read and deletion", async () => {
-    seedControl(CONTROL_TYPE.DUAL_CACHE);
-    const originalGet = wixDataMock.get;
-    let readCount = 0;
-
-    wixDataMock.get = async (collection, id) => {
-        const result = await originalGet(collection, id);
-        if (collection === COLLECTION && id === "control-target") {
-            readCount += 1;
-            if (readCount === 2) {
-                const rows = wixDataMock._store.get(COLLECTION);
-                rows[0].controlType = CONTROL_TYPE.DISPLAY_TOKEN;
-            }
-        }
-        return result;
-    };
-
-    await assert.rejects(
-        removeById(COLLECTION, "control-target", {
-            expectedControlType: CONTROL_TYPE.DUAL_CACHE,
-        }),
-        { code: "REMOVE_CONDITION_NOT_MET" }
-    );
-
-    assert.equal(wixDataMock._store.get(COLLECTION)[0].controlType, CONTROL_TYPE.DISPLAY_TOKEN);
-    wixDataMock.get = originalGet;
 });
