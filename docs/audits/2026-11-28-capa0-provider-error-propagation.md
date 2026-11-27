@@ -1,6 +1,6 @@
 # Capa 0 — proveedores, identidad y DAL — 28-11-2026
 
-Estado: cambios en rama, CI pendiente. Sin modificaciones de CMS, publicación, cobros ni operaciones fiscales.
+Estado: PR #675 integrada en main (squash 910ad3faa6e543c23e81b2902726d4d8cd43087f); CI offline PASS. Sin modificaciones de CMS, publicación, cobros ni operaciones fiscales.
 
 ## Diagnóstico confirmado
 
@@ -55,10 +55,10 @@ Defectos confirmados en el código:
 ## Pendientes/riesgos
 
 1. Query Staff Members v1 solo devuelve service providers. Verificar que todos los resourceId de roles de sitio pertenecen a service providers. Si existe personal no proveedor, evaluar Query Staff Members v2 con contrato oficial; no asumir que v1 cubre a todo el personal.
-2. secretAccess.js sigue convirtiendo fallo/ausencia de secreto a cadena vacía. La API oficial Get Secret Value documenta respuesta {value:string}, pero no errores específicos; no inventar distinción NOT_FOUND vs provider outage. Próxima fase.
+2. secretAccess.js fue corregido en la fase siguiente: ahora distingue nombre inválido, respuesta inválida, valor vacío y error del proveedor. La API oficial Get Secret Value documenta respuesta {value:string}, pero no errores específicos; no inventar distinción NOT_FOUND vs provider outage. Próxima fase.
 3. events.js _getEmisorFiscal aún captura error de secreto y construye NIF vacío. Debe revisarse junto con secretAccess.
-4. mmUtils._roundMoney y helpers numéricos aún convierten ciertos valores inválidos a 0; revisar consumidores de reservas, fiscalidad y caja antes de cambiar.
-5. TPV_RUNTIME_POLICY mantiene CURRENCY y CURRENCY_CODE con EUR; pendiente inventario completo de consumidores.
+4. mmUtils._roundMoney ahora rechaza valores inválidos; permanecen pendientes _readPositiveAmount y los normalizadores numéricos locales de caja/fiscalidad.
+5. TPV_RUNTIME_POLICY ya no duplica CURRENCY/CURRENCY_CODE/TIME_ZONE; el TPV usa SDK_CONFIG.CURRENCY_CODE y SDK_CONFIG.TZ.
 6. Runtime Wix y E2E siguen pendientes; no hay publicación autorizada ni fixture aislado configurado.
 
 ## Fuentes oficiales
@@ -71,7 +71,7 @@ Defectos confirmados en el código:
 
 ## Validación
 
-- CI de esta rama: pendiente.
+- PR #675: Layer 1 29/390 PASS; Layer 2 16/250 PASS; suite offline 89/804 PASS; SDK Cart, Transactions y TPV PASS; ESLint, npm audit y Gitleaks PASS. Backend run 46083433335; Secret scanning run 46083433301.
 - npm ci/lint/test local: no ejecutados en este entorno.
 - Wix Local Editor/Preview/Runtime: pendiente.
 - E2E: pendiente, sin escrituras económicas o fiscales reales.
