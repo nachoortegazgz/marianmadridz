@@ -10,7 +10,6 @@ const BACKEND_MEMBER_MODULES = [
   '../citasManager.web.js',
   '../security.js',
   '../security.web.js',
-  '../horario.web.js',
 ];
 
 test('MEMBER-SDK-01 backend modules use the documented @wix/members namespace', async () => {
@@ -32,6 +31,25 @@ test('MEMBER-SDK-01 backend modules use the documented @wix/members namespace', 
       `${relativePath} must not use the frontend Current Member namespace from @wix/members`,
     );
   }
+});
+
+test('MEMBER-SDK-03 horario delegates authenticated staff identity to security.js', async () => {
+  const source = await readFile(new URL('../horario.web.js', import.meta.url), 'utf8');
+  assert.match(
+    source,
+    /getMyStaffContext\s+as\s+getAuthenticatedStaffContext/,
+    'horario.web.js must import the centralized staff identity resolver',
+  );
+  assert.match(
+    source,
+    /getAuthenticatedStaffContext\s*\(/,
+    'horario.web.js must use the centralized resolver',
+  );
+  assert.doesNotMatch(
+    source,
+    /import\s+\{\s*members\s*\}\s+from\s+["']@wix\/members["']|members\.getCurrentMember\s*\(/,
+    'horario.web.js must not duplicate member identity resolution',
+  );
 });
 
 test('MEMBER-SDK-02 loader mirrors the direct Get My Member response', async () => {
