@@ -10,7 +10,7 @@ STANDARDS: G10 ASCII Strict. Sin suppressAuth. Acceso CMS centralizado
 
 import { items } from "@wix/data";
 import { auth } from "@wix/essentials";
-import { BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, OPERATIONAL_COLLECTIONS, CONTROL_TYPE } from "backend/internalConfig";
 import {
     assertControlOperativo,
     assertCanonicalControlFields,
