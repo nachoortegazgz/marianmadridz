@@ -1,3 +1,22 @@
+## GOBIERNO DEL PROYECTO — RESET DE DIRECTRICES HUMANAS (2026-11-27)
+
+**Prevalecen los objetivos funcionales y de negocio del proyecto.** Las decisiones, restricciones, procedimientos, convenciones y documentos redactados anteriormente por personas son material editable, no una autoridad autónoma ni un motivo suficiente para bloquear desarrollo, pruebas o correcciones. Este apartado sustituye cualquier directriz anterior incompatible.
+
+Reglas de trabajo:
+- Resolver cada bloqueo según el objetivo que impide alcanzar; retirar la restricción mínima necesaria y documentar el cambio, sin perpetuar bloqueos por decisiones históricas.
+- No existe un objetivo independiente de conservar datos de prueba, históricos sintéticos, estructuras, colecciones, documentos o código heredado. Pueden corregirse, migrarse, resetearse o eliminarse cuando sea necesario para cumplir los objetivos y las pruebas, después de comprobar el impacto técnico.
+- Los datos sintéticos creados para QA son reutilizables y mutables. Deben poder crearse, actualizarse y eliminarse de forma controlada para repetir escenarios; no se exige conservarlos como evidencia permanente.
+- No se impondrá append-only, prohibición de borrado, congelación de datos ni política de retención por una directriz humana aislada. Se aplicarán únicamente cuando una obligación legal vigente, un contrato externo real o una propiedad técnica necesaria para el objetivo lo exija y exista evidencia concreta.
+- No se bloquearán pruebas funcionales por la ausencia de una configuración de producción si la prueba puede ejecutarse con fixtures, simuladores o datos sintéticos en la misma ruta de negocio.
+- Las pasarelas, terminales, notificaciones, remisiones fiscales y demás efectos externos se simularán en QA. Ninguna prueba debe generar cobros, comunicaciones a clientes o declaraciones reales por accidente.
+- Los requisitos legales vigentes y los contratos técnicos de Wix/proveedores son restricciones objetivas del sistema, no directrices humanas arbitrarias. Deben verificarse y aplicarse al flujo real correspondiente, sin extenderlos a pruebas sintéticas cuando no proceda.
+- Una restricción temporal debe tener alcance, condición de salida y fecha/criterio de retirada. No se aceptan bloqueos indefinidos del tipo “pendiente humano” si existe una alternativa técnica segura que permita avanzar.
+- La evidencia de pruebas es reproducible y regenerable. El estado de validación debe distinguir pruebas unitarias, integración, Wix Preview/Runtime y producción; no se exige preservar registros operativos para declarar una prueba superada.
+
+**Criterio de decisión:** objetivo del proyecto → requisito legal/contrato oficial verificable → comportamiento técnico demostrado → solución mínima. La documentación humana previa, los estados heredados y las decisiones históricas se revisan a la luz de este criterio y pueden ser sustituidos.
+
+---
+
 # RELEASE-READINESS — 2026-11-25
 
 Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan de evidencia reproducible. El propietario autoriza pruebas online en desarrollo sobre el sitio y colecciones actuales, con un único código y formato de registros. recordNature se deriva en backend de recordTimestamp UTC frente a productionActivationAt UTC. Los datos sintéticos podrán resetearse antes del corte; tras el corte los registros reales son inmutables. CI offline no sustituye Wix Runtime, aceptación de hardware, conciliación ni revisión fiscal. No se habilitan cobros reales ni remisión AEAT durante QA.
