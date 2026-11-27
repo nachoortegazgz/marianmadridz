@@ -5,7 +5,6 @@ P1/P3 OFFICIAL REFERENCES:
 - Wix Payments API: "Processing Payments" — idempotent transaction identity
   (wixTransactionId / stable transaction key).
 */
-import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 import {
     CONSISTENCY,
@@ -43,11 +42,13 @@ const REFUND_LOCK_TTL_MS = 300000;
  * commercial sales and operational audit records have independent stores.
  */
 export function assertTpvOperationalLedgerConfigured(ledgerType = "fiscal") {
-    if (["physical", "commercial", "audit"].includes(ledgerType)) return true;
-    if (ledgerType !== "fiscal") throw new Error("TPV_LEDGER_TYPE_INVALID");
-    const error = new Error("TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED");
-    error.code = "TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED";
-    throw error;
+    const allowed = new Set(["physical", "commercial", "audit", "fiscal", "accounting"]);
+    if (!allowed.has(ledgerType)) {
+        const error = new Error("TPV_LEDGER_TYPE_INVALID");
+        error.code = "TPV_LEDGER_TYPE_INVALID";
+        throw error;
+    }
+    return true;
 }
 
 async function withCajaActualProjectionLock(traceId, operation) {
@@ -615,7 +616,6 @@ function _sessionCajaPatch(caja, record, eventHash) {
         ...caja,
         cashRegisterStatus: "ABIERTA",
         recordTimestamp: record.recordTimestamp,
-        recordNature: record.recordNature,
         openedAt,
         closedAt: null,
         openedBy: record.operatorId || record.cashierMemberId || null,
@@ -746,7 +746,6 @@ function _buildTpvLedgerItem(collection, key, record, fingerprint) {
         transactionId,
         previousRecordHash,
         recordTimestamp: timestamp,
-        recordNature: record.recordNature,
         schemaVersion: String(TPV_RUNTIME_POLICY.SCHEMA_VERSION),
         traceId,
         movementType,
