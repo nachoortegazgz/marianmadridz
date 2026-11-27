@@ -57,76 +57,80 @@ export const obtenerResumenCaja = webMethod(
     }
 );
 
-export const generarControlX = webMethod(
+export const generarTicketX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
-        let persisted = false;
         const traceId = makeTraceId("tpv-ticket-x");
         await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
+        assertTpvOperationalLedgerConfigured("audit");
         const operator = await resolveTpvContext(traceId);
-
         try {
-            const key = normalizeClientIdempotencyKey(input.idempotencyKey);
-            const requestedSessionId = String(input.sessionId || "").trim();
-            if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
+            const sessionId = String(input.sessionId || "").trim();
+            if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
-            if (!session) {
+            if (!session || session.sessionId !== sessionId) {
                 const latest = await latestTpvSession();
                 throw new Error(latest?.status === "CERRADA" ? "TPV_SESSION_CLOSED" : "TPV_SESSION_NOT_OPEN");
             }
-            if (requestedSessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            return await withTpvSessionLock(session.sessionId, traceId, async () => {
+            return await withTpvSessionLock(sessionId, traceId, async () => {
                 const activeSession = await latestOpenTpvSession();
-                if (!activeSession || activeSession.sessionId !== session.sessionId) {
-                    throw new Error("TPV_SESSION_CLOSED");
-                }
-            const totals = await buildTpvSessionSummary(session);
-            const reportId = "TPV-X-" + session.sessionId + "-" + key.slice(0, 20);
-            const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_X, key + ":TICKET_X", {
-                sessionId: session.sessionId,
-                reportId,
-                generatedAt: new Date(),
-                status: "GENERADO",
-                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-                totals,
-                payload: { traceId, readOnly: true, closesSession: false },
-            });
-            persisted = true;
-            await appendTpvAudit({
-                idempotencyKey: key + ":AUDIT",
-                action: "TICKET_X_GENERATED",
-                actorId: operator.operatorId,
-                entityType: "TICKET_X",
-                entityId: reportId,
-                traceId,
-                payload: { sessionId: session.sessionId },
-            });
-            return {
-                status: "SUCCESS",
-                data: {
-                    reportId: item.reportId,
-                    sessionId: session.sessionId,
-                    totals,
-                    operatorId: operator.operatorId,
-                    actorId: operator.actorId,
-                    operationalStatus: "ABIERTA",
-                    integrationStatus: "NO_ENVIADO",
-                    paymentStatus: "NOT_APPLICABLE",
-                    now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
-                    replayed,
-                    closesSession: false,
-                },
-                error: null,
-                traceId,
-            };
+                if (!activeSession || activeSession.sessionId !== sessionId) throw new Error("TPV_SESSION_CLOSED");
+                const totals = await buildTpvSessionSummary(activeSession);
+                const [sales, movements] = await Promise.all([
+                    queryTpvRecords(TPV_COLLECTIONS.VENTAS, wql.eq("sessionId", sessionId)),
+                    queryTpvRecords(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, wql.eq("sessionId", sessionId)),
+                ]);
+                const timestamp = new Date();
+                const ticketX = {
+                    sessionId,
+                    timestamp,
+                    totales: {
+                        totalVentas: fromMinorUnits(totals.grossSalesMinor),
+                        totalEfectivo: fromMinorUnits(totals.cashMinor),
+                        totalTarjeta: fromMinorUnits(totals.cardMinor),
+                        totalOtros: fromMinorUnits(
+                            totals.bizumMinor + totals.bonoMinor + totals.giftCardMinor + totals.otherMinor
+                        ),
+                    },
+                    desglose: {
+                        EFECTIVO: fromMinorUnits(totals.cashMinor),
+                        TARJETA: fromMinorUnits(totals.cardMinor),
+                        BIZUM: fromMinorUnits(totals.bizumMinor),
+                        BONO: fromMinorUnits(totals.bonoMinor),
+                        TARJETA_REGALO: fromMinorUnits(totals.giftCardMinor),
+                        OTROS: fromMinorUnits(totals.otherMinor),
+                    },
+                    nOperaciones: sales.length + movements.length,
+                };
+                const audit = await appendTpvAudit({
+                    idempotencyKey: "TICKET_X:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + sessionId,
+                    action: "TICKET_X_GENERATED",
+                    actorId: operator.operatorId,
+                    entityType: "TICKET_X",
+                    entityId: "TPV-X-" + sessionId,
+                    traceId,
+                    payload: { ticketX, closesSession: false, fiscalLedgerWritten: false },
+                });
+                return {
+                    status: "SUCCESS",
+                    ticketX: audit.item?.payload?.ticketX || ticketX,
+                    replayed: audit.replayed,
+                    traceId,
+                };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_X_FAILED") }, persisted, recoverable: persisted, traceId };
+            return {
+                status: "ERROR",
+                ticketX: null,
+                error: { code: String(error?.code || error?.message || "TPV_TICKET_X_FAILED") },
+                traceId,
+            };
         }
     }
 );
+
+// Compatibilidad del nombre consumido por versiones anteriores del controlador.
+export const generarControlX = generarTicketX;
 
 export const generarCierreZ = webMethod(
     Permissions.SiteMember,
