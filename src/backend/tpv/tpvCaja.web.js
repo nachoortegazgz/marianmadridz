@@ -399,12 +399,17 @@ export const cerrarSesionCaja = webMethod(
                         observations,
                     },
                 });
-                return {
-                    status: "SUCCESS",
+                const resultData = {
                     sessionId,
                     saldoFinal: fromMinorUnits(countedCashMinor),
                     diferencia: fromMinorUnits(differenceMinor),
                     replayed: movementReplayed || projection.replayed,
+                };
+                return {
+                    status: "SUCCESS",
+                    ...resultData,
+                    data: resultData,
+                    error: null,
                     traceId,
                 };
             });
