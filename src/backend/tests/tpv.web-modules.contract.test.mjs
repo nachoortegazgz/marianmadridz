@@ -735,7 +735,7 @@ test("Capa 3 export WebMethod is admin-only and has no delivery or write side ef
 });
 
 
-test("TPV error normalization preserves actionable metadata and legacy error codes", () => {
+test("TPV error normalization preserves actionable metadata and legacy error codes", async () => {
     const actionable = createActionableError({
         code: "TPV_TEST_ACTIONABLE",
         userMessage: "No se puede completar la operación.",
@@ -769,6 +769,17 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
     assert.equal(result.error.code, "TPV_TEST_ACTIONABLE");
     assert.equal(result.traceId, "trace-test");
     assert.equal(result.persisted, true);
+
+    const { error: createTpvErrorEnvelope } = await import("../tpv/tpvEnvelope.js");
+    const envelope = createTpvErrorEnvelope(
+        "TPV_ENVELOPE_TEST",
+        "No se pudo completar la operación.",
+        ["Revisar el traceId."],
+        { technicalDetail: "service unavailable", retryable: true }
+    );
+    assert.equal(envelope.error.code, "TPV_ENVELOPE_TEST");
+    assert.equal(envelope.error.technicalDetail, "service unavailable");
+    assert.equal(envelope.error.retryable, true);
 });
 
 test("TPV operational ledger assertions and operator resolution are inside WebMethod try blocks", async () => {
