@@ -15,6 +15,8 @@ The formatter is used by cashier/session, cash movement, movement/audit export, 
 
 - `MovimientosCaja_beforeUpdate` and `MovimientosCaja_beforeRemove` throw `MOVIMIENTOS_CAJA_APPEND_ONLY`.
 - `LibroAsientosContablesDetalle_beforeUpdate` and `LibroAsientosContablesDetalle_beforeRemove` throw `ACCOUNTING_LEDGER_APPEND_ONLY`.
+- `HistoricoCierresZ` update/remove throw `HISTORICO_CIERRES_Z_APPEND_ONLY`.
+- `RegistrosHorariosStaff` update/remove throw `STAFF_TIME_LEDGER_APPEND_ONLY`.
 - `ControlOperativo/WEBHOOK_EVENT` rejects both update and remove with an actionable append-only error.
 - `TransaccionesTPV_beforeRemove` resolves the requested identifier, verifies that the target exists using the strong DAL read, then throws `TPV_TRANSACTIONS_APPEND_ONLY`. Both string and `{ _id }` hook arguments are accepted.
 - The errors include remediation and a sanitized context snapshot. No hook performs a delete or changes an existing ledger record.
