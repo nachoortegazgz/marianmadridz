@@ -82,15 +82,9 @@ Construir un sistema Wix fiable, mantenible y funcional para un salón de peluqu
 
 El sistema debe cubrir:
 
-- Reservas simples.
-- Reservas duales.
+- Gestion profesional con WIX BOOKINGS V2 CUSTOMIZADO (NO MULTISERVICE) de Reservas online simples y duales (FASE1 + TIEMPO DE EXPOSICION + FASE2). el profesional es el mismo en las 2 fases y durante el tiempo de exposicion se libera su agenda.
 - Venta online.
-- TPV.
-- Pagos.
-- Devoluciones.
-- Caja.
-- Arqueos.
-- Cierres.
+- TPV PERSONALIZADA. Consolida las funciones nativas para: Pagos. Cobros. Devoluciones. Caja. Arqueos. Cierres. QR 
 - Productos.
 - Variantes.
 - Inventario.
@@ -102,8 +96,6 @@ El sistema debe cubrir:
 - Evidencia documental.
 
 “MVP” significa la versión mínima en complejidad, no una versión reducida en funcionalidad.
-
-No se puede eliminar una función exigida para simplificar el desarrollo.
 
 ---
 
