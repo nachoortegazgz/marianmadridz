@@ -15,7 +15,7 @@ Frontend: presentación y orquestación. Backend: identidad, autorización, cat�
 ## 2. Clasificación temporal
 
 - `recordTimestamp`: instante UTC generado en backend.
-- `recordNature`: metadato de trazabilidad derivado en backend; no es selector de flujo ni de runtime.
+- No existe `recordNature` ni etiqueta REAL/SYNTHETIC/SIMULATION. El mismo esquema y flujo se ejecutan en todos los entornos.
 - Los fixtures de test se marcan explícitamente como sintéticos desde el contexto de test confiable, nunca mediante un campo controlado por navegador.
 - La ausencia de configuración de activación no bloquea tests de dominio: los tests inyectan reloj/configuración de fixture o prueban expresamente el comportamiento sin configuración.
 - En operaciones reales, sin configuración única y válida no se permite atribuir naturaleza REAL ni activar efectos productivos. Configuración ambigua o fechas inválidas deben seguir produciendo rechazo donde el contrato lo exija.
@@ -64,7 +64,7 @@ La falta de datos fiscales reales no es un defecto de un test de lógica. Es una
 
 ## 7. Integridad
 
-Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se sobrescriben ni eliminan, incluso si contienen registros sintéticos. Las rectificaciones se realizan mediante nuevos registros trazables. Los tests persistentes deben usar un tenant/colección de pruebas aislado y writer canónico; nunca reutilizar la sesión `CajaActual` existente ni históricos compartidos.
+El borrado está prohibido para todos los registros. Las intenciones comerciales, proyecciones y datos operativos editables se actualizan mediante hooks y DAL validados. Los ledgers fiscales/contables contabilizados, jornada y cierres se corrigen mediante nuevos registros rectificativos trazables para conservar evidencia y cadena hash. Las pruebas deben usar el mismo código y contrato, con datos controlados, sin reutilizar sesiones abiertas ni alterar históricos.
 
 ## 8. Estado de pruebas
 
