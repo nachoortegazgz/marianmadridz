@@ -479,7 +479,7 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.doesNotMatch(accessPolicy, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
     assert.doesNotMatch(accessPolicy, /_isSyntheticTpvRecord|SIMULATED_TPV_/);
     assert.doesNotMatch(hooks, /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/);
-    assert.match(validation, /item\?\.recordSource === TPV_LEDGER_SOURCE/);
+    assert.match(hooks, /recordSource === TPV_LEDGER_SOURCE/);
     assert.doesNotMatch(hooks, /_isCurrentSyntheticTpvRow|SIMULATED_TPV_/);
     assert.match(repository, /TPV_PHYSICAL_LEDGER_CHAIN_BROKEN/);
     assert.match(repository, /sequenceNumber: previousSequence \+ 1/);
