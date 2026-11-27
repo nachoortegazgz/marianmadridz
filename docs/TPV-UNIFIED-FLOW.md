@@ -60,7 +60,7 @@ No duplicar ledgers ni trasladar intenciones comerciales a movimientos físicos.
 | Wix Preview/Runtime aislado | Permisos incorrectos, persistencia no aislada y efectos externos no interceptados | Datos comerciales reales, caja productiva, cobros o remesas reales |
 | Producción | Configuración legal incompleta, permisos, pagos no verificados y controles de integridad | Ningún gate obligatorio de producción se elimina |
 
-La falta de datos fiscales reales no es un defecto de un test de lógica. Es un bloqueo de habilitación productiva. Registrar como tal, sin propagarlo a suites que usan fixtures.
+La falta de datos fiscales reales no es un defecto de un test de lógica. Es una condición de datos/configuración que debe expresarse como error accionable de la operación afectada, no como interruptor global del writer. Las suites con fixtures ejecutan el mismo código de dominio y sus validaciones.
 
 ## 7. Integridad
 
