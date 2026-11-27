@@ -35,8 +35,8 @@ La lógica de negocio, permisos, validación, catálogo, importes, impuestos e i
 
 - Wix CMS es SSOT transaccional; SharePoint no gobierna Capa 1.
 - `MovimientosCaja` es ledger físico; `TransaccionesTPV` contiene intenciones comerciales pendientes/no contables.
-- Los ledgers físicos, fiscales, contables, laborales y cierres append-only no se borran ni sobrescriben. Las rectificaciones son nuevos registros trazables.
-- `recordTimestamp` y `recordNature` los genera/deriva backend; la naturaleza es metadato, no selector de runtime.
+- No se borra ningún registro, ni individual ni masivamente. Los datos operativos/comerciales editables admiten actualización validada. Los ledgers fiscales/contables contabilizados, jornada y cierres se rectifican con nuevos registros trazables.
+- `recordTimestamp` lo genera backend. No se usan `recordNature`, `REAL`, `SYNTHETIC`, `SIMULATION` ni etiquetas equivalentes en runtime.
 - El backend nunca confía en precio, impuesto, total, permiso o naturaleza enviados por el navegador.
 - Webhooks/jobs son al menos una vez: mantener idempotencia, CAS, locks, leases y recuperación.
 - No usar colecciones legacy prohibidas ni REST/CMS directo para saltarse DAL, hooks o writers.
@@ -46,13 +46,13 @@ La lógica de negocio, permisos, validación, catálogo, importes, impuestos e i
 
 ## Contratos técnicos
 
-- Hooks CMS server-side: beforeInsert valida/normaliza; beforeUpdate y beforeRemove protegen inmutabilidad y transiciones.
+- Hooks CMS server-side: beforeInsert/beforeUpdate validan contratos; beforeRemove deniega todo borrado. La mutabilidad de cada registro depende de su contrato legal y de negocio.
 - Webhooks son al menos una vez: mantener claims idempotentes, claves deterministas, comparación de fingerprint/payload y CAS/leases/recovery.
 - No intercambiar silenciosamente `resourceId` del dominio/CMS con `resource._id` del SDK o `resource.id` REST.
 - Importes TPV en céntimos enteros o helpers decimales canónicos; nunca usar importes del navegador como autoridad. Cantidades positivas enteras.
 - Métodos de pago V1 admitidos: `EFECTIVO` y `TARJETA`; los demás siguen fuera del contrato hasta que exista decisión de producto.
 - Las intenciones sintéticas solo se corrigen según su contrato de estado y reconciliación. Nunca limpiar por lote.
-- Los ledgers append-only no se sobrescriben ni borran, aunque sean sintéticos.
+- Los registros nunca se borran. Los ledgers contabilizados se rectifican sin sobrescribir evidencia legal.
 
 ## Documentación
 
