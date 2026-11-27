@@ -33,7 +33,7 @@ import {
     TPV_HISTORICAL_POLICY,
     TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
-import { isValidTpvTestRunPayload, stableTpvTestSerialize } from "backend/tpv/tpvTestRuntimeCore";
+import { isValidTpvTestRunPayload, stableTpvTestSerialize } from "backend/tpv/tpvHistoricalCompat";
 
 // =============================================================================
 // ASSERT VALID ENUM (unica funcion de validacion generica)
@@ -492,67 +492,6 @@ export function assertCanonicalControlFields(item) {
         throw new Error(
             `SCHEMA_VIOLATION: ControlOperativo fields absent from live CMS schema: ${unknown.join(", ")}`
         );
-    }
-    return true;
-}
-
-export function assertTpvTestRunAppendOnly(original, next) {
-    if (original?.controlType !== CONTROL_TYPE.TPV_TEST_RUN) return true;
-    const before = original.payload || {};
-    const after = next?.payload || {};
-    const immutableFields = [
-        "sourceType", "processingMode", "reconciliationStatus", "isSynthetic",
-        "realPayment", "externalSideEffects", "siteId", "sessionId",
-        "schemaVersion", "ledgerVersion", "actorId", "operatorId",
-        "operatorDisplayName", "operatorResourceId", "currency",
-        "openedAt", "activeUntil", "openingCashMinor", "traceId",
-    ];
-    const beforeExpiry = new Date(original.expiresAt || 0).getTime();
-    const afterExpiry = new Date(next?.expiresAt || 0).getTime();
-    if (original.status !== "OPEN" ||
-        Number(next?.version) !== Number(original.version) + 1 ||
-        next?._id !== original._id ||
-        next?.controlType !== CONTROL_TYPE.TPV_TEST_RUN ||
-        next?.dedupeKey !== original.dedupeKey ||
-        next?.traceId !== original.traceId ||
-        beforeExpiry !== afterExpiry) {
-        throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN update must use one OPEN-session CAS append");
-    }
-    for (const field of immutableFields) {
-        if (stableTpvTestSerialize(before[field]) !== stableTpvTestSerialize(after[field])) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN immutable payload field changed: " + field);
-        }
-    }
-    const oldEvents = Array.isArray(before.events) ? before.events : [];
-    const newEvents = Array.isArray(after.events) ? after.events : [];
-    if (newEvents.length !== oldEvents.length + 1) {
-        throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN update must append exactly one event");
-    }
-    for (let index = 0; index < oldEvents.length; index += 1) {
-        if (stableTpvTestSerialize(oldEvents[index]) !== stableTpvTestSerialize(newEvents[index])) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN historical event mutation detected");
-        }
-    }
-    const oldIndex = before.idempotencyIndex || {};
-    const newIndex = after.idempotencyIndex || {};
-    if (Object.keys(newIndex).length !== Object.keys(oldIndex).length + 1) {
-        throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN idempotency index must append exactly one claim");
-    }
-    for (const [key, claim] of Object.entries(oldIndex)) {
-        if (stableTpvTestSerialize(claim) !== stableTpvTestSerialize(newIndex[key])) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN idempotency claim mutation detected");
-        }
-    }
-    const appended = newEvents[newEvents.length - 1];
-    if (appended?.sequence !== newEvents.length ||
-        appended?.actorId !== before.actorId ||
-        after.eventHash !== appended.eventHash) {
-        throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN appended event identity invalid");
-    }
-    const isClosingEvent = appended.eventType === "TICKET_Z_CLOSED";
-    if ((next.status === "CLOSED") !== isClosingEvent ||
-        !["OPEN", "CLOSED"].includes(String(next.status || ""))) {
-        throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN closure transition invalid");
     }
     return true;
 }
