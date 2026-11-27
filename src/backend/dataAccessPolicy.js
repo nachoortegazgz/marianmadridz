@@ -6,8 +6,6 @@ import {
     CONTROL_TYPE,
     CONTROL_OPERATIVO_NON_CANONICAL_FIELDS,
     RECORD_TYPE,
-    TPV_LEGACY_EVENT_MOVEMENT_TYPES,
-    TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
 
 const APPEND_ONLY_COLLECTIONS = Object.freeze([
@@ -40,18 +38,6 @@ function _policyError(code) {
 
 function _isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-function _isHistoricalTpvMarker(item) {
-    const recordSource = String(item?.recordSource || "").trim().toUpperCase();
-    const movementType = String(item?.movementType || "").trim().toUpperCase();
-
-    return Object.values(TPV_LEGACY_EVENT_MOVEMENT_TYPES).includes(movementType) ||
-        movementType.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource.startsWith("SANDBOX_LOGICAL_") ||
-        recordSource === TPV_HISTORICAL_POLICY.CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_CASH_REGISTER_SOURCE ||
-        recordSource === TPV_HISTORICAL_POLICY.LEGACY_LEDGER_SOURCE;
 }
 
 function _assertControlRecord(item, allowedTypes, errorCode, requireId = true) {
@@ -125,13 +111,6 @@ export function assertBulkPatchAllowed(collection, modifications, conditionFilte
 export function assertInsertAllowed(collection, item) {
     if (!DATA_ACCESS_WRITE_POLICY.insertCollections.includes(collection) || !_isRecord(item)) {
         throw _policyError("CMS_INSERT_COLLECTION_DENIED");
-    }
-
-    if (
-        collection === BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA &&
-        _isHistoricalTpvMarker(item)
-    ) {
-        throw _policyError("CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED");
     }
 
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
