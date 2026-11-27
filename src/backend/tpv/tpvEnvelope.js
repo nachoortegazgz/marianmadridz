@@ -1,4 +1,5 @@
-import { createActionableError, toPublicShape } from "backend/errors/actionableError";
+import { createActionableError } from "backend/errors/actionableError";
+import { normalizeTpvError } from "backend/tpv/tpvError";
 
 export function ok(data, extra = {}) {
     return {
@@ -40,6 +41,6 @@ export function error(code, userMessage, remediation, extra = {}) {
         ...publicExtra,
         status: "ERROR",
         data: null,
-        error: toPublicShape(actionable),
+        error: normalizeTpvError(actionable),
     };
 }
