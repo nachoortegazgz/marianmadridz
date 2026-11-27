@@ -17,7 +17,7 @@ function _appendOnlyError(collection, operation) {
         code: "LEDGER_APPEND_ONLY",
         userMessage: "Los registros append-only no se modifican. Registra un nuevo evento rectificativo y trazable.",
         technicalDetail: "CMS " + operation + " denied for append-only collection: " + collection,
-        remediation: ["No intentar update/remove sobre colecciones append-only como MovimientosCaja, TransaccionesTPV, LibroAsientosContablesDetalle ni HistoricoCierresZ.", "Registrar la corrección como un nuevo evento rectificativo trazable, referenciando el _id original y conforme al contrato aplicable.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
+        remediation: ["No intentar update/remove sobre ledgers append-only como MovimientosCaja, LibroAsientosContablesDetalle, RegistrosHorariosStaff ni HistoricoCierresZ.", "Registrar la corrección como un nuevo evento rectificativo trazable, referenciando el _id original y conforme al contrato aplicable.", "Si el asiento rectificativo falla, adjuntar el código y contexto técnico al administrador."],
         contextSnapshot: { collection, operation },
         retryable: false,
     });
