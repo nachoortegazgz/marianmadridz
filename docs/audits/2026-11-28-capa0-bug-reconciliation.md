@@ -1,6 +1,6 @@
 # Auditoría Capa 0 — 28-11-2026
 
-Estado: cambios en rama v2; CI pendiente. No se ha ejecutado Wix Runtime ni se han modificado datos CMS.
+Estado: PR #670 integrada en main (squash 5a1c84e34c2112de1a3f4874ca0eb070bbf4845b); CI offline PASS. No se ha ejecutado Wix Runtime ni se han modificado datos CMS.
 
 ## Conciliación de los hallazgos
 
@@ -55,7 +55,7 @@ El esquema Query Data Items declara paging.limit y paging.offset como int32 con 
 ## Evidencia y validación
 
 - La primera ejecución CI de PR #669 ejecutó Layer 1 y Layer 2 con PASS, pero la suite completa falló en LOGGER-SEC-01: se detectó que las cadenas primitivas de propiedades ordinarias no entraban en la recursión de saneamiento.
-- Corrección aplicada en esta rama: todas las propiedades pasan por sanitizeValue(), incluidas cadenas primitivas. Se conserva la prueba que detectó el fallo.
-- CI de esta rama: pendiente.
+- Corrección integrada en PR #670: todas las propiedades pasan por sanitizeValue(), incluidas cadenas primitivas. La regresión que detectó el primer fallo pasa en CI.
+- PR #670: Layer 1 29/384 PASS; Layer 2 16/250 PASS; suite offline 88/794 PASS; SDK Cart, Transactions y TPV PASS; ESLint PASS; npm audit PASS; Gitleaks PASS. Run 46081642075, job 140781735934.
 - npm ci, lint y suite completa local: no ejecutados en este entorno.
 - Wix Local Editor/Preview/Runtime y E2E: pendientes. Sitio Draft; no se publica como parte de esta intervención.
