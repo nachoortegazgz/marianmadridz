@@ -645,6 +645,23 @@ export function assertControlOperativo(item) {
         if (!item.expiresAt || Number.isNaN(expiresAt.getTime())) {
             throw new Error("SCHEMA_VIOLATION: SLOT_LOCK requires a valid expiresAt date");
         }
+        // Reservation slot locks encode their exact interval in dedupeKey.
+        // Fiscal/accounting locks use their own fixed keys and have no slot range.
+        if (String(item.dedupeKey || "").startsWith("slot_")) {
+            const slotStart = new Date(item.payload?.slotStart);
+            const slotEnd = new Date(item.payload?.slotEnd);
+            if (
+                !item.payload?.slotStart ||
+                !item.payload?.slotEnd ||
+                Number.isNaN(slotStart.getTime()) ||
+                Number.isNaN(slotEnd.getTime()) ||
+                slotEnd.getTime() <= slotStart.getTime()
+            ) {
+                throw new Error(
+                    "SCHEMA_VIOLATION: reservation SLOT_LOCK requires valid payload.slotStart and payload.slotEnd DATETIME values"
+                );
+            }
+        }
     }
 
     return true;
