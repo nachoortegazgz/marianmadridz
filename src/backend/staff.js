@@ -37,7 +37,7 @@ const log = logger;
 // CONSTANTES
 // =============================================================================
 const CACHE_TTL_MS = SDK_CONFIG.CACHE.STAFF_TTL_MS;
-const CACHE_MAX_ENTRIES = SDK_CONFIG.CACHE.MAX_ENTRIES;
+const CACHE_MAX_ENTRIES = SDK_CONFIG.CACHE.STAFF_MAX_ENTRIES;
 const API_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.API_MS;
 
 // Bookings Staff Members API oficial.
