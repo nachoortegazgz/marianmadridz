@@ -7,6 +7,7 @@ import { appendTpvAudit, assertTpvOperationalLedgerConfigured, getPendingTpvRefu
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
+import { normalizeTpvError } from "backend/tpv/tpvError";
 
 export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
@@ -52,7 +53,7 @@ export const obtenerResumenCaja = webMethod(
                 traceId,
             };
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_SUMMARY_FAILED") }, traceId };
+            return { status: "ERROR", data: null, error: normalizeTpvError(error, "TPV_SUMMARY_FAILED"), traceId };
         }
     }
 );
@@ -61,10 +62,11 @@ export const generarTicketX = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-ticket-x");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("audit");
-        const operator = await resolveTpvContext(traceId);
+
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("audit");
+            const operator = await resolveTpvContext(traceId);
             const sessionId = String(input.sessionId || "").trim();
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
@@ -132,7 +134,7 @@ export const generarTicketX = webMethod(
                 status: "ERROR",
                 ticketX: null,
                 data: null,
-                error: { code: String(error?.code || error?.message || "TPV_TICKET_X_FAILED") },
+                error: normalizeTpvError(error, "TPV_TICKET_X_FAILED"),
                 traceId,
             };
         }
@@ -144,11 +146,11 @@ export const generarCierreZ = webMethod(
     async (input = {}) => {
         let persisted = false;
         const traceId = makeTraceId("tpv-ticket-z");
-        await requireAdmin(traceId);
-        assertTpvOperationalLedgerConfigured("physical");
-        const operator = await resolveTpvContext(traceId);
 
         try {
+            await requireAdmin(traceId);
+            assertTpvOperationalLedgerConfigured("physical");
+            const operator = await resolveTpvContext(traceId);
             const clientIdempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
@@ -315,7 +317,7 @@ export const generarCierreZ = webMethod(
             };
             });
         } catch (error) {
-            return { status: "ERROR", data: null, error: { code: String(error?.message || "TPV_TICKET_Z_FAILED") }, persisted, recoverable: persisted, traceId };
+            return { status: "ERROR", data: null, error: normalizeTpvError(error, "TPV_TICKET_Z_FAILED"), persisted, recoverable: persisted, traceId };
         }
     }
 );
