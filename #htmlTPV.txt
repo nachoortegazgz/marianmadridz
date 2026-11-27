@@ -457,6 +457,7 @@ body {
     // profesionalId is the native Bookings resourceId exposed by MapaStaff.
     profesionalId: null,
     staff: [],
+    catalogKind: "SERVICES",
     items: [],
     payments: [],
     paymentMethod: "EFECTIVO",
@@ -880,6 +881,7 @@ body {
   }
 
   async function loadCatalog(kind) {
+    state.catalogKind = kind === "PRODUCTS" ? "PRODUCTS" : "SERVICES";
     const type = kind === "PRODUCTS" ? "CATALOG_PRODUCTS" : "CATALOG_SERVICES";
     const responseType = type + "_RES";
     const result = await call(type, { limit: 100 }, responseType);
