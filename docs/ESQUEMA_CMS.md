@@ -88,7 +88,7 @@ recordNature:TEXT, recordTimestamp:DATETIME, singletonKey:TEXT, closedAt:DATETIM
 ~~~
 
 ### CitasF2 — CITAS_F2
-Revisión 60 · 29 campos · 11 items · permisos CMS ADMIN para read/insert/update/remove.
+Revisión 60 · 29 campos · 12 items · permisos CMS ADMIN para read/insert/update/remove.
 
 ~~~text
 slotStart:DATETIME!, timeZone:TEXT, cancellationReason:TEXT, privacyNoticePurpose:TEXT, privacyNoticeAcceptedAt:DATETIME, privacyNoticeVersion:TEXT, totalAmount:NUMBER!, slotEnd:DATETIME!, bookingId:TEXT!, traceId:TEXT!, bookingType:TEXT!, bookingStatus:TEXT!, paymentStatus:TEXT!, serviceId:TEXT!, resourceId:TEXT!, pairToken:TEXT, dateYmd:TEXT!, scheduleId:TEXT, contactDetails:OBJECT, cashMovementId:TEXT, revision:NUMBER, _id:TEXT, meta:OBJECT, _createdDate:DATETIME, _updatedDate:DATETIME, _owner:TEXT, orderId:TEXT, thirdPartyId:TEXT, catalogId:TEXT
