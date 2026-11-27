@@ -120,3 +120,7 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 ## Prioridad 1 TPV — 2026-11-25
 - Guard fiscal limitado a escrituras fiscales; MovimientosCaja físico, TransaccionesTPV comercial y ControlOperativo auditoría separados. Colección TransaccionesTPV creada en CMS con permisos PRIVILEGED (read/insert/update/remove).
 - registrarVenta implementado como persistencia idempotente PENDING_PAYMENT, sin cobro; CI offline PASS (80 suites/764 tests), runtime Wix no ejecutado, por lo que no se declara escritura verificada.
+
+- cerrarSesionCaja + generarTicketX + exportarMovimientos implementados en backend, con autorización ADMIN y persistencia operativa/auditoría no fiscal.
+- P1.2 pasa de PENDIENTE a PARCIAL: cierre operativo de CajaActual disponible; Ticket Z fiscal continúa separado.
+- Reembolso y Ticket Z real siguen bloqueados por Contract A (pagos) y Contract C (fiscal), respectivamente.
