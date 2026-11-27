@@ -1,74 +1,72 @@
-# Estado actual — 2026-11-27
+# Estado actual — 2026-11-28
 
-**MVP operativo/comercial: NO-GO.** El sitio sigue en Draft/no publicado. Las pruebas offline de backend pasan en los HEAD de las PR integradas; Wix Runtime, Local Editor E2E y producción no están acreditados.
+**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado. La validación offline de Capa 0 está verde en CI; Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
 
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD: `3270a9b2b9bb95e504ed00afa88d632ebd26cad5`.
-- PR #650: `transactionId` obligatorio en el writer fiscal manual; mantiene fingerprint de replay y validación del movimiento.
-- PR #662: serialización canónica de fingerprints TPV; rechaza valores ambiguos/no JSON, arrays dispersos, ciclos y fechas inválidas. Merge: `94e0435f2ff8f5c4fcd68480e85a253c2c38c1b0`.
-- PR #663: el guard de cierre fiscal propaga errores de Wix Data; solo WDE0073 se interpreta como registro inexistente por la DAL. Merge: `d4ce713b721aa758cdd02ed03732d6463faf5b86`.
-- PR #664: centralización de timeouts, cachés, TTL de secretos y paginación fiscal en `SDK_CONFIG`; eliminación de fallbacks duplicados. Merge: `60b726de6dbcd0440dbe8092621c78e46fecea37`.
-- PR #665: SHA-256/HMAC rechazan entradas vacías; el genesis hash de la cadena fiscal sigue explícito en `hashChain`. Merge: `b774e108aac03b88a359ec7e743105c97426011e`.
-- PR #666: `bookingType` ausente ya no se convierte en SIMPLE; nuevas inserciones CitasF2 lo exigen y las actualizaciones de registros históricos incompletos siguen permitidas. Merge: `a34461a9c53515714243e7a7bd5be8adad24d652`.
-- PR #667: `registrarEventoEconomico()` exige `transactionId` estable, lo usa para dedupe y recuperación de insert incierto, y elimina los fallbacks por secuencia/traceId. Merge: `3270a9b2b9bb95e504ed00afa88d632ebd26cad5`.
+- HEAD previo a esta actualización documental: `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- PR #662–#667: endurecimiento de serialización, errores de CMS, configuración, criptografía, bookingType y transactionId; integradas en main.
+- PR #668: evidencia documental inicial de Capa 0; integrada.
+- PR #670: validación DAL, GUID de jornada, normalización de errores públicos, redacción de logs y paridad de enums frontend/backend; integrada mediante squash en `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- PR #669 quedó cerrada sin merge porque su rama estaba desactualizada; su trabajo fue recreado y validado en #670.
 
-## Validación offline del último cambio
-
-CI del HEAD de PR #667 (`abce7588f6e1af63f2284740ad4cfd8bc29e6202`): **PASS**.
+### CI verificado para PR #670
 
 - Layer 1: 29 suites / 384 tests; 0 fallos.
 - Layer 2: 16 suites / 250 tests; 0 fallos.
-- Suite offline completa: 84 suites / 783 tests; 0 fallos.
-- Verificación SDK Wix eCommerce Cart, Transactions y TPV: PASS.
+- Suite offline completa: 88 suites / 794 tests; 0 fallos.
+- Wix eCommerce Cart SDK: PASS.
+- Wix eCommerce Transactions SDK: PASS.
+- Wix TPV SDK: PASS.
 - ESLint: PASS.
-- Secret scanning: PASS.
+- Gitleaks full-history scan: PASS.
 - npm audit: paso completado correctamente.
+- Workflow backend quality gates: run `46081642075`, job `140781735934`, PASS.
+- Secret scanning: run `46081642097`, PASS.
 
-Estos resultados pertenecen al HEAD de PR validado; no acreditan por sí mismos ejecución en Wix Runtime ni publicación.
+Estas evidencias son CI offline del HEAD de PR #670. No demuestran ejecución dentro del Wix Runtime.
 
-## Capa 0 — estado técnico
+## Capa 0 — corregido e integrado
 
-**Corregido e integrado:**
-- Fingerprints TPV no colisionan por valores no representables.
-- Los writers fiscales no interpretan indisponibilidad de CMS como periodo abierto.
-- Los timeouts, cachés, TTL y límites compartidos están declarados en `SDK_CONFIG`; sus consumidores ya no duplican defaults.
-- Las funciones criptográficas no devuelven un digest ficticio para entradas vacías.
-- La normalización de `bookingType` conserva ausencias; las nuevas inserciones exigen valor explícito y la compatibilidad histórica de actualizaciones queda acotada.
-- El writer fiscal general exige `transactionId` antes de cualquier resolución o persistencia y utiliza esa identidad para deduplicar y recuperar resultados inciertos.
+- Fingerprints TPV: serialización estricta; rechaza valores no JSON, ciclos, arrays dispersos, fechas inválidas, getters y objetos no planos.
+- Writers fiscales: errores de lectura CMS distintos de ausencia real; el periodo no se considera abierto ante indisponibilidad.
+- Configuración: timeouts, cachés, TTL y límites compartidos centralizados en `SDK_CONFIG`.
+- Criptografía: SHA-256/HMAC no generan hashes ficticios ante entradas vacías.
+- Bookings dual: ausencia de `bookingType` preservada; nuevas inserciones CitasF2 lo exigen y las actualizaciones legacy no inventan el dato.
+- Writer de eventos económicos: `transactionId` obligatorio (1–128 caracteres), identidad única para dedupe y recuperación; sin sustitución por secuencia ni traceId.
+- DAL: límites y offsets inválidos rechazados; offset 0 permitido; no se inventa un máximo 100 no declarado en el contrato usado. Retirados `contains` y la heurística implícita; pertenencia a arrays mediante `hasSome`/`hasAll` explícitos.
+- Jornada laboral: `resourceId` y `memberId` validados como GUID.
+- Errores públicos: objetos arbitrarios no se convierten en `[object Object]`.
+- Logging: redacción recursiva de claves y strings, secretos, tokens, credenciales URL, emails, PII y stacks; pruebas de regresión añadidas.
+- Contrato frontend/backend: retirado `PAYMENT_METHOD.OTRO` del espejo público al no formar parte del enum backend ni tener consumidores activos localizados.
 
-**Pendiente de auditoría/corrección:**
-- `secretAccess.js`: distingue actualmente secreto vacío/no disponible de forma insuficiente; revisar propagación de causa sin alterar el fail-closed de sus consumidores.
-- `staff.js`: algunos fallos de Bookings Staff Members se convierten en `null`/`[]`; autorización permanece fail-closed, pero falta diferenciar ausencia real de indisponibilidad del proveedor.
-- `logger.js`: ampliar pruebas de redacción para nombres compuestos, secretos y mensajes de error de proveedores; no cambiar el formato de logs sin medir impacto.
-- `dataAccess.js`: revisar consumidores de `getItem()` con argumentos vacíos y normalización de resultados de `queryReferencedItems()`; distinguir ausencia legítima de contrato inválido.
-- `mmUtils.js`: revisar consumidores de conversiones monetarias que devuelven cero ante entrada inválida; no cambiar hasta mapear impacto económico.
-- `internalConfig.js`: revisar duplicidad semántica `TPV_RUNTIME_POLICY.CURRENCY` / `CURRENCY_CODE` y los consumidores antes de consolidar.
-- Completar mapa de consumidores de todos los writers con obligación de `transactionId`, no solo los dos writers fiscales ya corregidos.
+## Pendiente — Capa 0 sigue EN EJECUCIÓN
 
-No se declara Capa 0 COMPLETADA hasta cerrar estos puntos con pruebas y revisar el diff completo.
+1. **Secretos — P1:** `secretAccess.js` aún convierte errores del proveedor en cadena vacía. La documentación oficial Velo confirma `getSecretValue()`, permisos elevados y uso exclusivo backend, pero no declara errores personalizados para distinguir de forma contractual NOT_FOUND de indisponibilidad. No clasificar códigos de error por intuición. Próximo cambio: preservar el fallo de proveedor con código técnico seguro y revisar cada consumidor para mantener fail-closed; ausencia solo podrá tratarse como opcional donde el contrato lo permita.
+2. **Staff — P1:** `staff.js` aún convierte fallos de consulta Bookings en `null`/ `[]`; autorización permanece fail-closed, pero los llamadores no distinguen ausencia de fallo del proveedor. La API documenta cursor paging y respuestas con `staffMembers`/ `pagingMetadata`; revisar consumidores y cambiar contratos con pruebas.
+3. **DAL — P1/P2:** `getItem(collection,id)` devuelve null para colección/ID vacíos; inventariar consumidores antes de endurecer. `queryReferencedItems()` normaliza respuestas desconocidas como lista vacía; verificar contrato SDK exacto y consumidores.
+4. **Dinero — P1:** `toFiniteNumber`, `_roundMoney` y helpers relacionados convierten ciertas entradas inválidas en fallback/0. Hay consumidores en contabilidad, fiscalidad, caja y reservas. No cambiar hasta definir contratos por dominio y añadir pruebas de regresión de importes.
+5. **Configuración — P2:** `TPV_RUNTIME_POLICY.CURRENCY` y `CURRENCY_CODE` duplican semánticamente EUR. Revisar consumidores y consolidar solo si no hay dependencia contractual.
+6. **Idempotencia global — P1:** completar inventario de todos los writers económicos/operativos y clasificar cuáles requieren `transactionId`, claves de idempotencia propias o no aplicabilidad justificada. No imponer una regla global ciega a eventos no económicos.
+7. **Deuda/código muerto:** continuar inventario por consumidores/imports/exports y dependencias; PR #670 no elimina módulos ni aliases históricos por tamaño o sospecha.
+8. **Runtime:** ejecutar Local Editor y pruebas E2E aisladas con fixture/sesión propia, sin reutilizar `CajaActual` ABIERTA y sin cobros reales. Confirmar despliegue/sincronización Wix-Git mediante evidencia del sitio.
+
+**Estado Capa 0: EN EJECUCIÓN.** El endurecimiento estático principal y la CI están validados, pero los puntos anteriores impiden declarar Capa 0 COMPLETADA o “excelente” todavía.
 
 ## Wix/CMS — último read-back documentado
 
 - Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor clásico, Velo habilitado, Draft.
 - Página TPV ID `yl5th`, ruta `/tpv`, `published=false` (read-back 27-11-2026).
 - Recuentos observados entonces: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
-- No había `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco MapaStaff consultados.
-- Esta lectura es histórica, no una consulta live actual. No se realizaron escrituras CMS en las auditorías de Capa 0.
+- Es una lectura histórica, no consulta live actual. No se modificaron colecciones ni registros en esta intervención.
 
-## Pendientes de validación superior
+## Fuentes oficiales y criterios
 
-1. Ejecutar Wix Local Editor y Runtime E2E con fixture/sesión aislada; no reutilizar `CajaActual` ABIERTA.
-2. Verificar los flujos TPV de apertura, venta, movimiento, actualización de `CajaActual` y cierre Z en Runtime.
-3. Reconciliar las seis divergencias Bookings/CitasF2 con proceso backend idempotente.
-4. Validar transporte Capa 3 SharePoint/Graph/Power Automate en tenant aislado.
-5. Confirmar SHA/fingerprint instalado en Wix. No publicar como parte de esta intervención.
+- Velo Secrets API v2: https://dev.wix.com/docs/velo/apis/wix-secrets-backend-v2/secrets/get-secret-value
+- Bookings Query Staff Members: https://dev.wix.com/docs/api-reference/business-solutions/bookings/staff-members/staff-members/query-staff-members
+- Wix Data Query / Paging: https://dev.wix.com/docs/velo/apis/wix-data/query
+- Wix Data `get()`: https://dev.wix.com/docs/velo/apis/wix-data/get
+- Documentación de proyecto: `PROJECT-CANON.md`, `TPV-UNIFIED-FLOW.md`, `RELEASE-READINESS.md`, `ESQUEMA_CMS.md`.
 
-## Fuentes
-
-- Código y pruebas: repositorio y commits enumerados.
-- Wix Data `get()`: https://dev.wix.com/docs/velo/apis/wix-data/get — devuelve `null` si el ID no existe y rechaza la promesa si faltan permisos.
-- Dossier y documentación especializada: `PROJECT-CANON.md`, `TPV-UNIFIED-FLOW.md`, `RELEASE-READINESS.md`, `ESQUEMA_CMS.md`.
-
-**Criterio:** CI PASS ≠ Runtime PASS ≠ Producción verificada. Mantener el estado NO-GO hasta obtener evidencia del entorno correspondiente.
+**CI PASS ≠ Runtime PASS ≠ Producción verificada.** Mantener NO-GO hasta obtener evidencia del entorno correspondiente.
