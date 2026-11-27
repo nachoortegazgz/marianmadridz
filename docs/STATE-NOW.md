@@ -10,7 +10,7 @@
 - PR #640: clasificación temporal TPV y gate de venta integrados. CI histórico: 81 suites, 764 tests, 0 fallos.
 - PR #641: preparación de paquete Capa 3 integrada. CI histórico: 80 suites, 762 tests, 0 fallos.
 - PR #650: identidad transaccional fiscal obligatoria, fingerprint de replay y contrato mínimo de movimiento fiscal integrados; CI PASS. AEAT hash y Runtime E2E continúan pendientes.
-- PR #651 (en revisión): normalización de errores TPV, guards operativos dentro de try/catch, append-only CMS hooks y filtros de marcadores simulados en agregados fiscales. CI pendiente de última ejecución.
+- PR #651 (en revisión): normalización de errores TPV, guards operativos dentro de try/catch, ausencia de filtros por entorno, retirada de bloqueos fiscales globales y prohibición global de borrado. CI pendiente de ejecución sobre el HEAD final.
 - Las ejecuciones CI acreditan únicamente los commits y suites ejecutados; no acreditan Wix Runtime.
 
 ## 2. Wix y CMS — último read-back documentado 2026-11-27
@@ -24,14 +24,14 @@
 
 ## 3. TPV — estado de código integrado
 
-- `recordTimestamp` y `recordNature` se generan/derivan en backend. La clasificación temporal es metadato, no selector de runtime.
+- El contrato TPV no contiene `recordNature` ni clasifica registros como REAL/SYNTHETIC/SIMULATION. `recordTimestamp` UTC es el único metadato temporal neutral.
 - La ausencia de corte/configuración real debe permitir probar el dominio con fixtures sintéticos y puertos simulados. No habilita clasificación REAL ni writers productivos.
 - `registrarVenta()` aplica los blockers de preparación para operaciones reales; el replay idempotente se resuelve antes del gate.
-- `TransaccionesTPV`: intención comercial pendiente/no contable; se permite únicamente la transición controlada de estado definida por contrato y se prohíbe el borrado en DAL y hook CMS. `MovimientosCaja`: ledger físico canónico append-only.
+- `TransaccionesTPV`: intención comercial editable mediante hook/DAL y validación completa del registro; borrado prohibido. `MovimientosCaja`: ledger físico canónico; no se borra y los movimientos contabilizados se rectifican mediante nuevos eventos trazables.
 - El widget sigue en MODO CONSULTA y no hay venta/cobro/movimiento físico aceptados en Runtime según la última evidencia.
-- Los interruptores globales `FISCAL_RUNTIME_POLICY` fueron retirados de los writers fiscales/contables, la preparación de venta y el cron de recuperación. Los gates de configuración y las garantías de autorización, contratos, locks, idempotencia e integridad permanecen en el punto de escritura. Los writers siguen ejecutando validación fiscal, autorización, contratos, locks, idempotencia e integridad; no equivale a certificar configuración fiscal ni Runtime.
+- No existen interruptores globales `FISCAL_RUNTIME_POLICY` ni `assertTpvOperationalLedgerConfigured("fiscal")` bloqueante. La validación fiscal/contable se mantiene en los contratos de datos: campos, tipos, importes, secuencias, hashes, autorización, locks e idempotencia. Una configuración o dato obligatorio ausente produce un código explícito de validación, no un bloqueo global genérico.
 - El writer de jornada conserva su control específico hasta disponer de idempotencia y serialización validadas.
-- Revisión actual en rama `fix/tpv-actionable-errors-and-guards`: normalización de errores TPV, guards operativos dentro de `try/catch` y denegación de borrado de `TransaccionesTPV` tanto en DAL como en hook. Pendiente de CI y merge; no implica Runtime PASS.
+- Revisión actual en rama `fix/tpv-actionable-errors-and-guards`: normalización de errores TPV, guards dentro de `try/catch`, lectores sin clasificación por entorno, actualización validada de intenciones comerciales y no-delete global (DAL, hooks y bulk). Pendiente de CI/merge; no implica Runtime PASS.
 
 ## 4. Reservas / Bookings
 
@@ -58,7 +58,7 @@
 - Frontend sin lógica de negocio ni autoridad de permisos.
 - Autorización, validación y secretos exclusivamente en backend.
 - Procesos asíncronos/webhooks idempotentes.
-- Ledgers físicos, fiscales, contables, laborales y cierres append-only son inmutables; rectificación mediante nuevos registros trazables.
+- No se permite borrar ningún registro. Los datos operativos y comerciales editables se actualizan mediante validación backend. Los ledgers ya contabilizados y registros laborales/cierres conservan la rectificación mediante nuevos registros trazables para no alterar la evidencia legal.
 - No usar REST/CMS directo para saltarse DAL, hooks o writers.
 
 ## 8. Siguiente trabajo
