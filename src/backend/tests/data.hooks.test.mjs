@@ -620,7 +620,7 @@ test("HOOK-CAJA-01 normalizes JSON sequenceCounters and clears a prior-session c
 // HistoricoCierresZ — CONSERVED (update restricted to signature fields)
 // -----------------------------------------------------------------------------
 
-test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state and allow recovery fields only', async () => {
+test('HOOK-CIERREZ-01 validates inserts and keeps historical closures append-only', async () => {
   wixDataMock._reset();
   assert.throws(() => H.HistoricoCierresZ_beforeInsert({}), /traceId/);
   const closing = {
@@ -655,15 +655,18 @@ test('HOOK-CIERREZ-01 insert needs traceId; updates use persisted strong state a
   };
   assert.throws(
     () => H.HistoricoCierresZ_beforeUpdate(signatureRecoveryAttempt),
-    /append-only/
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
   );
 
   const illegalUpdate = { ...closing, _id: 'Z_2026-11-11', totalCash: 999 };
   assert.throws(
     () => H.HistoricoCierresZ_beforeUpdate(illegalUpdate),
-    /append-only/
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
   );
-  assert.throws(() => H.HistoricoCierresZ_beforeRemove('x'), /append-only/);
+  assert.throws(
+    () => H.HistoricoCierresZ_beforeRemove('x'),
+    (error) => error?.code === "HISTORICO_CIERRES_Z_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 // -----------------------------------------------------------------------------
@@ -702,8 +705,14 @@ test('HOOK-CLOCK-01 insert requires canonical fields and HMAC signature', () => 
 });
 
 test('HOOK-CLOCK-02 preserves append-only integrity for timeclock records', () => {
-  assert.throws(() => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }), /append-only/);
-  assert.throws(() => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'), /append-only/);
+  assert.throws(
+    () => H.RegistrosHorariosStaff_beforeUpdate({ _id: 'synthetic-clock-1' }),
+    (error) => error?.code === "STAFF_TIME_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
+  assert.throws(
+    () => H.RegistrosHorariosStaff_beforeRemove('synthetic-clock-1'),
+    (error) => error?.code === "STAFF_TIME_LEDGER_APPEND_ONLY" && error?.retryable === false
+  );
 });
 
 // keep wixDataMock referenced so loader seeds reset between suites
