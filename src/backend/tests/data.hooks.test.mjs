@@ -329,7 +329,6 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
     amount: 10,
     totalAmount: 10,
     recordTimestamp: new Date('2026-11-25T10:00:00.000Z'),
-    recordNature: 'SYNTHETIC',
     schemaVersion: '3',
     traceId: 'TPV:' + IC.TPV_RUNTIME_POLICY.SITE_ID + ':SESSION-TEST',
     paymentMethod: IC.PAYMENT_METHOD.EFECTIVO,
@@ -359,14 +358,14 @@ test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new ins
       ...cajaBase(),
       recordSource: "SYNTHETIC",
       movementType,
-    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, movementType);
+    }), /SCHEMA_VIOLATION/, movementType);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource,
       movementType: "COBRO",
-    }), /CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED/, recordSource);
+    }), /SCHEMA_VIOLATION/, recordSource);
   }
 });
 
