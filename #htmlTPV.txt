@@ -784,9 +784,12 @@ body {
     const isOpen = operationalStatus === "ABIERTA";
     const isClosed = operationalStatus === "CERRADA";
     $("sessionLabel").textContent = state.session?.sessionId || "—";
-    const operatorId = state.session?.operatorId || state.session?.authenticatedOperatorId || "—";
-    const operatorName = state.session?.operatorDisplayName || state.session?.authenticatedDisplayName || operatorId;
-    $("operatorLabel").textContent = "Operador: " + operatorName + " · Usuario: " + operatorId;
+    const sessionOperatorId = state.session?.operatorId || "—";
+    const sessionOperatorName = state.session?.operatorDisplayName || sessionOperatorId;
+    const authenticatedOperatorId = state.session?.authenticatedOperatorId || "—";
+    const authenticatedDisplayName = state.session?.authenticatedDisplayName || authenticatedOperatorId;
+    $("operatorLabel").textContent = "Operador de sesión: " + sessionOperatorName +
+      " · Usuario autenticado: " + authenticatedDisplayName + " (" + authenticatedOperatorId + ")";
     const timestamp = state.session?.now || state.session?.openedAt || state.session?.closedAt;
     const parsedTimestamp = timestamp ? new Date(timestamp) : null;
     const timeZone = state.session?.timeZone || "Europe/Madrid";
