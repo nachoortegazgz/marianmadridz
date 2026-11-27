@@ -239,15 +239,15 @@ export function assertRemoveAllowed(collection, id, expectedControlType, existin
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
     }
 
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        throw _policyError("CMS_TPV_TRANSACTION_DELETE_DENIED");
+    }
+
     if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
         if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
             throw _appendOnlyError(collection, "REMOVE");
         }
         throw _policyError("CMS_REMOVE_SCOPE_DENIED");
-    }
-
-    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
-        return;
     }
 
     if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
