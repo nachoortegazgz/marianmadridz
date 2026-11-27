@@ -133,3 +133,6 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - Runtime gates (2026-11-27): PENDIENTE_HUMANO; TinyFish bloqueado por login Wix y Wix MCP rechazó el dominio del sitio con HTTP 403.
 - Plan reproducible: `tests/runtime/RUNTIME-TEST-PLAN.md` (PR #629); no se invocaron gates ni se mutaron registros durante los intentos.
 - P1 cerrada en delegable para el alcance aprobado; bloqueos externos: Contract A (pagos) y Contract C (fiscal).
+
+- Wix Preview discovery (2026-11-27, TinyFish run `d10ece85-5528-409d-9372-a9315c07e908`): admin autenticado; página TPV localizada en `/tpv`, código `src/pages/TPV.yl5th.js`; interfaz visible y sin sesión de caja abierta. No se mutó CMS.
+- Runtime gates siguen BLOQUEADOS antes de abrir sesión: `abrirSesionCaja()` escribe en `CajaActual` y `SesionesCaja` con `sessionId=TPV-SESSION-YYYYMMDD`, pero `_buildTpvLedgerItem()` aún no deriva/persiste `recordNature` desde `recordTimestamp`/`productionActivationAt`; el contrato de clasificación y ubicación del campo sigue pendiente (`TPV-ONLINE-TEST-READINESS.md`). No se creó sesión ni se invocaron gates para evitar registros de naturaleza ambigua.
