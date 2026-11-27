@@ -238,7 +238,7 @@ export const abrirSesionCaja = webMethod(
                     error: null,
                     traceId,
                 };
-            });
+            }, { allowLegacyProjection: true });
 
         } catch (error) {
             return errorResult(error, "TPV_SESSION_OPEN_FAILED", traceId, { persisted, recoverable: persisted });
