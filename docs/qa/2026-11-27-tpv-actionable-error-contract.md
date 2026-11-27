@@ -29,7 +29,7 @@ The `assertTpvOperationalLedgerConfigured("physical"|"audit")` checks and the co
 
 ## Fiscal read-model safety
 
-The fiscal aggregator excludes explicit smoke/simulation markers (source, event type, movement type, projection status and sentinel hashes) from both quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
+The canonical `isExplicitSimulationLedgerRecord` classifier is now applied by booking-receipt lookup, cash/fiscal chain-head readers and the fiscal aggregator. Explicit smoke/simulation markers are excluded from receipts, next-head selection, quarterly totals and the issued-sales ledger. It does not infer that every record marked SYNTHETIC is disposable; the explicit marker contract remains the filter.
 
 ## Regression coverage
 
