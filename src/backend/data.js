@@ -991,9 +991,6 @@ export async function TransaccionesTPV_beforeUpdate(item) {
         CONSISTENCY.STRONG
     );
     if (!original) _schemaError("TransaccionesTPV update target not found");
-    if (_safeTrim(item.status) !== _safeTrim(original.status)) {
-        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
-    }
 
     try {
         assertTransaccionesTPVRecord(item);
