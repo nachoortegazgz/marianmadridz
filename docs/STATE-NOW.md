@@ -124,7 +124,6 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - cerrarSesionCaja + generarTicketX + exportarMovimientos implementados en backend, con autorización ADMIN y persistencia operativa/auditoría no fiscal.
 - P1.2 pasa de PENDIENTE a PARCIAL: cierre operativo de CajaActual disponible; Ticket Z fiscal continúa separado.
 - Reembolso y Ticket Z real siguen bloqueados por Contract A (pagos) y Contract C (fiscal), respectivamente.
-
 - Hito TPV-01 completado en PR propuesta: tres módulos de runtime retirados; compatibilidad histórica extraída y escrituras legacy denegadas.
 - Tres gates operativos: PASS estático en PR #626; Wix Runtime: PENDIENTE_HUMANO. Tests offline locales: PENDIENTE_HUMANO; CI de esta PR pendiente.
 - P1 cerrada en delegable para el alcance aprobado; bloqueos externos: Contract A (pagos) y Contract C (fiscal).
