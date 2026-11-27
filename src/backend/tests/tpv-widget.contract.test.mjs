@@ -122,6 +122,16 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.match(repository, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
     assert.match(caja, /const session = await latestTpvSession\(\)/);
     assert.match(caja, /await buildTpvSessionSummary\(session\)/);
+    assert.match(caja, /authenticatedDisplayName: operator\.operatorDisplayName/);
+    assert.match(caja, /proposedSessionId: "TPV-SESSION-" \+ madridDayKey\(\)/);
+    assert.match(caja, /businessDate: madridDateISO/);
+    assert.match(caja, /authenticatedRole: operator\.rolWebsite/);
+    assert.match(html, /Usuario conectado:/);
+    assert.match(html, /sessionOperatorLabel/);
+    assert.match(html, /openingBusinessDate/);
+    assert.match(html, /openingSessionId/);
+    assert.match(html, /const ticketResult = await call\("TICKET_X"/);
+    assert.match(html, /renderTicketXMarkup\(ticket\)/);
 });
 
 test("TPV HTML component JavaScript parses without syntax errors", async () => {
