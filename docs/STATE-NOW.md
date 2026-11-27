@@ -5,7 +5,7 @@
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD previo a esta actualización documental: `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
+- HEAD de `main` tras integrar PR #671 y antes de esta rama de reorganización documental: `25b55d406b365ab8b82c70f1eb0803a5bf1f5628`.
 - PR #662–#667: endurecimiento de serialización, errores de CMS, configuración, criptografía, bookingType y transactionId; integradas en main.
 - PR #668: evidencia documental inicial de Capa 0; integrada.
 - PR #670: validación DAL, GUID de jornada, normalización de errores públicos, redacción de logs y paridad de enums frontend/backend; integrada mediante squash en `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
