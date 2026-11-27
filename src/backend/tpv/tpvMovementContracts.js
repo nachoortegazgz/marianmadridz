@@ -3,6 +3,8 @@
  * Keeps partial-persistence state explicit without mutating append-only records.
  */
 
+import { normalizeTpvError } from "backend/tpv/tpvError";
+
 export function createPersistedTpvProjectionError(cause, {
     recordId,
     idempotencyKey,
@@ -56,8 +58,6 @@ export function buildCashMovementSuccessData({
         persisted: true,
     };
 }
-
-import { normalizeTpvError } from "backend/tpv/tpvError";
 
 export function buildCashMovementFailure(error, persistedBeforeError, traceId) {
     const persisted = persistedBeforeError === true || error?.persisted === true;
