@@ -347,7 +347,7 @@ function _isTpvLedgerItem(item) {
         String(envelope.ledgerVersion || "").trim().length > 0 &&
         Number.isSafeInteger(Number(envelope.schemaVersion)) &&
         Number(envelope.schemaVersion) >= 1 &&
-        /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || "")) &&
+        (sequenceNumber === 0 || /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""))) &&
         (logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
         (ledgerRecord || legacyRecord);
 }
