@@ -1,48 +1,37 @@
 # Marian Madrid — repositorio técnico
 
-**Sitio:** https://www.marianmadrid.es/  
-**Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Plataforma verificada:** Wix Editor clásico + Velo.  
-**Repositorio:** `nachoortegazgz/marianmadridz`
+Sitio: https://www.marianmadrid.es/  
+Repositorio: `nachoortegazgz/marianmadridz`  
+Plataforma observada: Wix Editor clásico + Velo.
 
-## Estado ejecutivo — 2026-11-27
+## Estado — 2026-11-27
 
-**MVP operativo: NO-GO.**
+**MVP operativo/comercial: NO-GO.** PR #650 está integrada. PR #651 (`fix/tpv-actionable-errors-and-guards`) está abierta; el HEAD consultado es `235e78c48dab4e1c3d78518c24a3042b5165e257`. Su CI final y el Runtime E2E siguen pendientes. No se afirma venta, cobro, cierre ni persistencia TPV validada en Wix Runtime.
 
-El baseline de `main` al iniciar esta intervención es `7a7e171357090c18d01874d8deb4368344cd5af6`. Las decisiones integradas eliminan los interruptores globales de escritura fiscal/contable, sin eliminar validación fiscal, autorización, integridad, idempotencia ni concurrencia. La revisión de errores accionables e inmutabilidad TPV está en la rama `fix/tpv-actionable-errors-and-guards` y pendiente de CI/merge. La aceptación Runtime y la habilitación productiva siguen pendientes. El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
+El último read-back documentado de CMS (27-11-2026) encontró `CajaActual=1` ABIERTA, `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3` y `RegistrosHorariosStaff=0`. Es una instantánea histórica, no una lectura en vivo actual. No reutilizar la caja abierta ni modificar históricos durante QA.
 
-- **Main (baseline de esta revisión):** `7a7e171357090c18d01874d8deb4368344cd5af6` (27-11-2026).
-- **TPV:** PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, replay con fingerprint y validación pre-insert. PR #651 prepara errores accionables, escritura sin bloqueos globales fiscales/contables, unificación de lectores y política global no-delete. CI final y Wix Runtime E2E siguen pendientes; no se declara venta/cobro/cierre online validado.
-- **Identidad de registros:** todos los entornos usan el mismo contrato TPV. No se clasifica ni filtra por `REAL`, `SYNTHETIC`, `SIMULATION` o equivalentes; `recordTimestamp` es metadato UTC neutro.
-- **Colecciones:** `TransaccionesTPV` contiene intenciones comerciales pendientes no contables; `MovimientosCaja` es el ledger físico canónico; `ControlOperativo` guarda locks/auditoría; `CajaActual` proyecta la sesión.
-- **Bookings:** lectura read-only de 11 IDs: 6 proyecciones `CitasF2` muestran CONFIRMED/PENDING mientras Bookings V2 devuelve CANCELED. Es un fallo de coherencia abierto; no se han mutado reservas.
-- **Capa 3:** PR #641 integrada; paquete trimestral determinista Admin-only en memoria. No hay transporte SharePoint/Graph/Power Automate E2E.
-- **CMS:** último read-back documentado: CajaActual=1 ABIERTA; MovimientosCaja=5; HistoricoCierresZ=1; TransaccionesTPV=0; ControlOperativo=78 (3 recuperaciones fiscales pendientes); MapaStaff=5 sin CONFIG_SISTEMA; CitasF2=11; RegistrosHorariosStaff=0.
-- **Wix:** último read-back directo documentado: Draft, Editor clásico, 9 páginas estáticas + 2 dinámicas; TPV ID `yl5th`, ruta `/blank`. No se ha probado sincronización Git-Wix.
-- **CI:** PR #650 PASS (suite offline completa, SDK tests, ESLint y secret scanning según el run asociado). Las pruebas offline no acreditan Wix Runtime. La revisión `fix/tpv-actionable-errors-and-guards` aún requiere CI.
-- **Efectos externos:** no habilitar pagos reales, reembolsos, remisión fiscal/AEAT ni automatizaciones con efectos externos durante QA.
+## Documentos activos
 
-## Entrada documental canónica
+1. [Estado actual y siguiente trabajo](docs/STATE-NOW.md).
+2. [Criterios de release](docs/RELEASE-READINESS.md).
+3. [Invariantes de arquitectura](docs/PROJECT-CANON.md).
+4. [Flujo TPV, bloqueos y errores](docs/TPV-UNIFIED-FLOW.md).
+5. [Índice documental](docs/INDEX.md).
+6. [Backend TPV](src/backend/tpv/README.md) y [backend general](src/backend/README.md).
+7. [Plan Runtime](tests/runtime/RUNTIME-TEST-PLAN.md).
+8. [Archivo histórico](docs/ARCHIVE-MANIFEST.md).
 
-1. [Estado actual y siguiente sesión](docs/STATE-NOW.md).
-2. [Release readiness y matriz de aceptación](docs/RELEASE-READINESS.md).
-3. [Canon de arquitectura y decisiones](docs/PROJECT-CANON.md).
-4. [Índice documental](docs/INDEX.md).
-5. [Flujo TPV único](docs/TPV-UNIFIED-FLOW.md).
-6. [Backend TPV](src/backend/tpv/README.md).
-7. [Manifiesto de archivo histórico](docs/ARCHIVE-MANIFEST.md).
+## Reglas no negociables
 
-## Reglas de evidencia
+- Documentación oficial vigente de Wix y de cada integración prevalece sobre suposiciones.
+- Wix CMS es SSOT transaccional; Git es SSOT del código; SharePoint custodia evidencia, no gobierna Capa 1.
+- Frontend presenta/orquesta. Backend/WebMethods validan identidad, permisos, datos, reglas y persistencia.
+- Un solo código y contrato de dominio para desarrollo, pruebas y producción. Fixtures y dobles sustituyen dependencias externas, no la lógica de negocio.
+- No hay bloqueos globales de escritura por entorno. Cada operación valida sus precondiciones concretas y falla de forma explícita cuando no se cumplen.
+- No se borra ningún registro. Las escrituras pasan por DAL/hooks/writers canónicos. Los ledgers contabilizados y cierres se corrigen mediante nuevos registros trazables, no sobrescritura.
+- Errores públicos conservan código estable, mensaje seguro, remediation y metadatos de persistencia/recuperación; detalle técnico limitado y trazado en backend.
+- No publicar Wix, activar pagos/remesas reales ni ejecutar mutaciones live durante QA sin gate y autorización específicos.
 
-- Distinguir código integrado, CI offline, lectura de APIs Wix, ejecución WebMethod, Preview, Runtime E2E y producción.
-- Toda afirmación de estado Wix/CMS lleva fecha y alcance de lectura.
-- No declarar PASS de runtime por pruebas estáticas, mocks o CI.
-- CMS es SSOT transaccional; SharePoint es repositorio de evidencia, no fuente de verdad.
-- El frontend presenta/orquesta; backend/WebMethods validan permisos, identidad, catálogo, importes y reglas.
-- No aceptar clasificación temporal enviada por cliente ni exponer secretos.
-- **Borrado:** prohibido a nivel DAL y hooks CMS, individual o masivo. Los registros operativos/comerciales editables se actualizan por WebMethods validados. Los ledgers fiscales, contables, laborales y cierres ya contabilizados conservan rectificación trazable en lugar de sobrescritura directa.
-- No modificar la caja singleton existente ni históricos durante QA sin una precondición de aislamiento demostrada.
+## Evidencia
 
-## Validación
-
-El estado de cada control se vincula al SHA y al entorno exactos. La integración GitHub no acredita sincronización con Wix. No publicar ni habilitar actividad real mientras permanezcan gates P0/P1 abiertos.
+Distinguir estático, unitario, integración simulada, Preview, Runtime y producción. Toda afirmación PASS identifica SHA, entorno y prueba ejecutada. CI no acredita Runtime ni sincronización Git-Wix.
