@@ -29,6 +29,14 @@
 - No había `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco MapaStaff consultados.
 - Lectura fechada 27-11-2026; no es consulta live actual. No se hicieron escrituras en esas auditorías.
 
+## Runtime Wix — estrategia y límites verificados (27-11-2026)
+
+- La documentación oficial confirma que Wix Editor clásico admite Git Integration + Wix CLI for Sites; `wix dev` abre Local Editor y permite probar código local sin publicar. La conexión efectiva del sitio Marian Madrid con este repo sigue PENDIENTE de verificar en el panel GitHub del Editor.
+- `wix preview` remoto y Test Sites requieren que el sitio haya sido publicado al menos una vez. El sitio sigue Draft; no usar el workflow `.github/workflows/wix-tpv-preview.yml` con `create_preview=true` en este estado.
+- El smoke Playwright actual bloquea endpoints dinámicos y no interactúa: solo prueba HTTP/renderizado básico, no bridge, WebMethods, CMS ni TPV. No equivale a Runtime ni E2E.
+- Wix Preview asigna rol Admin y no ejecuta determinados eventos backend. Las colecciones de aplicaciones Wix pueden seguir usando datos live incluso con sandbox habilitado. CajaActual singleton ABIERTA y ledgers existentes quedan fuera de pruebas de escritura.
+- Ruta inmediata: verificar Git Integration → `wix dev` si ya está conectada; de lo contrario, sincronización manual al Editor → Preview read-only → smoke TPV/bridge/CASHIER_STATE. Escrituras requieren fixture aislado; no publicar ni tocar datos actuales.
+
 ## Pendientes
 
 1. Auditar `eventLog.js` y consumidores: sigue existiendo fallback `TX_${sequenceNumber}`; el contrato global de `transactionId` no está cerrado.
