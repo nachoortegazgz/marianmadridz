@@ -36,7 +36,7 @@ import {
 } from "backend/dataAccess";
 
 import { readMovementField, readMovementHash } from "backend/data";
-import { isValidNifOrEuVat, isExplicitSimulationLedgerRecord } from "backend/validation";
+import { isValidNifOrEuVat } from "backend/validation";
 
 import {
   BUSINESS_COLLECTIONS,
@@ -156,8 +156,6 @@ function _initTaxAccumulator(months) {
 
 function _accumulatePage(items, state, options = {}) {
   for (const m of items) {
-    if (isExplicitSimulationLedgerRecord(m)) continue;
-    if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     state.totalOperations++;
     const accountingAmount = Number(m.accountingAmount || 0);
     const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
@@ -298,7 +296,7 @@ export async function getQuarterlyTaxSummaryInternal(year, quarter, options = {}
   if (incompleteResult) return incompleteResult;
 
   const state = _initTaxAccumulator(months);
-  _accumulatePage(fetchResult.items, state, { requireRealRecords: options.requireRealRecords === true });
+  _accumulatePage(fetchResult.items, state);
 
   // Sin fallback BXXXXXXXX (prohibido inventar NIF). Si falta el singleton
   // fiscal, el error se propaga al wrapper webMethod (TAX_SUMMARY_FAIL).
@@ -389,7 +387,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
-    if (_isExplicitSmokeOrSimulatedMovement(m)) continue;
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     const accountingAmount = Number(m.accountingAmount || 0);
     const movementType = _readMovementType(m).toUpperCase();
@@ -400,7 +397,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
     libroFilas.push({
       orden: orderIndex++,
-      recordNature: _safeTrim(m.recordNature).toUpperCase(),
       invoiceNumber: _readInvoiceNumber(m),
       fechaExpedicion: _readOperationDate(m),
       tipoFactura: isRefund ? "R1" : "BORRADOR_INTERNO",
