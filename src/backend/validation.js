@@ -402,6 +402,15 @@ function assertMapaStaffFiscalRecord(item, { partial = false } = {}) {
     }, "recordType");
 
     if (item.recordType === RECORD_TYPE.CONFIG_SISTEMA) {
+        const activationAt = item.productionActivationAt;
+        if (activationAt != null && activationAt !== "") {
+            const activationDate = activationAt instanceof Date
+                ? activationAt
+                : (typeof activationAt === "string" && /Z$/.test(activationAt) ? new Date(activationAt) : null);
+            if (!activationDate || Number.isNaN(activationDate.getTime())) {
+                throw new Error("SCHEMA_VIOLATION: MapaStaff.productionActivationAt must be a valid UTC DATETIME");
+            }
+        }
         const hasTaxId = item.taxId != null && String(item.taxId).trim() !== "";
         const hasLegalName = item.legalName != null && String(item.legalName).trim() !== "";
         if (!partial && (!hasTaxId || !hasLegalName)) {
