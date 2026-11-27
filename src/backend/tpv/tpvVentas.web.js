@@ -6,7 +6,7 @@ import { error as tpvError, ok as tpvOk, pending as tpvPending } from "backend/t
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
 import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
 import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
-import { BUSINESS_COLLECTIONS, FISCAL_RUNTIME_POLICY, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { CONSISTENCY, getItem, insertItem } from "backend/dataAccess";
 import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { toMinorUnits } from "backend/tpv/tpvUtils";
@@ -83,7 +83,6 @@ function buildSaleReadiness(prepared, validated) {
         ...writeV1Blockers,
     ];
     if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
-    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) saleReadinessBlockers.push("FISCAL_WRITER_DISABLED");
     if (prepared.taxIncludedInPrice !== true) saleReadinessBlockers.push("WIX_TAX_REGION_EXCLUDES_TAX");
     return { containsProducts, writeV1Blockers, saleReadinessBlockers };
 }

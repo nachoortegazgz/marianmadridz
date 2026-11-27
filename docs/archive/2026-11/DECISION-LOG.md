@@ -181,7 +181,7 @@ La auditoría estática recibida se ha contrastado con `main` en `9f3b4366aacc72
 
 | Bug | Resultado de reauditoría | Decisión |
 |---|---|---|
-| 01 — `FISCAL_RUNTIME_POLICY` cerrado | Flag deliberado y documentado como fail-closed; el informe confunde bloqueo de seguridad con defecto. | Mantener cerrado hasta certificación runtime y gates fiscales. |
+| 01 — `FISCAL_RUNTIME_POLICY` cerrado | Decisión histórica de fail-closed global, sustituida por la orden del propietario de 2026-11-27 y por la eliminación de `FISCAL_RUNTIME_POLICY` en código. | SUPERSEDIDA: los writers recorren el mismo código; validación fiscal, autorización, integridad, locks e idempotencia se mantienen por operación. |
 | 02 — Proyección Bookings → `CitasF2` | Código de handlers `BOOKING_CREATED` y `BOOKING_CONFIRMED` y proyector idempotente existen en main. Incidente de reserva sintética sin marcador sigue sin causa runtime demostrada. | Mantener como incidente abierto; revisar entrega/event logs y SHA publicado solo en entorno aislado. No crear otra reserva de prueba. |
 | 03 — `CajaActual` SIMULACION | Estado sintético documentado; el guard evita mezclarlo con operación real. | No resetear ni borrar saldo sin inventario, conciliación y autorización específica. |
 | 04 — writers de jornada deshabilitados | Flag deliberado hasta idempotencia, serialización por empleado/día y transiciones concurrentes. El flag por sí solo no demuestra incumplimiento legal si existe otro sistema de registro válido. | Mantener fail-closed; certificar el sistema completo y revisar alternativa laboral vigente. |
@@ -372,6 +372,16 @@ Este apartado conserva únicamente el antecedente documental de una designación
 
 **Verificación pendiente:** ejecutar CI completo sobre el nuevo SHA; revisar todos los consumidores del flag; validar los hooks en Wix Local Editor cuando QA sea accesible. Esta decisión supersede la autorización TEC-037 en cuanto a la habilitación técnica global: TEC-037 se conserva como antecedente histórico, no como permiso operativo actual.
 
+
+---
+
+## Enmienda del propietario — 2026-11-27
+
+La orden posterior del propietario sustituye la pausa global de writers definida en el punto 4 de QA-2026-11-14-B y la decisión 01 de la tabla anterior. Se elimina el interruptor global de escritura fiscal/contable y el rechazo genérico de registros sintéticos. Los flujos sintéticos recorren el mismo código de dominio que el resto de ejecuciones; la naturaleza del registro se determina mediante metadatos de backend.
+
+Esta enmienda no elimina ni relaja: autorización backend, validación de configuración fiscal cuando la operación requiere emisión fiscal, contratos y conciliación matemática, hash-chain, idempotencia, locks, ni append-only. Tampoco autoriza pagos, emisión/transmisión a AEAT, comunicaciones reales, publicación o efectos externos. La ausencia de configuración fiscal debe producir un error específico y accionable en la operación fiscal, no un interruptor global que impida ejecutar otras operaciones.
+
+Implementación en rama `remove-global-ledger-write-gates`; pendiente CI y revisión de diff. No implica despliegue ni Runtime PASS.
 
 ---
 

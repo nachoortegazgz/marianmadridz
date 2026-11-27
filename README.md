@@ -7,7 +7,9 @@
 
 ## Estado ejecutivo — 2026-11-27
 
-**MVP operativo: NO-GO.** El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
+**MVP operativo: NO-GO.**
+
+La rama de trabajo `remove-global-ledger-write-gates` elimina los interruptores globales de escritura fiscal/contable; no elimina validación fiscal, autorización, integridad, idempotencia ni concurrencia. La aceptación Runtime y la habilitación productiva siguen pendientes. El repositorio contiene implementación y pruebas offline de varios flujos, pero no existe aceptación E2E de la aplicación en Wix Runtime ni evidencia de que el SHA actual de `main` esté sincronizado con el Editor/Preview.
 
 - **Main:** `f0b30c31c8ad924e42f8790338fa223716026420` (consolidación documental PR #645).
 - **TPV:** PR #640 integrada. Clasificación temporal server-side y gate de venta alineado con `validarVentaBorrador()`. El TPV continúa en MODO CONSULTA; `saleReady=false`. No se acredita venta persistida, pago, movimiento físico ni cierre Runtime.

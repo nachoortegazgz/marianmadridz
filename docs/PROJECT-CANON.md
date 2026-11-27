@@ -29,6 +29,7 @@
 - `registrarVenta()` aplica las reglas de preparación antes de aceptar una operación real. Los tests deben cubrir tanto rechazo por gates reales como ejecución del mismo flujo de dominio con fixtures y puertos simulados.
 - No se infiere cobro por la existencia de una intención. Pago verificado, movimiento físico y registro fiscal son etapas separadas.
 - Los ledgers físicos, fiscales, contables, laborales y cierres declarados append-only son inmutables, también cuando el dato es sintético; las correcciones se realizan con nuevos registros rectificativos trazables.
+- No se utilizan interruptores globales que deshabiliten writers por entorno. Cada operación atraviesa el mismo código y sus validaciones de dominio, autorización, configuración, idempotencia y concurrencia; los datos sintéticos se identifican por metadatos, no por un runtime alternativo.
 
 ## 4. Reservas
 

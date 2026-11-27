@@ -25,7 +25,9 @@
 ## Gates y límites por contexto
 
 - La naturaleza temporal se deriva en backend; no aceptar valores del cliente.
-- La falta de configuración productiva no debe bloquear unitarias, contratos ni integración simulada. Probar con fixtures sintéticos y adaptadores simulados, invocando las mismas funciones de dominio.
+- No existe un interruptor global de escritura fiscal/contable. Los writers recorren el mismo código en todos los entornos y aplican validaciones de dominio, autorización, configuración, locks e idempotencia.
+- La falta de configuración fiscal debe producir un error específico y accionable en la operación afectada; no deshabilitar globalmente los writers ni las suites de pruebas.
+- Los fixtures sintéticos se identifican mediante metadatos; los adaptadores simulados sustituyen solo infraestructura, no la lógica de negocio.
 - Los tests deben cubrir explícitamente configuración ausente/inválida y recorrido válido con fixture. No fabricar configuración fiscal real para conseguir un PASS.
 - `registrarVenta` no crea intención nueva cuando `saleReady=false` para la operación evaluada; los replays idempotentes se resuelven antes del gate.
 - El TPV actual permanece MODO CONSULTA/`saleReady=false` según la última evidencia Runtime; este bloqueo productivo no impide desarrollar ni probar el dominio aislado.

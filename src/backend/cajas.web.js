@@ -26,7 +26,6 @@ import {
     OPERATIONAL_COLLECTIONS,
     SINGLETONS,
     SDK_CONFIG,
-    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     CHANNEL_TYPE,
@@ -560,9 +559,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
     const traceId = payload?.traceId || makeTraceId("manual-tx");
     try {
         await requireCajero(traceId);
-        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
-        }
         await validateFiscalConfig(traceId);
         const { nifEmisor } = await _getFiscalKeys();
 
@@ -617,9 +613,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         const transactionId = _safeTrim(payload?.transactionId) || null;
 
         const inDto = normalizeMovementKeys({ ...(payload || {}) });
-        if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(inDto)) {
-            return { status: "ERROR", data: null, error: { code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION", message: "Los registros de simulacion no pueden persistirse en el ledger operativo." }, traceId };
-        }
         const eventType = _safeTrim(inDto.eventType).toUpperCase() || (
             [MOVEMENT_TYPE.REEMBOLSO, MOVEMENT_TYPE.DEVOLUCION, MOVEMENT_TYPE.DEVOLUCION_SERVICIO].includes(movementType)
                 ? EVENT_TYPE.RECTIFICATIVA
@@ -1496,9 +1489,6 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             if (!closingActor?.resourceId) {
                 return { status: "ERROR", data: null, error: { code: "STAFF_CONTEXT_REQUIRED", message: "No se pudo resolver al responsable autenticado del cierre." }, traceId };
             }
-        }
-        if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-            return { status: "ERROR", data: null, error: { code: "FISCAL_LEDGER_WRITES_DISABLED", message: "La escritura fiscal permanece deshabilitada hasta completar la certificacion de runtime." }, traceId };
         }
         const currentCashRegister = await getCashRegisterSingleton();
         if (_isSimulationCashRegister(currentCashRegister)) {

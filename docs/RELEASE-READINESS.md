@@ -17,7 +17,7 @@
 ## Bloqueos productivos vigentes
 
 - Venta/cobro/persistencia comercial: no habilitados en Runtime según la última auditoría.
-- Fiscal/SIF: configuración legal única no acreditada; writer fiscal deshabilitado.
+- Fiscal/SIF: la configuración legal única no está acreditada. Se retiró el interruptor global que impedía invocar writers; cada escritura sigue condicionada por validación de configuración fiscal, contrato, autorización y controles de integridad. Esto no acredita conformidad fiscal ni habilitación productiva.
 - Recuperación fiscal: tres compensaciones PENDING_RECOVERY pendientes de correlación con sus operaciones fuente.
 - Jornada laboral: writer deshabilitado; sin fichajes en el último read-back.
 - Bookings ↔ CitasF2: seis proyecciones divergentes pendientes de reconciliación backend.

@@ -3,22 +3,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { load } from "./loader.mjs";
 
-test("production fiscal and accounting gates remain fail-closed", async () => {
+test("fiscal writers have no global environment disable switches", async () => {
     const config = await readFile(new URL("../internalConfig.js", import.meta.url), "utf8");
-    assert.match(config, /LEDGER_WRITES_ENABLED:\s*false/);
-    assert.match(config, /ACCOUNTING_LEDGER_WRITES_ENABLED:\s*false/);
-    assert.match(config, /ALLOW_SIMULATION_RECORDS:\s*false/);
+    assert.doesNotMatch(config, /FISCAL_RUNTIME_POLICY|LEDGER_WRITES_ENABLED|ACCOUNTING_LEDGER_WRITES_ENABLED|ALLOW_SIMULATION_RECORDS/);
 });
 
-test("offline loader overrides fiscal gates only in the test loader", async () => {
-    const [config, loader] = await Promise.all([
-        readFile(new URL("../internalConfig.js", import.meta.url), "utf8"),
-        readFile(new URL("./loader.mjs", import.meta.url), "utf8"),
-    ]);
-    assert.match(loader, /\.replace\("LEDGER_WRITES_ENABLED: false", "LEDGER_WRITES_ENABLED: true"\)/);
-    assert.match(loader, /\.replace\("ACCOUNTING_LEDGER_WRITES_ENABLED: false", "ACCOUNTING_LEDGER_WRITES_ENABLED: true"\)/);
-    assert.match(loader, /\.replace\("ALLOW_SIMULATION_RECORDS: false", "ALLOW_SIMULATION_RECORDS: true"\)/);
-    assert.doesNotMatch(config, /process\.env|globalThis\.__mm.*Policy/);
+test("offline loader does not rewrite business configuration", async () => {
+    const loader = await readFile(new URL("./loader.mjs", import.meta.url), "utf8");
+    assert.doesNotMatch(loader, /LEDGER_WRITES_ENABLED|ACCOUNTING_LEDGER_WRITES_ENABLED|ALLOW_SIMULATION_RECORDS|internalConfigUrl/);
+    assert.match(loader, /Only infrastructure adapters are replaced by deterministic in-memory doubles/);
 });
 
 test("wix-fetch offline adapter blocks every host except the installed signer mock", async () => {

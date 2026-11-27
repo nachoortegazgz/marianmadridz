@@ -53,7 +53,6 @@ import {
     BUSINESS_COLLECTIONS,
     OPERATIONAL_COLLECTIONS,
     SDK_CONFIG,
-    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     IVA_RATES,
     TIPO_FACTURA,
@@ -167,7 +166,7 @@ function _toFiscalStartDateText(value) {
 function _buildFiscalSystemConfig(config) {
     if (!config || _safeTrim(config.recordType).toUpperCase() !== RECORD_TYPE.CONFIG_SISTEMA ||
         _safeTrim(config._id) !== "CONFIG_SISTEMA_FISCAL") {
-        throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "Falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL o su recordType no es CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear el singleton CONFIG_SISTEMA_FISCAL con los campos del contrato fiscal aprobado.", "Validar los datos identificativos con AEAT antes de guardar.", "Mantener LEDGER_WRITES_ENABLED=false hasta completar la certificación legal y Runtime.", "Reintentar tras el alta y su verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, expectedId: "CONFIG_SISTEMA_FISCAL" }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "Falta el singleton MapaStaff CONFIG_SISTEMA_FISCAL o su recordType no es CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear el singleton CONFIG_SISTEMA_FISCAL con los campos del contrato fiscal aprobado.", "Validar los datos identificativos con AEAT antes de guardar.", "Completar y verificar la configuración fiscal antes de emitir registros fiscales.", "Reintentar tras el alta y su verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, expectedId: "CONFIG_SISTEMA_FISCAL" }, retryable: false });
     }
 
     const resolved = {
@@ -183,14 +182,14 @@ function _buildFiscalSystemConfig(config) {
         fechaInicioVerifactu: _toFiscalStartDateText(config.fechaInicioVerifactu),
     };
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
-        throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Mantener deshabilitados los writers hasta corregir y certificar."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_INVALID_TAX_ID", userMessage: "El identificador fiscal no es válido. Contacta al responsable legal.", technicalDetail: "taxId no supera isValidNifOrEuVat.", remediation: ["Revisar taxId en CONFIG_SISTEMA_FISCAL.", "Verificar el identificador con documentación oficial y AEAT.", "Corregir el identificador fiscal y verificarlo antes de repetir la operación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null }, retryable: false });
     }
 
     const missing = Object.entries(resolved)
         .filter(([, value]) => value === "" || value === null)
         .map(([key]) => key);
     if (missing.length) {
-        throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "La configuración fiscal está incompleta. Contacta al responsable legal.", technicalDetail: "Faltan campos fiscales obligatorios: " + missing.join(", "), remediation: ["Revisar el contrato fiscal aprobado y los campos obligatorios de CONFIG_SISTEMA_FISCAL.", "Completar únicamente datos respaldados por documentación legal.", "Validar el NIF con AEAT y mantener los writers deshabilitados hasta certificación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null, missingFields: missing }, retryable: false });
+        throw createActionableError({ code: "FISCAL_CONFIG_INCOMPLETE", userMessage: "La configuración fiscal está incompleta. Contacta al responsable legal.", technicalDetail: "Faltan campos fiscales obligatorios: " + missing.join(", "), remediation: ["Revisar el contrato fiscal aprobado y los campos obligatorios de CONFIG_SISTEMA_FISCAL.", "Completar únicamente datos respaldados por documentación legal.", "Validar el NIF con AEAT y completar los campos obligatorios antes de repetir la operación."], contextSnapshot: { collection: MAPA_STAFF_COL, configId: config?._id || null, missingFields: missing }, retryable: false });
     }
     if (!isValidNifOrEuVat(resolved.nifProductor)) {
         throw new Error("FISCAL_CONFIG_INVALID_TAX_ID: MapaStaff CONFIG_SISTEMA taxId debe ser un NIF/NIE/CIF/VAT-UE valido");
@@ -219,7 +218,7 @@ async function _getFiscalSystemConfig(traceId) {
 
     const items = res?.items || [];
     if (items.length !== 1) {
-        throw createActionableError({ code: items.length === 0 ? "FISCAL_CONFIG_MISSING" : "FISCAL_CONFIG_NOT_UNIQUE", userMessage: items.length === 0 ? "Configuración fiscal no disponible. Contacta al responsable legal para completarla." : "Hay varias configuraciones fiscales. Contacta al responsable legal para corregirlo.", technicalDetail: "Se esperaba un singleton CONFIG_SISTEMA_FISCAL; encontrados: " + items.length + ".", remediation: items.length === 0 ? ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos con AEAT y mantener LEDGER_WRITES_ENABLED=false hasta certificación.", "Reintentar tras la verificación."] : ["No borrar ni sobrescribir registros fiscales desde código.", "Identificar con el responsable legal el registro canónico.", "Resolver la duplicidad mediante procedimiento autorizado.", "Mantener los writers fiscales deshabilitados hasta validar la configuración."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: items.length }, retryable: false });
+        throw createActionableError({ code: items.length === 0 ? "FISCAL_CONFIG_MISSING" : "FISCAL_CONFIG_NOT_UNIQUE", userMessage: items.length === 0 ? "Configuración fiscal no disponible. Contacta al responsable legal para completarla." : "Hay varias configuraciones fiscales. Contacta al responsable legal para corregirlo.", technicalDetail: "Se esperaba un singleton CONFIG_SISTEMA_FISCAL; encontrados: " + items.length + ".", remediation: items.length === 0 ? ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos identificativos con AEAT y repetir la operación tras la verificación.", "Reintentar tras la verificación."] : ["No borrar ni sobrescribir registros fiscales desde código.", "Identificar con el responsable legal el registro canónico.", "Resolver la duplicidad mediante procedimiento autorizado.", "Corregir la configuración duplicada mediante el procedimiento autorizado antes de repetir la operación."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: items.length }, retryable: false });
     }
 
     const resolved = _buildFiscalSystemConfig(items[0]);
@@ -439,27 +438,6 @@ export async function registrarEventoEconomico(input) {
             error: {
                 code: "Z_CLOSING_REQUIRES_CANONICAL_WRITER",
                 message: "Los cierres Z solo pueden registrarse mediante el escritor de HistoricoCierresZ.",
-                traceId,
-            },
-        };
-    }
-    if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(input)) {
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION",
-                message: "Los registros de simulacion no pueden persistirse en el ledger operativo.",
-                traceId,
-            },
-        };
-    }
-    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                ...toPublicShape(createActionableError({ code: "FISCAL_LEDGER_WRITES_DISABLED", userMessage: "La escritura fiscal está deshabilitada hasta completar su certificación legal y técnica.", technicalDetail: "FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true.", remediation: ["No intentar habilitar el writer ni sortear este control.", "Completar CONFIG_SISTEMA_FISCAL con datos legalmente verificados.", "Ejecutar y documentar las pruebas Runtime y la certificación aplicable.", "Solicitar autorización expresa antes de cambiar el flag fiscal."], contextSnapshot: { traceId, gate: "LEDGER_WRITES_ENABLED" }, retryable: false })),
                 traceId,
             },
         };
