@@ -411,9 +411,21 @@ export function bulkUpdate(collection, records, options = {}) {
     return elevatedBulkUpdate(collection, records, options);
 }
 
-export function bulkRemove(collection, ids, options) {
-    assertBulkRemoveAllowed(collection, ids, options);
-    return elevatedBulkRemove(collection, ids, options);
+export function bulkRemove(collection, ids) {
+    const count = Array.isArray(ids) ? ids.length : 0;
+    if (!Array.isArray(ids) || count === 0 || count > 1000 ||
+        ids.some((id) => typeof id !== "string" || !id.trim())) {
+        throw dataAccessError("BULK_REMOVE_IDS_INVALID");
+    }
+    return Promise.resolve({
+        removed: 0,
+        skipped: count,
+        failed: 0,
+        errors: [{
+            code: "CMS_BULK_DELETE_PROHIBITED",
+            message: "Los registros se conservan; no se ha ejecutado ningún borrado.",
+        }],
+    });
 }
 
 function buildBulkPatchCondition(filter) {
