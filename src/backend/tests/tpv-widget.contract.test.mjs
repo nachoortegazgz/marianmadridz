@@ -321,6 +321,8 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     // Opening is a fresh read of CajaActual. The server issues the date/session
     // preview and revalidates it before creating the canonical session projection.
     assert.match(html, /Apertura de caja: preflight autoritativo desde CajaActual/);
+    assert.match(html, /Usuario autenticado: /);
+    assert.match(html, /Operador de sesión: /);
     assert.match(html, /call\("CASHIER_STATE", \{\}, "CASHIER_STATE_RES"\)/);
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
