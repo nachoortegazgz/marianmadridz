@@ -92,13 +92,14 @@ export const obtenerEstadoCaja = webMethod(
             preparedAt: new Date().toISOString(),
         };
         if (!session) {
+            const canOpenSession = operator.rolWebsite === "ADMIN" && cajaActual.canStartSession === true;
             return {
                 status: "SUCCESS",
                 data: {
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
-                    canOpenSession: operator.rolWebsite === "ADMIN",
-                    nextSessionPreview: operator.rolWebsite === "ADMIN" ? nextSessionPreview : null,
+                    canOpenSession,
+                    nextSessionPreview: canOpenSession ? nextSessionPreview : null,
                     cajaActual,
                     operationalWritesAvailable: true,
                     operationalWritesUnavailableReason: null,
