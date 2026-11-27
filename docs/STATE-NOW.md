@@ -1,13 +1,25 @@
 # Estado actual — 2026-11-27
 
-**Estado: NO-GO para MVP operativo/comercial.** Desarrollo y QA con fixtures permitidos. Esta instantánea no sustituye nuevas lecturas del repositorio, Wix o CMS.
+**MVP operativo/comercial: NO-GO.** Desarrollo y QA offline con fixtures: PASS. Wix Runtime E2E, publicación y sincronización Git-Wix: no acreditados.
 
-## Git y cambios
+## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`.
-- PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, fingerprint de replay y validación del movimiento antes de persistir. CI reportada PASS para esa revisión. El mapping AEAT no está integrado.
-- PR #651 abierta: `fix/tpv-actionable-errors-and-guards`; HEAD consultado `235e78c48dab4e1c3d78518c24a3042b5165e257`. Propone normalización común de errores, guards dentro de try/catch, política no-delete y consolidación de writers/lectores. CI final sobre este HEAD pendiente; no tratar como integrado.
-- CI no acredita Wix Runtime ni sincronización Git-Wix.
+- PR #650 integrada: `transactionId` obligatorio en el writer fiscal manual, fingerprint de replay y validación del movimiento antes de persistir. Mapping AEAT no integrado.
+- PR #651 abierta: `fix/tpv-actionable-errors-and-guards`; HEAD `7771f4c6bb7da61ecf60bd58708b26d5331745dd`.
+- CI de ese HEAD: **PASS**. Layer 1: 29 suites / 376 tests; Layer 2: 16 suites / 249 tests; suite completa: 81 suites / 763 tests; 0 fallos. Gitleaks, npm audit, contratos SDK Wix y ESLint: PASS.
+- CI no acredita Wix Runtime ni sincronización Git-Wix. PR no integrada.
+
+## Cambios consolidados en PR #651
+
+- Error TPV común: código estable, mensaje público seguro, remediation, retryability, `traceId` y metadatos de persistencia/recuperación. `technicalDetail` se limita al código seguro; no se reenvían mensajes brutos ni datos de proveedor al frontend.
+- DAL: `bulkRemove` y `assertBulkRemoveAllowed` deniegan borrado físico. `removeById` solo permite retirada lógica CAS para tipos operativos autorizados (cachés, token, lock y rate limit).
+- Crons: cachés, tokens, locks y rate limits se retiran lógicamente; idempotencia, flags y evidencia de auditoría se conservan. No se purgan ledgers ni evidencia.
+- Locks del ledger contable: adquisición y liberación con CAS versionado y verificación de resultado.
+- Hooks CMS: ledgers físicos, contables, cierres, jornada y eventos webhook append-only; intención comercial solo admite cambios validados.
+- TPV reader: valida identidad, hash, secuencia, timestamp y envelope antes de tratar un registro como ledger. Sin clasificador genérico por entorno.
+- Marcadores explícitos de smoke/fixture se excluyen de lecturas fiscales/recibos cuando el contrato lo exige; etiquetas genéricas REAL/SYNTHETIC/SIMULATION no clasifican negocio.
+- Corregido `TransaccionesTPV_beforeInsert` para no referenciar un registro previo inexistente.
 
 ## Wix/CMS — último read-back documentado
 
@@ -15,34 +27,17 @@
 - TPV page ID `yl5th`, ruta `/blank`.
 - Recuentos observados: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`.
 - No había `recordType=CONFIG_SISTEMA` ni `productionActivationAt` en los cinco MapaStaff consultados.
-- Lectura fechada 27-11-2026; no es una consulta live actual. No se hicieron escrituras en esas auditorías.
+- Lectura fechada 27-11-2026; no es consulta live actual. No se hicieron escrituras en esas auditorías.
 
-## TPV
+## Pendientes
 
-- No se ha acreditado venta, cobro, movimiento físico ni cierre en Wix Runtime.
-- `TransaccionesTPV` es intención comercial; `MovimientosCaja` ledger físico; `CajaActual` proyección; `ControlOperativo` locks/auditoría.
-- El bloqueo global fiscal/contable no debe sustituir validaciones específicas. Configuración o datos obligatorios ausentes deben producir error de dominio accionable antes de persistir.
-- La política común de errores está definida por `tpvError.js` en PR #651: código estable, mensaje público seguro, remediation, detalle técnico acotado, retryability, `traceId` y metadatos de persistencia/recuperación. Pendiente de CI/merge para considerar integrada.
-- Borrado prohibido: DAL, operaciones bulk y hooks CMS deben denegar explícitamente. Los crons no purgan físicamente.
-- Edición validada solo para registros operativos/comerciales permitidos. Ledgers contabilizados, cierres y registros laborales se rectifican mediante nuevos eventos trazables.
-- No clasificar registros por entorno ni por etiquetas REAL/SYNTHETIC/SIMULATION. Los marcadores explícitos de smoke/simulación son exclusivos de fixtures y no convierten una operación en real.
+1. Auditar `eventLog.js` y consumidores: sigue existiendo fallback `TX_${sequenceNumber}`; el contrato global de `transactionId` no está cerrado.
+2. Mapping AEAT oficial de alta/anulación, tipo, serie/número, fecha, importes y hash previo. No inferirlo desde el hash interno ni recalcular históricos.
+3. Wix Preview/Runtime E2E con fixture/sesión aislada y writer canónico. No reutilizar `CajaActual` ABIERTA ni activar pagos/remesas.
+4. Reconciliar las seis divergencias Bookings/CitasF2 con proceso backend idempotente.
+5. Validar transporte Capa 3 SharePoint/Graph/Power Automate en tenant aislado.
+6. Confirmar SHA/fingerprint instalado en Wix. No publicar como parte de esta PR.
 
-## Otros dominios
+## Evidencia
 
-- Bookings/CitasF2: última auditoría encontró 6 proyecciones CONFIRMED/PENDING divergentes de Bookings V2 CANCELED. Reconciliación backend pendiente.
-- Capa 3: paquete trimestral determinista preparado en código; transporte SharePoint/Graph/Power Automate E2E no acreditado.
-- Jornada laboral: writer no validado; último read-back sin fichajes.
-
-## Pendientes ordenados
-
-1. Revisar PR #651: diff, imports/consumidores, DAL/hooks/bulk/crons no-delete, errores de todos los WebMethods, persistencia parcial e idempotencia/concurrencia.
-2. Ejecutar CI completa sobre el HEAD final de PR #651; corregir fallos antes de merge.
-3. Auditar `eventLog.js` y consumidores; establecer alcance real de `transactionId`.
-4. Completar mapping AEAT oficial contra especificación y esquema canónico; no inferirlo desde el hash interno ni tocar históricos.
-5. Preparar Wix Runtime E2E con fixture/sesión aislada y writer canónico. No reutilizar `CajaActual` ABIERTA ni activar pagos/remesas.
-6. Reconciliar Bookings/CitasF2 con proceso backend idempotente y pruebas de fixture.
-7. Validar Capa 3 con transporte simulado y, después, tenant SharePoint aislado.
-
-## Regla de evidencia
-
-Cada PASS debe identificar SHA, entorno, comando/flujo ejecutado y resultado. Distinguir estático, unitario, integración simulada, Preview, Runtime y producción. No declarar E2E ni despliegue validado sin ejecución real.
+Cada PASS identifica SHA, entorno, comando/flujo y resultado. No extrapolar CI a Runtime ni declarar E2E sin ejecución real.
