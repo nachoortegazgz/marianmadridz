@@ -175,7 +175,7 @@ test("MovimientosCaja permits current physical TPV events but remains append-onl
     });
 });
 
-test("TransaccionesTPV validates backend-priced commercial records and is append-only", () => {
+test("TransaccionesTPV validates backend-priced records and permits only synthetic pending-intent mutation", () => {
     const record = {
         _id: "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
         sessionId: "TPV-SESSION-20261125",
@@ -210,8 +210,10 @@ test("TransaccionesTPV validates backend-priced commercial records and is append
     };
     assert.equal(assertTransaccionesTPVRecord(record), true);
     assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
-    assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record), { code: "LEDGER_APPEND_ONLY" });
-    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "LEDGER_APPEND_ONLY" });
+    assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record));
+    assert.doesNotThrow(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record));
+    assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
+    assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "REAL" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
     assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
 });
 
