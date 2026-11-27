@@ -106,25 +106,29 @@ Math.max(30, SDK_CONFIG.JOBS.AUDIT_RETENTION_DAYS);
 const IDEMPOTENCY_RETENTION_MS = 24 * 60 * 60 * 1000;
 
 async function _retireControlRows(collection, rows, expectedControlType) {
-    const outcomes = await Promise.allSettled((rows || []).map((item) =>
-        dalRemoveById(collection, item._id, { expectedControlType })
-    ));
     const result = { retired: 0, failed: 0, errors: [] };
-    outcomes.forEach((outcome, index) => {
-        if (outcome.status === "fulfilled" && outcome.value?.retired === true) {
-            result.retired++;
-            return;
-        }
-        result.failed++;
-        if (result.errors.length < 10) {
-            result.errors.push({
-                id: rows[index]?._id || null,
-                code: outcome.status === "rejected"
-                    ? outcome.reason?.code || outcome.reason?.message || "CONTROL_RETIRE_FAILED"
-                    : "CONTROL_RETIRE_NOT_CONFIRMED",
-            });
-        }
-    });
+    const batchSize = 10;
+    for (let offset = 0; offset < (rows || []).length; offset += batchSize) {
+        const batch = rows.slice(offset, offset + batchSize);
+        const outcomes = await Promise.allSettled(batch.map((item) =>
+            dalRemoveById(collection, item._id, { expectedControlType })
+        ));
+        outcomes.forEach((outcome, index) => {
+            if (outcome.status === "fulfilled" && outcome.value?.retired === true) {
+                result.retired++;
+                return;
+            }
+            result.failed++;
+            if (result.errors.length < 10) {
+                result.errors.push({
+                    id: batch[index]?._id || null,
+                    code: outcome.status === "rejected"
+                        ? outcome.reason?.code || outcome.reason?.message || "CONTROL_RETIRE_FAILED"
+                        : "CONTROL_RETIRE_NOT_CONFIRMED",
+                });
+            }
+        });
+    }
     return result;
 }
 
