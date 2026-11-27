@@ -345,9 +345,27 @@ export const cerrarSesionCaja = webMethod(
                         wql.and(wql.eq("sessionId", sessionId), wql.eq("movementType", "CIERRE"))
                     );
                     const prior = priorClosures[0] || null;
-                    if (prior && Number(prior.payload?.countedCashMinor) !== countedCashMinor) {
+                    if (!prior) throw new Error("TPV_CLOSE_MOVEMENT_MISSING");
+                    if (Number(prior.payload?.countedCashMinor) !== countedCashMinor) {
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
+                    await appendTpvAudit({
+                        idempotencyKey: "CAJA_CIERRE:" + sessionId.slice(0, 70) + ":AUDIT",
+                        action: "CAJA_SESSION_CLOSED",
+                        actorId: operator.operatorId,
+                        entityType: "SESION_CAJA",
+                        entityId: sessionId,
+                        traceId,
+                        payload: {
+                            sessionId,
+                            movementId: prior._id,
+                            expectedCashMinor: Number(prior.payload?.expectedCashMinor || 0),
+                            countedCashMinor,
+                            countedCardMinor: prior.payload?.countedCardMinor ?? null,
+                            differenceMinor: Number(prior.payload?.differenceMinor || 0),
+                            observations: String(prior.payload?.observations || ""),
+                        },
+                    });
                     const replayData = {
                         sessionId,
                         saldoFinal: prior ? fromMinorUnits(Number(prior.payload?.countedCashMinor || 0)) : null,
@@ -397,7 +415,7 @@ export const cerrarSesionCaja = webMethod(
                     closedAt,
                 });
                 await appendTpvAudit({
-                    idempotencyKey: idempotencyKey + ":AUDIT",
+                    idempotencyKey: "CAJA_CIERRE:" + sessionId.slice(0, 70) + ":AUDIT",
                     action: "CAJA_SESSION_CLOSED",
                     actorId: operator.operatorId,
                     entityType: "SESION_CAJA",
