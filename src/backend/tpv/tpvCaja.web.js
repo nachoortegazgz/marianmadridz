@@ -175,7 +175,8 @@ export const abrirSesionCaja = webMethod(
             const dayKey = madridDayKey();
             const sessionId = "TPV-SESSION-" + dayKey;
             const expectedSessionId = String(input.expectedSessionId || "").trim();
-            if (expectedSessionId && expectedSessionId !== sessionId) {
+            if (!expectedSessionId) throw new Error("TPV_SESSION_PREVIEW_REQUIRED");
+            if (expectedSessionId !== sessionId) {
                 throw new Error("TPV_SESSION_PREVIEW_STALE");
             }
             return await withTpvSessionLock(sessionId, traceId, async () => {
