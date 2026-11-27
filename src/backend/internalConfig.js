@@ -580,7 +580,7 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
     [CONTROL_TYPE.SLOT_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType"]),
       anyConditionFields: Object.freeze(["version", "expiresAt"]),
-      allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
       fields: Object.freeze({
         status: Object.freeze(["SET_FIELD"]),
         expiresAt: Object.freeze(["SET_FIELD"]),
