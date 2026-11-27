@@ -12,8 +12,24 @@ function validUtcInstant(value) {
         !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)) {
         return null;
     }
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/.exec(value);
+    if (!match) return null;
+    const [, year, month, day, hour, minute, second, fraction = "0"] = match;
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
+    if (Number.isNaN(date.getTime())) return null;
+    const expected = [
+        Number(year), Number(month) - 1, Number(day),
+        Number(hour), Number(minute), Number(second),
+    ];
+    const actual = [
+        date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(),
+        date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(),
+    ];
+    if (expected.some((part, index) => part !== actual[index]) ||
+        Number(fraction.padEnd(3, "0")) !== date.getUTCMilliseconds()) {
+        return null;
+    }
+    return date;
 }
 
 export function classifyTpvRecordNature(recordTimestamp, productionActivationAt = null) {
