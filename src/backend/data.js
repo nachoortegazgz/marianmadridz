@@ -593,9 +593,22 @@ export function HistoricoCierresZ_beforeInsert(item) {
 
 // Wix Data beforeUpdate hook: https://dev.wix.com/docs/velo/apis/wix-data/hooks/before-update
 export function HistoricoCierresZ_beforeUpdate(item) {
-    _normalizeCmsDateTimes(item, ["closedAt", "verifiedAt", "sentAt"]);
-    assertHistoricoCierresZ(item);
-    return item;
+    throw createActionableError({
+        code: "HISTORICO_CIERRES_Z_APPEND_ONLY",
+        userMessage: "No se puede modificar un cierre Z histórico.",
+        technicalDetail: "HistoricoCierresZ es un registro de cierre append-only.",
+        remediation: [
+            "Conservar el cierre original y su evidencia.",
+            "Registrar cualquier corrección mediante un asiento o evento rectificativo trazable.",
+            "No alterar importes, firma ni fecha del cierre original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function HistoricoCierresZ_beforeRemove() {
@@ -614,7 +627,22 @@ export function RegistrosHorariosStaff_beforeInsert(item) {
 }
 
 export function RegistrosHorariosStaff_beforeUpdate(item) {
-    return RegistrosHorariosStaff_beforeInsert(item);
+    throw createActionableError({
+        code: "STAFF_TIME_LEDGER_APPEND_ONLY",
+        userMessage: "No se puede modificar un registro horario.",
+        technicalDetail: "RegistrosHorariosStaff es un ledger laboral append-only.",
+        remediation: [
+            "Registrar una rectificación horaria trazable.",
+            "Conservar el registro original y su firma.",
+            "No sobrescribir la evidencia de jornada.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
+            operation: "UPDATE",
+            recordId: _safeTrim(item?._id) || null,
+        },
+        retryable: false,
+    });
 }
 
 export function RegistrosHorariosStaff_beforeRemove() {
@@ -940,6 +968,10 @@ export async function TransaccionesTPV_beforeUpdate(item) {
         id,
         CONSISTENCY.STRONG
     );
+    if (!original) _schemaError("TransaccionesTPV update target not found");
+    if (_safeTrim(item.status) !== _safeTrim(original.status)) {
+        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
+    }
 
     try {
         assertTransaccionesTPVRecord(item);
