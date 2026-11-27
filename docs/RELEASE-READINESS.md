@@ -20,7 +20,8 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | #210 Main | Ruleset y checks requeridos acreditados | PENDIENTE |
 | #435 TPV QA | Preparación autoritativa, permisos, idempotencia y persistencia validados en Wix Runtime | PR #611 preparación Wix read-only + PR #612 contrato de preescritura V1 integrados; CI offline PASS; writer, persistencia real y Wix Preview/Runtime pendientes |
 | P1.1 Apertura de sesión | PARCIAL | `tpvCaja.web.js:148-189`: autorización ADMIN, guard physical y actualización CajaActual; falta evento de apertura en MovimientosCaja; CI offline PASS, runtime pendiente |
-| P1.2 Cierre de sesión | PARCIAL | `tpvCaja.web.js:cerrarSesionCaja` cierra CajaActual bajo lock, registra diferencia en MovimientosCaja y auditoría ControlOperativo con idempotencia; no genera Ticket Z ni toca ledger fiscal. CI pendiente de esta rama. |
+| P1.2 Cierre operativo de sesión | HABILITADO | `tpvCaja.web.js:cerrarSesionCaja` cierra CajaActual bajo lock, registra diferencia en MovimientosCaja y auditoría ControlOperativo con idempotencia; no genera Ticket Z ni toca ledger fiscal. |
+| P1.2 Estado global de cierre | PARCIAL | El cierre operativo está habilitado; la emisión de Ticket Z real sigue bloqueada por Contract C. |
 | P1.2-X Ticket X | HABILITADO | `tpvCierres.web.js:generarTicketX` genera snapshot no fiscal en ControlOperativo; no cierra sesión ni escribe MovimientosCaja. |
 | P1.2-E Exportación movimientos | HABILITADO | `tpvExport.web.js:exportarMovimientos` exporta MovimientosCaja por rango/ sesión en JSON o CSV, 1.000 registros por página y cursor; solo ADMIN; excluye campos fiscales. |
 | P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:392-455`; `validation.js:246-280`: guard physical y hook físico habilitados con cadena hash; CI offline PASS, runtime no ejecutado |
