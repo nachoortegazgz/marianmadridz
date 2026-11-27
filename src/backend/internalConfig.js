@@ -225,6 +225,7 @@ export const SDK_CONFIG = Object.freeze({
     CMS_MS: 15000,
     API_MS: 15000,
     CHECKOUT_MS: 20000,
+    BOOKING_CREATION_MS: 25000,
     WEBHOOK_MS: 30000,
   }),
 
