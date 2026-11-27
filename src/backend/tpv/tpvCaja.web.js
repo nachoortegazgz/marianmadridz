@@ -82,7 +82,37 @@ export const obtenerEstadoCaja = webMethod(
         await requireCajero(traceId);
 
         const operator = await resolveTpvContext(traceId);
+        const cajaResult = await initializeTpvCaja();
+        const caja = cajaResult.item;
+        const runtime = caja.conceptOperations?.tpvRuntime &&
+            typeof caja.conceptOperations.tpvRuntime === "object"
+            ? caja.conceptOperations.tpvRuntime
+            : {};
+        const canonicalProjection =
+            caja.snapshotSource === TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE &&
+            runtime.sourceType === TPV_RUNTIME_POLICY.SOURCE_TYPE &&
+            runtime.siteId === TPV_RUNTIME_POLICY.SITE_ID &&
+            runtime.ledgerVersion === TPV_RUNTIME_POLICY.LEDGER_VERSION &&
+            Number(runtime.schemaVersion) === TPV_RUNTIME_POLICY.SCHEMA_VERSION &&
+            Boolean(String(runtime.sessionId || "").trim()) &&
+            /^[a-f0-9]{64}$/i.test(String(runtime.eventHash || ""));
+        const cajaActual = {
+            singletonKey: caja.singletonKey || null,
+            projectionStatus: canonicalProjection ? "CANONICAL" : "LEGACY_UNVERIFIED",
+            cashRegisterStatus: caja.cashRegisterStatus || "DESCONOCIDO",
+            snapshotSource: caja.snapshotSource || null,
+            sessionId: canonicalProjection ? runtime.sessionId : null,
+            openedAt: canonicalProjection ? caja.openedAt || null : null,
+            openedBy: canonicalProjection ? caja.openedBy || null : null,
+        };
         const session = await latestTpvSession();
+        const dayKey = madridDayKey();
+        const nextSessionPreview = {
+            operationDate: dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8),
+            sessionId: "TPV-SESSION-" + dayKey,
+            timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+            preparedAt: new Date().toISOString(),
+        };
         if (!session) {
             return {
                 status: "SUCCESS",
@@ -90,6 +120,8 @@ export const obtenerEstadoCaja = webMethod(
                     status: OPERATIONAL_CASH_STATUS.NONE,
                     operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
                     canOpenSession: operator.rolWebsite === "ADMIN",
+                    nextSessionPreview: operator.rolWebsite === "ADMIN" ? nextSessionPreview : null,
+                    cajaActual,
                     operationalWritesAvailable: true,
                     operationalWritesUnavailableReason: null,
                     sessionId: null,
@@ -111,15 +143,18 @@ export const obtenerEstadoCaja = webMethod(
         const summary = status === OPERATIONAL_CASH_STATUS.OPEN
             ? await buildTpvSessionSummary(session)
             : null;
+        const canOpenSession = operator.rolWebsite === "ADMIN" &&
+            status === OPERATIONAL_CASH_STATUS.CLOSED &&
+            session.sessionId !== "TPV-SESSION-" + dayKey;
         return {
             status: "SUCCESS",
             data: {
                 sessionId: session.sessionId,
                 status,
                 operationalStatus: status,
-                canOpenSession: operator.rolWebsite === "ADMIN" &&
-                    status === OPERATIONAL_CASH_STATUS.CLOSED &&
-                    session.sessionId !== "TPV-SESSION-" + madridDayKey(),
+                canOpenSession,
+                nextSessionPreview: canOpenSession ? nextSessionPreview : null,
+                cajaActual,
                 operationalWritesAvailable: true,
                 operationalWritesUnavailableReason: null,
                 operatorId: session.operatorId || session.cashierMemberId || null,
@@ -128,6 +163,7 @@ export const obtenerEstadoCaja = webMethod(
                 operatorResourceId: session.operatorResourceId || null,
                 authenticatedOperatorId: operator.operatorId,
                 authenticatedActorId: operator.actorId,
+                authenticatedDisplayName: operator.operatorDisplayName,
                 openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
                 expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
                 cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
@@ -160,6 +196,10 @@ export const abrirSesionCaja = webMethod(
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "TPV-SESSION-" + dayKey;
+            const expectedSessionId = String(input.expectedSessionId || "").trim();
+            if (expectedSessionId && expectedSessionId !== sessionId) {
+                throw new Error("TPV_SESSION_PREVIEW_STALE");
+            }
             return await withTpvSessionLock(sessionId, traceId, async () => {
                 const idempotencyKey = "SESSION_OPEN:" + dayKey;
                 const current = await latestOpenTpvSession();
