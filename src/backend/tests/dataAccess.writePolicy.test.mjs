@@ -201,7 +201,7 @@ test("TransaccionesTPV validates backend-priced records and permits only synthet
         operatorId: "0114748d-2806-3928-9b97-ff0d09853759",
         createdAt: new Date("2026-11-25T10:00:00.000Z"),
         status: "PENDING_PAYMENT",
-        sourceType: "TPV",
+        sourceType: "SYNTHETIC",
         recordTimestamp: new Date("2026-11-25T10:00:00.000Z"),
         requiresReconciliation: true,
         draftOrderReason: "DRAFT_ORDER_API_UNAVAILABLE",
@@ -213,7 +213,7 @@ test("TransaccionesTPV validates backend-priced records and permits only synthet
     assert.doesNotThrow(() => assertInsertAllowed(C.TRANSACCIONES_TPV, record));
     assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, record));
     assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, record), { code: "CMS_DELETE_PROHIBITED" });
-    assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }));
+    assert.throws(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }), { code: "CMS_TPV_SYNTHETIC_INTENT_ONLY" });
     assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "TPV" }), { code: "CMS_DELETE_PROHIBITED" });
     assert.equal(DATA_ACCESS_WRITE_POLICY.removeCollections.includes(C.TRANSACCIONES_TPV), false);
     assert.throws(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }), /state or metadata invalid/);
@@ -240,7 +240,7 @@ test("WEBHOOK_EVENT is neither mutable nor removable", () => {
         controlType: T.WEBHOOK_EVENT,
     }), { code: "CMS_UPDATE_CONTROL_TYPE_DENIED" });
     assert.throws(() => assertRemoveAllowed(O.CONTROL_OPERATIVO, "event-1", T.WEBHOOK_EVENT), {
-        code: "CMS_REMOVE_SCOPE_DENIED",
+        code: "CMS_DELETE_PROHIBITED",
     });
 });
 
