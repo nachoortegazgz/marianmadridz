@@ -124,8 +124,8 @@ test("logical TPV entities cannot be newly persisted until the canonical ledger 
 
     assert.doesNotThrow(() => assertInsertAllowed("MovimientosCaja", item));
     assert.throws(() => assertUpdateAllowed("MovimientosCaja", item), { code: "LEDGER_APPEND_ONLY" });
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "CMS_DELETE_PROHIBITED" });
-    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "ledger-row"), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", item._id, undefined, item), { code: "LEDGER_APPEND_ONLY" });
+    assert.throws(() => assertRemoveAllowed("MovimientosCaja", "ledger-row"), { code: "LEDGER_APPEND_ONLY" });
 
     for (const logicalType of logicalTypes) {
         assert.throws(() => assertInsertAllowed(logicalType, item), /DATA_ACCESS_ERROR/);
@@ -221,7 +221,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_DELETE_PROHIBITED" });
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_REMOVE_SCOPE_DENIED" });
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
