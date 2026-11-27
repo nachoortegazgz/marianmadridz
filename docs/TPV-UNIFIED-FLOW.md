@@ -42,7 +42,7 @@ No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo. 
 
 ## 5. Errores explícitos
 
-El normalizador común de la rama PR #651 es `src/backend/tpv/tpvError.js`. Su CI completo está PASS; la PR sigue abierta.
+El normalizador común integrado en `main` es `src/backend/tpv/tpvError.js`. PR #651 está integrada y su CI completo está PASS; esto no acredita Wix Runtime.
 
 Contrato público:
 - `status`, `data`, `error` y `traceId`.
