@@ -1,42 +1,19 @@
-# Manifiesto documental — 2026-11-27
+# Archivo histórico
 
-## Documentación operativa vigente
+La documentación operativa se limita a [INDEX.md](INDEX.md) y a los documentos que enlaza. El directorio `docs/archive/2026-11/` conserva decisiones, auditorías, snapshots de CMS, contratos y handoffs fechados que permiten reconstruir por qué se tomaron decisiones y qué se observó en cada momento.
 
-La única entrada operativa es [INDEX.md](INDEX.md), con estas fuentes:
-- `PROJECT-CANON.md`: arquitectura e invariantes.
-- `STATE-NOW.md`: estado actual y siguiente sesión.
-- `RELEASE-READINESS.md`: gates de aceptación y GO/NO-GO.
-- `TPV-UNIFIED-FLOW.md`: contrato TPV.
-- `TPV-MILESTONE-01-UNIFIED-CORE.md`: estado del hito TPV.
-- `src/backend/tpv/README.md`: mapa del backend TPV.
+## Política
 
-## Política de archivo
+- El archivo no es fuente operativa ni prueba del estado actual.
+- No copiar snapshots antiguos al estado actual sin revalidar contra Wix/CMS.
+- No borrar evidencia de decisiones de arquitectura, seguridad, integridad fiscal/contable, contratos CMS ni resultados de auditoría que expliquen cambios.
+- Los planes duplicados, checklists superados y handoffs repetidos pueden retirarse del árbol activo; Git conserva el historial de los cambios.
+- Ante contradicción, prevalecen documentación oficial vigente, código integrado, pruebas ejecutadas y lecturas fechadas del entorno correspondiente.
 
-`docs/archive/2026-11/` contiene auditorías, decisiones, handoffs, snapshots de CMS, diseños y contratos históricos. Se conserva como evidencia fechada y contexto de trazabilidad. No es fuente de instrucciones operativas: si una afirmación contradice el código integrado o las fuentes operativas vigentes, prevalece la evidencia más reciente y verificable.
+## Consolidación documental — 2026-11-27
 
-No se borran auditorías históricas solo por ser antiguas. Los documentos duplicados o superados que ya no deban guiar trabajo se marcan como sustituidos, se archivan cuando aportan evidencia y se eliminan del árbol activo cuando existe una copia preservada.
-
-## Cambios de consolidación — 2026-11-27
-
-| Documento | Acción | Fuente vigente |
-|---|---|---|
-| `docs/TPV-ONLINE-TEST-READINESS.md` | Eliminado del árbol activo; copia histórica ya archivada | `docs/TPV-UNIFIED-FLOW.md` |
-| `docs/TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md` | Sustituido por una página breve; versión previa preservada en archivo | `docs/TPV-UNIFIED-FLOW.md`, `docs/RELEASE-READINESS.md` |
-| `DOSSIER TÉCNICO CONSOLIDADO.md` | Sustituido por un índice de transición para evitar duplicidad y directrices obsoletas | `docs/PROJECT-CANON.md`, `docs/STATE-NOW.md` |
-| `docs/audits/2026-11-27-wix-site-and-tpv-cli-audit.md` | Marcado como baseline anterior a PR #640; conservado como evidencia | `docs/STATE-NOW.md`, `docs/audits/2026-11-27-mvp-runtime-readonly-acceptance.md` |
-| `docs/TPV-SYNTHETIC-FISCAL-ACCEPTANCE.md` | Copia íntegra archivada como `TPV-SYNTHETIC-FISCAL-ACCEPTANCE-2026-11-27-SUPERSEDED.md` | La versión corta actual solo redirige |
-
-## Auditoría de código TPV
-
-El árbol actual no contiene `tpvTestRuntime.web.js`, `tpvTestRuntimeRepository.js` ni `tpvTestRuntimeCore.js`. No se encontró evidencia de un runtime de negocio paralelo activo.
-
-La compatibilidad histórica no se considera código muerto: `tpvHistoricalCompat.js` tiene consumidores en validación y pruebas; los discriminadores históricos aparecen en hooks/políticas de acceso y pruebas. No se eliminan hasta separar explícitamente el contrato de lectura histórica y superar la suite de regresión.
-
-No se ha demostrado ningún módulo TPV huérfano con evidencia suficiente para borrarlo. La limpieza de dependencias/toolchain (ESLint 8 EOL y transitivas deprecated detectadas en auditoría previa) queda como tarea aislada, con actualización de lockfiles por herramienta oficial Wix/npm, CI y revisión de diff; no se mezcla con esta consolidación documental.
-
-## Límites de verificación
-
-- No se ejecutó código local ni se modificó lógica de negocio en esta consolidación.
-- No se ejecutó CI para esta rama documental; el HEAD de main no tiene runs asociados.
-- Los resultados CI citados en `STATE-NOW.md` corresponden a PR #640/#641.
-- Wix Preview/Runtime y sincronización Git-Wix siguen sin acreditarse.
+- Se retiraron del árbol activo los documentos de milestone duplicados, páginas de redirección y dossier técnico monolítico. Las decisiones vigentes permanecen en PROJECT-CANON, STATE-NOW, RELEASE-READINESS y TPV-UNIFIED-FLOW.
+- La auditoría TPV anterior a PR #640 se conserva marcada como baseline previo a la corrección.
+- El readiness TPV antiguo se conserva en archivo como evidencia histórica, no como procedimiento vigente.
+- El diccionario CMS extenso se conserva como referencia histórica de esquemas y snapshots; sus recuentos/campos deben revalidarse antes de cualquier cambio.
+- No se ha eliminado código ejecutable ni se ha cambiado lógica de negocio en esta limpieza documental.
