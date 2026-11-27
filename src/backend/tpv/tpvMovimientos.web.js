@@ -2,7 +2,7 @@ import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvOperationalLedgerConfigured, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvOperationalLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -136,7 +136,7 @@ export const registrarMovimientoCaja = webMethod(
                     amountMinor,
                     operator,
                     replayed,
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                 }),
                 error: null,
                 traceId,
@@ -187,7 +187,7 @@ export const obtenerMovimientosCaja = webMethod(
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     now: new Date().toISOString(),
-                    timeZone: TPV_RUNTIME_POLICY.TIME_ZONE,
+                    timeZone: SDK_CONFIG.TZ,
                     truncated: ledger.hasMore,
                 },
                 error: null,
