@@ -416,6 +416,49 @@ async function _ensureCajaActual() {
     return caja;
 }
 
+export async function closeTpvCajaSessionProjection({
+    sessionId, countedCash, expectedCash, difference, operatorId, closedAt = new Date(),
+}) {
+    return withCajaActualProjectionLock("TPV_SESSION_CLOSE:" + sessionId, async (lock) => {
+        const caja = await _getCajaActual();
+        if (!caja) throw new Error("CERRAR_SESSION_NOT_FOUND");
+        assertTpvCajaIntegrity(caja);
+        const state = getTpvRuntimeState(caja);
+        if (String(state?.sessionId || "") !== String(sessionId || "")) {
+            throw new Error("TPV_SESSION_MISMATCH");
+        }
+        if (caja.cashRegisterStatus === "CERRADA" && caja.closedAt) {
+            return { item: caja, replayed: true };
+        }
+        if (caja.cashRegisterStatus !== "ABIERTA") {
+            throw new Error("TPV_SESSION_NOT_OPEN");
+        }
+        const timestamp = closedAt instanceof Date ? closedAt : new Date(closedAt);
+        if (Number.isNaN(timestamp.getTime())) throw new Error("TPV_CLOSE_TIMESTAMP_INVALID");
+        const updated = {
+            ...caja,
+            cashRegisterStatus: "CERRADA",
+            closedAt: timestamp,
+            closedBy: String(operatorId || ""),
+            countedCash: Number(countedCash),
+            expectedCash: Number(expectedCash),
+            difference: Number(difference),
+            lastOperationId: "TPV_SESSION_CLOSE:" + sessionId,
+            lastOperationType: "TPV_SESSION_CLOSE",
+            lastOperationAt: timestamp,
+            lastOperationStatus: "REGISTRADO",
+            conceptOperations: {
+                ...(caja.conceptOperations && typeof caja.conceptOperations === "object" ? caja.conceptOperations : {}),
+                tpvRuntime: { ...state, closedAt: timestamp, closedBy: String(operatorId || "") },
+            },
+            _updatedDate: timestamp,
+        };
+        await assertFiscalLedgerLock(lock);
+        const item = await updateItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, updated);
+        return { item, replayed: false };
+    });
+}
+
 function _sessionFromCaja(caja) {
     const state = getTpvRuntimeState(caja);
     const sessionId = String(state?.sessionId || "").trim();
