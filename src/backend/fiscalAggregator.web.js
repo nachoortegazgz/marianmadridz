@@ -229,6 +229,7 @@ async function _fetchQuarterMovements(months, options = {}) {
       .ne("recordSource", "SMOKE_TEST")
       .ne("movementType", "SIMULATED_PAYMENT")
       .ne("movementType", "SIMULATED_TPV_PAYMENT")
+      .ne("movementType", "VENTA_POS_SIMULADA")
       .ne("eventType", "SIMULATED_PAYMENT")
       .ascending("sequenceNumber")
       .limit(pageSize)
