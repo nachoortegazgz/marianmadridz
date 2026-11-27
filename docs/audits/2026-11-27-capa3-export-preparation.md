@@ -27,9 +27,9 @@ No se exportan nombre/NIF/dirección de clientes, notas de reserva, descripción
 - Solo lectura desde los agregadores de Wix CMS; no inserta ni actualiza CMS.
 - No envía correo, no llama a Microsoft Graph, no sube a SharePoint y no ejecuta Power Automate.
 - No se ha añadido ningún cron de exportación.
-- Los registros deben ser `recordNature=REAL`; cualquier registro sintético/no clasificado bloquea el artefacto.
+- No se filtran registros por naturaleza del entorno. Cada fila debe superar validaciones fiscales explícitas: identidad de factura, fecha, tipo, importes, IVA, transactionId y hash.
 - Los agregadores requieren la configuración fiscal canónica de `MapaStaff`. El read-back live del 2026-11-27 devolvió cero registros de configuración; por tanto no puede generarse un paquete fiscal online hasta completar datos legales verificados. No se inventan NIF ni datos del emisor.
-- La clasificación TPV `recordNature` y los gates de escritura de venta ya están integrados en `main` mediante PR #640. El campo `productionActivationAt` está disponible en el esquema CMS, pero el registro de configuración sigue sin fecha de corte; hasta fijarla mediante procedimiento formal, los eventos siguen siendo `SYNTHETIC`.
+- La clasificación `recordNature` y el corte `productionActivationAt` quedan retirados del contrato runtime. El mismo código y formato se usan en todos los entornos; los datos se validan por su contenido y por las garantías de integridad, no por etiquetas de entorno.
 - No existe evidencia de tenant M365, biblioteca SharePoint, permisos, DLP, retención, PA-01…PA-07 ni aprobación de gestoría. No declarar transporte externo conectado.
 
 ## Gates para activar transporte
