@@ -54,6 +54,7 @@ Wix Apps remain authoritative for their native domains. Wix CMS is the SSOT for 
 - Fiscal, accounting, labor and finalized cash-close records are append-only. Correct through new, traceable rectification records/events.
 - No silent fallback that turns invalid input/provider failure into success, empty data or zero when that masks a fault.
 - Do not delete records, purge evidence or remove code solely because it is old or large. Prove non-use by consumers, imports/exports, tests and contracts first.
+- All records predating the official production deployment in 2027 are synthetic under the project rule. This does not authorize deletion, destructive reclassification or mutation of historical records.
 - During tests: no real payments, refunds, fiscal submissions, notifications or external economic effects. Never reuse the existing open `CajaActual` singleton or historical ledgers as fixtures.
 
 ## 5. Evidence vocabulary — never overstate
