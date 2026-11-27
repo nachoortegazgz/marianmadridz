@@ -38,7 +38,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 
 - [Verificación de sitio y capas — 2026-11-27](audits/2026-11-27-current-site-layer-verification.md): Site Context, CMS, revisión estática TPV y límites de prueba.
 - [Auditoría integral CMS — 2026-11-27](audits/2026-11-27-full-cms-collections-audit.md): lectura de las 41 colecciones; revisar fecha y alcance.
-- [Aceptación MVP read-only — 2026-11-27](audits/2026-11-27-mvp-runtime-readonly-acceptance.md): divergencias Bookings/CitasF2 y límites Runtime.
+- [Aceptación MVP read-only — 2026-11-27](audits/2026-11-27-mvp-runtime-readonly-acceptance.md): lectura anterior (ControlOperativo 78 / CitasF2 11), divergencias Bookings/CitasF2 y límites Runtime. La auditoría CMS integral posterior del mismo día registra 81 / 12; usar `ESQUEMA_CMS.md` como snapshot físico más reciente.
 - [Auditoría Wix CLI/TPV — 2026-11-27](audits/2026-11-27-wix-site-and-tpv-cli-audit.md): baseline anterior a PR #640; histórico/supersedido para estado de implementación.
 - [Auditoría TPV widget/action — 2026-11-27](audits/2026-11-27-tpv-widget-action-alignment.md): correspondencia de UI, bridge y acciones; verificar que no haya revisión posterior.
 - [Auditoría Capa 0 — 2026-11-28](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente. Nombre de archivo conserva fecha 27, contenido actualizado a 28.
