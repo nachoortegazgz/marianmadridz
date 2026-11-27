@@ -63,7 +63,6 @@ PAYMENT_STATUS,
 BOOKING_FIELDS,
 CONCURRENCY,
 SDK_CONFIG,
-FISCAL_RUNTIME_POLICY,
 normalizeBookingType,
 BOOKING_TYPE,
 } from "backend/internalConfig";
@@ -766,13 +765,6 @@ for (const comp of compensationItems) {
 try {
 const payload = readControlPayload(comp);
 const compensationKind = _safeTrim(payload.compensationKind || payload.kind || comp?.kind).toUpperCase();
-const writerDisabled =
-    (compensationKind === "FISCAL_LEDGER" && FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) ||
-    (compensationKind === "RESYNC_LEDGER_ACCOUNTING" && FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED !== true);
-if (writerDisabled) {
-    result.skippedByPolicy++;
-    continue;
-}
 const outcome = await _runOneCompensation(comp, traceId);
 if (outcome?.manualReconciliationRequired === true) {
 payload.status = "MANUAL_RECONCILIATION_REQUIRED";
