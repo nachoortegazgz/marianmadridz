@@ -1,3 +1,7 @@
+> **AVISO DE ARCHIVO — NO ES ÍNDICE OPERATIVO ACTUAL.** Este índice refleja la organización documental del 23-11-2026. Sus tablas de autoridad, documentos operativos y estados son históricas y no deben utilizarse como instrucciones vigentes. Para trabajar en el estado actual, comenzar por [AI-ENTRYPOINT](../../AI-ENTRYPOINT.md), [AI-INDEX](../../AI-INDEX.md) y [índice documental activo](../../INDEX.md). El contenido de este directorio se conserva para trazabilidad; revalidar cada decisión, SHA, estado Wix y contrato antes de reutilizarlo.
+
+---
+
 # Índice documental y reglas de vigencia
 
 **Corte de reorganización:** 2026-11-23  
