@@ -134,7 +134,7 @@ async function _isMarianManagerIdentity(traceId) {
     return Boolean(marianContactId && marianContactId === contactId);
 }
 
-export const checkStaffCollaboratorAccessexport const checkStaffCollaboratorAccess = webMethod(
+export const checkStaffCollaboratorAccess = webMethod(
     Permissions.SiteMember,
     async (options = {}) => {
         const traceId = _resolveTraceId(options, "sec-staff");
