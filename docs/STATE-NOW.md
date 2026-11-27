@@ -8,7 +8,7 @@
 
 El propietario establece un único código, contrato, validación y writer para desarrollo y producción. Los registros comparten formato y recordNature se deriva en backend comparando recordTimestamp UTC con productionActivationAt UTC: anteriores = SYNTHETIC; iguales o posteriores = REAL. La marca es metadato de trazabilidad, no selector de motor. El propietario autoriza pruebas online completas en el sitio/colecciones actuales durante desarrollo; los registros sintéticos podrán modificarse y se resetearán mediante procedimiento controlado antes de iniciar actividad real. El estado Published/Draft de Wix no determina el corte comercial. Ver [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md).
 
-**Código aún no unificado:** `tpvPageController.js` importa `tpvTestRuntime.web.js`; `tpvPermisos.web.js` expone capacidades de ese runtime; `internalConfig.js`, `validation.js`, `data.js`, `dataAccessPolicy.js`, `tpvUtils.js` y `tpvRepository.js` conservan clasificadores/compatibilidad histórica. `insertTpvEvent()` está bloqueado y `_buildTpvLedgerItem()` no completa los campos fiscales físicos de `MovimientosCaja`. El runtime separado persiste en `ControlOperativo`. No se han eliminado módulos ni abierto escrituras.
+**TPV-01 unificado en la rama de trabajo:** el controlador usa WebMethods operativos; `tpvTestRuntime.web.js`, `tpvTestRuntimeRepository.js` y `tpvTestRuntimeCore.js` retirados. La compatibilidad histórica `TPV_TEST_RUN` queda en `tpvHistoricalCompat.js` para lectura/validación; las escrituras legacy quedan denegadas.
 
 ## 1. Estado ejecutivo
 
@@ -114,7 +114,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 
 ## 9. Historial y documentación sustituida
 
-Las implementaciones de PR #615/#616 y el documento de preparación online describen un runtime separado que persiste en `ControlOperativo`. Esa arquitectura queda sustituida y no debe recrearse. Se conserva como evidencia en [archivo histórico](archive/2026-11/qa/TPV-ONLINE-TEST-READINESS-2026-11-25-SUPERSEDED.md). El código, sus imports y sus discriminadores aún están presentes y forman parte del Hito TPV-01. No se ha verificado el número actual de registros de ese runtime en CMS tras los cambios de PR #616.
+Las implementaciones de PR #615/#616 quedan retiradas del runtime activo; sus registros históricos se conservan sin migración ni borrado. La compatibilidad de lectura se mantiene en `tpvHistoricalCompat.js`; no se ha consultado ni modificado CMS.
 
 La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FLOW.md](TPV-UNIFIED-FLOW.md) y [Hito TPV-01](TPV-MILESTONE-01-UNIFIED-CORE.md). **NO-GO** hasta superar sus criterios y los gates fiscales/comerciales de [RELEASE-READINESS.md](RELEASE-READINESS.md).
 ## Prioridad 1 TPV — 2026-11-25
@@ -124,3 +124,7 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - cerrarSesionCaja + generarTicketX + exportarMovimientos implementados en backend, con autorización ADMIN y persistencia operativa/auditoría no fiscal.
 - P1.2 pasa de PENDIENTE a PARCIAL: cierre operativo de CajaActual disponible; Ticket Z fiscal continúa separado.
 - Reembolso y Ticket Z real siguen bloqueados por Contract A (pagos) y Contract C (fiscal), respectivamente.
+
+- Hito TPV-01 completado en PR propuesta: tres módulos de runtime retirados; compatibilidad histórica extraída y escrituras legacy denegadas.
+- Tres gates operativos: PASS estático en PR #626; Wix Runtime: PENDIENTE_HUMANO. Tests offline locales: PENDIENTE_HUMANO; CI de esta PR pendiente.
+- P1 cerrada en delegable para el alcance aprobado; bloqueos externos: Contract A (pagos) y Contract C (fiscal).
