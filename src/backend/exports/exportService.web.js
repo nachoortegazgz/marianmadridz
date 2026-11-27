@@ -20,7 +20,7 @@ function errorResult(code, traceId, message) {
 /**
  * Admin-only, read-only Capa 3 export preparation.
  * This method creates an in-memory package only. No CMS writes, network
- * delivery, email, SharePoint upload, or callbacks to Capa 1 are performed.
+ * delivery, email, external uploads, or callbacks to Capa 1 are performed.
  */
 export const prepareExternalRegistryPackage = webMethod(
     Permissions.Admin,
