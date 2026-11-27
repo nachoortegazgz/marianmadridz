@@ -124,11 +124,11 @@ const CT_DISPLAY_TOKEN = CONTROL_TYPE.DISPLAY_TOKEN;
 
 const CONSISTENT_READ = Object.freeze({ consistentRead: true });
 
-const WATCHDOG_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.WATCHDOG_MS) || 15000;
-const SERVICE_CACHE_TTL_MS = Number(SDK_CONFIG?.CACHE?.SERVICES_TTL_MS) || 120000;
+const WATCHDOG_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.WATCHDOG_MS;
+const SERVICE_CACHE_TTL_MS = SDK_CONFIG.CACHE.SERVICES_TTL_MS;
 
 const DIAS_LIMITE = Number(SLOT_SEARCH?.DIAS_LIMITE) || 14;
-const CACHE_MAX_SIZE = Number(SDK_CONFIG?.CACHE?.MAX_ENTRIES) || 500;
+const CACHE_MAX_SIZE = SDK_CONFIG.CACHE.SERVICES_MAX_ENTRIES;
 
 function _normalizeServiceLookupKey(value) {
     const raw = _safeTrim(value, 200);
@@ -141,7 +141,7 @@ function _normalizeServiceLookupKey(value) {
         .replace(/^-+|-+$/g, "");
 }
 
-const DAYS_CACHE_VERSION = String(SDK_CONFIG?.CACHE?.DAYS_CACHE_VERSION || "v1");
+const DAYS_CACHE_VERSION = SDK_CONFIG.CACHE.DAYS_CACHE_VERSION;
 const STAFF_RESOURCE_TYPE_ID = API.STAFF_RESOURCE_TYPE_ID;
 
 const serviceCatalogRAM = new Map();

@@ -133,7 +133,7 @@ const LEDGER_SCHEMA_VERSION = "LEDGER_V5_FISCAL";
 const GENESIS_HASH = "0".repeat(64);
 
 const PROYECCION_BATCH_LIMIT = 25;
-const PROYECCION_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
+const PROYECCION_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.API_MS;
 
 // ============================================================================
 // ALN-07: CONFIGURACION FISCAL CANONICA — FAIL CLOSED
@@ -141,8 +141,7 @@ const PROYECCION_TIMEOUT_MS = Number(SDK_CONFIG?.TIMEOUTS?.API_MS) || 15000;
 
 let _fiscalSystemCache = null;
 let _fiscalSystemCacheAt = 0;
-const FISCAL_SYSTEM_CACHE_TTL_MS =
-    Number(SDK_CONFIG?.SECURITY?.SECRET_CACHE_TTL_MS) || 300000;
+const FISCAL_SYSTEM_CACHE_TTL_MS = SDK_CONFIG.SECURITY.SECRET_CACHE_TTL_MS;
 
 function _toAeatFlag(value) {
     if (typeof value === "boolean") return value ? "S" : "N";
