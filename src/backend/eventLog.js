@@ -53,7 +53,6 @@ import {
     BUSINESS_COLLECTIONS,
     OPERATIONAL_COLLECTIONS,
     SDK_CONFIG,
-    FISCAL_RUNTIME_POLICY,
     MOVEMENT_TYPE,
     IVA_RATES,
     TIPO_FACTURA,
@@ -439,27 +438,6 @@ export async function registrarEventoEconomico(input) {
             error: {
                 code: "Z_CLOSING_REQUIRES_CANONICAL_WRITER",
                 message: "Los cierres Z solo pueden registrarse mediante el escritor de HistoricoCierresZ.",
-                traceId,
-            },
-        };
-    }
-    if (FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true && isExplicitSimulationLedgerRecord(input)) {
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                code: "TEST_DATA_NOT_ALLOWED_IN_PRODUCTION",
-                message: "Los registros de simulacion no pueden persistirse en el ledger operativo.",
-                traceId,
-            },
-        };
-    }
-    if (FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true) {
-        return {
-            status: "ERROR",
-            data: null,
-            error: {
-                ...toPublicShape(createActionableError({ code: "FISCAL_LEDGER_WRITES_DISABLED", userMessage: "La escritura fiscal está deshabilitada hasta completar su certificación legal y técnica.", technicalDetail: "FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true.", remediation: ["No intentar habilitar el writer ni sortear este control.", "Completar CONFIG_SISTEMA_FISCAL con datos legalmente verificados.", "Ejecutar y documentar las pruebas Runtime y la certificación aplicable.", "Solicitar autorización expresa antes de cambiar el flag fiscal."], contextSnapshot: { traceId, gate: "LEDGER_WRITES_ENABLED" }, retryable: false })),
                 traceId,
             },
         };
