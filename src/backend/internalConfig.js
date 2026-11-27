@@ -586,11 +586,40 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         expiresAt: Object.freeze(["SET_FIELD"]),
       }),
     }),
+    [CONTROL_TYPE.DUAL_CACHE]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.DAYS_CACHE]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+      }),
+    }),
+    [CONTROL_TYPE.DISPLAY_TOKEN]: Object.freeze({
+      requiredConditionFields: Object.freeze(["controlType"]),
+      anyConditionFields: Object.freeze(["expiresAt"]),
+      allowedConditionFields: Object.freeze(["controlType", "expiresAt"]),
+      fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
+        expiresAt: Object.freeze(["SET_FIELD"]),
+        version: Object.freeze(["SET_FIELD", "INCREMENT_FIELD"]),
+      }),
+    }),
     [CONTROL_TYPE.SLOT_LOCK]: Object.freeze({
       requiredConditionFields: Object.freeze(["controlType"]),
       anyConditionFields: Object.freeze(["version", "expiresAt"]),
       allowedConditionFields: Object.freeze(["controlType", "version", "expiresAt"]),
       fields: Object.freeze({
+        status: Object.freeze(["SET_FIELD"]),
         expiresAt: Object.freeze(["SET_FIELD"]),
         heartbeatAt: Object.freeze(["SET_FIELD"]),
         payload: Object.freeze(["SET_FIELD"]),
@@ -686,6 +715,10 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DEDUPE_KEY,
     CONTROL_TYPE.IDEMPOTENCY,
     CONTROL_TYPE.SYSTEM_FLAG,
+    CONTROL_TYPE.DISPLAY_TOKEN,
+    CONTROL_TYPE.DUAL_CACHE,
+    CONTROL_TYPE.DAYS_CACHE,
+    CONTROL_TYPE.SLOT_LOCK,
   ]),
   removableControlTypes: Object.freeze([
     CONTROL_TYPE.DAYS_CACHE,
