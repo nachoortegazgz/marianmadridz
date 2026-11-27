@@ -6,6 +6,7 @@
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
 - [PROJECT-CANON](PROJECT-CANON.md): invariantes de arquitectura y seguridad.
 - [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores explícitos.
+- [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix vigente, inventario y auditoría read-only de datos.
 - [Backend TPV](../src/backend/tpv/README.md) y [backend general](../src/backend/README.md): módulos y contratos de código.
 - [Plan Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): ejecución Wix aislada.
 - [Archivo histórico](ARCHIVE-MANIFEST.md): informes y decisiones sustituidos.
