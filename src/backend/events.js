@@ -402,21 +402,18 @@ let _emisorCache = null;
 
 async function _getEmisorFiscal() {
     if (_emisorCache) return _emisorCache;
-    try {
-        const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR);
-        // SSOT-KEYFIELD (Matriz MovimientosCaja, Apartado 2): claves canonicas
-        // AEAT; el motor promueve aliases historical, pero los writers entregan
-        // directamente el canon — cero aliases en src/.
-        _emisorCache = {
-            nifEmisor: _safeTrim(nif).toUpperCase(),
-            issuerLegalName: EMISOR_FALLBACK_NAME,
-        };
-    } catch (_) {
-        _emisorCache = {
-            nifEmisor: "",
-            issuerLegalName: EMISOR_FALLBACK_NAME,
-        };
+    const nif = await getSecretValue(SECRETS.FISCAL_NIF_EMISOR);
+    const normalizedNif = _safeTrim(nif).toUpperCase();
+    if (!normalizedNif) {
+        const error = new Error("FISCAL_NIF_EMISOR_REQUIRED");
+        error.code = "FISCAL_NIF_EMISOR_REQUIRED";
+        throw error;
     }
+
+    _emisorCache = {
+        nifEmisor: normalizedNif,
+        issuerLegalName: EMISOR_FALLBACK_NAME,
+    };
     return _emisorCache;
 }
 
