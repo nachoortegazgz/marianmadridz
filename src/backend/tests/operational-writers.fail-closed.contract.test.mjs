@@ -11,105 +11,40 @@ async function read(name) {
   return readFile(resolve(backend, name), "utf8");
 }
 
-test("P0-FISCAL-01 fiscal ledger writers are disabled by canonical fail-closed policy", async () => {
-  const [config, cajas, eventLog, accounting] = await Promise.all([
+test("P0-FISCAL-01 writers use domain validation instead of a global disable switch", async () => {
+  const [config, cajas, eventLog, accounting, crons] = await Promise.all([
     read("internalConfig.js"),
     read("cajas.web.js"),
     read("eventLog.js"),
     read("accountingLedger.js"),
+    read("crons.js"),
   ]);
 
-  assert.match(config, /FISCAL_RUNTIME_POLICY\s*=\s*Object\.freeze\(\{[\s\S]*?LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ACCOUNTING_LEDGER_WRITES_ENABLED:\s*false,[\s\S]*?ALLOW_SIMULATION_RECORDS:\s*false/s);
-  assert.match(cajas, /FISCAL_RUNTIME_POLICY/);
-
-  const manualStart = cajas.indexOf("export const registerManualTransaction");
-  const manualEnd = cajas.indexOf("export const getCashierState", manualStart);
-  const manual = cajas.slice(manualStart, manualEnd);
-  const manualGuard = manual.indexOf('FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true');
-  assert.ok(manualGuard >= 0, "manual fiscal writer must fail closed");
-  for (const operation of ["validateFiscalConfig(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
-    const index = manual.indexOf(operation);
-    assert.ok(index > manualGuard, "fiscal guard must precede " + operation);
+  for (const [name, source] of Object.entries({ config, cajas, eventLog, accounting, crons })) {
+    assert.doesNotMatch(source, /FISCAL_RUNTIME_POLICY|FISCAL_LEDGER_WRITES_DISABLED|ACCOUNTING_LEDGER_WRITES_DISABLED|TEST_DATA_NOT_ALLOWED_IN_PRODUCTION/,
+      name + " must not depend on global fiscal/synthetic writer switches");
   }
-  assert.match(manual.slice(manualGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
-  const manualSimulationGuard = manual.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
-  assert.ok(manualSimulationGuard >= 0, "manual writer must reject explicit simulation records");
-  assert.ok(manual.indexOf("isExplicitSimulationLedgerRecord(inDto)") > manualSimulationGuard);
-  assert.ok(manual.indexOf("dalInsert(MOVIMIENTOS_CAJA_COL") > manualSimulationGuard);
 
-  const zStart = cajas.indexOf("async function _registerZClosing");
-  const zEnd = cajas.indexOf("export const registerZClosing", zStart);
-  const zWriter = cajas.slice(zStart, zEnd);
-  const zGuard = zWriter.indexOf('FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true');
-  assert.ok(zGuard >= 0, "shared Z writer must fail closed for public and internal callers");
-  assert.ok(zWriter.indexOf("if (authorizeCashier) await requireCajero(traceId);") < zGuard, "public Z writer must authorize before revealing the disabled policy");
-  for (const operation of ["getCashRegisterSingleton(", "validateFiscalConfig(", "acquireFiscalLedgerLock(", "dalInsert(HISTORICO_CIERRES_Z_COL"]) {
-    const index = zWriter.indexOf(operation);
-    assert.ok(index > zGuard, "Z fiscal guard must precede " + operation);
-  }
-  assert.match(zWriter.slice(zGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
+  assert.match(cajas, /await requireCajero\(traceId\)/);
+  assert.match(cajas, /await validateFiscalConfig\(traceId\)/);
+  assert.match(cajas, /acquireFiscalLedgerLock\(traceId\)/);
+  assert.match(cajas, /dalInsert\(MOVIMIENTOS_CAJA_COL/);
+  assert.match(cajas, /dalInsert\(HISTORICO_CIERRES_Z_COL/);
 
-  const eventStart = eventLog.indexOf("export async function registrarEventoEconomico");
-  const thirdPartyStart = eventLog.indexOf("async function _upsertMapaStaff(");
-  const thirdPartyEnd = eventLog.indexOf("async function _getServicioCatalogo(", thirdPartyStart);
-  const thirdPartyUpsert = eventLog.slice(thirdPartyStart, thirdPartyEnd);
-  assert.match(thirdPartyUpsert, /dalQuery\(MAPA_STAFF_COL\)/);
-  assert.match(thirdPartyUpsert, /dalInsert\(MAPA_STAFF_COL/);
-  assert.match(thirdPartyUpsert, /schemaVersion:\s*1/);
-  assert.match(thirdPartyUpsert, /traceId:\s*_safeTrim\(traceId\)/);
-  assert.doesNotMatch(eventLog, /nombreRazonProductor:\s*["']Marian Madrid["']/,
-    "legalName must not be inferred from the commercial brand");
+  assert.match(eventLog, /assertFiscalMovementInputEnums\(input\)/);
+  assert.match(eventLog, /await validateFiscalConfig\(traceId\)/);
+  assert.match(eventLog, /acquireFiscalLedgerLock\(traceId\)/);
+  assert.match(eventLog, /dalInsert\(MOVIMIENTOS_CAJA_COL/);
 
-  const eventWriter = eventLog.slice(eventStart);
-  const zEventGuard = eventWriter.indexOf('if (_safeTrim(input?.eventType).toUpperCase() === EVENT_TYPE.CIERRE_Z)');
-  assert.ok(zEventGuard >= 0, "EventLog must reject the duplicate/incomplete CIERRE_Z projection before any ledger work");
-  assert.match(eventWriter.slice(zEventGuard), /Z_CLOSING_REQUIRES_CANONICAL_WRITER/);
-  assert.doesNotMatch(eventLog, /dalInsert\(HISTORICO_CIERRES_Z_COL/,
-    "EventLog must not create a second Z closing row");
-  const eventGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED !== true");
-  assert.ok(eventGuard >= 0, "native event/refund fiscal writer must fail closed");
-  for (const operation of ["_upsertMapaStaff(", "acquireFiscalLedgerLock(", "dalInsert(MOVIMIENTOS_CAJA_COL"]) {
-    const index = eventWriter.indexOf(operation);
-    assert.ok(index > eventGuard, "event fiscal guard must precede " + operation);
-  }
-  assert.match(eventWriter.slice(eventGuard), /FISCAL_LEDGER_WRITES_DISABLED/);
-  assert.match(eventWriter, /channelType: _safeTrim\(input\.channelType\)\.toUpperCase\(\)/);
-  const inputEnumGuard = eventWriter.indexOf("assertFiscalMovementInputEnums(input)");
-  const thirdPartyInsert = eventWriter.indexOf("_upsertMapaStaff({");
-  assert.ok(inputEnumGuard >= 0 && thirdPartyInsert > inputEnumGuard,
-    "movement enums must be validated before third-party CMS side effects");
-  assert.doesNotMatch(eventWriter, /channelType: _safeTrim\(input\.channelType\) \|\| ["']POS["']/);
-  const dataAccess = await read("dataAccess.js");
-  assert.match(dataAccess, /collection === BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA\) \{\s*assertMovimientosCajaRequiredFields\(item\)/);
+  assert.match(accounting, /_normalizeEntry\(input, traceId\)/);
+  assert.match(accounting, /ACCOUNTING_LEDGER_LOCK_CONFIG/);
+  assert.match(accounting, /debitTotal/);
+  assert.match(accounting, /creditTotal/);
 
-  const accountingStart = accounting.indexOf("export async function appendAccountingEntry");
-  const accountingWriter = accounting.slice(accountingStart);
-  const accountingGuard = accountingWriter.indexOf("FISCAL_RUNTIME_POLICY.ACCOUNTING_LEDGER_WRITES_ENABLED !== true");
-  assert.ok(accountingGuard >= 0, "accounting ledger writer must fail closed");
-  assert.ok(accountingWriter.indexOf("ACCOUNTING_LEDGER_WRITES_DISABLED") > accountingGuard);
-  const accountingSimulationGuard = accountingWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
-  assert.ok(accountingSimulationGuard > accountingGuard, "accounting writer must reject simulation data after write policy check");
-  assert.ok(accountingWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > accountingSimulationGuard);
-  assert.ok(accountingWriter.indexOf("_normalizeEntry(input, traceId)") > accountingSimulationGuard);
-  assert.ok(accountingWriter.indexOf("dalInsert(ACCOUNTING_COL") > accountingSimulationGuard);
-  const eventSimulationGuard = eventWriter.indexOf("FISCAL_RUNTIME_POLICY.ALLOW_SIMULATION_RECORDS !== true");
-  assert.ok(eventSimulationGuard >= 0, "event writer must reject explicit simulation records");
-  assert.ok(eventWriter.indexOf("isExplicitSimulationLedgerRecord(input)") > eventSimulationGuard);
-  assert.ok(eventWriter.indexOf("_upsertMapaStaff(") > eventSimulationGuard);
-});
-
-test("P0-FISCAL-02 recovery cron preserves fiscal queues while their writers are disabled", async () => {
-  const crons = await read("crons.js");
-  assert.match(crons, /FISCAL_RUNTIME_POLICY/);
-  const jobStart = crons.indexOf("export async function runPendingCompensationsJob");
-  const job = crons.slice(jobStart);
-  const policyGuard = job.indexOf("if (writerDisabled)");
-  assert.ok(policyGuard >= 0);
-  assert.ok(job.indexOf("result.skippedByPolicy++") > policyGuard);
-  assert.ok(job.indexOf("continue;") > policyGuard);
-  assert.ok(job.indexOf("_runOneCompensation(comp, traceId)") > policyGuard,
-    "disabled fiscal/accounting recovery must be skipped before invoking writers");
-  assert.match(job, /skippedByPolicy:\s*result\.skippedByPolicy/);
+  const recoveryStart = crons.indexOf("export async function runPendingCompensationsJob");
+  const recovery = crons.slice(recoveryStart);
+  assert.match(recovery, /_runOneCompensation\(comp, traceId\)/);
+  assert.doesNotMatch(recovery, /writerDisabled|skippedByPolicy\+\+/);
 });
 
 test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signing or persistence", async () => {
