@@ -110,3 +110,16 @@ Corrección documental necesaria: la descripción de `MapaStaff` como “sin reg
 6. Ejecutar exportación Capa 3 con fixture REAL controlado solo después de disponer de configuración fiscal válida; conectar transporte SharePoint/Power Automate en entorno aislado y verificar idempotencia y trazabilidad.
 
 **Resultado global:** objetivos arquitectónicos y parte de los contratos de código están integrados y CI offline ha pasado en las PR citadas. El sitio actual está Draft y no existe evidencia Runtime. El ecosistema no cumple todavía el criterio de aceptación final ni está listo para liberar operación comercial.
+
+
+## Addendum — ruta TPV actualizada (27-11-2026)
+
+Se repitió la lectura de páginas estáticas mediante la API oficial Wix `List Static Pages`, en modo solo lectura, sobre el Site ID canónico `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+
+- Página: `TPV`.
+- Page ID: `yl5th` (sin cambios).
+- Ruta devuelta por Wix: `/tpv`.
+- URL derivada: `https://www.marianmadrid.es/tpv`.
+- Estado del sitio: `published=false` (Draft).
+
+La mención `/blank` en el cuerpo principal de esta auditoría describe la lectura anterior y queda superada por este addendum. La ruta actual procede del read-back de Wix, no de una suposición ni de un cambio de código. La búsqueda de `/blank` en la rama `main` no encontró referencias en `src/`; las coincidencias restantes corresponden a documentación de auditorías históricas. No se modificó código de página ni se publicó el sitio.
