@@ -3,6 +3,8 @@ import {
     toPublicShape,
 } from "backend/errors/actionableError";
 
+const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]{2,119}$/;
+
 export function normalizeTpvError(
     error,
     fallbackCode = "TPV_OPERATION_FAILED"
@@ -10,30 +12,32 @@ export function normalizeTpvError(
     if (isActionableError(error)) {
         return {
             ...toPublicShape(error),
-            technicalDetail: error.technicalDetail || null,
+            // technicalDetail may contain provider payloads or credentials.
+            // Expose only the stable code; the backend trace retains diagnostics.
+            technicalDetail: error.code,
             retryable: error.retryable === true,
         };
     }
 
     const message = typeof error?.message === "string" ? error.message.trim() : "";
-    const messageIsCode = /^[A-Z][A-Z0-9_]{2,119}$/.test(message);
-    const suppliedCode = typeof error === "string"
-        ? error.trim()
+    const messageIsCode = SAFE_ERROR_CODE.test(message);
+    const candidateCode = typeof error === "string"
+        ? (SAFE_ERROR_CODE.test(error.trim()) ? error.trim() : "")
         : error?.code || (messageIsCode ? message : "");
-    const code = String(suppliedCode || fallbackCode).slice(0, 120);
-    const technicalDetail = typeof error === "string"
-        ? error
-        : error?.technicalDetail || message || fallbackCode;
+    const code = SAFE_ERROR_CODE.test(String(candidateCode || ""))
+        ? String(candidateCode)
+        : (SAFE_ERROR_CODE.test(String(fallbackCode || "")) ? fallbackCode : "TPV_OPERATION_FAILED");
 
     return {
         code,
         userMessage: "No se pudo completar la operación TPV.",
         remediation: [
-            "Revisar el detalle técnico asociado al traceId.",
-            "Comprobar el estado de la sesión y la configuración TPV.",
-            "Corregir la causa indicada antes de reintentar.",
+            "Revisar el estado de la operación mediante su traceId.",
+            "Comprobar la sesión, los permisos y la configuración requerida.",
+            "Corregir la causa antes de reintentar.",
         ],
-        technicalDetail: String(technicalDetail || fallbackCode).slice(0, 1000),
+        // Never forward raw Error.message or provider details to the browser.
+        technicalDetail: code,
         retryable: false,
     };
 }
