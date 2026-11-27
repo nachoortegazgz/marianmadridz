@@ -213,3 +213,18 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - `GetSiteContext`: sitio Marian Madrid Peluquería y Estética `188bed94-177c-4bc9-a9f0-35080d874f3e` figura **Published**, plan Premium, dominio personalizado, Editor y Velo habilitado. Última actualización indicada por Wix: 2026-11-27 03:55.
 - Apps confirmadas en contexto: Wix Bookings, Stores Catalog V3, Wix Payments, Wix Invoices V1, Members Area, Gift Cards, Forms & Payments, Blog y SEO.
 - Este read-back acredita estado publicado del sitio y presencia de las apps; **no acredita** que el código de `main` (incluidos los PR #634/#635 posteriores al update de Wix) esté sincronizado/desplegado. No se ha publicado ni modificado el sitio desde esta intervención.
+
+
+---
+
+## READ-BACK DIRECTO WIX Y VERIFICACIÓN MULTICAPA — 2026-11-27
+
+Auditoría posterior al commit documental `21b905859d64bd9989103ac328331ef6147e19c6`: [informe completo](audits/2026-11-27-current-site-layer-verification.md).
+
+**Estado Wix:** Draft, `published=false`; 9 páginas estáticas y 2 dinámicas, `published=false`. TPV ID `yl5th`, ruta `/blank`.
+
+**CMS read-back:** CajaActual=1 ABIERTA; MovimientosCaja=5 (`SIMULATED_SUCCESS`); TransaccionesTPV=0; HistoricoCierresZ=1 (`SIMULATED`, `NOT_SIGNED`); ControlOperativo=78; CitasF2=11; LibroAsientosContablesDetalle=3; MapaStaff=5; RegistrosHorariosStaff=0. MapaStaff tiene 1 GESTORIA, 1 TERCERO y 3 STAFF; no existe `recordType=CONFIG_SISTEMA` ni valor `productionActivationAt` en los cinco registros consultados. No se mutó CMS.
+
+**Verificación:** PR #640/#641 mantienen CI offline PASS en sus respectivos commits. El HEAD documental de main no tiene checks/runs asociados. El workflow Wix Preview no se ejecutó; el smoke actual no interactúa ni invoca WebMethods. No se acredita runtime, sincronización Git-Wix, pagos, reservas, jornada ni hardware.
+
+**Corrección de precisión documental:** sustituir la afirmación genérica de que MapaStaff está vacío por la lectura actual: cinco identidades/terceros, pero ausencia del singleton CONFIG_SISTEMA y del corte de activación. La matriz final sigue NO-GO comercial hasta pruebas Wix Runtime y cierre de gates legales/operativos.
