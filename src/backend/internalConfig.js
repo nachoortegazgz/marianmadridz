@@ -671,7 +671,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
   removeCollections: Object.freeze([
     BUSINESS_COLLECTIONS.CONTROL_OPERATIVO,
   ]),
-  bulkRemoveCollections: Object.freeze([BUSINESS_COLLECTIONS.CONTROL_OPERATIVO]),
+  bulkRemoveCollections: Object.freeze([]),
   mutableControlTypes: Object.freeze([
     CONTROL_TYPE.ALERT,
     CONTROL_TYPE.COMPENSATION,
@@ -686,7 +686,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.DAYS_CACHE,
     CONTROL_TYPE.DISPLAY_TOKEN,
     CONTROL_TYPE.DUAL_CACHE,
-    CONTROL_TYPE.IDEMPOTENCY,
+    CONTROL_TYPE.RATE_LIMIT,
     CONTROL_TYPE.SLOT_LOCK,
   ]),
 });
