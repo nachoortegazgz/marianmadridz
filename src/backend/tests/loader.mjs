@@ -418,7 +418,12 @@ export const crypto = fnProxy;
 // mocks.members._current to a member object or null. State lives in
 // globalThis so the stub factory and the test file share one reference.
 const membersMockState = globalThis.__mmMembersState || (globalThis.__mmMembersState = { _current: null });
-export const members = { getCurrentMember: async () => membersMockState._current };
+export const members = {
+  getCurrentMember: async () => {
+    if (membersMockState._error) throw membersMockState._error;
+    return membersMockState._current;
+  },
+};
 // LH-18b (E2E flows suite): secrets por nombre con override mutable. El stub
 // generico se evalua UNA vez por specifier, asi que un valor fijo no permite
 // al test configurar claves fiscales validas (>=32 chars) para @wix/secrets
