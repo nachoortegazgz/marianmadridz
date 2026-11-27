@@ -566,7 +566,7 @@ test("TPV envelope helpers expose the complete status/data/error contract", asyn
     const envelope = await source("tpv/tpvEnvelope.js");
     assert.match(envelope, /status: "SUCCESS",[\s\S]*?data,[\s\S]*?error: null/);
     assert.match(envelope, /status: "PENDING",[\s\S]*?data: null,[\s\S]*?error: null/);
-    assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: toPublicShape\(actionable\)/);
+    assert.match(envelope, /status: "ERROR",[\s\S]*?data: null,[\s\S]*?error: normalizeTpvError\(actionable\)/);
 });
 
 
