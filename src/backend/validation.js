@@ -687,11 +687,11 @@ export function assertRegistrosHorariosStaff(item) {
         throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff item must be an object");
     }
 
-    if (!item.resourceId || !String(item.resourceId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires resourceId");
+    if (!isValidGuid(item.resourceId)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires valid GUID resourceId");
     }
-    if (!item.memberId || !String(item.memberId).trim()) {
-        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires memberId");
+    if (!isValidGuid(item.memberId)) {
+        throw new Error("SCHEMA_VIOLATION: RegistrosHorariosStaff requires valid GUID memberId");
     }
 
     for (const field of ["recordId", "source", "timeZone", "schemaVersion", "traceId"]) {

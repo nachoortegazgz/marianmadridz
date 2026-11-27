@@ -113,3 +113,20 @@ test("VALIDATION-MAPASTAFF-01 validates native staff identity fields without fis
 
 
 
+
+test("VALIDATION-CLOCK-IDENTITY-01 requires Wix GUID resourceId and memberId", () => {
+    assert.throws(
+        () => V.assertRegistrosHorariosStaff({
+            resourceId: "resource-not-guid",
+            memberId: "e52404b1-7a72-4b99-b231-66c4dc413421",
+        }),
+        /valid GUID resourceId/
+    );
+    assert.throws(
+        () => V.assertRegistrosHorariosStaff({
+            resourceId: "e556070a-6d6a-402e-8422-11133033ea76",
+            memberId: "member-not-guid",
+        }),
+        /valid GUID memberId/
+    );
+});

@@ -23,12 +23,27 @@ function _cloneMeta(value) {
     }
 }
 
-function _truncateMessage(value) {
-    const rawMessage =
-        value instanceof Error
-            ? value.message || String(value)
-            : String(value || "");
+function _normalizeMessageText(value) {
+    if (value instanceof Error) {
+        return typeof value.message === "string" && value.message.trim()
+            ? value.message
+            : DEFAULT_ERROR_MESSAGE;
+    }
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") {
+        for (const key of ["message", "error", "reason"]) {
+            if (typeof value[key] === "string" && value[key].trim()) {
+                return value[key];
+            }
+        }
+        return DEFAULT_ERROR_MESSAGE;
+    }
+    if (value === null || value === undefined) return DEFAULT_ERROR_MESSAGE;
+    return String(value);
+}
 
+function _truncateMessage(value) {
+    const rawMessage = _normalizeMessageText(value);
     const safeMessage = _safeTrim(rawMessage);
 
     if (safeMessage.length <= MAX_ERROR_MESSAGE_LENGTH) {
