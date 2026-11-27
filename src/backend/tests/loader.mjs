@@ -1102,12 +1102,6 @@ export async function resolve(specifier, context, nextResolve) {
 export async function load(url, context, nextLoad) {
   // Offline tests execute the same writer code as the deployed runtime.
   // Only infrastructure adapters are replaced by deterministic in-memory doubles.
-  const internalConfigUrl = pathToFileURL(path.join(BACKEND_DIR, "internalConfig.js")).href;
-  if (url === internalConfigUrl) {
-    const source = fs.readFileSync(path.join(BACKEND_DIR, "internalConfig.js"), "utf8")
-      .replace('  ENABLED: false,\n  ENVIRONMENT: "SANDBOX"', '  ENABLED: true,\n  ENVIRONMENT: "SANDBOX"');
-    return { format: "module", source, shortCircuit: true };
-  }
   if (url === 'mock:wix-fetch') {
     // The offline signer is the only permitted HTTP destination. The test
     // suite must install its deterministic mock before this adapter can run.
