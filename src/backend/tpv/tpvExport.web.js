@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { BUSINESS_COLLECTIONS, TPV_LEDGER_SOURCE } from "backend/internalConfig";
+import { BUSINESS_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_EVENT_MOVEMENT_TYPES, TPV_COLLECTIONS } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 
 const PAGE_SIZE = 1000;
@@ -82,6 +82,7 @@ export const exportarMovimientos = webMethod(
                 dataCollectionId: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
                 filter: wql.and(
                     wql.eq("recordSource", TPV_LEDGER_SOURCE),
+                    wql.eq("movementType", TPV_EVENT_MOVEMENT_TYPES[TPV_COLLECTIONS.MOVIMIENTOS_CAJA]),
                     wql.gte("recordTimestamp", desde),
                     wql.lte("recordTimestamp", hasta)
                 ),
