@@ -221,40 +221,40 @@ function _validateTimeclockSequence(records) {
 // =============================================================================
 
 async function _resolveStaffContext(traceId) {
+    let response;
     try {
-        /* @wix/members backend SDK: respuesta de Get My Member. */
-        const response = await members.getCurrentMember();
-        const member = response?.member || response;
-        if (!member || member.status === "ERROR") return null;
-
-        const memberId = _safeTrim(member._id || member.id || "");
-        const contactId = _safeTrim(member.contactId || "");
-        const email = _safeTrim(
-            member.loginEmail || member.contactDetails?.email
-        ).toLowerCase();
-        if (!contactId) return null;
-
-        const staff = await findStaffByContactId(contactId, traceId);
-        if (!staff) return null;
-
-        return {
-            memberId,
-            contactId: staff.contactId,
-            email,
-            resourceId: staff.resourceId,
-            displayName: getStaffDisplayName(staff),
-            rolWebsite: staff.roleWebsite,
-        };
-    } catch (error) {
-        log.error("_resolveStaffContext failed", {
-            traceId,
-            message: error?.message || String(error),
-        });
-        return null;
+        response = await members.getCurrentMember();
+    } catch (cause) {
+        const error = new Error("MEMBER_IDENTITY_PROVIDER_UNAVAILABLE");
+        error.code = "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE";
+        error.traceId = traceId || null;
+        error.cause = cause;
+        throw error;
     }
+
+    const member = response?.member || response;
+    if (!member || member.status === "ERROR") return null;
+
+    const memberId = _safeTrim(member._id || member.id || "");
+    const contactId = _safeTrim(member.contactId || "");
+    const email = _safeTrim(member.loginEmail || member.contactDetails?.email).toLowerCase();
+    if (!contactId) return null;
+
+    const staff = await findStaffByContactId(contactId, traceId);
+    if (!staff) return null;
+
+    return {
+        memberId,
+        contactId: staff.contactId,
+        email,
+        resourceId: staff.resourceId,
+        displayName: getStaffDisplayName(staff),
+        rolWebsite: staff.roleWebsite,
+    };
 }
 
 // =============================================================================
+// WEBMETHODS PUBLICOS// =============================================================================
 // WEBMETHODS PUBLICOS (BIBLIA 14.7)
 // =============================================================================
 
@@ -287,7 +287,7 @@ export const getMyStaffContext = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "INTERNAL", message: "Error resolviendo contexto staff" },
+                error: { code: error?.code || "INTERNAL", message: "Error resolviendo contexto staff" },
                 traceId,
             };
         }
@@ -362,9 +362,9 @@ export const registrarFichaje = webMethod(
                 status: "ERROR",
                 data: null,
                 error: {
-                    code: error?.message?.startsWith("SCHEMA_VIOLATION")
+                    code: error?.code || (error?.message?.startsWith("SCHEMA_VIOLATION")
                         ? "SCHEMA_VIOLATION"
-                        : "INTERNAL",
+                        : "INTERNAL"),
                     message: error?.message || "Error registrando fichaje",
                 },
                 traceId,
