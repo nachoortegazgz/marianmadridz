@@ -756,7 +756,9 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
         if (existingRes?.items?.length === 1) {
             const existingMovement = existingRes.items[0];
-            const existingFingerprint = existingMovement.idempotencyFingerprint ||
+            const claimId = `LEDGER_TX_${await hashSHA256(transactionId)}`;
+            const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
+            const existingFingerprint = existingClaim?.payload?.requestFingerprint ||
                 await hashSHA256(_stableSerialize(_manualTransactionFingerprint(existingMovement)));
             if (existingFingerprint !== transactionFingerprint) {
                 return {
@@ -923,7 +925,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             correctionReason,
             previousInvoiceId,
             issuerInvoiceNumber,
-            idempotencyFingerprint: transactionFingerprint,
         };
 
         const fiscalChainPayload = _buildInternalFiscalChainPayload({ ...baseMovement, previousRecordHash }, generatedAt);
@@ -1054,6 +1055,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                     payload: {
                         reservedAt: new Date().toISOString(),
                         transactionId,
+                        requestFingerprint: transactionFingerprint,
                     },
                     traceId,
                     _createdDate: new Date(),
