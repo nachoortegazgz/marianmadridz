@@ -17,6 +17,16 @@ Reglas de trabajo:
 
 ---
 
+## AUDITORÍA WIX / TPV / CLI — 2026-11-27
+
+**Auditoría actual:** [2026-11-27-wix-site-and-tpv-cli-audit.md](audits/2026-11-27-wix-site-and-tpv-cli-audit.md). Main `d95c2321f5227e987b22455150fd7a62b4129fa0`; PR #638 integrada. CI run `45948074849`: 80 suites / 759 tests / 0 fallos. Wix Site Context: Draft, Editor clásico, Velo activo, actualizado 05:37; `published=false`; 9 páginas estáticas y 2 dinámicas. TPV está registrado como `/blank` (ID `yl5th`), no se acredita `/tpv` como ruta actual. CMS: HistoricoCierresZ=1, CajaActual=1 ABIERTA, MovimientosCaja=5, TransaccionesTPV=0, ControlOperativo=78.
+
+**TPV:** el HTML está en MODO CONSULTA; tarifa personalizada y métodos no incluidos en V1 siguen deshabilitados. `saleReady=false` por gates fiscales, de pago y presentación de precios. `registrarVenta()` puede persistir una intención `PENDING_PAYMENT` aunque la cotización no esté lista; no confirma pago ni crea movimiento físico. La clasificación temporal `recordTimestamp`/`productionActivationAt`/`recordNature` está documentada pero no implementada en `src/`; `sourceType` se fija como `SYNTHETIC`. Resolver antes de actividad real.
+
+**Wix CLI:** existe workflow manual `wix-tpv-preview.yml` que crea Preview no publicador y ejecuta smoke read-only. No se pudo disparar desde esta integración; el smoke no llama WebMethods ni prueba interacciones. No se ha ejecutado Preview ni Wix Runtime. No hay escrituras CMS ni publicación en esta auditoría.
+
+---
+
 # STATE-NOW — 2026-11-25
 
 **Base de código TPV:** PR #612 squash merge `239fd8207d228bde56e9908055166980a87d4989` (árbol probado `632c85edbd765a291abe7b411fe08af75da5e571`) · **Documentación de flujo único:** integrada en la historia de `main` (commit `19378e00f6568afaf68df6550d7fbb7844e221ab`) · **Sitio Wix:** `188bed94-177c-4bc9-a9f0-35080d874f3e` · **Site Context read-back 2026-11-25 17:53 CET:** Draft, Velo habilitado, Editor, Stores Catalog V3, Bookings, Payments e Invoices V1; Preview/Runtime no ejecutado.
