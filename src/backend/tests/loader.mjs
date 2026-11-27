@@ -1042,7 +1042,6 @@ export const items = {
     const totalSuccesses = results.filter((entry) => entry.itemMetadata.success).length;
     return { results, bulkActionMetadata: { totalSuccesses, totalFailures: results.length - totalSuccesses } };
   },
-  queryReferencedItems: (col, id, field) => m.queryReferencedItems(col, id, field),
 };
 export default m;
 `;
