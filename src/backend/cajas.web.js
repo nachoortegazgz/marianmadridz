@@ -51,7 +51,6 @@ import {
     readTaxAmount,
 } from "backend/data";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 
 import { SECRETS } from "backend/mmSecrets";
@@ -90,10 +89,6 @@ const log = logger;
 // ============================================================================
 
 const CASH_REGISTER_ID = SINGLETONS.CAJA_PRINCIPAL;
-
-function _isSimulationCashRegister(cashRegister) {
-    return _safeTrim(cashRegister?.cashRegisterStatus).toUpperCase() === "SIMULACION";
-}
 
 function _effectiveSessionClosedAt(cashRegister) {
     if (!cashRegister?.closedAt) return null;
@@ -558,7 +553,7 @@ async function _getLastMovement() {
         .descending("sequenceNumber")
         .limit(20)
         .find(STRONG_READ);
-    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
+    return (res?.items || [])[0] || null;
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
@@ -792,9 +787,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
 
         const currentCashRegister = await getCashRegisterSingleton();
-        if (_isSimulationCashRegister(currentCashRegister)) {
-            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." } };
-        }
         // Idempotent retries return the original movement before consuming the
         // per-operator rate limit; only new operations are rate-limited.
         await _rateLimitOrThrow("cajas.registerManualTransaction", resourceId, traceId);
@@ -872,9 +864,6 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         await _assertPeriodNotClosed(operationDate, traceId);
         if (channelType === CHANNEL_TYPE.PRESENCIAL) {
             const lockedCashRegister = await getCashRegisterSingleton();
-            if (_isSimulationCashRegister(lockedCashRegister)) {
-                return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "La caja actual contiene estado de simulacion; no se permiten movimientos reales." }, traceId };
-            }
             if (!_hasOpenCashierSession(lockedCashRegister)) {
                 return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "La sesión de caja se cerró o no está abierta; no se ha insertado el movimiento." }, traceId };
             }
@@ -1256,9 +1245,6 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
         for (let attempt = 0; attempt < 4; attempt += 1) {
             await assertFiscalLedgerLock(projectionLock);
             const cashRegister = await getCashRegisterSingleton();
-            if (_isSimulationCashRegister(cashRegister)) {
-                throw new Error("CAJA_ACTUAL_SIMULATION_STATE");
-            }
             if (!cashRegister ||
                 _safeTrim(cashRegister.cashRegisterStatus).toUpperCase() !== CASH_REGISTER_STATUS.ABIERTA) {
                 throw new Error("CAJA_SESSION_NOT_OPEN");
@@ -1519,9 +1505,6 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     try {
         await requireCajero(traceId);
         const cashRegister = await getCashRegisterSingleton();
-        if (_isSimulationCashRegister(cashRegister)) {
-            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "El saldo mostrado pertenece a una caja de simulacion y no es un saldo operativo." } };
-        }
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
@@ -1633,9 +1616,6 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             }
         }
         const currentCashRegister = await getCashRegisterSingleton();
-        if (_isSimulationCashRegister(currentCashRegister)) {
-            return { status: "ERROR", data: null, error: { code: "CASH_REGISTER_SIMULATION_STATE", message: "No se puede cerrar una caja que contiene estado de simulacion." } };
-        }
         await validateFiscalConfig(traceId);
         const cleanDiaKey = _readDate(diaKey);
         if (!cleanDiaKey) {
@@ -2163,7 +2143,6 @@ export const getMovimientoByBooking = webMethod(
             // not array fields, and substring matching could return false positives.
 
             // Simulation-marked rows are historical synthetic evidence, never a fiscal receipt.
-            items = items.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
 
             if (items.length === 0) {
                 return {
