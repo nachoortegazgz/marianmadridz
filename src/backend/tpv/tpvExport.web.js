@@ -3,6 +3,8 @@ import { requireAdmin } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { BUSINESS_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_EVENT_MOVEMENT_TYPES, TPV_COLLECTIONS } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
+import { normalizeTpvError } from "backend/tpv/tpvError";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 const PAGE_SIZE = 1000;
 const EXPORT_FIELDS = Object.freeze([
@@ -65,8 +67,8 @@ export const exportarMovimientos = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-movements-export");
-        await requireAdmin(traceId);
         try {
+            await requireAdmin(traceId);
             const desde = parseDate(input.desde, "DESDE");
             const hasta = parseDate(input.hasta, "HASTA");
             if (desde > hasta) throw new Error("TPV_EXPORT_DATE_RANGE_INVALID");
@@ -92,6 +94,7 @@ export const exportarMovimientos = webMethod(
                 consistency: CONSISTENCY.STRONG,
             });
             const records = page.items
+                .filter((item) => !isExplicitSimulationLedgerRecord(item))
                 .filter((item) => !sessionId || item.payloadFiscal?.sessionId === sessionId)
                 .map(projectRecord);
             const contenido = formato === "csv" ? toCsv(records) : records;
@@ -118,7 +121,7 @@ export const exportarMovimientos = webMethod(
                 contenido: null,
                 nextCursor: null,
                 hasMore: false,
-                error: { code: String(error?.code || error?.message || "TPV_MOVEMENTS_EXPORT_FAILED") },
+                error: normalizeTpvError(error, "TPV_MOVEMENTS_EXPORT_FAILED"),
                 traceId,
             };
         }
