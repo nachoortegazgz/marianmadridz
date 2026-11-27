@@ -185,7 +185,7 @@ test("refund lock is mutable only through its scoped compare-and-swap policy", (
         collection,
         "TPVQaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         CONTROL_TYPE.TPV_REFUND_LOCK
-    ), { code: "CMS_REMOVE_SCOPE_DENIED" });
+    ), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("TPV session lock is deterministic, bounded and CAS-only", () => {
@@ -221,7 +221,7 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
         controlType: CONTROL_TYPE.TPV_SESSION_LOCK,
         status: "RELEASED",
     }), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_REMOVE_SCOPE_DENIED" });
+    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), { code: "CMS_DELETE_PROHIBITED" });
 });
 
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
