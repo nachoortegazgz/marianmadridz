@@ -304,15 +304,15 @@ test("DATAACCESS-MOVIMIENTOS-APPEND-01 public bulk mutation APIs reject Movimien
         () => bulkUpdate(C.MOVIMIENTOS_CAJA, [{ _id: "synthetic-row", totalAmount: 1 }]),
         { code: "CMS_BULK_UPDATE_SCOPE_DENIED" }
     );
-    assert.throws(
-        () => bulkRemove(C.MOVIMIENTOS_CAJA, ["synthetic-row"], {
-            condition: { filter: {
-                controlType: { $eq: T.DUAL_CACHE },
-                expiresAt: { $lt: new Date("2026-11-14T00:00:00.000Z") },
-            } },
-        }),
-        { code: "CMS_BULK_REMOVE_SCOPE_DENIED" }
-    );
+    const result = await bulkRemove(C.MOVIMIENTOS_CAJA, ["synthetic-row"], {
+        condition: { filter: {
+            controlType: { $eq: T.DUAL_CACHE },
+            expiresAt: { $lt: new Date("2026-11-14T00:00:00.000Z") },
+        } },
+    });
+    assert.equal(result.removed, 0);
+    assert.equal(result.failed, 1);
+    assert.equal(result.errors[0].code, "CMS_BULK_DELETE_PROHIBITED");
 });
 
 test("bulk insert remains disabled during isolated-site mutation window", () => {
