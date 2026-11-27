@@ -20,12 +20,12 @@
 
 ## 2. Inventario actual
 
-Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE suman 238 items.
+Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE suman 242 items; las WIX_APP, 489. Total: 731 items.
 
 | Colección | Tipo | Revisión | Campos | Items |
 |---|---:|---:|---:|---:|
 | CajaActual | NATIVE | 20 | 83 | 1 |
-| CitasF2 | NATIVE | 60 | 29 | 11 |
+| CitasF2 | NATIVE | 60 | 29 | 12 |
 | ComplementosCatalogo | NATIVE | 144 | 17 | 36 |
 | ControlOperativo | NATIVE | 95 | 34 | 81 |
 | HistoricoCierresZ | NATIVE | 44 | 66 | 1 |
@@ -34,9 +34,9 @@ Wix devolvió 41 colecciones: 12 NATIVE y 29 WIX_APP. Las 12 colecciones NATIVE 
 | MovimientosCaja | NATIVE | 110 | 114 | 5 |
 | RegistroIntegracion | NATIVE | 5 | 21 | 3 |
 | RegistrosHorariosStaff | NATIVE | 2 | 47 | 0 |
-| ServiciosCatalogo | NATIVE | 204 | 43 | 95 |
+| ServiciosCatalogo | NATIVE | 206 | 43 | 95 |
 | TransaccionesTPV | NATIVE | 7 | 27 | 0 |
-| **Total NATIVE** | | | **628** | **241** |
+| **Total NATIVE** | | | **628** | **242** |
 
 ### Colecciones Wix Apps
 
@@ -154,7 +154,7 @@ resourceId:TEXT!, memberId:TEXT!, employeeNumber:TEXT, staffName:TEXT, workplace
 Revisión 204 · 43 campos · 95 items · permisos CMS ADMIN para read/insert/update/remove.
 
 ~~~text
-sessionCount:NUMBER, staffMembers:MULTI_REFERENCE->MapaStaff, pricingPlanId:TEXT, catalogEntryType:TEXT, locationId:TEXT, description:TEXT, _id:TEXT, serviceId:TEXT, title:TEXT, slug:TEXT, tagLine:TEXT, categoryId:TEXT, itemNature:TEXT, sku:TEXT, price:NUMBER, currency:TEXT, taxIncluded:BOOLEAN, tipoImpositivo:NUMBER, calificacionOperacion:TEXT, totalDuration:NUMBER, phase1Duration:NUMBER, phase2Duration:NUMBER, exposureDuration:NUMBER, allowCombine:BOOLEAN, linkedPhases:TEXT, location:TEXT, clientHidden:BOOLEAN, onlinePayment:BOOLEAN, inPersonPayment:BOOLEAN, pricingModel:TEXT, depositType:TEXT, depositAmount:NUMBER, margin:NUMBER, internalNotes:TEXT, category:TEXT, precioCosteBase:NUMBER, _createdDate:DATETIME, mainMedia:IMAGE, _updatedDate:DATETIME, _owner:TEXT, recomendaciones:TEXT, bookingsStaffNames:OBJECT, bookingsStaff:OBJECT
+sessionCount:NUMBER, staffMembers:MULTI_REFERENCE->MapaStaff, pricingPlanId:TEXT, catalogEntryType:TEXT, locationId:TEXT, description:TEXT, _id:TEXT, serviceId:TEXT, title:TEXT, slug:TEXT, tagLine:TEXT, categoryId:TEXT, itemNature:TEXT, sku:TEXT, price:NUMBER, currency:TEXT, taxIncluded:BOOLEAN, tipoImpositivo:NUMBER, calificacionOperacion:TEXT, totalDuration:NUMBER, phase1Duration:NUMBER, phase2Duration:NUMBER, exposureDuration:NUMBER, allowCombine:BOOLEAN, linkedPhases:TEXT, location:TEXT, clientHidden:BOOLEAN, onlinePayment:BOOLEAN, inPersonPayment:BOOLEAN, pricingModel:TEXT, depositType:TEXT, depositAmount:NUMBER, margin:NUMBER, internalNotes:TEXT, category:TEXT, precioCosteBase:NUMBER, _createdDate:DATETIME, mainMedia:IMAGE, _updatedDate:DATETIME, _owner:TEXT, recomendaciones:TEXT, bookingsStaffNames:ARRAY_STRING, bookingsStaff:ARRAY_STRING
 ~~~
 
 ### TransaccionesTPV — TRANSACCIONES_TPV
@@ -177,16 +177,16 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 | Colección | Observación de contenido |
 |---|---|
 | CajaActual | 1 singleton ABIERTA. Apertura 300 EUR; cashAmount/expectedCash 320 EUR; countedCash 0; difference 0; salesCount 2. snapshotSource=MOVIMIENTOS_CAJA_RECONCILIADOS. |
-| CitasF2 | 11 items: 10 CONFIRMED, 1 PENDING; 9 NOT_PAID, 2 PENDING_LEDGER; 3 DUAL_F1, 3 DUAL_F2 y 5 SIMPLE. |
+| CitasF2 | 12 items: 11 CONFIRMED, 1 PENDING; 10 NOT_PAID, 2 PENDING_LEDGER; 6 SIMPLE, 3 DUAL_F1 y 3 DUAL_F2. Todos los 11 campos required y los tipos físicos pasan. |
 | ComplementosCatalogo | 36 items. |
 | ControlOperativo | 81 items: 9 SLOT_LOCK liberados, 6 IDEMPOTENCY completados, 6 DAYS_CACHE (1 INVALIDATED y 5 sin status), 4 RATE_LIMIT activos, 15 WEBHOOK_EVENT completados, 33 WEBHOOK_CLAIM completados, 5 TPV_FUNCTIONAL_TEST completados y 3 COMPENSATION PENDING_RECOVERY. |
-| HistoricoCierresZ | 1 item SIMULATED / Z_SIMULATED; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required en el esquema actual. |
+| HistoricoCierresZ | 1 item SIMULATED / TPV_CUSTOM_QA; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required. Se conserva sin modificar por append-only. |
 | LibroAsientosContablesDetalle | 3 items; los 3 tienen projectionStatus=SIMULATED_ONLY. |
-| MapaStaff | 5 items: STAFF=3, TERCERO=1, GESTORIA=1. No existe item CONFIG_SISTEMA en el conjunto leído. |
+| MapaStaff | 5 items: STAFF=3, TERCERO=1, GESTORIA=1. No existe CONFIG_SISTEMA. Se retiró schemaVersion="N/A" de los 3 STAFF; el campo es opcional y no se infirió una versión. |
 | MovimientosCaja | 5 items: movementType SALE=2 y REFUND=1; recordSource=TPV_QA_DEVELOPMENT en 3. Un item no tiene transactionId. |
 | RegistroIntegracion | 3 items, todos deliveryStatus=NOT_SENT; 2 TPV_SALE_SIMULATED y 1 TPV_REFUND_SIMULATED. |
 | RegistrosHorariosStaff | 0 items. |
-| ServiciosCatalogo | 95 items: 94 SERVICE y 1 PRICING_PLAN. |
+| ServiciosCatalogo | 95 items: 94 SERVICE y 1 PRICING_PLAN. bookingsStaffNames/bookingsStaff son ARRAY_STRING; los 93 valores existentes son arrays de cadenas y 2 items los dejan vacíos. |
 | TransaccionesTPV | 0 items. |
 
 ### Incidencias de conformidad de datos
@@ -200,6 +200,10 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 7. RegistrosHorariosStaff: la colección existe y su esquema está definido, pero no hay items.
 
 8. ControlOperativo: auditoría Wix consistente del 2026-11-27 (81/81 items; revisión 95). Se detectaron 6 WEBHOOK_EVENT históricos con eventType/processedAt solo en payload, 6 WEBHOOK_CLAIM históricos con ownerToken y aliases payload.attempt/payload.leaseExpiresAt sin attempts/expiresAt top-level, y 3 SLOT_LOCK históricos liberados sin payload.slotStart/slotEnd. Los registros afectados son terminales; WEBHOOK_EVENT es append-only. No se modificaron ni migraron. Los writers actuales ya emiten los campos canónicos y sus hooks los validan; se endureció además la creación/validación de locks de reserva para rechazar intervalos ausentes o inválidos. No se detectaron tipos superiores incorrectos ni campos raíz desconocidos. resourceId vacío en DAYS_CACHE es intencional porque la clave representa un conjunto de recursos.
+
+### Auditoría integral de colecciones — 27-11-2026
+
+Se releen las 41 colecciones con paginación completa y consistentRead=true: 12 NATIVE (242 items) y 29 WIX_APP (489 items). En las colecciones propias, tras las dos correcciones descritas en el informe enlazado, no quedan discrepancias de tipo en los campos declarados. Persisten anomalías históricas en ledgers append-only y propiedades raíz no declaradas en tres colecciones; no se han reescrito. La colección WIX_APP StoreCatalog/Products omite variantsInfo en 24 items, pero el API oficial Catalog V3 confirma 24 productos y 30 variantes con correspondencia de los 24 IDs; no se parchea una colección administrada por Wix. Informe completo: [auditoría integral CMS 27-11-2026](audits/2026-11-27-full-cms-collections-audit.md).
 
 Los datos actuales son anteriores al despliegue oficial de producción de 2027 y, por la política del proyecto, son sintéticos. Los marcadores explícitos no son uniformes: por ejemplo, solo tres de los cinco movimientos indican recordSource=TPV_QA_DEVELOPMENT. No inferir naturaleza real a partir de la ausencia de marcador.
 
