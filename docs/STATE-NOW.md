@@ -26,7 +26,8 @@
 - `registrarVenta()` aplica los blockers de preparación para operaciones reales; el replay idempotente se resuelve antes del gate.
 - `TransaccionesTPV`: intención comercial pendiente/no contable. `MovimientosCaja`: ledger físico canónico.
 - El widget sigue en MODO CONSULTA y no hay venta/cobro/movimiento físico aceptados en Runtime según la última evidencia.
-- Los writers fiscales/contables y de jornada constaban deshabilitados en la auditoría. Su estado actual requiere read-back; no se presupone que haya cambiado.
+- Cambio de código en rama `remove-global-ledger-write-gates`: retirados los interruptores globales `FISCAL_RUNTIME_POLICY` de los writers fiscales/contables, la preparación de venta y el cron de recuperación. Los writers siguen ejecutando validación fiscal, autorización, contratos, locks, idempotencia e integridad; no equivale a certificar configuración fiscal ni Runtime.
+- El writer de jornada conserva su control específico hasta disponer de idempotencia y serialización validadas.
 
 ## 4. Reservas / Bookings
 
