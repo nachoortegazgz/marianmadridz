@@ -11,8 +11,6 @@ CORRECTIONS: C-01 (sin active), C-03/C-04 (memberId), BUG-04 FIX (campos
 
 import { query as dalQuery, insertItem as insert } from "backend/dataAccess";
 import { webMethod, Permissions } from "wix-web-module";
-/* @wix/members backend SDK: Get My Member devuelve el miembro actual. */
-import { members } from "@wix/members";
 
 import {
     BUSINESS_COLLECTIONS,
@@ -33,13 +31,15 @@ import {
 } from "backend/validation";
 
 import {
-    findStaffByContactId,
     findStaffByResourceId,
     getSiteMemberIdByContactId,
     getStaffDisplayName,
 } from "backend/staff";
 
-import { requireAdmin } from "backend/security";
+import {
+    requireAdmin,
+    getMyStaffContext as getAuthenticatedStaffContext,
+} from "backend/security";
 import { hashSHA256, signTimeclockRecord, verifyTimeclockSignature } from "backend/securityEngine";
 import { getSecretValue } from "backend/secretAccess";
 /* HOR-R3-03 (DUP-02): _safeTrim importado de mmUtils (SSOT). Helper local
@@ -216,44 +216,10 @@ function _validateTimeclockSequence(records) {
 
 /* HOR-R3-03 (DUP-02): _safeTrim local ELIMINADO. Importado de mmUtils. */
 
+// Staff identity is resolved centrally in backend/security.js. It verifies
+// the current Wix memberId against the fresh Bookings resource identity.
+
 // =============================================================================
-// RESOLUCION DE CONTEXTO STAFF (C-03: memberId, sin guard active)
-// =============================================================================
-
-async function _resolveStaffContext(traceId) {
-    try {
-        /* @wix/members backend SDK: respuesta de Get My Member. */
-        const response = await members.getCurrentMember();
-        const member = response?.member || response;
-        if (!member || member.status === "ERROR") return null;
-
-        const memberId = _safeTrim(member._id || member.id || "");
-        const contactId = _safeTrim(member.contactId || "");
-        const email = _safeTrim(
-            member.loginEmail || member.contactDetails?.email
-        ).toLowerCase();
-        if (!contactId) return null;
-
-        const staff = await findStaffByContactId(contactId, traceId);
-        if (!staff) return null;
-
-        return {
-            memberId,
-            contactId: staff.contactId,
-            email,
-            resourceId: staff.resourceId,
-            displayName: getStaffDisplayName(staff),
-            rolWebsite: staff.roleWebsite,
-        };
-    } catch (error) {
-        log.error("_resolveStaffContext failed", {
-            traceId,
-            message: error?.message || String(error),
-        });
-        return null;
-    }
-}
-
 // =============================================================================
 // WEBMETHODS PUBLICOS (BIBLIA 14.7)
 // =============================================================================
@@ -263,7 +229,7 @@ export const getMyStaffContext = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("staff-ctx");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return {
                     status: "ERROR",
@@ -287,7 +253,7 @@ export const getMyStaffContext = webMethod(
             return {
                 status: "ERROR",
                 data: null,
-                error: { code: "INTERNAL", message: "Error resolviendo contexto staff" },
+                error: { code: error?.code || "INTERNAL", message: "Error resolviendo contexto staff" },
                 traceId,
             };
         }
@@ -299,7 +265,7 @@ export const registrarFichaje = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("fichaje");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return {
                     status: "ERROR",
@@ -362,9 +328,9 @@ export const registrarFichaje = webMethod(
                 status: "ERROR",
                 data: null,
                 error: {
-                    code: error?.message?.startsWith("SCHEMA_VIOLATION")
+                    code: error?.code || (error?.message?.startsWith("SCHEMA_VIOLATION")
                         ? "SCHEMA_VIOLATION"
-                        : "INTERNAL",
+                        : "INTERNAL"),
                     message: error?.message || "Error registrando fichaje",
                 },
                 traceId,
@@ -378,7 +344,7 @@ export const getEstadoJornada = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("estado-jornada");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
@@ -453,7 +419,7 @@ export const getEstadoJornada = webMethod(
             };
         } catch (error) {
             log.error("getEstadoJornada failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -463,7 +429,7 @@ export const calcularHorasTrabajadas = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("calc-horas");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
@@ -595,7 +561,7 @@ export const calcularHorasTrabajadas = webMethod(
             };
         } catch (error) {
             log.error("calcularHorasTrabajadas failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -605,7 +571,7 @@ export const getHistorialFichajes = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("hist-fichajes");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
@@ -708,7 +674,7 @@ export const getHistorialFichajes = webMethod(
             return { status: "OK", data: { items, total: items.length }, traceId };
         } catch (error) {
             log.error("getHistorialFichajes failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
@@ -728,7 +694,7 @@ export const registrarAjusteHorario = webMethod(
                 );
             }
 
-            const adminCtx = await _resolveStaffContext(traceId);
+            const adminCtx = await getAuthenticatedStaffContext(traceId);
             const targetResourceId = _safeTrim(options?.resourceId);
             const clockEventType = _safeTrim(options?.clockEventType).toUpperCase();
             const adjustmentReason = _safeTrim(
@@ -825,7 +791,7 @@ export const registrarAjusteHorario = webMethod(
                 status: "ERROR",
                 data: null,
                 error: {
-                    code: error?.code === "ACCESS_DENIED" ? "ACCESS_DENIED" : "INTERNAL",
+                    code: error?.code || "INTERNAL",
                     message: error?.message || "Error registrando ajuste",
                 },
                 traceId,
@@ -839,7 +805,7 @@ export const getResumenHoras = webMethod(
     async (options = {}) => {
         const traceId = _safeTrim(options?.traceId) || makeTraceId("resumen-horas");
         try {
-            const ctx = await _resolveStaffContext(traceId);
+            const ctx = await getAuthenticatedStaffContext(traceId);
             if (!ctx) {
                 return { status: "ERROR", data: null, error: { code: "NOT_STAFF" } };
             }
@@ -941,7 +907,7 @@ export const getResumenHoras = webMethod(
             };
         } catch (error) {
             log.error("getResumenHoras failed", { traceId, message: String(error) });
-            return { status: "ERROR", data: null, error: { code: "INTERNAL" }, traceId };
+            return { status: "ERROR", data: null, error: { code: error?.code || "INTERNAL" }, traceId };
         }
     }
 );
