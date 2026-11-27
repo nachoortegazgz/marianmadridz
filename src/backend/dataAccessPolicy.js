@@ -154,6 +154,13 @@ export function assertUpdateAllowed(collection, item) {
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
         }
+        if (
+            item.status !== "PENDING_PAYMENT" ||
+            item.sourceType !== "SYNTHETIC" ||
+            item.requiresReconciliation !== true
+        ) {
+            throw _policyError("CMS_TPV_SYNTHETIC_INTENT_ONLY");
+        }
     } else if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
         if (!item._id) {
             throw _policyError("CMS_UPDATE_ID_REQUIRED");
@@ -199,20 +206,37 @@ export function assertSaveAllowed(collection, item) {
     }
 }
 
-export function assertRemoveAllowed(collection, id) {
+export function assertRemoveAllowed(collection, id, expectedControlType, existingItem) {
     if (!id) throw _policyError("CMS_REMOVE_ID_REQUIRED");
-    throw createActionableError({
-        code: "CMS_DELETE_PROHIBITED",
-        userMessage: "No está permitido borrar registros.",
-        technicalDetail: "Delete denied for collection: " + String(collection || "UNKNOWN"),
-        remediation: [
-            "Conservar el registro original.",
-            "Editar el registro mediante su flujo autorizado cuando el contrato lo permita.",
-            "Añadir un registro rectificativo o compensatorio cuando proceda.",
-        ],
-        contextSnapshot: { collection, operation: "REMOVE" },
-        retryable: false,
-    });
+
+    if (collection === BUSINESS_COLLECTIONS.TRANSACCIONES_TPV) {
+        throw _policyError("CMS_TPV_TRANSACTION_DELETE_DENIED");
+    }
+
+    if (!DATA_ACCESS_WRITE_POLICY.removeCollections.includes(collection)) {
+        if (APPEND_ONLY_COLLECTIONS.includes(collection)) {
+            throw _appendOnlyError(collection, "REMOVE");
+        }
+        throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+    }
+
+    if (collection === BUSINESS_COLLECTIONS.CONTROL_OPERATIVO) {
+        if (!DATA_ACCESS_WRITE_POLICY.removableControlTypes.includes(expectedControlType)) {
+            throw _policyError("CMS_REMOVE_SCOPE_DENIED");
+        }
+        if (existingItem) {
+            if (existingItem.controlType !== expectedControlType) {
+                throw _policyError("CMS_REMOVE_CONTROL_TYPE_MISMATCH");
+            }
+            _assertControlRecord(
+                existingItem,
+                [expectedControlType],
+                "CMS_REMOVE_CONTROL_TYPE_INVALID"
+            );
+        }
+    }
+
+    return true;
 }
 
 export function assertBulkRemoveAllowed() {
