@@ -183,3 +183,19 @@ test('STAFF-SDK-04 pagination cap never returns an apparently complete partial s
   assert.deepEqual(all, []);
   assert.equal(calls, 20);
 });
+
+test('STAFF-CONFIG-01 cache limits and API timeout come only from canonical SDK_CONFIG', async () => {
+  const { SDK_CONFIG } = await import('../internalConfig.js');
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../staff.js', import.meta.url), 'utf8');
+
+  assert.deepEqual(SDK_CONFIG.CACHE, {
+    STAFF_TTL_MS: 300000,
+    MAX_ENTRIES: 100,
+  });
+  assert.equal(SDK_CONFIG.TIMEOUTS.API_MS, 15000);
+  assert.match(source, /const CACHE_TTL_MS = SDK_CONFIG\.CACHE\.STAFF_TTL_MS;/);
+  assert.match(source, /const CACHE_MAX_ENTRIES = SDK_CONFIG\.CACHE\.MAX_ENTRIES;/);
+  assert.match(source, /const API_TIMEOUT_MS = SDK_CONFIG\.TIMEOUTS\.API_MS;/);
+  assert.doesNotMatch(source, /SDK_CONFIG\?\.CACHE|SDK_CONFIG\?\.TIMEOUTS\?\.API_MS/);
+});
