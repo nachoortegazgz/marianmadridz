@@ -482,8 +482,22 @@ export async function MovimientosCaja_beforeUpdate(item) {
     return MovimientosCaja_beforeInsert(item);
 }
 
-export async function MovimientosCaja_beforeRemove() {
-    _fiscalError("Borrado de MovimientosCaja prohibido: ledger append-only.");
+export function MovimientosCaja_beforeRemove() {
+    throw createActionableError({
+        code: "MOVIMIENTOS_CAJA_APPEND_ONLY",
+        userMessage: "No se puede borrar un movimiento de caja.",
+        technicalDetail: "MovimientosCaja es un ledger append-only.",
+        remediation: [
+            "Registrar una devolución o ajuste compensatorio.",
+            "Usar el flujo TPV correspondiente.",
+            "Conservar el registro histórico original.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA,
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 export function LibroAsientosContablesDetalle_beforeInsert(item) {
@@ -500,7 +514,20 @@ export function LibroAsientosContablesDetalle_beforeUpdate(item) {
 }
 
 export function LibroAsientosContablesDetalle_beforeRemove() {
-    _fiscalError("Borrado de LibroAsientosContablesDetalle prohibido: ledger contable append-only.");
+    throw createActionableError({
+        code: "ACCOUNTING_LEDGER_APPEND_ONLY",
+        userMessage: "No se puede borrar un asiento contable.",
+        technicalDetail: "El libro contable es append-only.",
+        remediation: [
+            "Registrar una rectificación formal.",
+            "No modificar el asiento original.",
+            "Consultar el traceId en los registros técnicos.",
+        ],
+        contextSnapshot: {
+            operation: "REMOVE",
+        },
+        retryable: false,
+    });
 }
 
 // =============================================================================
@@ -873,14 +900,40 @@ export async function TransaccionesTPV_beforeUpdate(item) {
 }
 
 export async function TransaccionesTPV_beforeRemove(itemId) {
-    const id = _safeTrim(itemId);
-    if (!id) _schemaError("TransaccionesTPV remove requires _id");
+    const id = typeof itemId === "string"
+        ? itemId.trim()
+        : _safeTrim(itemId?._id);
+
+    if (!id) {
+        _schemaError("TransaccionesTPV remove requires _id");
+    }
 
     const existing = await getItem(
         BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
         id,
         CONSISTENCY.STRONG
     );
+
+    if (!existing) {
+        _schemaError("TransaccionesTPV remove target not found");
+    }
+
+    throw createActionableError({
+        code: "TPV_TRANSACTIONS_APPEND_ONLY",
+        userMessage: "No se puede borrar una transacción TPV.",
+        technicalDetail: "TransaccionesTPV conserva la intención comercial y su trazabilidad.",
+        remediation: [
+            "Registrar una devolución formal cuando corresponda.",
+            "No eliminar la transacción original.",
+            "Usar el flujo TPV de devoluciones.",
+        ],
+        contextSnapshot: {
+            collection: BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+            operation: "REMOVE",
+            recordId: id,
+        },
+        retryable: false,
+    });
 }
 
 export function ControlOperativo_beforeInsert(item) {
