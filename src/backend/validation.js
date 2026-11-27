@@ -30,10 +30,8 @@ import {
     TIPO_FACTURA,
     TPV_LEDGER_SOURCE,
     TPV_EVENT_MOVEMENT_TYPES,
-    TPV_HISTORICAL_POLICY,
     TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
-import { isValidTpvTestRunPayload } from "backend/tpv/tpvHistoricalCompat";
 
 // =============================================================================
 // ASSERT VALID ENUM (unica funcion de validacion generica)
@@ -620,44 +618,6 @@ export function assertControlOperativo(item) {
         }
     }
 
-    if (item.controlType === CONTROL_TYPE.TPV_TEST_RUN) {
-        const payload = item.payload;
-        const expiresAt = new Date(item.expiresAt);
-        if (!/^TPVTR[a-f0-9]{31}$/i.test(String(item._id || "")) ||
-            !["OPEN", "CLOSED"].includes(String(item.status || "")) ||
-            !Number.isSafeInteger(Number(item.version)) || Number(item.version) < 0 ||
-            Number(item.version) !== payload.events.length - 1 ||
-            !item.expiresAt || Number.isNaN(expiresAt.getTime()) ||
-            expiresAt.getTime() <= Date.parse(payload.activeUntil || "")) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN root contract invalid");
-        }
-        if (payload.sourceType !== "SYNTHETIC" ||
-            payload.processingMode !== "INTERNAL" ||
-            payload.reconciliationStatus !== "NOT_RECONCILED" ||
-            payload.isSynthetic !== true ||
-            payload.realPayment !== false ||
-            payload.externalSideEffects !== false ||
-            payload.siteId !== TPV_RUNTIME_POLICY.SITE_ID ||
-            !String(payload.sessionId || "").trim() ||
-            !String(payload.actorId || "").trim() ||
-            !String(payload.operatorId || "").trim() ||
-            payload.schemaVersion !== 1 ||
-            payload.ledgerVersion !== "TPV_TEST_RUNTIME_V1" ||
-            !Array.isArray(payload.events) ||
-            !payload.idempotencyIndex ||
-            typeof payload.idempotencyIndex !== "object" ||
-            Array.isArray(payload.idempotencyIndex) ||
-            !/^[a-f0-9]{64}$/i.test(String(payload.eventHash || ""))) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN synthetic envelope invalid");
-        }
-        if (!isValidTpvTestRunPayload(payload, {
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-            sessionId: payload.sessionId,
-            actorId: payload.actorId,
-        })) {
-            throw new Error("SCHEMA_VIOLATION: TPV_TEST_RUN event chain invalid");
-        }
-    }
 
     // DISPLAY_TOKEN stores its policy metadata inside the required OBJECT payload.
     if (item.controlType === CONTROL_TYPE.DISPLAY_TOKEN) {
