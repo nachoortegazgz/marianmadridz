@@ -252,7 +252,7 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pending-intent mutation', async () => {
+test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits validated commercial-intent updates', async () => {
   const item = {
     _id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
     sessionId: 'TPV-SESSION-20261125',
@@ -351,23 +351,22 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
   assert.equal(item.tipoFactura, undefined);
 });
 
-test('HOOK-CAJA-TPV-02 rejects historical TPV movement discriminators on new inserts', () => {
+test('HOOK-CAJA-TPV-02 rejects legacy and environment-labelled TPV discriminators on new inserts', () => {
   for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
-    assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert({
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource: "TPV_LEDGER",
-      movementType: "TPV_PAYMENT",
-    }), movementType);
+      movementType,
+    }), /TPV physical envelope invalid/);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
-    assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert({
+    assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
-      recordSource: "TPV_LEDGER",
+      recordSource,
       movementType: "TPV_PAYMENT",
-    }), recordSource);
+    }), /TPV physical envelope invalid/);
   }
 });
-
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
   const item = {
     ...cajaBase(),
@@ -542,7 +541,7 @@ test("HOOK-MAPASTAFF-02 CONFIG_SISTEMA uses the physical MapaStaff schema and pr
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "01/01/2026" }), /YYYY-MM-DD/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, recordType: "config_sistema" }), /recordType invalido/);
   assert.throws(() => H.MapaStaff_beforeInsert({ ...config, fechaInicioVerifactu: "   " }), /solo espacios/);
-  assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /SINGLETON_PROTECTED/);
+  assert.throws(() => H.MapaStaff_beforeRemove({ ...config, _id: "CONFIG_SISTEMA_FISCAL" }), /CMS_DELETE_PROHIBITED/);
 });
 
 test("HOOK-MAPASTAFF-03 TERCERO and GESTORIA use live fiscal fields; email remains optional until configured", () => {
@@ -822,26 +821,26 @@ test('HOOK-ADDON-01 requires the physical taxIncluded boolean', () => {
   assert.throws(() => H.ComplementosCatalogo_beforeInsert({ ...valid, taxIncluded: 'false' }), /taxIncluded/);
 });
 
-test('HOOK-CAJA-04 preserves historical TPV rows as append-only records', async () => {
-  const runId = IC.TPV_HISTORICAL_POLICY.LEGACY_RUN_ID;
+test('HOOK-CAJA-04 preserves canonical TPV rows as append-only records', async () => {
   const row = {
     _id: 'TPV_HOOK_TEST_ROW',
+    transactionId: 'TPV-HOOK-TRANSACTION-001',
+    traceId: 'trace-tpv-hook-001',
+    movementType: 'TPV_PAYMENT',
+    recordSource: 'TPV_LEDGER',
+    sequenceNumber: 1,
     hash: 'a'.repeat(64),
-    sequenceNumber: 0,
-    transactionId: 'TPVSANDBOX_HOOK_TEST_ROW',
-    traceId: 'TPV:' + runId + ':SESSION-TEST',
-    movementType: 'SIMULATED_TPV_PAYMENT',
-    recordSource: 'TPV_SANDBOX_SYNTHETIC',
     payloadFiscal: {
-      sandboxRunId: runId,
-      requestFingerprint: 'f'.repeat(64),
+      sourceType: IC.TPV_RUNTIME_POLICY.SOURCE_TYPE,
+      siteId: IC.TPV_RUNTIME_POLICY.SITE_ID,
+      ledgerVersion: IC.TPV_RUNTIME_POLICY.LEDGER_VERSION,
+      schemaVersion: IC.TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+      sessionId: 'SESSION-HOOK-001',
       logicalCollection: IC.TPV_COLLECTIONS.PAGOS,
-      idempotencyKey: 'SANDBOX-PAYMENT-1',
-      sandboxRecord: { amountMinor: 5000, paymentMethod: 'EFECTIVO' },
-      isSynthetic: true,
-      realPayment: false,
-      externalSideEffects: false,
+      idempotencyKey: 'TPV-HOOK-IDEMPOTENCY-001',
+      requestFingerprint: 'f'.repeat(64),
     },
+    lineItems: { ledgerRecord: [] },
   };
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [row]);
