@@ -1511,7 +1511,7 @@ test('RES-DAYS-02 invalid month -> INVALID_PARAMS', async () => {
 // CACHE INVALIDATION (C2) + expired dual purge
 // ---------------------------------------------------------------------------
 
-test('RES-INV-01 invalidate removes DUAL_CACHE rows for the day', async () => {
+test('RES-INV-01 invalidate retires only target-day DUAL_CACHE rows without deleting evidence', async () => {
   resetState();
   await invalidateStaffCache();
   const row = baseServiceRow();
@@ -1525,10 +1525,14 @@ test('RES-INV-01 invalidate removes DUAL_CACHE rows for the day', async () => {
   const out = await RW._invalidateCachesInternal(row.serviceId, ymd, '');
   assert.strictEqual(out.ok, true);
   const left = (wixDataMock._store.get(CONTROL_COL) || []).filter((r) => r.controlType === 'DUAL_CACHE');
-  assert.deepStrictEqual(left.map((r) => r._id).sort(), ['d3'], 'only target-day rows removed');
+  assert.deepStrictEqual(left.map((r) => r._id).sort(), ['d1', 'd2', 'd3'], 'all CMS evidence is retained');
+  const retired = left.filter((r) => ['d1', 'd2'].includes(r._id));
+  assert.ok(retired.every((r) => r.status === 'INVALIDATED'));
+  assert.ok(retired.every((r) => new Date(r.expiresAt).getTime() === 0));
+  assert.equal(left.find((r) => r._id === 'd3').status, undefined, 'other day remains active');
 });
 
-test('RES-INV-02 cleanExpiredDualSlots removes expired, keeps alive', async () => {
+test('RES-INV-02 cleanExpiredDualSlots retires expired evidence and keeps alive entries', async () => {
   resetState();
   await invalidateStaffCache();
   wixDataMock._seed(CONTROL_COL, [
@@ -1537,9 +1541,14 @@ test('RES-INV-02 cleanExpiredDualSlots removes expired, keeps alive', async () =
   ]);
   const res = await RW._cleanExpiredDualSlotsInternal({ limit: 10 });
   assert.strictEqual(res.status, 'SUCCESS');
-  assert.strictEqual(res.data.removed, 1);
-  const left = (wixDataMock._store.get(CONTROL_COL) || []).map((r) => r._id);
-  assert.deepStrictEqual(left, ['x2']);
+  assert.strictEqual(res.data.retired, 1);
+  assert.strictEqual(res.data.deleted, 0);
+  const rows = wixDataMock._store.get(CONTROL_COL) || [];
+  assert.deepStrictEqual(rows.map((r) => r._id).sort(), ['x1', 'x2'], 'no CMS row is deleted');
+  const expired = rows.find((r) => r._id === 'x1');
+  assert.equal(expired.status, 'INVALIDATED');
+  assert.equal(new Date(expired.expiresAt).getTime(), 0);
+  assert.ok(new Date(rows.find((r) => r._id === 'x2').expiresAt).getTime() > Date.now());
 });
 
 test('RES-INV-03 invalidate with invalid params is a safe no-op', async () => {
@@ -1728,12 +1737,8 @@ test('RES-DISPLAY-06 token is single-use: replay after success is rejected', asy
   assert.strictEqual(first.ok, true);
   const replay = await RW.getConfirmedBookingForDisplay({ displayToken: token });
   assert.strictEqual(replay.ok, false);
-  // v3 delete-atomico (RES-R3-15): el consumo elimina la fila DT_. Un replay
-  // posterior ya no encuentra credencial -> TOKEN_NOT_FOUND. Es el contrato
-  // uniforme anti-enumeracion: no revela si el token existio o fue consumido
-  // (mismo codigo que un token fabricado, RES-DISPLAY-05). El rechazo
-  // concurrente interno usa TOKEN_ALREADY_CONSUMED, pero es observable
-  // identico para el cliente.
+  // El consumo marca la credencial CONSUMED mediante CAS y conserva evidencia.
+  // El replay devuelve TOKEN_NOT_FOUND para mantener el contrato anti-enumeración.
   assert.strictEqual(replay.error, 'TOKEN_NOT_FOUND');
 });
 
