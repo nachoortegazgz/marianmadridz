@@ -252,7 +252,7 @@ test('HOOK-CAJA-04 accepts valid baseline', () => {
   assert.doesNotThrow(() => H.MovimientosCaja_beforeInsert(cajaBase()));
 });
 
-test('HOOK-TPV-SALE-01 validates and protects TransaccionesTPV as append-only', () => {
+test('HOOK-TPV-SALE-01 validates TransaccionesTPV and permits only synthetic pending-intent mutation', async () => {
   const item = {
     _id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301',
     sessionId: 'TPV-SESSION-20261125',
@@ -286,8 +286,24 @@ test('HOOK-TPV-SALE-01 validates and protects TransaccionesTPV as append-only', 
     traceId: 'tpv-sale-hook-test',
   };
   assert.doesNotThrow(() => H.TransaccionesTPV_beforeInsert(item));
-  assert.throws(() => H.TransaccionesTPV_beforeUpdate(item), /LEDGER_APPEND_ONLY/);
-  assert.throws(() => H.TransaccionesTPV_beforeRemove(item._id), /LEDGER_APPEND_ONLY/);
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [item]);
+  const updatedIntent = { ...item, draftOrderReason: "QA_RESETTABLE" };
+  assert.equal(await H.TransaccionesTPV_beforeUpdate(updatedIntent), updatedIntent);
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeUpdate({ ...item, status: "PAID" }),
+    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
+  );
+  await assert.doesNotReject(() => H.TransaccionesTPV_beforeRemove(item._id));
+  wixDataMock._reset();
+
+  const real = { ...item, sourceType: "REAL" };
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, [real]);
+  await assert.rejects(
+    () => H.TransaccionesTPV_beforeRemove(real._id),
+    /TPV_COMMERCIAL_RECORD_NOT_MUTABLE/
+  );
+  wixDataMock._reset();
 });
 
 test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields', () => {

@@ -27,7 +27,7 @@ import {
     TPV_LEGACY_EVENT_MOVEMENT_TYPES,
     TPV_HISTORICAL_POLICY,
 } from "backend/internalConfig";
-import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
+import { assertCitasF2, assertCitasF2Insert, assertControlOperativo, assertCanonicalControlFields, assertRegistrosHorariosStaff, assertMapaStaffRecord, assertCajaActualRecord, assertHistoricoCierresZ, assertMovimientosCajaRequiredFields, assertTransaccionesTPVRecord, isMutableSyntheticTpvIntent, assertAccountingLedgerRecord, isValidNifOrEuVat as _isValidNifOrEuVat } from "backend/validation";
 import { CONSISTENCY, getItem } from "backend/dataAccess";
 
 import { logger } from "backend/logger";
@@ -876,12 +876,39 @@ export function TransaccionesTPV_beforeInsert(item) {
     }
 }
 
-export function TransaccionesTPV_beforeUpdate() {
-    _schemaError("LEDGER_APPEND_ONLY: TransaccionesTPV es append-only.");
+export async function TransaccionesTPV_beforeUpdate(item) {
+    const id = _safeTrim(item?._id);
+    if (!id) _schemaError("TransaccionesTPV update requires _id");
+
+    const original = await getItem(
+        BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!isMutableSyntheticTpvIntent(original) || !isMutableSyntheticTpvIntent(item)) {
+        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
+    }
+
+    try {
+        assertTransaccionesTPVRecord(item);
+        return item;
+    } catch (error) {
+        _schemaError(error?.message || "TPV_COMMERCIAL_RECORD_INVALID");
+    }
 }
 
-export function TransaccionesTPV_beforeRemove() {
-    _schemaError("LEDGER_APPEND_ONLY: TransaccionesTPV es append-only.");
+export async function TransaccionesTPV_beforeRemove(itemId) {
+    const id = _safeTrim(itemId);
+    if (!id) _schemaError("TransaccionesTPV remove requires _id");
+
+    const existing = await getItem(
+        BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+        id,
+        CONSISTENCY.STRONG
+    );
+    if (!isMutableSyntheticTpvIntent(existing)) {
+        _schemaError("TPV_COMMERCIAL_RECORD_NOT_MUTABLE");
+    }
 }
 
 export function ControlOperativo_beforeInsert(item) {

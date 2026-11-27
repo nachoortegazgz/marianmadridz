@@ -46,7 +46,7 @@ Criterio vinculante: **NO-GO comercial** mientras los gates P0/P1 no dispongan d
 | P1.2-X Ticket X | PASS estático; RUNTIME BLOQUEADO POR PRECONDICIÓN | Ruta `/tpv` y administrador autenticados; no hay sesión sintética segura porque falta clasificación temporal `recordNature`. No invocado; sin JSON runtime. |
 | P1.2-E Exportación movimientos | PASS estático; RUNTIME BLOQUEADO POR PRECONDICIÓN | Ruta `/tpv` y administrador autenticados; no hay sesión sintética segura porque falta clasificación temporal `recordNature`. No invocado; JSON/CSV y paginación multi-page sin evidencia runtime. |
 | P1.3 Movimiento de caja | PARCIAL | `tpvMovimientos.web.js:70-127`; `tpvRepository.js:44-45,744-810`; `data.js:392-455`; `validation.js:246-280`: guard physical y hook físico habilitados con cadena hash; CI offline PASS, runtime no ejecutado |
-| P1.4 Registro de venta | PARCIAL | Catalog V3/impuestos backend, idempotencia y persistencia de intención `PENDING_PAYMENT` en `TransaccionesTPV`; Draft Order externo desactivado para QA; no hay cobro ni movimiento físico; runtime no probado |
+| P1.4 Registro de venta | PARCIAL | Catalog V3/impuestos backend, idempotencia y persistencia de intención `PENDING_PAYMENT`; Draft Order externo desactivado. Intenciones sintéticas pendientes mutables/eliminables bajo predicate exacto; sin cobro ni movimiento físico; runtime no probado |
 | P1.5 Devolución | BLOQUEADO | `tpvDevoluciones.web.js:43-86`: valida DTO y devuelve `TPV_REFUND_PROVIDER_NOT_CONFIGURED`; no persiste; `procesarDevolucion` ausente |
 | P1.6 Cierre Z | PARCIAL | `tpvCierres.web.js:66-253`: guard physical y persistencia física separados del ledger fiscal; Contract C mantiene cierres reales bloqueados; CI offline PASS, runtime no probado |
 | P1.7 Operador TPV | PENDIENTE | `security.js:163-187,538-545`; `tpvOperatorContext.js:1-20`; gates de autorización en código, prueba efectiva pendiente |
@@ -132,3 +132,11 @@ El [RDL 15/2025 (BOE-A-2025-24446)](https://www.boe.es/eli/es/rdl/2025/12/02/15)
 - QA de venta TPV: no crea Draft Orders, pedidos ni pagos en Wix. Mantiene persistencia comercial sintética pendiente y auditoría idempotente.
 - Test de contrato actualizado para fallar si reaparecen `draftOrders`, `createDraftOrder` o `auth.elevate` en el WebMethod de ventas.
 - Estado: cambio preparado en rama; CI pendiente; Wix Preview/Runtime pendiente. No se han ejecutado operaciones sobre CMS real.
+
+
+## Avance — limpieza/repetición de QA comercial TPV (2026-11-27)
+
+- `TransaccionesTPV` queda como intención comercial, no ledger. Se permite modificar/eliminar únicamente registros `SYNTHETIC` en `PENDING_PAYMENT`, sin `orderId`, con `requiresReconciliation=true` y sin ningún pago confirmado.
+- La política se aplica en DAL y hooks Wix; la eliminación incluye filtro de condición por `sourceType`, `status` y `requestFingerprint`.
+- Los ledgers físicos/fiscales/contables/laborales no cambian de política. No se ejecutó ninguna mutación CMS real.
+- CI pendiente sobre PR; Preview/Runtime pendiente.

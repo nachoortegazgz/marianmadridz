@@ -116,7 +116,7 @@ La evidencia CI valida el commit de código indicado; no debe atribuirse automá
 ## 7. Decisiones e invariantes
 
 - Los ledgers son independientes: `MovimientosCaja` físico, `TransaccionesTPV` comercial, `eventLog` fiscal y `ControlOperativo` auditoría.
-- Ledgers append-only: no actualizar ni borrar históricos; rectificaciones mediante nuevos registros trazables.
+- `MovimientosCaja`, `LibroAsientosContablesDetalle`, `RegistrosHorariosStaff` y `HistoricoCierresZ` mantienen append-only cuando contienen movimientos físicos, contables, laborales o cierres fiscales. `TransaccionesTPV` no es un ledger: sus intenciones sintéticas `PENDING_PAYMENT` sin pedido y con pagos no confirmados pueden actualizarse o eliminarse para repetir QA; cualquier registro que no cumpla exactamente esa condición queda protegido.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - El frontend no contiene lógica de negocio ni autoridad de permisos.
 - No mutar inventario real sin recuento físico; no alterar tax settings/precios para hacer pasar pruebas. Los datos sintéticos de desarrollo pueden prepararse/resetearse antes del corte oficial.
@@ -183,3 +183,12 @@ La decisión de flujo único y la secuencia ejecutable están en [TPV-UNIFIED-FL
 - `src/backend/tests/tpv.web-modules.contract.test.mjs`: el contrato estático exige ausencia de `draftOrders`, `createDraftOrder` y `auth.elevate` en el módulo de ventas y comprueba el motivo de omisión.
 - Se resuelve la contradicción documental de `TransaccionesTPV`: colección de intención comercial/pago pendiente, distinta del ledger físico `MovimientosCaja` y de auditoría `ControlOperativo`.
 - Validación: cambio y test añadidos al repositorio; CI aún no ejecutada en esta rama. Wix Preview/Runtime no ejecutado. Sin escrituras CMS ni mutaciones Wix realizadas durante esta intervención.
+
+
+## Avance técnico — mutabilidad controlada de intenciones TPV sintéticas (2026-11-27)
+
+- `TransaccionesTPV` se trata como registro comercial de intención, no como ledger append-only. Se habilitan `update` y `remove` en la DAL solo si el registro persistido y el nuevo estado cumplen simultáneamente: `sourceType=SYNTHETIC`, `status=PENDING_PAYMENT`, `orderId=null`, `requiresReconciliation=true` y todos los pagos permanecen `confirmed !== true`.
+- `TransaccionesTPV_beforeUpdate` lee el original con consistencia fuerte y valida tanto el original como el resultado. `TransaccionesTPV_beforeRemove` lee el original y solo permite eliminar intenciones sintéticas pendientes. Los intentos de convertir a REAL/PAID o mutar registros no sintéticos se rechazan.
+- `removeById` aplica condición CMS sobre `sourceType`, `status` y `requestFingerprint`, además del ID exacto, para evitar borrar un registro que haya cambiado entre lectura y eliminación.
+- Se actualizan pruebas de política y hooks. No se habilita mutabilidad para `MovimientosCaja`, contabilidad, fichajes ni cierres fiscales.
+- CI de esta rama pendiente; Wix Runtime no ejecutado; sin mutaciones CMS reales.

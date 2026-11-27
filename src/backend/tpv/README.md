@@ -10,7 +10,7 @@ La implementación aún no cumple este criterio: el controlador importa `tpvTest
 
 ## Arquitectura y autoridad
 
-- `MovimientosCaja` es el ledger físico canónico. No crear `TransaccionesTPV` ni otro ledger alternativo.
+- `MovimientosCaja` es el ledger físico canónico. `TransaccionesTPV` almacena intenciones comerciales pendientes, no es un ledger alternativo; las intenciones sintéticas no pagadas son reseteables bajo la política DAL/hooks.
 - Wix CMS es SSOT transaccional; SharePoint solo custodia evidencia.
 - Durante desarrollo, los registros sintéticos pueden modificarse/resetearse mediante mantenimiento controlado antes del corte. Tras productionActivationAt, los ledgers reales son append-only; rectificaciones mediante nuevos registros trazables.
 - El contrato operativo único no clasifica operaciones por origen de datos. Los registros heredados quedan fuera de la nueva ruta y se conservan hasta definir su tratamiento controlado.

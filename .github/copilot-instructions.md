@@ -69,8 +69,8 @@ Business rules belong in backend modules or CMS hooks, not in page/public code. 
 ## Key conventions
 
 - Use Wix SDK APIs first. Do not replace native Wix Catalog, Bookings, Payments, or CMS behavior with parallel ledgers or duplicate implementations.
-- `MovimientosCaja` is the canonical physical cash ledger. Do not create or use `TransaccionesTPV` or another TPV ledger.
-- Ledgers and append-only records are immutable. Rectify by creating a traceable new record rather than updating or deleting historical records.
+- `MovimientosCaja` is the canonical physical cash ledger. `TransaccionesTPV` stores commercial pending intents and is not a physical or fiscal ledger.
+- Synthetic `TransaccionesTPV` intents may be updated or removed only while `sourceType=SYNTHETIC`, `status=PENDING_PAYMENT`, `orderId=null`, `requiresReconciliation=true`, and every payment remains unconfirmed. Real/paid records and physical, fiscal, accounting, labor, and closing ledgers remain protected by their own contracts.
 - Wix CMS is the transactional SSOT. SharePoint is evidence storage, not a transactional authority.
 - CMS hooks are server-side invariants. `beforeInsert` validates and normalizes records; `beforeUpdate` and `beforeRemove` enforce immutability and state-transition rules. Preserve fail-closed behavior.
 - Use deterministic idempotency keys and fingerprint/payload conflict checks. A replay with identical payload should return the existing result; a conflicting payload must fail.
