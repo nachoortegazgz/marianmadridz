@@ -264,6 +264,7 @@ body {
           <button id="tabServicios" class="btn active">Servicios</button>
           <button id="tabProductos" class="btn">Productos</button>
           <button id="tabPersonalizada" class="btn" disabled title="Pendiente de clasificación fiscal y autorización de descuentos">Tarifa personalizada</button>
+          <button id="refreshCatalog" class="btn">Actualizar catálogo</button>
         </div>
         <div id="catalogList" class="catalog-list">
           <p>Esperando catálogo…</p>
@@ -885,6 +886,7 @@ body {
     renderCatalog(result?.items || []);
   }
 
+  $("refreshCatalog").onclick = () => loadCatalog(state.catalogKind || "SERVICES").catch((e) => error(e));
   $("tabServicios").onclick = () => loadCatalog("SERVICES").catch((e) => error(e));
   $("tabProductos").onclick = () => loadCatalog("PRODUCTS").catch((e) => error(e));
   $("tabPersonalizada").onclick = () => toast("Tarifa personalizada no disponible: falta clasificación fiscal autorizada.");
