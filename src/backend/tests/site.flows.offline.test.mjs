@@ -1501,3 +1501,80 @@ test('FLOW-HOR-09 normalizes invalid history limits and rejects malformed month 
   assert.equal(summary.error.code, 'INVALID_MONTH_KEY');
   assert.match(summary.error.message, /AAAA-MM/);
 });
+
+
+test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', async () => {
+  wixDataMock._reset();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const base = {
+    totalAmount: 12,
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoFactura: 'F2',
+    operationDescription: 'Prueba de contrato transactionId',
+    channelType: 'PRESENCIAL',
+  };
+  const missing = await cajas.registerManualTransaction(base);
+  assert.strictEqual(missing.status, 'ERROR');
+  assert.strictEqual(missing.error.code, 'TRANSACTION_ID_REQUIRED');
+
+  const oversized = await cajas.registerManualTransaction({
+    ...base,
+    transactionId: 'x'.repeat(129),
+  });
+  assert.strictEqual(oversized.status, 'ERROR');
+  assert.strictEqual(oversized.error.code, 'TRANSACTION_ID_REQUIRED');
+  assert.strictEqual((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+});
+
+test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const payload = {
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta de prueba idempotente',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoImpositivo: 21,
+    transactionId: 'p0-idempotency-contract-0001',
+    channelType: 'PRESENCIAL',
+  };
+  const first = await cajas.registerManualTransaction(payload);
+  assert.strictEqual(first.status, 'SUCCESS', JSON.stringify(first.error));
+  const retry = await cajas.registerManualTransaction(payload);
+  assert.strictEqual(retry.status, 'SUCCESS', JSON.stringify(retry.error));
+  assert.strictEqual(retry.idempotent, true);
+
+  const changed = await cajas.registerManualTransaction({
+    ...payload,
+    totalAmount: 51,
+  });
+  assert.strictEqual(changed.status, 'ERROR');
+  assert.strictEqual(changed.error.code, 'TRANSACTION_ID_PAYLOAD_CONFLICT');
+  assert.strictEqual((wixDataMock._store.get('MovimientosCaja') || [])
+    .filter((item) => item.transactionId === payload.transactionId).length, 1);
+});
+
+test('P0-FISCAL-TX-03 recovery queue rejects absent or oversized transactionId', async () => {
+  const { cajas } = await freshImports();
+  const missing = await cajas.queueFiscalRecovery({ traceId: 'recovery-missing-tx' });
+  assert.strictEqual(missing.queued, false);
+  assert.strictEqual(missing.error, 'TRANSACTION_ID_REQUIRED');
+
+  const oversized = await cajas.queueFiscalRecovery({
+    traceId: 'recovery-oversized-tx',
+    transactionId: 'x'.repeat(129),
+  });
+  assert.strictEqual(oversized.queued, false);
+  assert.strictEqual(oversized.error, 'TRANSACTION_ID_REQUIRED');
+});
