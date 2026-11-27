@@ -431,7 +431,10 @@ export const members = {
 // '_default' para nombres no registrados.
 const secretsState = globalThis.__mmSecretsState || (globalThis.__mmSecretsState = { _map: {}, _default: 'mock-secret' });
 export const secrets = {
-  getSecretValue: async (name) => ({ value: secretsState._map[name] !== undefined ? secretsState._map[name] : secretsState._default }),
+  getSecretValue: async (name) => {
+    if (secretsState._error) throw secretsState._error;
+    return { value: secretsState._map[name] !== undefined ? secretsState._map[name] : secretsState._default };
+  },
 };
 // auth.elevate (@wix/essentials): identidad, igual que elevate (ver abajo).
 export const auth = { elevate: (fn) => fn };
