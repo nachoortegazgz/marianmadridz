@@ -1,46 +1,60 @@
 # Wix Preview / Runtime — plan de aceptación TPV
 
-**Estado:** NO EJECUTADO. El último intento documentado no obtuvo una sesión Wix autenticada ni acceso permitido a WebMethods. No se ha demostrado sincronización Git-Wix ni ejecución de flujos TPV en Runtime.
+**Estado:** NO EJECUTADO según la última evidencia fechada. Este plan separa pruebas de lectura, pruebas de aplicación aisladas y aceptación de operaciones productivas. No se exige configuración fiscal productiva para probar lógica sin efectos externos.
 
 ## Objetivo
 
-Validar el bridge, permisos, WebMethods, persistencia, idempotencia, concurrencia y recuperación en Wix Preview sin publicar ni producir efectos externos.
+Validar bridge, permisos, WebMethods, persistencia, idempotencia, concurrencia y recuperación en niveles proporcionales al riesgo, sin publicar ni producir efectos externos.
 
-## Precondiciones obligatorias
+## Niveles de prueba
 
-1. Abrir Preview del sitio correcto desde Wix Editor autenticado; no publicar.
-2. Confirmar Site ID y fingerprint/build SHA del código que realmente carga Preview.
-3. Usar identidad ADMIN de prueba autorizada y verificar permisos efectivos desde backend.
-4. Preparar una sesión y datos sintéticos aislados mediante el flujo canónico y writer de aplicación. No utilizar ni cerrar la sesión singleton `CajaActual` existente ni reutilizar movimientos/cierres históricos.
-5. Confirmar que el fixture no puede disparar pagos, remesas fiscales, notificaciones ni integraciones externas.
-6. Definir explícitamente el alcance de cada prueba, los IDs de correlación y la estrategia de recuperación antes de ejecutar.
+### A. Lectura y diagnóstico
 
-Si no se cumplen todas las precondiciones, detener la prueba. No insertar fixtures por REST/CMS directo ni añadir código temporal al sitio para saltarse los contratos.
+Puede ejecutarse sin fixtures ni escrituras: fingerprint, handshake, catálogo de diagnóstico, permisos efectivos y lectura de estado. No requiere sesión de caja sintética ni configuración fiscal productiva.
 
-## Secuencia de aceptación
+### B. Pruebas de dominio y contrato
 
-1. **Bridge read-only:** handshake `MM_READY → MM_CONTEXT`, carga de catálogo y diagnóstico. Verificar rechazo de tipos no permitidos y payloads inválidos.
-2. **Autorización:** probar roles permitidos y denegados en WebMethods sin realizar escrituras.
-3. **Preflight TPV:** ejecutar `validarVentaBorrador()`; confirmar que los bloqueos esperados se devuelven y que no se persiste nada.
-4. **Gate de venta:** invocar `registrarVenta()` con la misma operación no preparada; debe devolver `TPV_SALE_NOT_READY`, `persisted=false` y no crear intención.
-5. **Idempotencia:** repetir una solicitud idéntica en entorno aislado; comprobar mismo resultado/ID sin duplicación. Payload conflictivo debe rechazarse.
-6. **Concurrencia:** dos operaciones con la misma clave/recurso; comprobar una única adquisición/escritura y respuesta determinista para el competidor.
-7. **Persistencia y recuperación:** solo sobre fixture aislado, verificar read-back de la escritura canónica, lock, auditoría y proyección. Simular timeout/reintento sin pagos ni efectos externos.
-8. **Cierre/arqueo:** no ejecutar hasta disponer de sesión sintética aislada, aceptación de Ticket X/export y aprobación explícita del escenario. Cerrar la sesión es una mutación irreversible del fixture; nunca probar contra la sesión actual.
+Se ejecutan en CI con fixtures explícitos y adaptadores simulados. Deben probar tanto los rechazos fail-closed esperados como los recorridos válidos del dominio. No requieren identidad Wix, CMS real, serie fiscal productiva, pagos, SharePoint ni configuración de activación real.
 
-## Evidencia requerida
+### C. Integración Wix aislada
 
-Por cada prueba guardar: commit/fingerprint, sitio/entorno, identidad/rol, método invocado, payload anonimizado, IDs de correlación, resultado, read-back y logs. No registrar secretos, datos de tarjeta ni datos personales innecesarios.
+Precondiciones específicas:
+1. Preview del sitio correcto y fingerprint/build SHA leído.
+2. Identidad de prueba y permisos efectivos verificados para los WebMethods invocados.
+3. Tenant/espacio de prueba o fixture aislado creado por el writer canónico, sin tocar `CajaActual` singleton ni ledgers históricos compartidos.
+4. Pagos, AEAT, terminales, notificaciones y otros efectos externos interceptados por adaptadores simulados.
+5. IDs de correlación y limpieza/reversión limitados a datos de test no append-only. Los registros append-only de test se conservan y se rectifican mediante nuevos eventos.
+
+No es precondición para esta categoría disponer de configuración fiscal productiva, credenciales de cobro, serie real o datos de clientes reales.
+
+### D. Aceptación productiva
+
+Requiere configuración legal/fiscal validada, permisos, proveedores reales autorizados, pruebas operativas y aprobación correspondiente. No se ejecuta como parte de QA sintético.
+
+## Secuencia recomendada
+
+1. **Bridge read-only:** handshake `MM_READY → MM_CONTEXT`, diagnóstico y validación de protocolo.
+2. **Autorización:** roles permitidos y denegados en WebMethods.
+3. **Preflight:** comprobar resultado con configuración ausente/incompleta y con fixture válido.
+4. **Gate real:** verificar que `registrarVenta()` rechaza la operación no preparada sin persistir una intención.
+5. **Dominio simulado:** ejecutar el mismo flujo con fixture fiscal/catalogo y puertos simulados; comprobar intención y resultados en repositorio de test, sin pago ni ledger productivo.
+6. **Idempotencia:** replay idéntico no duplica; payload conflictivo se rechaza.
+7. **Concurrencia:** dos operaciones con la misma clave/recurso; comprobar adquisición única y respuesta determinista.
+8. **Persistencia/recuperación:** read-back del repositorio aislado, lock, auditoría y proyección; simular timeout/reintento.
+9. **Cierre/arqueo:** probar cálculos y contrato con fixture/dobles en CI. Cualquier persistencia append-only en Wix requiere fixture aislado y conservar el registro; nunca usar la caja o históricos existentes.
+
+## Evidencia
+
+Por prueba guardar commit/fingerprint, entorno, identidad/rol cuando aplique, método, payload anonimizado, IDs de correlación, resultado, read-back y logs. No registrar secretos, datos de tarjeta ni datos personales innecesarios.
 
 ## Criterios PASS
 
-- El fingerprint coincide con el commit esperado.
-- Bridge funcional y rechazos de protocolo efectivos.
-- Autorización backend aplicada.
-- Gates de venta coherentes entre preflight y escritura.
-- Persistencia exactamente una vez lógica bajo replay/concurrencia.
-- Proyección y ledger coherentes; recuperación trazable.
+- Fingerprint coincidente para pruebas Wix.
+- Bridge y autorización backend correctos.
+- Gates reales rechazan operaciones no preparadas.
+- El mismo dominio funciona con fixtures y adaptadores simulados.
+- Persistencia lógica idempotente y concurrencia controlada en el repositorio probado.
 - Cero efectos externos reales.
-- No se modifica la caja singleton ni ningún ledger histórico.
+- Ninguna mutación de caja singleton ni ledger histórico compartido.
 
-Un smoke HTTP, un test estático, un mock o CI offline no acredita Runtime E2E.
+Un smoke HTTP, test estático, mock o CI offline no acredita Runtime E2E; sí acredita el nivel concreto que realmente ejecuta.
