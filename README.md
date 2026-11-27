@@ -6,7 +6,7 @@ Plataforma: Wix Editor clásico + Velo.
 
 ## Estado — 2026-11-27
 
-**MVP operativo/comercial: NO-GO.** PR #650 integrada. PR #651 sigue abierta; HEAD validado: `7771f4c6bb7da61ecf60bd58708b26d5331745dd`. CI completo PASS; Wix Runtime E2E y sincronización Git-Wix no acreditados. No afirmar venta, cobro, cierre ni persistencia TPV validada en Runtime.
+**MVP operativo/comercial: NO-GO.** PR #650 integrada. PR #651 sigue abierta; código validado: `7771f4c6bb7da61ecf60bd58708b26d5331745dd`. Los commits posteriores son documentales. CI completo PASS; Wix Runtime E2E y sincronización Git-Wix no acreditados. No afirmar venta, cobro, cierre ni persistencia TPV validada en Runtime.
 
 Último read-back CMS documentado (27-11-2026): `CajaActual=1` ABIERTA, `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=78`, `MapaStaff=5`, `CitasF2=11`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`. Es una instantánea histórica, no una lectura live. No reutilizar la caja abierta ni modificar históricos durante QA.
 
