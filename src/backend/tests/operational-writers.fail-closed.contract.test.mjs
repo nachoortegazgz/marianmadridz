@@ -95,3 +95,31 @@ test("P0-CMS-02 fiscal identity consumers follow the live MapaStaff schema", asy
   assert.match(fiscalDocuments, /record\.phoneFiscal/);
   assert.doesNotMatch(fiscalDocuments, /gestorEmail|#gestor/);
 });
+
+
+test("P0-FISCAL-TX-04 transaction and recovery writers enforce the canonical identity contract", () => {
+  const transactionGuard = cajas.indexOf('const transactionId = _safeTrim(payload?.transactionId);');
+  const fiscalConfigGuard = cajas.indexOf('await validateFiscalConfig(traceId);', transactionGuard);
+  assert.ok(transactionGuard >= 0);
+  assert.ok(fiscalConfigGuard > transactionGuard);
+  assert.match(cajas, /transactionId\.length > 128/);
+  assert.doesNotMatch(cajas, /transactionId: transactionId \|\| `TX_\${seq\.sequenceNumber\}`/);
+
+  const recoveryStart = cajas.indexOf('export async function queueFiscalRecovery');
+  const recoveryEnd = cajas.indexOf('// GET CASHIER STATE', recoveryStart);
+  const recovery = cajas.slice(recoveryStart, recoveryEnd);
+  assert.match(recovery, /const transactionId = _safeTrim\(recoveryData\.transactionId\)/);
+  assert.match(recovery, /error: "TRANSACTION_ID_REQUIRED"/);
+  assert.match(recovery, /transactionId,\s*bookingIds:/);
+
+  const validatorStart = cajas.indexOf('function validateFiscalMovementContract');
+  assert.ok(validatorStart >= 0);
+  for (const field of ["transactionId", "hash", "previousRecordHash", "sequenceNumber", "tipoFactura", "fiscalPeriod", "staffResourceId"]) {
+    assert.ok(cajas.includes('"' + field + '"'), "required fiscal field: " + field);
+  }
+  const validationCall = cajas.indexOf('validateFiscalMovementContract({');
+  const insertCall = cajas.indexOf('saved = await dalInsert(MOVIMIENTOS_CAJA_COL, movement)');
+  assert.ok(validationCall > validatorStart);
+  assert.ok(insertCall > validationCall, "contract validation must precede CMS insert");
+  assert.match(cajas, /FISCAL_MOVEMENT_INCOMPLETE/);
+});
