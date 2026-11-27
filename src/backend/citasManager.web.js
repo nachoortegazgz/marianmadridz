@@ -240,14 +240,23 @@ function _isOnlinePaymentAllowed(cita) {
 }
 
 async function _getCurrentMemberInfo() {
+    let response;
     try {
-        const response = await members.getCurrentMember({ fieldsets: ["FULL"] });
-        const member = response?.member || response;
-        if (!member || member.status === "ERROR") return null;
-        return member;
-    } catch (_) {
-        return null;
+        response = await members.getCurrentMember({ fieldsets: ["FULL"] });
+    } catch (cause) {
+        const error = new Error("MEMBER_IDENTITY_PROVIDER_UNAVAILABLE");
+        error.code = "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE";
+        error.cause = cause;
+        throw error;
     }
+    const member = response?.member || response;
+    if (!member) return null;
+    if (member.status === "ERROR") {
+        const error = new Error("MEMBER_IDENTITY_RESPONSE_INVALID");
+        error.code = "MEMBER_IDENTITY_RESPONSE_INVALID";
+        throw error;
+    }
+    return member;
 }
 
 function _getMemberId(member) {
@@ -298,22 +307,13 @@ async function _getStaffAccess(resourceId, traceId = null) {
     const id = _safeTrim(resourceId);
     if (!id || !_looksLikeGuid(id)) return null;
 
-    try {
-        const staff = await findStaffByResourceId(id, traceId);
-        if (!staff?.contactId || !staff.roleWebsite) return null;
+    const staff = await findStaffByResourceId(id, traceId);
+    if (!staff?.contactId || !staff.roleWebsite) return null;
 
-        return {
-            contactId: staff.contactId,
-            roleWebsite: staff.roleWebsite,
-        };
-    } catch (error) {
-        log.warn("_getStaffAccess: Bookings Staff Members lookup failed", {
-            resourceId: id,
-            traceId,
-            error: error?.message,
-        });
-        return null;
-    }
+    return {
+        contactId: staff.contactId,
+        roleWebsite: staff.roleWebsite,
+    };
 }
 
 function _validateProcessBookingPayload(payload, traceId, sessionMemberId = "", sessionContactId = "", sessionMember = null) {
@@ -968,6 +968,16 @@ async function _assertBookingOwner(cita, traceId) {
         );
     }
 
+    const meta = _getCitaMeta(cita);
+    const contactDetails =
+        cita?.[FIELD_CONTACT_DETAILS] || meta.contactDetails || {};
+    const citaMemberId = _safeTrim(contactDetails?.memberId || "");
+
+    // A verified booking owner does not depend on the staff directory.
+    if (citaMemberId && citaMemberId === currentMemberId) {
+        return { memberId: currentMemberId, via: "MEMBER_ID_MATCH" };
+    }
+
     const resourceId = _safeTrim(
         cita?.[FIELD_RESOURCE_ID] || cita?.resourceId || ""
     );
@@ -985,15 +995,6 @@ async function _assertBookingOwner(cita, traceId) {
                 role: staffAccess.roleWebsite,
             };
         }
-    }
-
-    const meta = _getCitaMeta(cita);
-    const contactDetails =
-        cita?.[FIELD_CONTACT_DETAILS] || meta.contactDetails || {};
-    const citaMemberId = _safeTrim(contactDetails?.memberId || "");
-
-    if (citaMemberId && citaMemberId === currentMemberId) {
-        return { memberId: currentMemberId, via: "MEMBER_ID_MATCH" };
     }
 
     throw createBookingError(
