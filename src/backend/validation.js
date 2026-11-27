@@ -33,7 +33,7 @@ import {
     TPV_HISTORICAL_POLICY,
     TPV_RUNTIME_POLICY,
 } from "backend/internalConfig";
-import { isValidTpvTestRunPayload, stableTpvTestSerialize } from "backend/tpv/tpvHistoricalCompat";
+import { isValidTpvTestRunPayload } from "backend/tpv/tpvHistoricalCompat";
 
 // =============================================================================
 // ASSERT VALID ENUM (unica funcion de validacion generica)
