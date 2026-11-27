@@ -10,6 +10,7 @@
 - PR #640: clasificación temporal TPV y gate de venta integrados. CI histórico: 81 suites, 764 tests, 0 fallos.
 - PR #641: preparación de paquete Capa 3 integrada. CI histórico: 80 suites, 762 tests, 0 fallos.
 - PR #650: identidad transaccional fiscal obligatoria, fingerprint de replay y contrato mínimo de movimiento fiscal integrados; CI PASS. AEAT hash y Runtime E2E continúan pendientes.
+- PR #651 (en revisión): normalización de errores TPV, guards operativos dentro de try/catch, append-only CMS hooks y filtros de marcadores simulados en agregados fiscales. CI pendiente de última ejecución.
 - Las ejecuciones CI acreditan únicamente los commits y suites ejecutados; no acreditan Wix Runtime.
 
 ## 2. Wix y CMS — último read-back documentado 2026-11-27
@@ -62,11 +63,12 @@
 
 ## 8. Siguiente trabajo
 
-1. Resolver las divergencias Bookings/CitasF2 mediante reconciliación backend y pruebas con fixtures.
-2. Completar pruebas unitarias/contrato del clasificador, gate de venta, bridge e idempotencia.
-3. Preparar integración Wix aislada con fingerprint, identidad de prueba y adaptadores sin efectos externos.
-4. Completar pruebas Capa 3 con fixtures y transporte simulado; después validar tenant SharePoint de pruebas.
-5. Resolver configuración fiscal y compensaciones para habilitación productiva, sin bloquear el desarrollo del resto de módulos.
+1. Auditar `src/backend/eventLog.js` y consumidores para decidir y aplicar el contrato global de `transactionId`; el cambio P0 de PR #650 cubre `cajas.web.js`, no todos los writers.
+2. Completar el mapping AEAT oficial (alta/anulación, tipoFactura, serie/número, fecha, importes y hash previo) antes de conectar los hashes AEAT; no recalcular históricos.
+3. Preparar Wix Runtime E2E con fixture/sesión sintética aislada y writer canónico; no reutilizar la caja ABIERTA ni activar pagos/AEAT.
+4. Resolver las divergencias Bookings/CitasF2 mediante reconciliación backend y pruebas con fixtures.
+5. Completar pruebas Capa 3 con fixtures y transporte simulado; después validar tenant SharePoint de pruebas.
+6. Resolver configuración fiscal y compensaciones para habilitación productiva, sin bloquear el desarrollo del resto de módulos.
 
 ## 9. Estado de evidencia
 
