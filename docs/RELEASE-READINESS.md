@@ -4,9 +4,9 @@
 
 Reglas de trabajo:
 - Resolver cada bloqueo según el objetivo que impide alcanzar; retirar la restricción mínima necesaria y documentar el cambio, sin perpetuar bloqueos por decisiones históricas.
-- No existe un objetivo independiente de conservar datos de prueba, históricos sintéticos, estructuras, colecciones, documentos o código heredado. Pueden corregirse, migrarse, resetearse o eliminarse cuando sea necesario para cumplir los objetivos y las pruebas, después de comprobar el impacto técnico.
-- Los datos sintéticos creados para QA son reutilizables y mutables. Deben poder crearse, actualizarse y eliminarse de forma controlada para repetir escenarios; no se exige conservarlos como evidencia permanente.
-- No se impondrá append-only, prohibición de borrado, congelación de datos ni política de retención por una directriz humana aislada. Se aplicarán únicamente cuando una obligación legal vigente, un contrato externo real o una propiedad técnica necesaria para el objetivo lo exija y exista evidencia concreta.
+- No existe un objetivo independiente de conservar artefactos de QA desechables, históricos de pruebas no-ledger o código heredado sin función. Esos artefactos pueden corregirse, migrarse o resetearse tras comprobar impacto, trazabilidad e identificación inequívoca del test-run.
+- Los datos sintéticos de QA son reutilizables y pueden resetearse cuando pertenezcan a artefactos explícitamente desechables y no-ledger. Esta regla **no autoriza** actualizar o eliminar movimientos físicos de caja, ledgers fiscales/contables/laborales, cierres ni registros que el contrato del sistema declare append-only; esos registros son inmutables también si son sintéticos y se corrigen mediante nuevos registros rectificativos trazables.
+- La política append-only se aplica a los ledgers y colecciones declarados inmutables por el contrato de datos y a los registros sujetos a obligaciones legales/contractuales. No se extiende automáticamente a proyecciones, intenciones comerciales sintéticas no cobradas ni artefactos temporales de QA, siempre que sus contratos permitan mutación y se compruebe el estado persistido.
 - No se bloquearán pruebas funcionales por la ausencia de una configuración de producción si la prueba puede ejecutarse con fixtures, simuladores o datos sintéticos en la misma ruta de negocio.
 - Las pasarelas, terminales, notificaciones, remisiones fiscales y demás efectos externos se simularán en QA. Ninguna prueba debe generar cobros, comunicaciones a clientes o declaraciones reales por accidente.
 - Los requisitos legales vigentes y los contratos técnicos de Wix/proveedores son restricciones objetivas del sistema, no directrices humanas arbitrarias. Deben verificarse y aplicarse al flujo real correspondiente, sin extenderlos a pruebas sintéticas cuando no proceda.
@@ -147,3 +147,10 @@ Actualización 27-11-2026: el [RDL 43/2026](https://www.boe.es/eli/es/rdl/2026/1
 - Wix devuelve el sitio como **Published**, Premium, dominio personalizado, Editor y Velo habilitado; última actualización del sitio indicada: 03:55 CET.
 - Catalog V3 y Bookings están instalados; Invoices V1. Wix Payments está instalado, pero no se ha verificado una transacción de pago.
 - La condición Published no acredita sincronización con el último commit de GitHub ni runtime E2E. No se ha publicado ni modificado Wix durante esta intervención.
+
+
+---
+
+## REVALIDACIÓN MVP — 2026-11-27
+
+La aceptación read-only de APIs Wix se documenta en [auditoría MVP](audits/2026-11-27-mvp-runtime-readonly-acceptance.md). Resultado NO-GO: 6/11 proyecciones CitasF2 divergen de Bookings V2; CajaActual permanece ABIERTA; 3 compensaciones fiscales siguen PENDING_RECOVERY; falta CONFIG_SISTEMA/productionActivationAt; 7 automatizaciones preinstaladas ACTIVE no modificables; escritores fiscales y de jornada permanecen fail-closed. PR #528 acredita lock compartido en código y CI offline, no concurrencia Wix Runtime. No se ha ejecutado E2E UI ni se ha verificado el SHA instalado. No mutar caja/ledgers ni publicar.

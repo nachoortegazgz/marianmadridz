@@ -4,9 +4,9 @@
 
 Reglas de trabajo:
 - Resolver cada bloqueo según el objetivo que impide alcanzar; retirar la restricción mínima necesaria y documentar el cambio, sin perpetuar bloqueos por decisiones históricas.
-- No existe un objetivo independiente de conservar datos de prueba, históricos sintéticos, estructuras, colecciones, documentos o código heredado. Pueden corregirse, migrarse, resetearse o eliminarse cuando sea necesario para cumplir los objetivos y las pruebas, después de comprobar el impacto técnico.
-- Los datos sintéticos creados para QA son reutilizables y mutables. Deben poder crearse, actualizarse y eliminarse de forma controlada para repetir escenarios; no se exige conservarlos como evidencia permanente.
-- No se impondrá append-only, prohibición de borrado, congelación de datos ni política de retención por una directriz humana aislada. Se aplicarán únicamente cuando una obligación legal vigente, un contrato externo real o una propiedad técnica necesaria para el objetivo lo exija y exista evidencia concreta.
+- No existe un objetivo independiente de conservar artefactos de QA desechables, históricos de pruebas no-ledger o código heredado sin función. Esos artefactos pueden corregirse, migrarse o resetearse tras comprobar impacto, trazabilidad e identificación inequívoca del test-run.
+- Los datos sintéticos de QA son reutilizables y pueden resetearse cuando pertenezcan a artefactos explícitamente desechables y no-ledger. Esta regla **no autoriza** actualizar o eliminar movimientos físicos de caja, ledgers fiscales/contables/laborales, cierres ni registros que el contrato del sistema declare append-only; esos registros son inmutables también si son sintéticos y se corrigen mediante nuevos registros rectificativos trazables.
+- La política append-only se aplica a los ledgers y colecciones declarados inmutables por el contrato de datos y a los registros sujetos a obligaciones legales/contractuales. No se extiende automáticamente a proyecciones, intenciones comerciales sintéticas no cobradas ni artefactos temporales de QA, siempre que sus contratos permitan mutación y se compruebe el estado persistido.
 - No se bloquearán pruebas funcionales por la ausencia de una configuración de producción si la prueba puede ejecutarse con fixtures, simuladores o datos sintéticos en la misma ruta de negocio.
 - Las pasarelas, terminales, notificaciones, remisiones fiscales y demás efectos externos se simularán en QA. Ninguna prueba debe generar cobros, comunicaciones a clientes o declaraciones reales por accidente.
 - Los requisitos legales vigentes y los contratos técnicos de Wix/proveedores son restricciones objetivas del sistema, no directrices humanas arbitrarias. Deben verificarse y aplicarse al flujo real correspondiente, sin extenderlos a pruebas sintéticas cuando no proceda.
@@ -175,3 +175,8 @@ Esta sección fija el estado actual de integración y prevalece sobre los regist
 - La consulta de `MapaStaff` por `recordType=CONFIG_SISTEMA` devolvió 0 registros; `FISCAL_RUNTIME_POLICY.LEDGER_WRITES_ENABLED=false`.
 
 Fuente operativa única: [STATE-NOW.md](STATE-NOW.md) y [RELEASE-READINESS.md](RELEASE-READINESS.md). Si hay discrepancia con cualquier tabla histórica de este canon, prevalecen esos dos documentos y el código del commit indicado.
+
+
+## Aceptación MVP — read-back Wix 2026-11-27
+
+La auditoría [MVP runtime read-only](audits/2026-11-27-mvp-runtime-readonly-acceptance.md) registra el estado real de Wix. No declarar funcionalidad E2E por CI offline ni por lectura de APIs. La coherencia Bookings/CitasF2 falla 6/11; los escritores TPV/fiscales/laborales siguen bloqueados; el transporte Capa 3 no está conectado. Los ledgers append-only son inmutables aunque contengan datos sintéticos; correcciones mediante registros rectificativos. Solo artefactos QA no-ledger explícitamente desechables pueden resetearse.

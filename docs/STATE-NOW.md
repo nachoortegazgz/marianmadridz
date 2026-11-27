@@ -228,3 +228,20 @@ Auditoría posterior al commit documental `21b905859d64bd9989103ac328331ef6147e1
 **Verificación:** PR #640/#641 mantienen CI offline PASS en sus respectivos commits. El HEAD documental de main no tiene checks/runs asociados. El workflow Wix Preview no se ejecutó; el smoke actual no interactúa ni invoca WebMethods. No se acredita runtime, sincronización Git-Wix, pagos, reservas, jornada ni hardware.
 
 **Corrección de precisión documental:** sustituir la afirmación genérica de que MapaStaff está vacío por la lectura actual: cinco identidades/terceros, pero ausencia del singleton CONFIG_SISTEMA y del corte de activación. La matriz final sigue NO-GO comercial hasta pruebas Wix Runtime y cierre de gates legales/operativos.
+
+
+---
+
+## REVALIDACIÓN MVP RUNTIME READ-ONLY — 2026-11-27
+
+Auditoría actual: [MVP runtime read-only acceptance](audits/2026-11-27-mvp-runtime-readonly-acceptance.md).
+
+**Resultado:** APIs Wix de lectura ejecutadas con éxito; no se ha ejecutado E2E de aplicación ni se ha probado sincronización de main con Editor Draft. Bookings presenta una divergencia demostrada: 11/11 IDs existen en Bookings V2, pero 6 proyecciones `CitasF2` mantienen CONFIRMED/PENDING mientras el booking nativo está CANCELED. No se ha modificado ninguna reserva/proyección.
+
+**CMS actual:** CajaActual=1 ABIERTA; MovimientosCaja=5 SIMULATED_SUCCESS; HistoricoCierresZ=1 SIMULATED; TransaccionesTPV=0; ControlOperativo=78 con 3 compensaciones FISCAL_LEDGER/PENDING_RECOVERY/attempts=0; MapaStaff=5 (1 GESTORIA, 1 TERCERO, 3 STAFF), sin CONFIG_SISTEMA ni productionActivationAt; RegistrosHorariosStaff=0; CitasF2=11.
+
+**Automations V2:** 159 inventariadas, 7 ACTIVE; todas PREINSTALLED y `disableStatusChange=true`. No se activaron ni modificaron.
+
+**Concurrencia CajaActual:** código de lock compartido integrado (PR #528) y CI offline PASS histórico; Wix Runtime no probado. **Fiscal/contabilidad/jornada** siguen fail-closed. **Capa 3** tiene contrato en memoria, sin transporte SharePoint/Power Automate.
+
+**Decisión:** NO-GO MVP funcional. La lectura de APIs Wix sí está verificada; Bookings falla coherencia 6/11; TPV, caja, pagos, fichajes, fiscalidad, E2E UI y sincronización de código permanecen sin aceptación runtime. No se realizaron escrituras Wix.
