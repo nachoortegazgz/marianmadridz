@@ -357,14 +357,14 @@ test('HOOK-CAJA-TPV-02 rejects legacy and environment-labelled TPV discriminator
       ...cajaBase(),
       recordSource: "TPV_LEDGER",
       movementType,
-    }), /TPV physical envelope invalid/);
+    }), /SCHEMA_VIOLATION/);
   }
   for (const recordSource of ["TPV_SYNTHETIC", "TPV_SANDBOX_SYNTHETIC", "SANDBOX_LOGICAL_PAGOS"]) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource,
       movementType: "TPV_PAYMENT",
-    }), /TPV physical envelope invalid/);
+    }), /SCHEMA_VIOLATION/);
   }
 });
 test('HOOK-CMS-DATETIME-05 normalizes MovimientosCaja DateTime fields only', () => {
