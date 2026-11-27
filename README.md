@@ -1,3 +1,9 @@
+## Directriz de gobierno vigente (2026-11-27)
+
+Los objetivos del proyecto son la única SSOT de decisión funcional. Las directrices humanas previas son editables y no bloquean por sí mismas el desarrollo. Los datos sintéticos y de QA pueden resetearse o eliminarse cuando sea necesario para repetir pruebas; no existe un objetivo autónomo de conservar históricos de prueba. Se mantienen únicamente los requisitos legales y contratos externos que resulten aplicables y estén acreditados. Las pruebas deben usar simuladores para evitar efectos externos reales.
+
+---
+
 # Marian Madrid — repositorio técnico
 
 **Sitio:** https://www.marianmadrid.es/  
