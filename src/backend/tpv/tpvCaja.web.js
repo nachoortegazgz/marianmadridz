@@ -49,9 +49,9 @@ export const inicializarCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-bootstrap");
-        await requireCajero(traceId);
 
         try {
+            await requireCajero(traceId);
             const result = await initializeTpvCaja();
             return {
                 status: "SUCCESS",
