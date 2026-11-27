@@ -7,9 +7,9 @@ import { getBookingMemberProfile } from "backend/citasManager.web";
 test("CITAS-IDENTITY-01 member provider outages are not reported as AUTH_REQUIRED", async () => {
     mocks.members._error = new Error("Members provider unavailable");
     try {
-        await assert.rejects(getBookingMemberProfile(), {
-            code: "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE",
-        });
+        const response = await getBookingMemberProfile();
+        assert.equal(response.status, "ERROR");
+        assert.equal(response.error.code, "MEMBER_IDENTITY_PROVIDER_UNAVAILABLE");
     } finally {
         delete mocks.members._error;
         mocks.members._current = null;
