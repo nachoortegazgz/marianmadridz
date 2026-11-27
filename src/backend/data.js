@@ -948,9 +948,10 @@ export function readControlPayload(doc) {
 }
 
 export function TransaccionesTPV_beforeInsert(item) {
+    const normalized = { ...original, ...item };
     try {
-        assertTransaccionesTPVRecord(item);
-        return item;
+        assertTransaccionesTPVRecord(normalized);
+        return normalized;
     } catch (error) {
         _schemaError(error?.message || "TPV_COMMERCIAL_RECORD_INVALID");
     }
