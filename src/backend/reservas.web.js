@@ -1647,13 +1647,21 @@ export async function _cleanExpiredDualSlotsInternal({ limit = 100, traceId = nu
         WATCHDOG_TIMEOUT_MS,
         "cleanExpiredDualSlotsQuery"
     );
-    let removed = 0;
+    let retired = 0;
+    let failed = 0;
+    const errors = [];
     for (const item of result?.items || []) {
-        await withTimeout(removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE }), WATCHDOG_TIMEOUT_MS, "cleanExpiredDualSlotsRemove").catch(() => null);
-        removed += 1;
+        try {
+            await withTimeout(removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE }), WATCHDOG_TIMEOUT_MS, "cleanExpiredDualSlotsRetire");
+            retired += 1;
+        } catch (error) {
+            failed += 1;
+            if (errors.length < 10) errors.push({ id: item._id, code: error?.code || error?.message || "DUAL_CACHE_RETIRE_FAILED" });
+            log.error("DUAL_CACHE_RETIRE_FAILED", { traceId, recordId: item._id, errorCode: error?.code || error?.message });
+        }
     }
-    log.info("Expired dual cache entries cleaned", { removed, traceId });
-    return { status: "SUCCESS", data: { removed }, error: null };
+    log.info("Expired dual cache entries retired", { retired, failed, traceId });
+    return { status: failed ? "PARTIAL" : "SUCCESS", data: { retired, deleted: 0, failed, errors }, error: failed ? { code: "DUAL_CACHE_RETIRE_PARTIAL" } : null };
 }
 
 export async function _getCertifiedDualSlotsInternal(serviceId, resourceId, dateYMD, requestedAddonIds = []) {
@@ -1938,15 +1946,28 @@ async function _removeDualCacheForDay(serviceId, dateYmd, resourceId, traceId) {
         .eq("dateYmd", String(dateYmd));
     if (ids.length === 1) query = query.eq("resourceId", ids[0]);
     let page = await withTimeout(query.limit(1000).find(CONSISTENT_READ), WATCHDOG_TIMEOUT_MS, "invalidateDualCacheQuery");
-    let removed = 0;
+    let retired = 0;
+    let failed = 0;
+    const errors = [];
     while (page) {
         const items = page.items || [];
-        await Promise.allSettled(items.map((item) => removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE }).catch(() => null)));
-        removed += items.length;
+        const outcomes = await Promise.allSettled(items.map((item) =>
+            removeById(CONTROL_COL, item._id, { expectedControlType: CT_DUAL_CACHE })
+        ));
+        outcomes.forEach((outcome, index) => {
+            if (outcome.status === "fulfilled") retired += 1;
+            else {
+                failed += 1;
+                if (errors.length < 10) errors.push({
+                    id: items[index]?._id || null,
+                    code: outcome.reason?.code || outcome.reason?.message || "DUAL_CACHE_RETIRE_FAILED",
+                });
+            }
+        });
         if (!page.hasNext || !page.hasNext()) break;
-        page = await withTimeout(page.next(), WATCHDOG_TIMEOUT_MS, "invalidateDualCacheNext").catch(() => null);
+        page = await withTimeout(page.next(), WATCHDOG_TIMEOUT_MS, "invalidateDualCacheNext");
     }
-    return removed;
+    return { retired, failed, errors };
 }
 
 export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, traceId = null) {
@@ -1957,12 +1978,11 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
         return { ok: true, traceId: tId, skipped: true };
     }
 
-    /* CACHE-03 + CACHE-04: recolectar IDs durante la paginación y borrar
-       SOLO al final. Borrar en mitad de la paginación desplaza el cursor
-       de Wix Data y puede saltarse entradas. */
+    /* CACHE-03 + CACHE-04: recolectar IDs durante la paginación y retirar
+       por estado SOLO al final. No se eliminan registros CMS. */
     const daysPrefix = `DAYSCACHE_${DAYS_CACHE_VERSION}__${String(resolvedServiceId)}__`;
     try {
-        const idsToRemove = [];
+        const idsToRetire = [];
 
         let page = await withTimeout(
             dalQuery(CONTROL_COL)
@@ -1976,7 +1996,7 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
         while (page) {
             for (const item of page.items || []) {
                 if (String(item.dedupeKey || "").startsWith(daysPrefix)) {
-                    idsToRemove.push(item._id);
+                    idsToRetire.push(item._id);
                 }
             }
             if (!page.hasNext || !page.hasNext()) break;
@@ -1987,9 +2007,19 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
             );
         }
 
-        await Promise.allSettled(
-            idsToRemove.map((id) => removeById(CONTROL_COL, id, { expectedControlType: CT_DAYS_CACHE }).catch(() => null))
+        const dayCacheRetirements = await Promise.allSettled(
+            idsToRetire.map((id) => removeById(CONTROL_COL, id, { expectedControlType: CT_DAYS_CACHE }))
         );
+        const dayCacheFailures = dayCacheRetirements.filter((entry) => entry.status === "rejected");
+        if (dayCacheFailures.length) {
+            log.error("DAYS_CACHE_RETIRE_PARTIAL", {
+                traceId: tId,
+                failed: dayCacheFailures.length,
+                errorCodes: dayCacheFailures.slice(0, 10).map((entry) =>
+                    entry.reason?.code || entry.reason?.message || "DAYS_CACHE_RETIRE_FAILED"
+                ),
+            });
+        }
     } catch (e) {
         log.warn("_invalidateCachesInternal: days cache cleanup skipped", {
             traceId: tId,
@@ -1997,8 +2027,8 @@ export async function _invalidateCachesInternal(serviceId, dateYMD, resourceId, 
         });
     }
     try {
-        const removed = await _removeDualCacheForDay(resolvedServiceId, ymd, resourceId, tId);
-        log.info("Dual cache invalidated", { traceId: tId, removed });
+        const retirement = await _removeDualCacheForDay(resolvedServiceId, ymd, resourceId, tId);
+        log.info("Dual cache invalidated", { traceId: tId, ...retirement });
     } catch (e) {
         log.warn("_invalidateCachesInternal: dual cache cleanup failed", { traceId: tId, message: e?.message });
     }
@@ -2290,6 +2320,8 @@ async function _generateDisplayToken(bookingId, traceId, serviceId) {
             bookingId: _safeTrim(bookingId),
             serviceId: _looksLikeGuid(serviceId) ? _safeTrim(serviceId) : undefined,
             expiresAt,
+            status: "ACTIVE",
+            version: 0,
             attempts: 0,
             payload: { maxAttempts: DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS },
             traceId,
@@ -2311,6 +2343,7 @@ async function _validateAndConsumeDisplayToken(token, traceId) {
             "validateDisplayToken"
         );
         if (!record) return { valid: false, reason: "TOKEN_NOT_FOUND" };
+        if (record.status !== "ACTIVE") return { valid: false, reason: "TOKEN_ALREADY_CONSUMED" };
         const expiresAtMs = new Date(record.expiresAt).getTime();
         if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return { valid: false, reason: "TOKEN_EXPIRED" };
         const maxAttempts = Number(record.payload?.maxAttempts) || DISPLAY_TOKEN_CONFIG.MAX_ATTEMPTS;
