@@ -1251,7 +1251,7 @@ body {
         throw new Error("TPV_SESSION_OPEN_NOT_ALLOWED");
       }
       const authenticatedName = current.authenticatedDisplayName || current.authenticatedOperatorId || "Usuario autenticado";
-      const projectionLabel = current.cajaActual?.projectionStatus === "CANONICAL"
+      const projectionLabel = current.cajaActual?.projectionStatus !== "LEGACY_UNVERIFIED"
         ? "Proyección CajaActual verificada"
         : "Proyección anterior no verificada; no se reutiliza como sesión activa";
       openModal("Abrir caja", `
