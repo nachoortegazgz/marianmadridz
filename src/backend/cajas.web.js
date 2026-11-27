@@ -398,6 +398,14 @@ function _manualTransactionFingerprint(movement) {
     };
 }
 
+async function _matchesManualTransactionReplay(existingMovement, transactionId, requestFingerprint) {
+    const claimId = `LEDGER_TX_${await hashSHA256(transactionId)}`;
+    const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
+    const existingFingerprint = existingClaim?.payload?.requestFingerprint ||
+        await hashSHA256(_stableSerialize(_manualTransactionFingerprint(existingMovement)));
+    return existingFingerprint === requestFingerprint;
+}
+
 function validateFiscalMovementContract(movement) {
     const required = [
         "transactionId", "hash", "previousRecordHash", "sequenceNumber",
@@ -756,11 +764,12 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         }
         if (existingRes?.items?.length === 1) {
             const existingMovement = existingRes.items[0];
-            const claimId = `LEDGER_TX_${await hashSHA256(transactionId)}`;
-            const existingClaim = await dalGet(CONTROL_OPERATIVO_COL, claimId, "strong").catch(() => null);
-            const existingFingerprint = existingClaim?.payload?.requestFingerprint ||
-                await hashSHA256(_stableSerialize(_manualTransactionFingerprint(existingMovement)));
-            if (existingFingerprint !== transactionFingerprint) {
+            const replayMatches = await _matchesManualTransactionReplay(
+                existingMovement,
+                transactionId,
+                transactionFingerprint,
+            );
+            if (!replayMatches) {
                 return {
                     status: "ERROR", data: null,
                     error: { code: "TRANSACTION_ID_PAYLOAD_CONFLICT", message: "transactionId ya fue utilizado con datos diferentes." },
@@ -821,13 +830,30 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             if (transactionId) {
                 const lockedExisting = await dalQuery(MOVIMIENTOS_CAJA_COL)
                     .eq("transactionId", transactionId)
-                    .limit(1)
+                    .limit(2)
                     .find(STRONG_READ);
                 if (lockedExisting?.items?.length === 1) {
-                    const cashProjection = await _updateCajaActual(lockedExisting.items[0], traceId, ledgerLock);
+                    const existingMovement = lockedExisting.items[0];
+                    const replayMatches = await _matchesManualTransactionReplay(
+                        existingMovement,
+                        transactionId,
+                        transactionFingerprint,
+                    );
+                    if (!replayMatches) {
+                        return {
+                            status: "ERROR",
+                            data: null,
+                            error: {
+                                code: "TRANSACTION_ID_PAYLOAD_CONFLICT",
+                                message: "transactionId ya fue utilizado con datos diferentes.",
+                            },
+                            traceId,
+                        };
+                    }
+                    const cashProjection = await _updateCajaActual(existingMovement, traceId, ledgerLock);
                     return {
                         status: cashProjection?.status === "SUCCESS" ? "SUCCESS" : "PARTIAL",
-                        data: lockedExisting.items[0],
+                        data: existingMovement,
                         error: cashProjection?.status === "SUCCESS" ? null : {
                             code: "CASH_PROJECTION_PENDING",
                             message: "Movimiento fiscal persistido; CajaActual requiere reconciliacion.",
