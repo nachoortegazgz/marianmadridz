@@ -196,25 +196,23 @@ export function makeTpvPayload(payload = {}) {
         throw new Error("TPV_INVALID_PAYLOAD");
     }
 
-    const forbiddenFields = [
-        "isSynthetic",
-        "realPayment",
-        "realPayments",
-        "processingMode",
-        "reconciliationStatus",
-        "sandboxRunId",
-        "legacyRunId",
-        "sourceType",
-        "ledgerVersion",
-        "schemaVersion",
-        "recordSource",
-    ];
-    if (forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(payload, field))) {
-        throw new Error("TPV_OPERATIONAL_METADATA_FORBIDDEN");
+    const {
+        isSynthetic: _ignoredIsSynthetic,
+        realPayment: _ignoredRealPayment,
+        realPayments: _ignoredRealPayments,
+        processingMode: _ignoredProcessingMode,
+        reconciliationStatus: _ignoredReconciliationStatus,
+        sandboxRunId: _ignoredSandboxRunId,
+        legacyRunId: _ignoredLegacyRunId,
+        ...businessPayload
+    } = payload;
+    const forbiddenFields = ["sourceType", "ledgerVersion", "schemaVersion", "recordSource"];
+    if (forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(businessPayload, field))) {
+        throw new Error("TPV_BACKEND_METADATA_FORBIDDEN");
     }
 
     return {
-        ...payload,
+        ...businessPayload,
         sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
         siteId: TPV_RUNTIME_POLICY.SITE_ID,
         ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
