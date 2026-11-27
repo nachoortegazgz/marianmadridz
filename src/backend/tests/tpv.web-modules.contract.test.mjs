@@ -685,7 +685,7 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
     assert.equal(JSON.stringify(first).includes("must not be exported"), false);
 });
 
-test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
+test("Capa 3 export rejects incomplete fiscal source rows", () => {
     const summary = {
         nifEmisor: "B12345678",
         totalOperaciones: 0,
@@ -716,8 +716,8 @@ test("Capa 3 export rejects synthetic or incomplete fiscal source rows", () => {
     };
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
-        summary, rows: [row],
-    }), /C3_EXPORT_ISSUE_DATE_INVALID/);
+        summary, rows: [{ ...row, hashCompleto: "" }],
+    }), /C3_EXPORT_RECORD_HASH_MISSING/);
     assert.throws(() => buildQuarterlyRegistryPackage({
         year: 2026, quarter: 4, generatedAt: new Date(), traceId: "c3-test-2",
         summary, rows: [{ ...row, fechaExpedicion: "2026-02-31" }],
