@@ -51,6 +51,7 @@ import {
     readTaxAmount,
 } from "backend/data";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
+import { isExplicitSimulationLedgerRecord } from "backend/validation";
 
 
 import { SECRETS } from "backend/mmSecrets";
@@ -557,7 +558,7 @@ async function _getLastMovement() {
         .descending("sequenceNumber")
         .limit(20)
         .find(STRONG_READ);
-    return (res?.items || []).find((item) => item) || null;
+    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
 }
 
 async function _assertPeriodNotClosed(operationDate, traceId) {
@@ -2145,7 +2146,9 @@ export const getMovimientoByBooking = webMethod(
 
             let items = canonical.items || [];
 
-            if (items.length === 0) {
+            if (items.length === 0 || items.every((movement) =>
+                isExplicitSimulationLedgerRecord(movement)
+            )) {
                 // Read-only compatibility for historical CSV/single-string rows.
                 const exact = await dalQuery(MOVIMIENTOS_CAJA_COL)
                     .eq("linkedBookingIds", cleanId)
@@ -2160,7 +2163,7 @@ export const getMovimientoByBooking = webMethod(
             // not array fields, and substring matching could return false positives.
 
             // Simulation-marked rows are historical synthetic evidence, never a fiscal receipt.
-            items = items;
+            items = items.filter((movement) => !isExplicitSimulationLedgerRecord(movement));
 
             if (items.length === 0) {
                 return {
