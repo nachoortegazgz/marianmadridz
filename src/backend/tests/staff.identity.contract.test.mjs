@@ -267,3 +267,23 @@ test('SECURITY-STAFF-02 member provider outage is distinct from an unauthenticat
     mocks.members._current = null;
   }
 });
+
+
+test('STAFF-SDK-06 CRM provider errors are not converted to an unlinked contact', async () => {
+  staff.invalidateStaffCache();
+  mocks.sdk['crm::contactsV5'] = {
+    getContact: async () => { throw Object.assign(new Error('CRM unavailable'), { code: 'ECONNRESET' }); },
+  };
+  await assert.rejects(
+    staff.getSiteMemberIdByContactId(CONTACT_ID),
+    { code: 'STAFF_PROVIDER_UNAVAILABLE' }
+  );
+
+  mocks.sdk['crm::contactsV5'] = {
+    getContact: async () => null,
+  };
+  await assert.rejects(
+    staff.getSiteMemberIdByContactId(CONTACT_ID),
+    { code: 'STAFF_PROVIDER_RESPONSE_INVALID' }
+  );
+});
