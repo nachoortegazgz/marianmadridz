@@ -232,10 +232,6 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const joined = contents.join("\n");
     assert.match(joined, /webMethod\(\s*Permissions\.SiteMember/);
     assert.match(joined, /requireCajero/);
-    const testRuntime = await source("tpv/tpvTestRuntime.web.js");
-    assert.match(testRuntime, /registrarVentaPrueba/);
-    assert.match(testRuntime, /registrarDevolucionPrueba/);
-    assert.match(testRuntime, /generarCierreZPrueba/);
     assert.match(joined, /TPV_COLLECTIONS/);
     assert.doesNotMatch(joined, /contactsV5|extendedBookings|giftVouchers|staffMembers|staff\?\.memberId/);
     const cashierModule = await source("tpv/tpvCaja.web.js");
@@ -347,88 +343,6 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     const widget = await readFile(new URL("../../#htmlTPV.txt", backendRoot), "utf8").catch(() => "");
     if (widget) assert.doesNotMatch(widget, /requireOperator\(\)/);
 });
-test("TPV QA runtime uses a dedicated lock discriminator and deterministic ID helper", async () => {
-    const repository = await source("tpv/tpvTestRuntimeRepository.js");
-    const config = await source("internalConfig.js");
-    assert.match(repository, /import \{ createHash \} from "node:crypto"/);
-    assert.match(repository, /function makeTpvTestSessionLockId\(actorId\)/);
-    assert.match(repository, /return "TPVT" \+ digest/);
-    assert.doesNotMatch(repository, /makeTpvSessionLockId/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
-    assert.match(repository, /const RUN_TTL_MS = 24 \* 60 \* 60 \* 1000/);
-    assert.doesNotMatch(repository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
-    assert.match(config, /TPV_TEST_SESSION_LOCK: "TPV_TEST_SESSION_LOCK"/);
-    assert.match(config, /\[CONTROL_TYPE\.TPV_TEST_SESSION_LOCK\]: Object\.freeze/);
-});
-
-test("synthetic QA records are not consumed by operational ledgers, closures or cash reports", async () => {
-    const paths = [
-        "cajas.web.js",
-        "accountingLedger.js",
-        "eventLog.js",
-        "tpv/tpvRepository.js",
-        "tpv/tpvCaja.web.js",
-        "tpv/tpvCierres.web.js",
-        "tpv/tpvMovimientos.web.js",
-        "tpv/tpvDevoluciones.web.js",
-    ];
-    for (const path of paths) {
-        const file = await source(path);
-        assert.doesNotMatch(file, /TPV_TEST_RUN|TPV_TEST_SESSION_LOCK/,
-            path + " must not query or consume synthetic QA records");
-    }
-    const repository = await source("tpv/tpvTestRuntimeRepository.js");
-    assert.match(repository, /wql\.eq\("controlType", CONTROL_TYPE\.TPV_TEST_RUN\)/);
-});
-
-test("legacy TPV QA runtime remains isolated pending its controlled retirement", async () => {
-    const runtime = await source("tpv/tpvTestRuntime.web.js");
-    const repository = await source("tpv/tpvTestRuntimeRepository.js");
-    const core = await source("tpv/tpvTestRuntimeCore.js");
-    const config = await source("internalConfig.js");
-    const contracts = [
-        "obtenerEstadoCajaPrueba",
-        "abrirSesionCajaPrueba",
-        "validarVentaBorradorPrueba",
-        "registrarVentaPrueba",
-        "registrarMovimientoCajaPrueba",
-        "registrarArqueoParcialPrueba",
-        "registrarDevolucionPrueba",
-        "generarControlXPrueba",
-        "generarCierreZPrueba",
-        "obtenerResumenCajaPrueba",
-        "obtenerAuditoriaTPVPrueba",
-        "exportarMovimientosCajaPrueba",
-    ];
-    for (const name of contracts) {
-        assert.match(runtime, new RegExp("export const " + name + " = webMethod\\("));
-    }
-    assert.match(runtime, /requireAdmin/);
-    assert.match(runtime, /prepareTpvSaleCatalog/);
-    assert.match(runtime, /validateSaleDraft/);
-    assert.match(runtime, /getTpvWriteV1Blockers/);
-    assert.match(runtime, /realPayment: false/);
-    assert.match(runtime, /externalSideEffects: false/);
-    assert.match(runtime, /testPersisted: true/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_RUN/);
-    assert.match(repository, /acquireTpvTestSessionLock/);
-    assert.match(repository, /releaseTpvTestSessionLock/);
-    assert.match(repository, /makeTpvTestSessionLockId/);
-    assert.doesNotMatch(repository, /makeTpvSessionLockId/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
-    assert.match(repository, /TPV_TEST_ADMIN:/);
-    assert.match(repository, /buildData/);
-    assert.match(repository, /requestFingerprint/);
-    assert.match(repository, /bulkPatchItems/);
-    assert.match(repository, /CONSISTENCY\.STRONG/);
-    assert.match(runtime, /PRODUCTS_CATALOG_TAX_ONLY_NO_STOCK_MUTATION/);
-    assert.match(core, /sourceType: "SYNTHETIC"/);
-    assert.match(core, /processingMode: "INTERNAL"/);
-    assert.match(core, /reconciliationStatus: "NOT_RECONCILED"/);
-    assert.match(config, /TPV_TEST_RUN: "TPV_TEST_RUN"/);
-    assert.ok(config.includes("[CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze"));
-});
-
 test("TPV page is wired to the native POS widget bridge and operational backend exports", async () => {
     const [page, controller, html, bridge] = await Promise.all([
         source("../pages/TPV.yl5th.js"),
@@ -687,4 +601,17 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
     assert.match(permissions, /closeSession: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /issueTicketX: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /exportMovements: staff\.rolWebsite === "ADMIN"/);
+});
+
+
+test("legacy TPV runtime writers are retired while historical payload validation remains read-only", async () => {
+    const controller = await readFile(new URL("../public/tpvPageController.js", backendRoot), "utf8");
+    const compat = await source("tpv/tpvHistoricalCompat.js");
+    const validation = await source("validation.js");
+    assert.doesNotMatch(controller, /tpvTestRuntime/);
+    assert.match(validation, /backend\/tpv\/tpvHistoricalCompat/);
+    assert.match(compat, /isValidTpvTestRunPayload/);
+    await assert.rejects(source("tpv/tpvTestRuntime.web.js"), { code: "ENOENT" });
+    await assert.rejects(source("tpv/tpvTestRuntimeRepository.js"), { code: "ENOENT" });
+    await assert.rejects(source("tpv/tpvTestRuntimeCore.js"), { code: "ENOENT" });
 });

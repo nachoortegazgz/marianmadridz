@@ -654,28 +654,6 @@ export const DATA_ACCESS_BULK_PATCH_POLICY = Object.freeze({
         version: Object.freeze(["INCREMENT_FIELD"]),
       }),
     }),
-    [CONTROL_TYPE.TPV_TEST_RUN]: Object.freeze({
-      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
-      anyConditionFields: Object.freeze([]),
-      allowedConditionFields: Object.freeze(["controlType", "version", "status"]),
-      fields: Object.freeze({
-        status: Object.freeze(["SET_FIELD"]),
-        payload: Object.freeze(["SET_FIELD"]),
-        version: Object.freeze(["INCREMENT_FIELD"]),
-      }),
-    }),
-    [CONTROL_TYPE.TPV_TEST_SESSION_LOCK]: Object.freeze({
-      requiredConditionFields: Object.freeze(["controlType", "version", "status"]),
-      anyConditionFields: Object.freeze([]),
-      allowedConditionFields: Object.freeze(["controlType", "version", "status", "expiresAt"]),
-      fields: Object.freeze({
-        status: Object.freeze(["SET_FIELD"]),
-        payload: Object.freeze(["SET_FIELD"]),
-        expiresAt: Object.freeze(["SET_FIELD"]),
-        traceId: Object.freeze(["SET_FIELD"]),
-        version: Object.freeze(["INCREMENT_FIELD"]),
-      }),
-    }),
   }),
 });
 
@@ -736,7 +714,6 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     CONTROL_TYPE.RATE_LIMIT,
     CONTROL_TYPE.SLOT_LOCK,
     CONTROL_TYPE.SYSTEM_FLAG,
-    CONTROL_TYPE.TPV_TEST_RUN,
   ]),
 });
 

@@ -232,54 +232,6 @@ test("TPV session lock is deterministic, bounded and CAS-only", () => {
     assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_SESSION_LOCK), /DATA_ACCESS_ERROR/);
 });
 
-test("TPV QA session lock has a distinct namespace and CAS-only CMS policy", async () => {
-    const repository = await readFile(new URL("../tpv/tpvTestRuntimeRepository.js", import.meta.url), "utf8");
-    const operationalRepository = await readFile(new URL("../tpv/tpvRepository.js", import.meta.url), "utf8");
-    assert.notEqual(CONTROL_TYPE.TPV_TEST_SESSION_LOCK, CONTROL_TYPE.TPV_SESSION_LOCK);
-    assert.match(repository, /function makeTpvTestSessionLockId\(actorId\)/);
-    assert.match(repository, /return "TPVT" \+ digest/);
-    assert.doesNotMatch(repository, /makeTpvSessionLockId/);
-    assert.match(repository, /CONTROL_TYPE\.TPV_TEST_SESSION_LOCK/);
-    assert.doesNotMatch(repository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
-    assert.match(operationalRepository, /CONTROL_TYPE\.TPV_SESSION_LOCK/);
-
-    const collection = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-    const lockId = "TPVT" + "a".repeat(32);
-    const item = {
-        _id: lockId,
-        controlType: CONTROL_TYPE.TPV_TEST_SESSION_LOCK,
-        dedupeKey: "TPV_TEST_SESSION:" + lockId.slice(4),
-        traceId: "TPV-QA-LOCK-001",
-        status: "ACTIVE",
-        version: 0,
-        expiresAt: new Date(Date.now() + 60_000),
-        payload: {
-            sessionId: "TPV_TEST_ADMIN:member-admin-1",
-            actorId: "member-admin-1",
-            testSessionId: "TPV-SESSION-001",
-            lockPurpose: "TPV_TEST_SESSION",
-            sourceType: "SYNTHETIC",
-            processingMode: "INTERNAL",
-            siteId: TPV_RUNTIME_POLICY.SITE_ID,
-        },
-    };
-    assert.doesNotThrow(() => assertInsertAllowed(collection, item));
-    assert.doesNotThrow(() => assertBulkPatchAllowed(collection, [
-        { fieldPath: "status", action: "SET_FIELD", value: "RELEASED" },
-        { fieldPath: "expiresAt", action: "SET_FIELD", value: new Date() },
-        { fieldPath: "payload", action: "SET_FIELD", value: item.payload },
-        { fieldPath: "traceId", action: "SET_FIELD", value: item.traceId },
-        { fieldPath: "version", action: "INCREMENT_FIELD", value: 1 },
-    ], {
-        controlType: { $eq: CONTROL_TYPE.TPV_TEST_SESSION_LOCK },
-        version: { $eq: 0 },
-        status: { $eq: "ACTIVE" },
-        expiresAt: { $eq: item.expiresAt },
-    }));
-    assert.throws(() => assertUpdateAllowed(collection, item), /DATA_ACCESS_ERROR/);
-    assert.throws(() => assertRemoveAllowed(collection, lockId, CONTROL_TYPE.TPV_TEST_SESSION_LOCK), /DATA_ACCESS_ERROR/);
-});
-
 test("MovimientosCaja transaction IDs are unique across logical TPV event collections", () => {
     const key = "arqueo-reintento-0001";
     const cashCountId = makeTpvTransactionId(TPV_COLLECTIONS.MOVIMIENTOS_CAJA, key);
