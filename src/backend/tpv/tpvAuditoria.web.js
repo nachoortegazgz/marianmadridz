@@ -1,7 +1,7 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
-import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_COLLECTIONS } from "backend/internalConfig";
 import { queryTpvRecords } from "backend/tpv/tpvRepository";
 
 import { normalizeTpvError } from "backend/tpv/tpvError";
