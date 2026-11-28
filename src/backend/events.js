@@ -577,6 +577,17 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
         return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
     }
 
+    const rawRevision = booking?.revision;
+    const validRevisionType = rawRevision === undefined || rawRevision === null ||
+        typeof rawRevision === "number" ||
+        (typeof rawRevision === "string" && rawRevision.trim() !== "");
+    const revision = rawRevision === undefined || rawRevision === null
+        ? 1
+        : validRevisionType ? Number(rawRevision) : Number.NaN;
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+        return { ok: false, reason: "NATIVE_BOOKING_REVISION_INVALID" };
+    }
+
     const selectedPaymentOption = _safeTrim(booking?.selectedPaymentOption || "UNDEFINED").toUpperCase();
     const rawPaymentStatus = _safeTrim(booking?.paymentStatus || "").toUpperCase();
     const validPaymentStatuses = Object.values(PAYMENT_STATUS);
@@ -596,8 +607,13 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
     const rawAmount = amountCandidates.find(value =>
         value !== undefined && value !== null && value !== ""
     );
-    const parsedAmount = Number(rawAmount);
-    const hasExactAmount = rawAmount !== undefined && Number.isFinite(parsedAmount) && parsedAmount >= 0;
+    const validAmountType = typeof rawAmount === "number" ||
+        (typeof rawAmount === "string" && rawAmount.trim() !== "");
+    const parsedAmount = validAmountType ? Number(rawAmount) : Number.NaN;
+    if (rawAmount !== undefined && (!Number.isFinite(parsedAmount) || parsedAmount < 0)) {
+        return { ok: false, reason: "NATIVE_BOOKING_AMOUNT_INVALID" };
+    }
+    const hasExactAmount = rawAmount !== undefined && validAmountType && Number.isFinite(parsedAmount) && parsedAmount >= 0;
 
     const appointmentNotes = (Array.isArray(booking?.additionalFields) ? booking.additionalFields : [])
         .filter(field => /note|nota|observaci[oó]n|comentario|comment/i.test(_safeTrim(field?.label)))
