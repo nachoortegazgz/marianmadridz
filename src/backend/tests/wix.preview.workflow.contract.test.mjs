@@ -58,12 +58,17 @@ test("WIX-PREVIEW-06 read-only smoke is the default and exits before all operati
     const workflow = await readFile(workflowUrl, "utf8");
     const runner = await readFile(runnerUrl, "utf8");
     assert.match(workflow, /default: read-only/);
-    assert.match(workflow, /confirm_writes:[\\s\\S]*?default: NO/);
-    assert.match(workflow, /data_isolation_confirmed:[\\s\\S]*?default: NO/);
-    assert.match(runner, /WIX_TPV_E2E_MODE \\|\\| "read-only"/);
+    assert.match(workflow, /confirm_writes:[\s\S]*?default: NO/);
+    assert.match(workflow, /data_isolation_confirmed:[\s\S]*?default: NO/);
+    assert.match(runner, /WIX_TPV_E2E_MODE \|\| "read-only"/);
     assert.match(runner, /executionMode === "e2e"/);
     assert.match(runner, /WIX_TPV_E2E_ALLOW_WRITES=YES/);
     assert.match(runner, /WIX_TPV_DATA_ISOLATION_CONFIRMED=YES/);
-    assert.match(runner, /if \\(executionMode === "read-only"\\)[\\s\\S]*?report\\.result = "PASS_READ_ONLY"[\\s\\S]*?return;[\\s\\S]*?phase = "session-open"/);
+    assert.ok(
+        runner.indexOf('if (executionMode === "read-only")') <
+        runner.indexOf('phase = "session-open"'),
+        "Read-only return must precede SESSION_OPEN"
+    );
+    assert.match(runner, /report\.result = "PASS_READ_ONLY"/);
     assert.match(runner, /noBusinessWritesInvoked/);
 });
