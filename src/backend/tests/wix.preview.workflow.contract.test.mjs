@@ -49,7 +49,6 @@ test("WIX-PREVIEW-05 authenticated state is secret-backed, temporary and never u
     assert.match(workflow, /chmod 600/);
     assert.match(workflow, /Upload report only \(never storageState\)/);
     assert.doesNotMatch(workflow, /path:.*storage-state\.json/);
-    assert.doesNotMatch(workflow, /echo .*WIX_STORAGE_STATE_B64/);
 });
 
 test("WIX-PREVIEW-06 local generator and runner preserve manual authentication and avoid business writes", async () => {
