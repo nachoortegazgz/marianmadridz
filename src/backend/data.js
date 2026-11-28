@@ -505,19 +505,12 @@ export function MovimientosCaja_beforeInsert(item) {
     _validateFiscalRole(item);
     _validateFiscalPayload(item);
 
-    const breakdownArr = readBreakdown(item);
-    if (Array.isArray(breakdownArr) && breakdownArr.length > 0) {
-        let sumBase = 0;
-        let sumTax = 0;
-        for (const d of breakdownArr) {
-            sumBase += Number(d.taxableBaseOrNonSubjectAmount ?? d.base ?? 0);
-            sumTax += Number(d.chargedTaxAmount ?? d.cuota ?? 0);
+    if (breakdown.hasBreakdown) {
+        if (Math.abs(_roundItem(breakdown.base) - finalBase) > 0.02) {
+            _schemaError(`desgloseDetallado.base (${breakdown.base}) no cuadra con cabecera (${finalBase})`);
         }
-        if (Math.abs(_roundItem(sumBase) - finalBase) > 0.02) {
-            _schemaError(`desgloseDetallado.base (${sumBase}) no cuadra con cabecera (${finalBase})`);
-        }
-        if (Math.abs(_roundItem(sumTax) - finalTax) > 0.02) {
-            _schemaError(`desgloseDetallado.cuota (${sumTax}) no cuadra con cabecera (${finalTax})`);
+        if (Math.abs(_roundItem(breakdown.tax) - finalTax) > 0.02) {
+            _schemaError(`desgloseDetallado.cuota (${breakdown.tax}) no cuadra con cabecera (${finalTax})`);
         }
     }
 
