@@ -22,9 +22,9 @@ Métrica exigida: 100 % de condiciones bloqueantes/early return observables con 
 
 - Checklist consolidado: [TPV-DEEP-AUDIT-CHECKLIST](TPV-DEEP-AUDIT-CHECKLIST.md), basado en la auditoría adjunta de 40 bloqueos TPV, 29 módulos TPV, 33 módulos backend y 8 módulos de páginas/reservas.
 - Correcciones de código en rama `docs/tpv-runtime-success-flows-2026-11-28`: exportación de auditoría TPV (guard ADMIN), capabilities ADMIN Ticket Z/exportación, normalización de errores en `obtenerEstadoCaja`, lectura de `orderId` raíz en idempotencia Bookings, eventType consistente en marcadores de reembolso y regex GMT del offset Madrid.
-- Las seis correcciones están IMPLEMENTADAS en Git; no están aún VALIDATED: no se ejecutaron lint, unit tests, CI ni Wix Runtime en esta intervención.
+- Las seis correcciones están IMPLEMENTADAS en Git; no están aún VALIDATED. CI `46162312738` ejecutó Layer 1 y falló por una aserción obsoleta (`issueTicketZ: false`), con 397 tests PASS y 1 FAIL; Secret scanning `46162312766` PASS. Se actualizó esa aserción y se añadió una suite de regresión; falta CI PASS sobre el HEAD final.
 - Pendientes P0/P1 destacados: colisión de contratos TPV/fiscal en `MovimientosCaja`/`CajaActual`, circuito de confirmación de pago y cierre Z, paginación de crons, coherencia de estados de venta, stock, y acciones de documentos/cierre de `zonamarian.js`.
-- La rama no se ha fusionado ni desplegado. Sitio sigue Draft/no publicado; NO-GO.
+- La rama `docs/tpv-runtime-success-flows-2026-11-28` está 17 commits ahead / 4 behind de `main`; PR #709 continúa en borrador y no debe fusionarse hasta reconciliar el desfase y obtener CI PASS. No se ha desplegado. Sitio sigue Draft/no publicado; NO-GO.
 
 ## Auditoría de persistencia operativa — 28-11-2026
 
