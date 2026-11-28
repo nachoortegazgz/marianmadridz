@@ -178,8 +178,8 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 ## Bootstrap TPV singleton — 28-11-2026
 
 - Diagnóstico confirmado por read-only Wix CMS: CajaActual=0; el inicializador anterior no creaba el singleton y devolvía TPV_CASH_REGISTER_NOT_PRESEEDED.
-- Rama fix/tpv-caja-singleton-bootstrap-2026-11-28 añade creación backend del único item SINGLE_ITEM_ID bajo lock, con estado inicial CERRADA/0 €, contadores, validación y read-back.
-- No crea movimientos, apertura, cierre histórico ni cobros. Wix Runtime pendiente.
+- PR #711 fusionada en main añade creación backend del único item SINGLE_ITEM_ID bajo lock, con estado inicial CERRADA/0 €, contadores, validación y read-back.
+- No crea movimientos, apertura, cierre histórico ni cobros. El singleton no se ha restaurado aún en Wix Runtime porque el código fusionado no está sincronizado con Editor/Preview.
 
 
 ## TPV — offline workflow y cierre de sesión (28-11-2026)
