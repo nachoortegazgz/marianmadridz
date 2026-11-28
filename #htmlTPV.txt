@@ -655,18 +655,26 @@ body {
   }
 
   /* ---------- Modales ---------- */
+  let modalSubmitting = false;
   function openModal(title, bodyHtml, onConfirm) {
     $("modalTitle").textContent = title;
     $("modalBody").innerHTML = bodyHtml;
     $("modalConfirm").textContent = "Confirmar";
+    $("modalConfirm").disabled = modalSubmitting;
     $("modalCancel").classList.remove("hidden");
     $("modalBackdrop").classList.remove("hidden");
     $("modalConfirm").onclick = async () => {
+      if (modalSubmitting) return;
+      modalSubmitting = true;
+      $("modalConfirm").disabled = true;
       try {
         const outcome = await onConfirm();
         if (outcome?.keepOpen !== true) closeModal();
       } catch (e) {
         error(e);
+      } finally {
+        modalSubmitting = false;
+        $("modalConfirm").disabled = false;
       }
     };
   }
@@ -716,17 +724,44 @@ body {
   }
 
   /* ---------- Idempotencia local ---------- */
-  function keyedAction(keyPrefix, type, payload, responseType) {
+  async function keyedAction(keyPrefix, type, payload, responseType) {
     const storageKey = "tpv_key_" + keyPrefix;
+    const fingerprintKey = storageKey + "_fingerprint";
+    const fingerprint = JSON.stringify(payload);
     let key = sessionStorage.getItem(storageKey);
+
+    // After an unknown timeout, never reuse the old sale key for a changed cart.
+    // Read back the old operation first; only a proven absence permits a new key.
+    if (key && keyPrefix === "SALE" && sessionStorage.getItem(fingerprintKey) !== fingerprint) {
+      try {
+        const previous = await call("SALE_READBACK", {
+          sessionId: payload.sessionId,
+          idempotencyKey: key,
+        }, "SALE_READBACK_RES");
+        if (previous?.recordPersisted === true) {
+          const conflict = new Error("TPV_PREVIOUS_SALE_RECONCILIATION_REQUIRED");
+          conflict.code = "TPV_PREVIOUS_SALE_RECONCILIATION_REQUIRED";
+          conflict.userMessage = "La venta anterior quedó registrada o requiere conciliación. Consulta su estado antes de crear otra venta.";
+          throw conflict;
+        }
+      } catch (readbackError) {
+        if (readbackError.code !== "TPV_SALE_NOT_FOUND") throw readbackError;
+      }
+      sessionStorage.removeItem(storageKey);
+      sessionStorage.removeItem(fingerprintKey);
+      key = null;
+    }
+
     if (!key) {
       key = keyPrefix + "_" + crypto.randomUUID().replace(/-/g, "");
       sessionStorage.setItem(storageKey, key);
+      if (keyPrefix === "SALE") sessionStorage.setItem(fingerprintKey, fingerprint);
     }
     const fullPayload = Object.assign({}, payload, { idempotencyKey: key });
     return call(type, fullPayload, responseType).then((result) => {
       if (result !== null && result !== undefined) {
         sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(fingerprintKey);
       }
       return result;
     });
@@ -1381,7 +1416,7 @@ body {
     state.payments = [];
     state.saleQuote = null;
     renderTicket();
-  });
+  }).catch((saleError) => error(saleError));
 
   /* ---------- Apertura de caja: sesión, movimiento, recibo y continuidad ---------- */
   function openingReceiptHtml(receipt) {

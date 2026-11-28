@@ -99,7 +99,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
     assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
-    assert.match(permissions, /exportAudit: false/);
+    assert.match(permissions, /exportAudit: staff\.rolWebsite === "ADMIN"/);
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
@@ -108,6 +108,12 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.doesNotMatch(html, /\$\("refund"\)\.onclick|keyedAction\("REFUND"/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /result\?\.persisted !== true/);
+    assert.match(html, /let modalSubmitting = false/);
+    assert.match(html, /if \(modalSubmitting\) return/);
+    assert.match(html, /call\("SALE_READBACK"/);
+    assert.match(html, /TPV_PREVIOUS_SALE_RECONCILIATION_REQUIRED/);
+    assert.match(html, /sessionStorage\.setItem\(fingerprintKey, fingerprint\)/);
+    assert.match(html, /\.catch\(\(saleError\) => error\(saleError\)\)/);
     assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
     assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
     assert.match(html, /Venta cobrada y registrada en Wix\./);

@@ -28,7 +28,7 @@ function sessionOf(record) {
 function mapMovementRecord(record) {
     const sourceType = String(record?.cmsMovementType || "");
     if (!Object.prototype.hasOwnProperty.call(TPV_LEDGER_DISPLAY_TYPES, sourceType)) return null;
-    if (sourceType === "TPV_SALE" && record.status !== "CONFIRMADA") return null;
+    if (sourceType === "TPV_SALE" && !["CONFIRMADA", "CONFIRMED"].includes(record.status)) return null;
     const amountMinor = Number.isSafeInteger(Number(record.amountMinor))
         ? Number(record.amountMinor)
         : Number.isSafeInteger(Number(record.totalMinor))

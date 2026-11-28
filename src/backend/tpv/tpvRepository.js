@@ -28,6 +28,7 @@ import {
     makeTpvRefundLockId,
     makeTpvSessionLockId,
     makeTpvTransactionId,
+    toMinorUnits,
 } from "backend/tpv/tpvUtils";
 import {
     acquireFiscalLedgerLock,
@@ -1344,19 +1345,44 @@ async function queryCommercialTpvSales(sessionId) {
     return records;
 }
 
+function normalizeCommercialSale(item) {
+    return {
+        ...item,
+        saleId: item._id,
+        totalMinor: item.totalVentaMinor,
+        amountMinor: item.totalVentaMinor,
+        taxMinor: Number.isSafeInteger(Number(item.impuestosTotalMinor))
+            ? Number(item.impuestosTotalMinor)
+            : (Array.isArray(item.lineas) ? item.lineas.reduce(
+                (sum, line) => sum + toMinorUnits(line.impuestosImporte || 0, "SALE_TAX"),
+                0
+            ) : 0),
+        discountMinor: 0,
+        paymentMethod: item.medioPago || null,
+        cmsMovementType: "TPV_SALE",
+        operationDescription: "Venta TPV",
+    };
+}
+
 export async function getCommittedTpvSales(sessionId) {
     const records = await queryCommercialTpvSales(sessionId);
-    return records.filter((item) => item.status === "CONFIRMED");
+    return records
+        .filter((item) => item.status === "CONFIRMADA" || item.status === "CONFIRMED")
+        .map(normalizeCommercialSale);
 }
 
 export async function getPendingTpvSales(sessionId) {
     const records = await queryCommercialTpvSales(sessionId);
-    return records.filter((item) => item.status === "PENDING_PAYMENT");
+    return records
+        .filter((item) => item.status === "PENDING_PAYMENT")
+        .map(normalizeCommercialSale);
 }
 
 export async function getTpvPayments(sessionId) {
     const records = await queryTpvRecords(TPV_COLLECTIONS.PAGOS, undefined);
-    return records.filter((item) => item.payload?.sessionId === sessionId);
+    return records.filter((item) =>
+        item.sessionId === sessionId || item.payload?.sessionId === sessionId
+    );
 }
 
 export async function getPendingTpvRefunds(sessionId) {
