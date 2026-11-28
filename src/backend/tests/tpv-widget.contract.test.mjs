@@ -359,7 +359,9 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    assert.match(caja, /const cajaActual = await readTpvCajaSnapshot\(\)/);
+    assert.match(caja, /let cajaActual;[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
+    assert.match(caja, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
+    assert.match(caja, /await initializeTpvCaja\(traceId\)/);
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
