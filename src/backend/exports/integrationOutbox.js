@@ -92,7 +92,7 @@ export async function appendC3PreparedEvent({ manifest, traceId } = {}) {
     const payload = {
         exportId: String(manifest.exportId),
         artifactId: String(manifest.artifactId),
-        fileName: String(manifest.exportId) + "-" + String(manifest.artifactId).slice(0, 12) + ".json",
+        fileName: String(manifest.exportId) + "-" + String(manifest.artifactId) + ".json",
         contentChecksum: String(manifest.contentChecksum),
         year,
         quarter,
