@@ -150,9 +150,11 @@ Leyenda: **CONSERVAR** = control correcto; **CORREGIDO** = cambio incluido en es
 
 ## 9. Estado y criterios de cierre
 
-**Implementado en código de esta rama:** 6 correcciones puntuales.  
+**Implementado en código de esta rama:** 6 correcciones puntuales y pruebas de regresión añadidas/actualizadas.  
 **Implementado en documentación:** este checklist y actualización del índice/estado.  
-**Estático/unitario/CI:** PENDIENTE en esta intervención; no se ha ejecutado runtime de pruebas local ni CI.  
+**CI observado:** el run `46162312738` sobre SHA `1ba6b5a14b4d3b6d016cad02d0afd845ec99070b` terminó FAILURE en Layer 1: 397 tests PASS y 1 FAIL. El único fallo fue una aserción obsoleta que exigía `issueTicketZ: false`; la política de permisos ya se había corregido para ADMIN. Secret scanning `46162312766` terminó SUCCESS.  
+**Corrección de test:** actualizada la aserción en `tpv-widget.contract.test.mjs` y añadida `tpv-deep-audit-regressions.test.mjs`. El HEAD final de rama es `7fd897d798f0fb2a5ed16ccc2d7e3cc2302ab957`; no consta todavía una nueva ejecución CI asociada a ese HEAD, por lo que la suite final sigue PENDIENTE.  
+**Comparación con main:** rama `docs/tpv-runtime-success-flows-2026-11-28` = 17 commits ahead / 4 behind; estado divergido. PR #709 sigue en borrador y no debe fusionarse hasta reconciliar esos 4 commits de main y obtener CI PASS sobre el HEAD resultante.  
 **Wix Runtime / E2E:** PENDIENTE.  
 **Producción:** NO-GO; el sitio sigue sin publicar según el último estado verificado.
 
