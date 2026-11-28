@@ -1837,7 +1837,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 .eq(dateField, cleanDiaKey)
                 // Include malformed sequence values so the integrity check below can reject them.
                 .ne("recordSource", "SMOKE_TEST")
-        .ne("recordSource", TPV_LEDGER_SOURCE)
+                .ne("recordSource", TPV_LEDGER_SOURCE)
                 .ascending("sequenceNumber")
                 .limit(LEDGER_PAGE_SIZE);
             let res = await query.find();
@@ -1953,7 +1953,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             const predecessorResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
                 .gt("sequenceNumber", 0)
                 .ne("recordSource", "SMOKE_TEST")
-        .ne("recordSource", TPV_LEDGER_SOURCE)
+                .ne("recordSource", TPV_LEDGER_SOURCE)
                 .lt("sequenceNumber", firstSequence)
                 .descending("sequenceNumber")
                 .limit(1)
