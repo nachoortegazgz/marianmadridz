@@ -68,3 +68,12 @@ El frontend muestra mensaje y remediation, conserva código/`traceId` para sopor
 - Los movimientos de caja se escriben en `MovimientosCaja` con `transactionId`, secuencia, hash, hash anterior, timestamp, sesión, operador y correlación. `CajaActual` se actualiza como proyección de la sesión.
 - Los eventos fiscales y contables mantienen sus validaciones específicas y append-only. Los campos de factura no se exigen a un movimiento físico TPV cuando no aplican; el hook aplica el contrato según el tipo de registro.
 - No borrar, editar ni reclasificar movimientos históricos para preparar pruebas. Las correcciones se registran como nuevos eventos trazables.
+
+
+## 7. Venta y medios
+
+El backend vuelve a resolver catálogo, precio e impuestos; el navegador no es autoridad. La intención comercial, la respuesta del proveedor, el movimiento físico y el registro fiscal son etapas separadas. Un pago solo se confirma cuando existe una respuesta válida del proveedor; el resto del flujo interno se persiste y audita con el mismo contrato.
+
+## 8. Evidencia
+
+CI offline PASS no acredita Preview, Runtime ni producción. Cada aceptación identifica SHA, flujo, identidad autorizada, resultado y read-back de CMS. No declarar E2E sin ejecución real en Wix Runtime.
