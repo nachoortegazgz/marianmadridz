@@ -1547,6 +1547,22 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
   assert.strictEqual(maximumLength.data.transactionId.length, 128);
 });
 
+test('FLOW-CAJA-14 cashier state rejects missing persisted balances instead of showing zero', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  const row = wixDataMock._store.get('CajaActual')[0];
+  row.cashAmount = null;
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+
+  const state = await cajas.getCashierState({});
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'CAJA_STATE_NUMERIC_FIELD_INVALID');
+  assert.equal((wixDataMock._store.get('CajaActual') || [])[0].cashAmount, null);
+  setMember(null);
+});
+
 test('P0-FISCAL-TX-03 manual fiscal writer rejects missing VAT rate before ledger append', async () => {
   wixDataMock._reset();
   seedCajaPrincipal(new Date(Date.now() - 60_000));
