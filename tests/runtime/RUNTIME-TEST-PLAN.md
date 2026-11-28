@@ -1,106 +1,85 @@
 # Wix Preview / Runtime — plan de aceptación TPV
 
-**Estado:** NO EJECUTADO según la última evidencia fechada. Este plan separa pruebas de lectura, pruebas de aplicación aisladas y aceptación de operaciones productivas. No se exige configuración fiscal productiva para probar lógica sin efectos externos.
+**Estado:** PENDIENTE de ejecución Wix Runtime E2E. Última auditoría CMS/código: 2026-11-28.  
+**Guía operativa y matriz de 20 pruebas:** [TPV-RUNTIME-AND-TEST-FLOWS](../../docs/TPV-RUNTIME-AND-TEST-FLOWS.md).
 
-## Objetivo
+## 1. Objetivo y regla de ejecución
 
-Validar bridge, permisos, WebMethods, persistencia, idempotencia, concurrencia y recuperación en niveles proporcionales al riesgo, sin publicar ni producir efectos externos.
+Acreditar bridge, permisos, WebMethods, persistencia, idempotencia, concurrencia, recuperación y documentos del TPV mediante operaciones ejecutadas en el runtime Wix.
 
-## Terminología y alcance de cada prueba
+El runtime utiliza un único código y las mismas reglas de dominio. No diferencia procesos ni datos por origen real/prueba. Los casos de prueba se identifican mediante el cliente de prueba acordado y el periodo de prueba; no se añaden flags, prefijos, colecciones paralelas ni filtros de negocio.
 
-- **Runtime test:** ejecuta código Velo en el runtime alojado por Wix. Identifica siempre el entorno concreto: Preview del Editor, Local Editor, preview URL, test site o sitio publicado.
-- **Smoke test:** subconjunto breve de comprobaciones básicas (carga, bridge, respuesta de lectura, ausencia de errores críticos). Puede ejecutarse en runtime, pero no demuestra flujos completos.
-- **Online test:** describe que la prueba usa una URL/servicio accesible por red. No define por sí solo el entorno ni la profundidad de validación.
-- **Integration test:** verifica el contrato entre componentes reales (por ejemplo, HtmlComponent → page controller → WebMethod → CMS).
-- **E2E:** recorre un caso funcional de principio a fin y verifica estado persistido, auditoría y ausencia de efectos no autorizados.
+Durante QA: cero cobros bancarios, pagos externos, reembolsos, remesas fiscales o notificaciones reales. Una intención `PENDING_PAYMENT` no se considera pagada. No escribir directamente en CMS para simular una ejecución Velo.
 
-Un HTTP 200 o una página renderizada solo acredita disponibilidad/renderizado. No acredita runtime funcional, bridge, WebMethods, CMS ni E2E.
+## 2. Qué acredita cada nivel
 
-## Entornos Wix y viabilidad actual
+- **HTTP render smoke:** disponibilidad/renderizado de una URL; no acredita página TPV funcional.
+- **Bridge smoke:** handshake y mensajes permitidos entre HtmlComponent y página; no acredita WebMethods.
+- **CMS REST:** lectura/escritura mediante REST; no acredita writers Velo ni idempotencia del TPV.
+- **WebMethod test:** invocación del WebMethod en el runtime Wix y respuesta normalizada.
+- **Integration:** interacción real entre UI, bridge, WebMethod, DAL y CMS.
+- **Wix Runtime E2E:** recorrido funcional completo con read-back de las colecciones y auditoría.
+- **Producción:** versión publicada y operación verificada; requiere autorización expresa.
 
-| Entorno | Qué permite | Restricciones y decisión |
+No extrapolar un PASS de un nivel a otro.
+
+## 3. Entornos Wix y restricciones conocidas
+
+| Entorno | Uso | Restricción |
 |---|---|---|
-| Wix Editor Preview (Editor clásico) | Ejecutar la versión guardada en el Editor, inspeccionar Developer Console, bridge y lecturas | Primera opción inmediata. Preview asigna rol Admin; no valida permisos de cajero. Los eventos backend no se disparan. |
-| Functional Testing del Editor | Invocar backend/WebMethods de forma aislada | Se ejecuta en contexto Preview y hereda sus limitaciones. Solo métodos read-only hasta disponer de fixture aislado. |
-| Local Editor con `wix dev` | Ejecutar código local sincronizado en el Editor sin publicar | Wix documenta soporte para Wix Editor y Wix Studio. Requiere Git Integration activa para este sitio y repo, acceso Velo/GitHub y entorno local. La existencia de `wix.config.json` no demuestra por sí sola que la conexión esté activa. Verificar repo, branch y UI version en el panel GitHub del Editor antes de usarlo. |
-| `wix preview` (CLI, URL compartible) | Crear preview remoto del código de la rama/local IDE | Requiere que el sitio haya sido publicado al menos una vez. Marian Madrid está en Draft/no publicado: no es una vía disponible sin publicar. No ejecutar este workflow hasta cambiar esa precondición con autorización. |
-| Test Site / Release Manager | Probar funciones que necesitan versión publicada, incluidos eventos que no corren en Preview | También requiere publicación previa. El test site comparte los datos live del sitio principal; exposición 0% no aísla CMS ni evita efectos sobre datos compartidos. No usar para writers TPV con la caja singleton actual. |
-| Sitio publicado | Verificar runtime y permisos reales | Fuera del alcance actual. No publicar ni activar operaciones económicas como parte de QA. |
+| Wix Editor Preview (Editor clásico) | Primera comprobación de página, bridge y lecturas | Preview puede ejecutar con rol Admin; no valida permisos de cajero por sí solo. Eventos backend pueden no dispararse. |
+| Functional Testing del Editor | Invocación aislada de backend/WebMethods cuando la función esté soportada | Contexto Preview; validar limitaciones y no asumir E2E. |
+| Local Editor con `wix dev` | Ejecutar código local sincronizado en Editor | Requiere CLI, acceso al equipo, Git Integration activa y comprobar repo/branch/UI version. |
+| `wix preview` / Test Site | Pruebas que requieren versión publicada | El sitio Draft no cumple la precondición. Test Site puede compartir CMS con el sitio principal; no asumir aislamiento. |
+| Sitio publicado | Verificar runtime/permisos reales | No publicar ni activar operaciones económicas como parte de esta batería. |
 
-Documentación oficial consultada: Wix Editor admite Git Integration + Wix CLI for Sites; `wix dev` abre Local Editor. `wix preview` y Test Sites requieren publicación previa. Referencias:
+Referencias Wix:
 - https://dev.wix.com/docs/develop-websites/articles/get-started/development-environments
 - https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites
 - https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands
 - https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/test-your-code-in-the-local-editor
 - https://support.wix.com/en/article/creating-a-release-candidate
 
-## Estado específico de Marian Madrid (27-11-2026)
+## 4. Estado específico de Marian Madrid
 
-- Wix GetSiteContext confirma Editor clásico, Velo habilitado y estado Draft. El sitio no consta como publicado.
-- El repositorio contiene `wix.config.json` con el Site ID correcto, pero no se ha verificado desde el panel del Editor que Git Integration esté conectada a este repositorio ni que el SHA de `main` sea el código instalado.
-- Existe `.github/workflows/wix-tpv-preview.yml`. Su job ejecuta `wix preview`; por tanto, con el sitio aún no publicado al menos una vez, el job no puede completar la creación de preview. El input `create_preview=false` evita que se ejecute.
-- `scripts/wix-preview-smoke.mjs` bloquea peticiones dinámicas y no realiza interacciones. Solo comprueba respuesta HTTP/renderizado básico del documento y registra errores. No visita específicamente el TPV ni ejecuta bridge, WebMethods o lecturas CMS. Su resultado debe denominarse **HTTP render smoke**, nunca Runtime TPV PASS.
-- El estado CMS conocido incluye `CajaActual` singleton ABIERTA y ledgers/históricos existentes. No son fixtures y no se usarán para probar mutaciones.
+- Site ID: `188bed94-177c-4bc9-a9f0-35080d874f3e`.
+- Editor clásico + Velo; estado conocido Draft/no publicado.
+- No se ha acreditado la conexión activa de Git Integration con este repo ni que el SHA de `main` esté instalado en Wix.
+- `wix preview` y Test Site no son rutas disponibles sin cumplir su precondición de publicación.
+- La última lectura CMS observó una proyección `CajaActual` antigua en estado ABIERTA, cinco movimientos históricos, cero intenciones en `TransaccionesTPV`, 90 registros `ControlOperativo` y un cierre histórico. No reutilizar caja ni históricos para pruebas.
+- La auditoría CMS REST anterior acreditó escritura/read-back de registros de evidencia en `ControlOperativo`, no invocación de WebMethods Velo.
+- No se ha acreditado una venta, movimiento, arqueo, Ticket X, cierre Z o jornada en Wix Runtime.
 
-## Ruta de ejecución recomendada
+## 5. Ruta de ejecución
 
-1. **Ahora, sin publicar:** comprobar en el Editor clásico si GitHub Integration está conectada al repo `nachoortegazgz/marianmadridz`. Si lo está, usar `wix dev` desde el ordenador con el repo clonado y Node.js 24.22.1; si no, sincronizar manualmente los archivos Velo/HTML aprobados al Editor. No conectar ni sustituir repositorios sin revisar el vínculo existente.
-2. Abrir Preview desde el Editor y registrar Site ID, UI version, commit SHA esperado, página `/tpv`, hora, usuario y rol. Leer Developer Console y DevTools.
-3. Ejecutar smoke read-only de TPV: página correcta, HtmlComponent presente, handshake `MM_READY → MM_CONTEXT`, identidad devuelta, capacidades, `CASHIER_STATE`, catálogo de lectura y ausencia de errores no explicados. No invocar `SESSION_OPEN`, movimientos, arqueos, Ticket X si crea auditoría, ventas ni otros writers.
-4. Ejecutar Functional Testing solo para métodos read-only o funciones cuyo contrato garantice no persistencia. Verificar los resultados con una segunda lectura.
-5. Para integración con escrituras, preparar primero un sitio/espacio de prueba realmente aislado y verificar el destino de cada writer. No basta con sandbox de CMS: las colecciones de apps Wix pueden seguir siendo live. No usar `CajaActual`, `MovimientosCaja`, `HistoricoCierresZ` ni ledgers actuales como fixture.
-6. Solo cuando exista aislamiento demostrado, probar writer canónico, read-back, idempotencia y concurrencia con dos sesiones/operaciones controladas. Efectos de Payments, AEAT, terminales, emails y proveedores permanecen simulados.
-7. Si una capacidad exige publicación (eventos backend o APIs no disponibles en Preview), documentar el gap. No publicar el sitio actual para resolverlo; solicitar un test site aislado o una estrategia de entorno separada y autorización explícita.
+1. Confirmar en el Editor clásico Git Integration, repositorio, rama y UI version. Verificar fingerprint del código cargado frente al SHA candidato.
+2. Abrir Preview sin publicar. Registrar Site ID, UI version, commit/fingerprint, página TPV, fecha/hora, identidad y rol.
+3. Ejecutar bridge smoke: `MM_READY → MM_CONTEXT`, contexto de miembro, capacidades, `CASHIER_STATE` y catálogo read-only. Registrar mensajes y errores.
+4. Probar permisos backend: administrador, operador/cajero autorizado, estilista con el rol esperado y miembro sin rol. La autorización del WebMethod prevalece sobre la visibilidad de botones.
+5. Resolver la proyección heredada mediante el flujo canónico de apertura; no actualizar `CajaActual` directamente.
+6. Ejecutar TPV-RT-01…20 según la matriz de [TPV-RUNTIME-AND-TEST-FLOWS](../../docs/TPV-RUNTIME-AND-TEST-FLOWS.md): apertura, venta pendiente, replay/conflicto, entradas/salidas, arqueo, Ticket X, concurrencia, timeout/recuperación, cierre y operación posterior al cierre.
+7. Tras cada operación, leer de vuelta las colecciones afectadas y correlacionar `sessionId`, `transactionId`, claves idempotentes, IDs y `traceId`.
+8. Verificar documento Ticket X: registro en ControlOperativo y, separadamente, vista/descarga/PDF/impresión si la funcionalidad lo promete.
+9. Confirmar cero efectos externos reales y que ningún histórico anterior se haya modificado.
+10. Guardar evidencia con SHA, entorno, rol, método, respuesta, IDs, read-back y logs seguros.
 
-## Niveles de prueba
+## 6. Criterios PASS de Wix Runtime E2E
 
-### A. Lectura y diagnóstico
+- Fingerprint del código instalado coincide con el SHA validado.
+- Bridge y autorización backend funcionan con los roles probados.
+- Apertura crea una sesión y proyección coherentes, sin reutilizar históricos.
+- Venta válida crea una única intención comercial; no se presenta como cobro.
+- Replay idéntico no duplica; misma clave con payload distinto genera conflicto.
+- Movimientos y arqueos aparecen en el ledger y proyección, con operador, sesión, importe, motivo, estado y auditoría.
+- Ticket X genera el documento de control esperado y no cierra la sesión.
+- Cierre Z conserva histórico y bloquea operaciones posteriores.
+- Recuperación ante timeout no duplica.
+- Cero pagos, reembolsos, remesas y notificaciones externas reales.
 
-Puede ejecutarse sin fixtures ni escrituras: fingerprint, handshake, catálogo de diagnóstico, permisos efectivos y lectura de estado. No requiere sesión de caja sintética ni configuración fiscal productiva.
+## 7. No ejecutar / no certificar
 
-### B. Pruebas de dominio y contrato
-
-Se ejecutan en CI con fixtures explícitos y adaptadores simulados. Deben probar tanto los rechazos fail-closed esperados como los recorridos válidos del dominio. No requieren identidad Wix, CMS real, serie fiscal productiva, pagos, SharePoint ni configuración de activación real.
-
-### C. Integración Wix aislada
-
-Precondiciones específicas:
-1. Preview del sitio correcto y fingerprint/build SHA leído.
-2. Identidad de prueba y permisos efectivos verificados para los WebMethods invocados.
-3. Tenant/espacio de prueba o fixture aislado creado por el writer canónico, sin tocar `CajaActual` singleton ni ledgers históricos compartidos.
-4. Pagos, AEAT, terminales, notificaciones y otros efectos externos interceptados por adaptadores simulados.
-5. IDs de correlación y limpieza/reversión limitados a datos de test no append-only. Los registros append-only de test se conservan y se rectifican mediante nuevos eventos.
-
-No es precondición para esta categoría disponer de configuración fiscal productiva, credenciales de cobro, serie real o datos de clientes reales.
-
-### D. Aceptación productiva
-
-Requiere configuración legal/fiscal validada, permisos, proveedores reales autorizados, pruebas operativas y aprobación correspondiente. No se ejecuta como parte de QA sintético.
-
-## Secuencia recomendada
-
-1. **Bridge read-only:** handshake `MM_READY → MM_CONTEXT`, diagnóstico y validación de protocolo.
-2. **Autorización:** roles permitidos y denegados en WebMethods.
-3. **Preflight:** comprobar resultado con configuración ausente/incompleta y con fixture válido.
-4. **Gate real:** verificar que `registrarVenta()` rechaza la operación no preparada sin persistir una intención.
-5. **Dominio simulado:** ejecutar el mismo flujo con fixture fiscal/catalogo y puertos simulados; comprobar intención y resultados en repositorio de test, sin pago ni ledger productivo.
-6. **Idempotencia:** replay idéntico no duplica; payload conflictivo se rechaza.
-7. **Concurrencia:** dos operaciones con la misma clave/recurso; comprobar adquisición única y respuesta determinista.
-8. **Persistencia/recuperación:** read-back del repositorio aislado, lock, auditoría y proyección; simular timeout/reintento.
-9. **Cierre/arqueo:** probar cálculos y contrato con fixture/dobles en CI. Cualquier persistencia append-only en Wix requiere fixture aislado y conservar el registro; nunca usar la caja o históricos existentes.
-
-## Evidencia
-
-Por prueba guardar commit/fingerprint, entorno, identidad/rol cuando aplique, método, payload anonimizado, IDs de correlación, resultado, read-back y logs. No registrar secretos, datos de tarjeta ni datos personales innecesarios.
-
-## Criterios PASS
-
-- Fingerprint coincidente para pruebas Wix.
-- Bridge y autorización backend correctos.
-- Gates reales rechazan operaciones no preparadas.
-- El mismo dominio funciona con fixtures y adaptadores simulados.
-- Persistencia lógica idempotente y concurrencia controlada en el repositorio probado.
-- Cero efectos externos reales.
-- Ninguna mutación de caja singleton ni ledger histórico compartido.
-
-Un smoke HTTP, test estático, mock o CI offline no acredita Runtime E2E; sí acredita el nivel concreto que realmente ejecuta.
+- No publicar el sitio, activar pagos reales ni cerrar una caja operativa sin autorización expresa.
+- No insertar directamente en CMS para fingir WebMethod PASS.
+- No alterar CajaActual, MovimientosCaja o HistoricoCierresZ históricos para preparar una prueba.
+- No crear ramas de runtime ni clasificar registros por origen de prueba.
+- No declarar Runtime E2E PASS por tests unitarios, CI, HTTP smoke o CMS REST.
