@@ -23,7 +23,9 @@ const wixHost = (hostname) =>
     hostname === "wix.com" ||
     hostname.endsWith(".wix.com") ||
     hostname === "wixsite.com" ||
-    hostname.endsWith(".wixsite.com");
+    hostname.endsWith(".wixsite.com") ||
+    hostname === "marianmadrid.es" ||
+    hostname === "www.marianmadrid.es";
 
 const allowedParentOrigins = [
     "https://www.marianmadrid.es",
@@ -33,8 +35,9 @@ const allowedParentOrigins = [
 
 const report = {
     result: "FAIL",
-    environment: "WIX_PREVIEW",
-    dataEnvironment: "SANDBOX_EXPECTED_CMS_SANDBOX_MUST_BE_ENABLED",
+    environment: "WIX_EDITOR_PREVIEW",
+    dataEnvironment: "WIX_PREVIEW_SITE_DATA",
+    syntheticByDate: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric" }).format(new Date())) < 2027,
     previewHttpStatus: null,
     tpvPageHttpStatus: null,
     previewHost: null,
@@ -97,6 +100,19 @@ function assertSuccess(envelope, name) {
         throw error;
     }
     return envelope.data ?? envelope;
+}
+
+function assertPending(envelope, name) {
+    if (envelope?.status !== "PENDING" || envelope?.persisted !== true ||
+        envelope?.orderPersisted !== true || !envelope?.orderId ||
+        !envelope?.idempotencyKey || !Number.isFinite(Number(envelope?.totalVenta))) {
+        const code = envelope?.error?.code || envelope?.reason || "TPV_PENDING_SALE_NOT_PERSISTED";
+        const error = new Error(name + " did not persist a pending sale: " + code);
+        error.code = code;
+        error.response = redact(envelope);
+        throw error;
+    }
+    return envelope;
 }
 
 async function waitForTpvFrame(targetPage, timeoutMs = 90000) {
@@ -217,7 +233,17 @@ function cashTotalFromMovements(items) {
             case "RETIRADA":
                 totalMinor -= minor;
                 break;
+            case "ARQUEO_PARCIAL":
+            case "CONTROL_X":
+            case "CIERRE_Z":
+            case "VENTA":
+            case "DEVOLUCION":
             case "CIERRE":
+                break;
+            case "COBRO":
+                if (String(item.paymentMethod || "").toUpperCase() === "EFECTIVO") {
+                    totalMinor += minor;
+                }
                 break;
             default:
                 throw new Error("TPV_UNEXPECTED_MOVEMENT_TYPE:" + String(item.movementType || "UNKNOWN"));
@@ -307,32 +333,16 @@ async function run() {
         projectionStatus: state.cajaActual?.projectionStatus || null,
     });
 
-    if (state.operationalStatus === "ABIERTA" && state.sessionId) {
-        phase = "close-existing-session";
-        const expectedCash = Number(state.expectedCash);
-        assert.ok(Number.isFinite(expectedCash) && expectedCash >= 0,
-            "Existing open session has no reliable expectedCash; refusing to close it");
-        const closeExisting = await invokeWidget(frame, "SESSION_CLOSE", {
-            sessionId: state.sessionId,
-            contadoEfectivo: expectedCash,
-            observaciones: "Cierre previo autorizado antes de la comprobación funcional",
-        });
-        const closeExistingData = assertSuccess(closeExisting, "SESSION_CLOSE_EXISTING");
-        assert.equal(closeExistingData.sessionId, state.sessionId);
-        stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
-        state = assertSuccess(stateEnvelope, "CASHIER_STATE_AFTER_EXISTING_CLOSE");
-        if (state.canOpenSession !== true) {
-            report.result = "BLOCKED";
-            report.blockReason = "EXISTING_SESSION_CLOSED_BUT_TODAY_CANNOT_BE_REOPENED";
-            report.closedExistingSessionId = closeExistingData.sessionId;
-            throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
-        }
-    } else if (state.operationalStatus === "ABIERTA" && !state.sessionId) {
-        throw Object.assign(new Error("OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION"), {
-            code: "OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION",
+    // Preflight is read-only. Never close, alter, or adopt a session that
+    // existed before this E2E run.
+    if (state.operationalStatus === "ABIERTA") {
+        report.result = "BLOCKED";
+        report.blockReason = "PREEXISTING_OPEN_SESSION_NOT_TOUCHED";
+        report.preexistingSessionId = state.sessionId || null;
+        throw Object.assign(new Error("A cash session is already open; E2E will not close or modify it."), {
+            code: report.blockReason,
         });
     }
-
     if (state.canOpenSession !== true) {
         report.result = "BLOCKED";
         report.blockReason = state.operationalStatus === "CERRADA"
@@ -345,8 +355,8 @@ async function run() {
     await clearCapturedResponses(frame);
     await frame.locator("#openCash").click();
     await frame.locator("#openingCash").waitFor({ state: "visible", timeout: 15000 });
-    await frame.locator("#openingCash").fill("0,00");
-    await frame.locator("#openingReason").fill("");
+    await frame.locator("#openingCash").fill("300,00");
+    await frame.locator("#openingReason").fill("E2E TPV " + new Date().toISOString().slice(0, 19));
     await frame.locator("#modalConfirm").click();
 
     const openEnvelope = await captureUiOperation(frame, "SESSION_OPEN_RES", "SESSION_OPEN");
@@ -375,13 +385,162 @@ async function run() {
     await frame.locator("#cashIn").click();
     await frame.locator("#movementAmount").waitFor({ state: "visible", timeout: 15000 });
     await frame.locator("#movementAmount").fill("1,00");
-    await frame.locator("#movementConcept").fill("Entrada de efectivo para comprobación funcional");
+    await frame.locator("#movementConcept").fill("Entrada de efectivo E2E TPV");
     await frame.locator("#modalConfirm").click();
 
     const cashEnvelope = await captureUiOperation(frame, "CASH_MOVEMENT_RES", "CASH_MOVEMENT");
     const cashData = assertSuccess(cashEnvelope, "CASH_MOVEMENT");
     assert.ok(cashData.movementId, "CASH_MOVEMENT did not return movementId");
     report.cashMovementId = cashData.movementId;
+
+    phase = "partial-cash-count";
+    const partialEnvelope = await invokeWidget(frame, "PARTIAL_CASH_COUNT", {
+        sessionId,
+        countedCash: 301,
+        reason: "Arqueo parcial E2E TPV",
+    });
+    const partialData = assertSuccess(partialEnvelope, "PARTIAL_CASH_COUNT");
+    assert.ok(partialData.movementId, "PARTIAL_CASH_COUNT did not return movementId");
+    report.partialCountMovementId = partialData.movementId;
+
+    phase = "pending-sale";
+    const catalogEnvelope = await invokeWidget(frame, "CATALOG_SERVICES", {});
+    const catalogData = assertSuccess(catalogEnvelope, "CATALOG_SERVICES");
+    const services = Array.isArray(catalogData.items) ? catalogData.items : [];
+    const testService = services.find((item) =>
+        item && item.tipoLinea === "SERVICIO" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(item.itemId || "")) &&
+        Number.isFinite(Number(item.precioFijo)) && Number(item.precioFijo) > 0 &&
+        String(item.moneda || "EUR").toUpperCase() === "EUR"
+    );
+    assert.ok(testService, "No fixed-price EUR service is available for the pending-sale E2E case");
+    const saleIdempotencyKey = randomUUID();
+    const saleEnvelope = await invokeWidget(frame, "SALE_REGISTER", {
+        sessionId,
+        idempotencyKey: saleIdempotencyKey,
+        lineItems: [{ tipoLinea: "SERVICIO", itemId: testService.itemId, cantidad: 1 }],
+        payments: [],
+    });
+    const pendingSale = assertPending(saleEnvelope, "SALE_REGISTER_PENDING");
+    phase = "pending-sale-readback";
+    const saleReadbackEnvelope = await invokeWidget(frame, "SALE_READBACK", {
+        sessionId,
+        idempotencyKey: saleIdempotencyKey,
+    });
+    const saleReadback = assertSuccess(saleReadbackEnvelope, "SALE_READBACK");
+    assert.equal(saleReadback.recordPersisted, true);
+    assert.equal(saleReadback.orderId, pendingSale.orderId);
+    assert.equal(saleReadback.status, "PENDING_PAYMENT");
+    assert.equal(saleReadback.requiresReconciliation, false);
+    assert.equal(saleReadback.order.externalOrderId, saleIdempotencyKey);
+    assert.equal(saleReadback.order.status, "APPROVED");
+    assert.equal(saleReadback.order.paymentStatus, "NOT_PAID");
+    assert.equal(saleReadback.order.totalMinor, Math.round(Number(pendingSale.totalVenta) * 100));
+    report.saleReadback = {
+        orderId: saleReadback.orderId,
+        status: saleReadback.status,
+        requiresReconciliation: saleReadback.requiresReconciliation,
+        wixOrderStatus: saleReadback.order.status,
+        wixPaymentStatus: saleReadback.order.paymentStatus,
+        totalMinor: saleReadback.order.totalMinor,
+    };
+
+    report.pendingSale = {
+        idempotencyKey: pendingSale.idempotencyKey,
+        orderId: pendingSale.orderId,
+        orderPersisted: pendingSale.orderPersisted,
+        paymentStatus: pendingSale.paymentStatus,
+        totalVenta: pendingSale.totalVenta,
+        medioPago: pendingSale.medioPago || null,
+        persisted: pendingSale.persisted,
+        replayed: pendingSale.replayed === true,
+        auditPersisted: pendingSale.auditPersisted === true,
+        serviceItemId: testService.itemId,
+    };
+
+    phase = "pending-sale-summary";
+    const summaryEnvelope = await invokeWidget(frame, "SESSION_SUMMARY", { sessionId });
+    const summary = assertSuccess(summaryEnvelope, "SESSION_SUMMARY_AFTER_PENDING_SALE");
+    assert.equal(Number(summary.pendingSalesCount), 1);
+    assert.equal(Math.round(Number(summary.pendingSalesGross) * 100),
+        Math.round(Number(pendingSale.totalVenta) * 100));
+    assert.equal(summary.reconciliationOk, true,
+        "An unpaid commercial intent must remain separate from collected cash");
+
+    phase = "cash-sale-register";
+    const cashSaleIdempotencyKey = randomUUID();
+    const cashSaleEnvelope = await invokeWidget(frame, "SALE_REGISTER", {
+        sessionId,
+        idempotencyKey: cashSaleIdempotencyKey,
+        lineItems: [{ tipoLinea: "SERVICIO", itemId: testService.itemId, cantidad: 1 }],
+        payments: [{
+            method: "EFECTIVO",
+            amount: Number(pendingSale.totalVenta),
+            change: 0,
+        }],
+    });
+    const cashSale = assertSuccess(cashSaleEnvelope, "SALE_REGISTER_CASH");
+    assert.equal(cashSale.orderPersisted, true);
+    assert.equal(cashSale.paymentPersisted, true);
+    assert.equal(cashSale.ledgerPersisted, true);
+    assert.equal(cashSale.auditPersisted, true);
+    assert.ok(cashSale.orderId, "Cash sale Wix orderId missing");
+    assert.equal(cashSale.paymentStatus, "PAID");
+    assert.ok(cashSale.paymentId, "Wix offline cash paymentId missing");
+    assert.ok(cashSale.ledgerMovementId, "TPV cash payment ledgerMovementId missing");
+    report.cashSale = {
+        idempotencyKey: cashSaleIdempotencyKey,
+        orderId: cashSale.orderId,
+        paymentId: cashSale.paymentId,
+        ledgerMovementId: cashSale.ledgerMovementId,
+        paymentStatus: cashSale.paymentStatus,
+        totalVenta: cashSale.totalVenta,
+        auditPersisted: cashSale.auditPersisted === true,
+    };
+
+    phase = "cash-sale-readback";
+    const cashSaleReadbackEnvelope = await invokeWidget(frame, "SALE_READBACK", {
+        sessionId,
+        idempotencyKey: cashSaleIdempotencyKey,
+    });
+    const cashSaleReadback = assertSuccess(cashSaleReadbackEnvelope, "SALE_READBACK_CASH");
+    assert.equal(cashSaleReadback.recordPersisted, true);
+    assert.equal(cashSaleReadback.orderId, cashSale.orderId);
+    assert.equal(cashSaleReadback.status, "CONFIRMADA");
+    assert.equal(cashSaleReadback.requiresReconciliation, false);
+    assert.equal(cashSaleReadback.order.externalOrderId, cashSaleIdempotencyKey);
+    assert.equal(cashSaleReadback.order.status, "APPROVED");
+    assert.equal(cashSaleReadback.order.paymentStatus, "PAID");
+    assert.equal(cashSaleReadback.paymentSelection.length, 1);
+    assert.equal(cashSaleReadback.paymentSelection[0].medioPago, "EFECTIVO");
+    assert.equal(cashSaleReadback.paymentSelection[0].confirmed, true);
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importe) * 100),
+        Math.round(Number(cashSale.totalVenta) * 100));
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importeCambio) * 100), 0);
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importeAplicado) * 100),
+        Math.round(Number(cashSale.totalVenta) * 100));
+    assert.ok(/^TPV_[a-f0-9]{64}$/i.test(cashSaleReadback.paymentSelection[0].ledgerMovementId));
+    report.cashSaleReadback = {
+        orderId: cashSaleReadback.orderId,
+        orderPaymentStatus: cashSaleReadback.order.paymentStatus,
+        paymentId: cashSaleReadback.paymentSelection[0].paymentId,
+        ledgerMovementId: cashSaleReadback.paymentSelection[0].ledgerMovementId,
+    };
+
+    phase = "cashier-projection-readback";
+    const cashierStateAfterCashSaleEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
+    const cashierStateAfterCashSale = assertSuccess(cashierStateAfterCashSaleEnvelope, "CASHIER_STATE_AFTER_CASH_SALE");
+    const cajaAfterCashSale = cashierStateAfterCashSale.cajaActual;
+    assert.equal(Number(cajaAfterCashSale.salesCount), 1);
+    assert.equal(
+        Math.round(Number(cajaAfterCashSale.cashAmount) * 100),
+        30100 + Math.round(Number(cashSale.totalVenta) * 100)
+    );
+    report.cashierProjection = {
+        salesCount: Number(cajaAfterCashSale.salesCount),
+        cashAmount: cajaAfterCashSale.cashAmount,
+        expectedCash: cajaAfterCashSale.expectedCash,
+    };
 
     phase = "ticket-x";
     await clearCapturedResponses(frame);
@@ -413,19 +572,32 @@ async function run() {
     assert.equal(openingItem.movementId, openingItem.transactionId);
     assert.equal(cashItem.movementId, cashItem.transactionId);
     const expectedCash = cashTotalFromMovements(beforeItems);
-    assert.equal(Math.round(expectedCash * 100), 100,
-        "Expected cash differs from the controlled opening and cash-in operations");
+    const expectedCashMinor = 30100 + Math.round(Number(cashSale.totalVenta) * 100);
+    assert.equal(Math.round(expectedCash * 100), expectedCashMinor,
+        "Expected cash differs from the 300€ opening, 1€ cash-in and confirmed cash sale");
 
-    phase = "session-close";
-    const closeEnvelope = await invokeWidget(frame, "SESSION_CLOSE", {
+    phase = "ticket-z";
+    const ticketZEnvelope = await invokeWidget(frame, "TICKET_Z", {
         sessionId,
-        contadoEfectivo: expectedCash,
-        observaciones: "Cierre tras comprobación funcional",
+        countedCash: expectedCash,
+        differenceReason: "",
     });
-    const closeData = assertSuccess(closeEnvelope, "SESSION_CLOSE");
-    assert.equal(closeData.sessionId, sessionId);
-    assert.equal(Math.round(Number(closeData.saldoFinal) * 100), 100);
-    assert.equal(Math.round(Number(closeData.diferencia) * 100), 0);
+    const ticketZData = assertSuccess(ticketZEnvelope, "TICKET_Z");
+    assert.equal(ticketZData.sessionId, sessionId);
+    assert.equal(ticketZData.closed, true);
+    assert.equal(Math.round(Number(ticketZData.expectedCash) * 100), expectedCashMinor);
+    assert.equal(Math.round(Number(ticketZData.countedCash) * 100), expectedCashMinor);
+    assert.equal(Math.round(Number(ticketZData.difference) * 100), 0);
+    report.ticketZInvoked = true;
+    report.ticketZ = {
+        reportId: ticketZData.reportId,
+        sessionId: ticketZData.sessionId,
+        expectedCash: ticketZData.expectedCash,
+        countedCash: ticketZData.countedCash,
+        difference: ticketZData.difference,
+        pendingSalesCount: ticketZData.pendingSalesCount,
+        closed: ticketZData.closed,
+    };
 
     phase = "post-close-state-query";
     const finalStateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
@@ -439,6 +611,10 @@ async function run() {
     const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
     const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
     assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
+    const ticketZLedgerItem = finalItems.find((item) => item.movementType === "CIERRE_Z" && item.reference === ticketZData.reportId);
+    assert.ok(ticketZLedgerItem, "Ticket Z record was not found in the post-close ledger query");
+    assert.equal(ticketZLedgerItem.sessionId, sessionId);
+    assert.ok(ticketZLedgerItem.transactionId, "Ticket Z transactionId missing from ledger query");
     assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
     assert.equal(closingItem.movementId, closingItem.transactionId);
     for (const item of finalItems) {
@@ -454,9 +630,19 @@ async function run() {
     const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST");
     const auditItems = Array.isArray(auditData.items) ? auditData.items : [];
     const ticketAudit = auditItems.find((item) => item.action === "TICKET_X_GENERATED");
-    const closeAudit = auditItems.find((item) => item.action === "CAJA_SESSION_CLOSED");
+    const closeAudit = auditItems.find((item) => item.action === "TICKET_Z_CLOSED");
     assert.ok(ticketAudit?.id, "Ticket X audit record not found");
-    assert.ok(closeAudit?.id, "Session close audit record not found");
+    assert.ok(closeAudit?.id, "Ticket Z audit record not found");
+    const saleAudit = auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === saleIdempotencyKey);
+    const orderAudit = auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === saleIdempotencyKey);
+    assert.ok(saleAudit?.id, "Sale audit record not found");
+    assert.ok(orderAudit?.id, "Wix order link audit record not found");
+    const cashSaleAudit = auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === cashSaleIdempotencyKey);
+    const cashOrderAudit = auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === cashSaleIdempotencyKey);
+    const cashPaymentAudit = auditItems.find((item) => item.action === "PAGO_TPV_CONFIRMADO" && item.entityId === cashSaleIdempotencyKey);
+    assert.ok(cashSaleAudit?.id, "Cash sale audit record not found");
+    assert.ok(cashOrderAudit?.id, "Cash Wix order link audit record not found");
+    assert.ok(cashPaymentAudit?.id, "Cash payment audit record not found");
 
     report.postChecks = {
         cashRegisterStatus: finalState.operationalStatus,
@@ -474,11 +660,30 @@ async function run() {
         })),
         ticketXAuditId: ticketAudit.id,
         closeAuditId: closeAudit.id,
+        saleAuditId: saleAudit.id,
+        orderAuditId: orderAudit.id,
+        ticketZReportId: ticketZData.reportId,
+        pendingSalesCount: Number(ticketZData.pendingSalesCount || 0),
+        cashSaleAuditId: auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === cashSaleIdempotencyKey)?.id || null,
+        cashOrderAuditId: auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === cashSaleIdempotencyKey)?.id || null,
+        cashPaymentAuditId: auditItems.find((item) => item.action === "PAGO_TPV_CONFIRMADO" && item.entityId === cashSaleIdempotencyKey)?.id || null,
         auditActions: auditItems.map((item) => item.action),
     };
 
     report.result = "PASS";
     report.completedPhase = phase;
+    report.acceptance = {
+        openingCashMinor: 30000,
+        cashInMinor: 100,
+        partialCountMinor: 30100,
+        pendingSalePersisted: true,
+        cashSalePersisted: true,
+        cashPaymentPersisted: true,
+        expectedCashMinor,
+        ticketXVerified: true,
+        ticketZVerified: true,
+        sessionClosed: true,
+    };
     await persistReport();
 }
 

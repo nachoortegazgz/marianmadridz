@@ -6,6 +6,7 @@ import {
     searchTpvContacts,
     resolveTpvContact,
     listAuthorizedProfessionals,
+    listCustomerBookings,
 } from "backend/tpv/tpvNativeDirectory";
 import { requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
@@ -157,11 +158,16 @@ export const obtenerReservasClienteTPV = webMethod(
                 };
             }
 
+            const bookings = await listCustomerBookings(customer.contactId, {
+                limit: input.limit,
+                cursor: input.cursor,
+            });
+
             return {
                 status: "SUCCESS",
                 data: {
-                    items: [],
-                    pagingMetadata: null,
+                    items: bookings.items,
+                    pagingMetadata: bookings.pagingMetadata || null,
                 },
                 error: null,
                 traceId,

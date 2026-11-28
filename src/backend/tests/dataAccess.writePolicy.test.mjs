@@ -216,6 +216,16 @@ test("TransaccionesTPV validates backend-priced records and permits validated ed
     assert.doesNotThrow(() => assertUpdateAllowed(C.TRANSACCIONES_TPV, { ...record, status: "PAID" }));
     assert.throws(() => assertRemoveAllowed(C.TRANSACCIONES_TPV, record._id, undefined, { ...record, sourceType: "TPV" }), { code: "CMS_DELETE_PROHIBITED" });
     assert.doesNotThrow(() => assertTransaccionesTPVRecord({ ...record, status: "PAID" }));
+    assert.doesNotThrow(() => assertTransaccionesTPVRecord({
+        ...record,
+        orderId: "e556070a-6d6a-402e-8422-11133033ea76",
+        requiresReconciliation: true,
+        draftOrderReason: "CASH_PAYMENT_WRITE_UNKNOWN",
+    }));
+    assert.throws(() => assertTransaccionesTPVRecord({
+        ...record,
+        requiresReconciliation: false,
+    }), /state or metadata invalid/);
 });
 
 test("MovimientosCaja accepts legacy movement aliases without environment classification", () => {

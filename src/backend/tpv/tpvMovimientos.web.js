@@ -14,6 +14,7 @@ import { normalizeTpvError } from "backend/tpv/tpvError";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_SALE: "VENTA",
+    TPV_PAYMENT: "COBRO",
     TPV_CASH_MOVEMENT: null,
     TPV_REFUND: "DEVOLUCION",
     TPV_TICKET_X: "CONTROL_X",
@@ -275,7 +276,7 @@ export const exportarAuditoriaTPV = webMethod(
         const traceId = makeTraceId("tpv-audit-export");
 
         try {
-            await requireCajero(traceId);
+            await requireAdmin(traceId);
             assertTpvLedgerTypeSupported("audit");
             const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);

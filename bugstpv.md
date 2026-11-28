@@ -1,3 +1,27 @@
+> **ACTUALIZACIÓN 2026-11-28 — documento histórico, no usar la tabla como estado vigente.**
+>
+> Esta auditoría antecede a la integración nativa implementada en la rama `feat/tpv-native-wix-commerce-2026-11-28`. Los hallazgos que siguen deben contrastarse con el código actual y con `tests/runtime/RUNTIME-TEST-PLAN.md`.
+>
+> **Implementado en código y CI offline PASS en esta rama; Runtime Preview pendiente:**
+> - Pedido nativo Wix Orders: creación, correlación por `channelInfo.externalOrderId`, lectura posterior y verificación de total/estado.
+> - Venta TPV persistida antes del pedido Wix, con recuperación por clave idempotente.
+> - Cobro en efectivo mediante `orderTransactions.addPayments` como pago offline; el TPV no simula un cobro de tarjeta ni procesa una pasarela.
+> - Ledger de caja `TPV_PAYMENT` (`COBRO`), auditoría independiente de venta/pedido/pago y read-back `SALE_READBACK`.
+> - El stock se gestiona por el flujo nativo de Wix Orders conforme a `settings.orderApprovalStrategy`; no existe un inventario paralelo del TPV.
+> - `CASHIER_STATE` es read-only; el singleton `CajaActual` se inicializa en el comando explícito `SESSION_OPEN`.
+> - El runner E2E no cierra sesiones preexistentes y ejecuta arqueo parcial, venta/pedido, Ticket X y Ticket Z.
+>
+> **Pendiente de validar o implementar antes de GO productivo:**
+> - Ejecución real en Wix Editor Preview y read-back de CMS/Orders.
+> - Cobro efectivo completo en Runtime, con confirmación física del efectivo y conciliación de caja.
+> - Integración de terminal/proveedor para tarjeta; no se habilita con un `AddPayments` offline.
+> - Devoluciones/reembolsos nativos, cancelación de pedidos pagados, factura/recibo y cumplimiento fiscal productivo.
+> - Pruebas de permisos con usuarios/cajeros reales; Preview ejecuta como Admin y no acredita los roles productivos.
+>
+> **Evidencia:** CI offline PASS en SHA `24a5d851a0725db8713cf426cdc41300e450f2ac` (97 suites, 864 tests, 0 fallos; Wix SDK verifiers, ESLint y auditoría SUCCESS). No sustituye Runtime Preview. No se debe declarar GO hasta completar ambos niveles.
+>
+> ---
+
 He contrastado los **40 bloqueos** de tu lista directamente contra el código real de los **29 módulos** auditados.
 
 ### Hallazgos previos importantes (discrepancias con el código actual)

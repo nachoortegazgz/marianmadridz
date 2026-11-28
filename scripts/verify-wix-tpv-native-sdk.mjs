@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { services, staffMembers } from "@wix/bookings";
+import { bookings, extendedBookings, services, staffMembers } from "@wix/bookings";
 import { contactsV5 } from "@wix/crm";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import { taxCalculation, taxSettings } from "@wix/ecom";
@@ -14,5 +14,8 @@ assert.equal(typeof taxSettings?.getTaxSettings, "function", "@wix/ecom taxSetti
 process.stdout.write("Wix TPV SDK contracts OK: Bookings services, Stores Catalog V3 and eCommerce tax calculation\n");
 
 assert.equal(typeof staffMembers?.queryStaffMembers, "function", "@wix/bookings staffMembers.queryStaffMembers must be exported");
+assert.equal(typeof bookings?.confirmOrDeclineBooking, "function", "@wix/bookings bookings.confirmOrDeclineBooking must be exported");
+assert.equal(typeof extendedBookings?.queryExtendedBookings, "function", "@wix/bookings extendedBookings.queryExtendedBookings must be exported");
+
 assert.equal(typeof contactsV5?.searchContacts, "function", "@wix/crm contactsV5.searchContacts must be exported");
 assert.equal(typeof contactsV5?.getContact, "function", "@wix/crm contactsV5.getContact must be exported");

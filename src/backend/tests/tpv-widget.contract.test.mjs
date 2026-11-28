@@ -83,7 +83,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /state\.capabilities\.acceptPayment === true/);
     assert.match(html, /paymentMethod: null/);
-    assert.match(html, /Cobros deshabilitados: el TPV registra ventas pendientes/);
+    assert.match(html, /Efectivo disponible: se registra en Wix al confirmar la entrega/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
@@ -93,7 +93,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
-    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /acceptPayment: true/);
     assert.match(permissions, /openSession: true/);
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
@@ -110,7 +110,9 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
     assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
-    assert.match(html, /Venta registrada\. Pago pendiente de confirmación\./);
+    assert.match(html, /Venta cobrada y registrada en Wix\./);
+    assert.match(html, /Pedido Wix registrado\. El cobro queda pendiente\./);
+    assert.match(html, /Operación registrada, pero requiere conciliación/);
     assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado|Total simulado|pago simulado/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
@@ -182,7 +184,7 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(controller, /allowedTypes:\s*\[MESSAGE_TYPES\.READY,\s*MESSAGE_TYPES\.CONTEXT,\s*\.\.\.REQUEST_TYPES\]/);
     assert.match(controller, /receivedType: typeof detail\.receivedType/);
     assert.match(controller, /controllerBuild: CONTROLLER_BUILD/);
-    assert.match(controller, /TPV_BRIDGE_DIAGNOSTICS_2026-11-27/);
+    assert.match(controller, /TPV_BRIDGE_E2E_2026-11-28/);
     assert.ok(controller.includes("onError: (error, reportedDetail)"));
     assert.ok(controller.includes('reportedDetail && typeof reportedDetail === "object"'));
     assert.match(controller, /attemptedType: typeof detail\.attemptedType/);
@@ -359,8 +361,8 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
         source("src/backend/tpv/tpvRepository.js"),
     ]);
 
-    // Opening is a fresh read of CajaActual. The server issues the date/session
-    // preview and revalidates it before creating the canonical session projection.
+    // CASHIER_STATE is read-only. The first explicit SESSION_OPEN bootstraps
+    // the canonical CajaActual projection before opening the operational session.
     assert.match(html, /Apertura de caja: sesión, movimiento, recibo y continuidad/);
     assert.match(html, /Usuario autenticado: /);
     assert.match(html, /Operador de sesión: /);
@@ -368,9 +370,14 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    assert.match(caja, /let cajaActual;[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
-    assert.match(caja, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
-    assert.match(caja, /await initializeTpvCaja\(traceId\)/);
+    const cashStateStart = caja.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const cashStateEnd = caja.indexOf("\nexport const abrirSesionCaja = webMethod(", cashStateStart);
+    assert.ok(cashStateStart >= 0 && cashStateEnd > cashStateStart);
+    const cashStateReader = caja.slice(cashStateStart, cashStateEnd);
+    assert.ok(cashStateReader.includes("await readTpvCajaSnapshot()"));
+    assert.ok(!cashStateReader.includes("initializeTpvCaja("));
+    assert.match(cashStateReader, /projectionStatus: "NOT_INITIALIZED"/);
+    assert.ok(caja.indexOf("await initializeTpvCaja(traceId);") < caja.indexOf("withTpvSessionLock("));
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
@@ -392,7 +399,7 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(permissions, /searchCustomers: true/);
     assert.match(permissions, /readCashSummary: true/);
     assert.match(permissions, /readAudit: staff\.rolWebsite !== "ESTILISTA"/);
-    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /acceptPayment: true/);
     assert.match(permissions, /printReceipt: false/);
     assert.match(html, /SESSION_REQUIRED_CAPABILITIES/);
     assert.match(html, /printLast: "printReceipt"/);
@@ -426,9 +433,10 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(repository, /BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
     assert.match(repository, /OPERATIONAL_COLLECTIONS\.CONTROL_OPERATIVO/);
 
-    // No apparent payment controls can be mistaken for real or persisted payments.
-    assert.match(html, /Efectivo \(no habilitado\)/);
-    assert.match(html, /Tarjeta \(no habilitada\)/);
-    assert.match(html, /Cobros deshabilitados/);
+    // Cash is enabled through native Wix Orders; card remains explicitly pending terminal integration.
+    assert.match(html, /data-method="EFECTIVO"/);
+    assert.match(html, /data-method="TARJETA" disabled/);
+    assert.match(html, /Efectivo disponible/);
+    assert.match(html, /Tarjeta \(pendiente\)/);
     assert.doesNotMatch(html, /window\.print\(\);[\s\S]{0,150}state\.lastSale/);
 });

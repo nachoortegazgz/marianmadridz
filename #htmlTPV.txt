@@ -317,6 +317,7 @@ body {
           Ticket actual
           <span>
             <button id="selectClient" class="btn">Cliente</button>
+            <button id="viewCustomerBookings" class="btn" disabled>Reservas</button>
             <button id="clearTicket" class="btn danger">Vaciar</button>
           </span>
         </h2>
@@ -336,10 +337,10 @@ body {
       <section class="panel">
         <h2>Pago presencial</h2>
 
-        <p id="paymentNotice" class="status">Cobros deshabilitados: el TPV registra ventas pendientes, no ejecuta cobros ni confirma pagos.</p>
+        <p id="paymentNotice" class="status">Efectivo disponible: se registra en Wix al confirmar la entrega. Tarjeta requiere integrar el terminal de pago.</p>
         <div class="payment-methods" id="paymentMethods">
-          <button class="btn" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
-          <button class="btn" data-method="TARJETA" disabled>Tarjeta (no habilitada)</button>
+          <button class="btn" data-method="EFECTIVO">Efectivo</button>
+          <button class="btn" data-method="TARJETA" disabled title="Pendiente de integrar el terminal de pago">Tarjeta (pendiente)</button>
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
           <button class="btn" data-method="TARJETA_REGALO" disabled title="Saldo no verificable en esta versión">Tarjeta regalo (no verificada)</button>
@@ -369,7 +370,7 @@ body {
         </div>
 
         <button id="saveSale" class="btn primary" style="width:100%;margin-top:14px;min-height:52px;font-size:16px;">
-          Registrar venta pendiente
+          Registrar pedido pendiente
         </button>
       </section>
 
@@ -497,7 +498,7 @@ body {
   }
   const num = (v) => v === null || v === undefined || v === "" ? 0 : (parseLocalizedAmount(v) ?? Number.NaN);
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
-  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA"];
+  const PAYMENT_METHODS = ["EFECTIVO"];
 
   /* ---------- Estado local ---------- */
   const state = {
@@ -538,6 +539,7 @@ body {
     tabServicios: "readCatalog",
     tabProductos: "readCatalog",
     selectClient: "searchCustomers",
+    viewCustomerBookings: "searchCustomers",
     printLast: "printReceipt",
   });
   const SESSION_REQUIRED_CAPABILITIES = new Set([
@@ -587,7 +589,7 @@ body {
       TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
       TPV_INVALID_UNIT_PRICE: "El precio unitario no es válido. Usa un importe como 25,90.",
       TPV_INVALID_CHANGE_AMOUNT: "El cambio debe ser un importe válido, por ejemplo 2,50.",
-      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago no está admitido en el contrato de escritura V1. Elige Efectivo o Tarjeta.",
+      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago no está integrado. Actualmente solo se admite Efectivo.",
       TPV_INVALID_PAYMENT_METHOD: "El medio de pago no es válido. Selecciona una de las opciones disponibles.",
 
       TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
@@ -750,6 +752,8 @@ body {
     $("selectClient").textContent = state.customerIdentityId
       ? "Cliente: " + state.customerLabel
       : "Cliente";
+    $("viewCustomerBookings").disabled = !state.customerIdentityId ||
+      state.capabilities.searchCustomers !== true;
   }
 
   async function searchCustomers() {
@@ -779,6 +783,79 @@ body {
     });
   }
 
+  async function viewCustomerBookings() {
+    if (!state.customerIdentityId) throw new Error("Selecciona primero un cliente.");
+    let cursor = null;
+    const items = [];
+    openModal("Reservas de " + (state.customerLabel || "cliente"), `
+      <div id="customerBookingsList" class="status">Cargando reservas de Wix Bookings…</div>
+      <button id="loadMoreCustomerBookings" type="button" class="btn" style="display:none;margin-top:10px;">Cargar más</button>
+    `, async () => {});
+
+    $("modalConfirm").textContent = "Cerrar";
+    const list = $("customerBookingsList");
+    const more = $("loadMoreCustomerBookings");
+    const render = () => {
+      list.innerHTML = items.length
+        ? items.map((booking) => {
+            const start = new Date(booking.startDate);
+            const date = Number.isNaN(start.getTime()) ? "Fecha no disponible" :
+              new Intl.DateTimeFormat("es-ES", {
+                timeZone: "Europe/Madrid",
+                dateStyle: "short",
+                timeStyle: "short",
+              }).format(start);
+            const payment = ({
+              PAID: "Pagada",
+              PARTIALLY_PAID: "Parcial",
+              NOT_PAID: "Pendiente de pago",
+              UNDEFINED: "Pago no definido",
+              EXEMPT: "Exenta",
+              REFUNDED: "Reembolsada",
+              FAILED: "Pago fallido",
+            })[booking.paymentStatus] || booking.paymentStatus;
+            const status = ({
+              CONFIRMED: "Confirmada",
+              PENDING: "Pendiente de confirmación",
+              CREATED: "Creada",
+            })[booking.status] || booking.status;
+            return `
+              <article class="ticket-line" style="margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
+                <strong>${esc(booking.serviceName || "Servicio")}</strong>
+                <div>${esc(date)}</div>
+                <div>${esc(status)} · ${esc(payment)}</div>
+                <div>${esc(booking.staffName || "Profesional sin asignar")}</div>
+                <div>${esc(booking.locationName || "Ubicación no indicada")}</div>
+                ${booking.doubleBooked ? '<strong class="danger">Conflicto de agenda: doble reserva</strong>' : ""}
+              </article>`;
+          }).join("")
+        : "<p>Este cliente no tiene reservas activas en Wix Bookings.</p>";
+    };
+    const loadPage = async () => {
+      more.disabled = true;
+      more.textContent = "Cargando…";
+      const result = await call("CUSTOMER_BOOKINGS", {
+        contactId: state.customerIdentityId,
+        limit: 50,
+        cursor,
+      }, "CUSTOMER_BOOKINGS_RES");
+      const pageItems = Array.isArray(result?.items) ? result.items : [];
+      items.push(...pageItems);
+      cursor = result?.pagingMetadata?.cursors?.next || null;
+      render();
+      more.style.display = cursor ? "" : "none";
+      more.disabled = false;
+      more.textContent = "Cargar más";
+    };
+    more.onclick = () => loadPage().catch((e) => error(e));
+    try {
+      await loadPage();
+    } catch (e) {
+      list.textContent = "No se pudieron cargar las reservas: " + publicErrorMessage(e);
+      throw e;
+    }
+  }
+
   $("selectClient").onclick = () => {
     openModal("Seleccionar cliente", `
       <input id="customerSearch" class="field" maxlength="100" placeholder="Nombre o correo del cliente">
@@ -801,6 +878,8 @@ body {
     };
   };
 
+  $("viewCustomerBookings").onclick = () => runOperation(viewCustomerBookings);
+
   function updateControlAvailability() {
     const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
     const isOpen = operationalStatus === "ABIERTA";
@@ -814,6 +893,8 @@ body {
       element.disabled = PERMANENTLY_DISABLED.has(id) || state.busy || !state.operationalWritesAvailable ||
         state.capabilities[capability] !== true || (requiresSession && !isOpen);
     });
+    $("viewCustomerBookings").disabled = state.busy || !state.operationalWritesAvailable ||
+      state.capabilities.searchCustomers !== true || !isOpen || !state.customerIdentityId;
   }
 
   function renderSession(session) {
@@ -1144,9 +1225,9 @@ body {
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
     $("paymentMethods").querySelectorAll("button[data-method]").forEach((button) => {
-      const unsupportedTender = ["BONO", "TARJETA_REGALO", "OTROS"].includes(button.dataset.method);
+      const unsupportedTender = button.dataset.method !== "EFECTIVO";
       button.disabled = !paymentReady || unsupportedTender;
-      if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
+      if (unsupportedTender && !button.title) button.title = "Medio de pago pendiente de integración.";
     });
     $("applied").textContent = money(appliedMinor / 100);
     $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
@@ -1174,6 +1255,18 @@ body {
         refreshSaleQuote();
       };
     });
+    const saleButton = $("saveSale");
+    if (saleButton) {
+      const cashConfirmed = state.payments.some((payment) =>
+        payment.method === "EFECTIVO" && payment.amountMinor - payment.changeMinor > 0
+      );
+      saleButton.textContent = cashConfirmed
+        ? "Confirmar cobro y registrar venta"
+        : "Registrar pedido pendiente";
+      saleButton.title = cashConfirmed
+        ? "Al continuar confirmas que has recibido físicamente el efectivo."
+        : "El pedido se registrará en Wix sin marcarlo como cobrado.";
+    }
   }
 
   $("paymentMethods").querySelectorAll("button[data-method]").forEach((btn) => {
@@ -1245,7 +1338,7 @@ body {
     if (changeMinor > 0) toast("Importe añadido. Cambio calculado: " + money(changeMinor / 100));
   };
 
-  /* ---------- Registrar venta; el pago permanece pendiente hasta su confirmación ---------- */
+  /* ---------- Registrar pedido y, si se ha confirmado efectivo, registrar el cobro nativo ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
     if (!state.items.length) {
       toast("El ticket está vacío.");
@@ -1265,6 +1358,7 @@ body {
         profesionalId: state.profesionalId,
       })),
       medioPago: state.paymentMethod || null,
+      contactId: state.customerIdentityId || null,
       payments: state.payments.map((payment) => ({
         method: payment.method,
         amount: payment.amountMinor / 100,
@@ -1273,7 +1367,16 @@ body {
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada. Pago pendiente de confirmación.");
+    if (result.paymentStatus === "PAID" && result.orderPersisted === true &&
+        result.paymentPersisted === true && result.ledgerPersisted === true &&
+        result.auditPersisted === true) {
+      toast("Venta cobrada y registrada en Wix.");
+    } else if (result.requiresReconciliation === true) {
+      toast("Operación registrada, pero requiere conciliación. No repitas la venta; referencia: " +
+        (result.idempotencyKey || "consulta TransaccionesTPV"));
+    } else {
+      toast("Pedido Wix registrado. El cobro queda pendiente.");
+    }
     state.items = [];
     state.payments = [];
     state.saleQuote = null;

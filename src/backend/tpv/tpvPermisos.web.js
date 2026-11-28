@@ -21,7 +21,7 @@ export const obtenerPermisosTPV = webMethod(
                     readCashSummary: true,
                     readAudit: staff.rolWebsite !== "ESTILISTA",
                     createSale: true,
-                    acceptPayment: false,
+                    acceptPayment: true,
                     printReceipt: false,
                     openSession: true,
                     registerCashMovement: true,

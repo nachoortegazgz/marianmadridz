@@ -11,7 +11,7 @@ import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV 
 import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { obtenerResumenCaja, generarTicketX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
-import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
+import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV, obtenerReservasClienteTPV } from "backend/tpv/tpvCatalogo.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 
@@ -25,8 +25,10 @@ const REQUEST_TYPES = Object.freeze([
     "CATALOG_VARIANTS",
     "CATALOG_STAFF",
     "CUSTOMERS_SEARCH",
+    "CUSTOMER_BOOKINGS",
     "SALE_VALIDATE",
     "SALE_REGISTER",
+    "SALE_READBACK",
     "CASH_MOVEMENT",
     "PARTIAL_CASH_COUNT",
     "REFUND",
@@ -38,7 +40,7 @@ const REQUEST_TYPES = Object.freeze([
     "AUDIT_EXPORT",
 ]);
 const activeBridges = new WeakMap();
-const CONTROLLER_BUILD = "TPV_BRIDGE_DIAGNOSTICS_2026-11-27";
+const CONTROLLER_BUILD = "TPV_BRIDGE_E2E_2026-11-28";
 const MAX_KEY_LEN = 120;
 
 function optionalString(value, maxLength = MAX_KEY_LEN) {
@@ -334,6 +336,12 @@ async function dispatch(message) {
             return obtenerStaff();
         case "CUSTOMERS_SEARCH":
             return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
+        case "CUSTOMER_BOOKINGS":
+            return obtenerReservasClienteTPV({
+                identityId: optionalString(payload.contactId, 64) || "",
+                limit: boundedInteger(payload.limit ?? 50, "BOOKINGS_LIMIT", 1, 100),
+                cursor: optionalString(payload.cursor, 16000) || "",
+            });
         case "SALE_VALIDATE": {
             if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
             if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
@@ -362,6 +370,11 @@ async function dispatch(message) {
             });
             return validarVentaBorrador({ lineas, pagos });
         }
+        case "SALE_READBACK":
+            return obtenerEstadoVentaTPV({
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
+            });
         case "SALE_REGISTER": {
             if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
             if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
@@ -395,6 +408,7 @@ async function dispatch(message) {
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
                 pagos,
+                contactId: optionalString(payload.contactId, 64) || null,
                 medioPago: optionalString(payload.medioPago, 40) || null,
             });
         }

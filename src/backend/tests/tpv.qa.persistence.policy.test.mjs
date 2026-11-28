@@ -345,7 +345,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
         },
         "tpvVentas.web.js": {
             guarded: ["registrarVenta"],
-            readOnly: ["validarVentaBorrador"],
+            readOnly: ["validarVentaBorrador", "obtenerEstadoVentaTPV"],
         },
         "tpvDevoluciones.web.js": {
             guarded: ["registrarDevolucion"],

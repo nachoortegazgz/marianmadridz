@@ -564,14 +564,16 @@ export function assertTransaccionesTPVRecord(item) {
     if (typeof item.status !== "string" || !item.status.trim() || item.status.length > 40 ||
         item.sourceType !== TPV_RUNTIME_POLICY.SOURCE_TYPE ||
         !(item.recordTimestamp instanceof Date) || Number.isNaN(item.recordTimestamp.getTime()) ||
-        item.requiresReconciliation !== (item.orderId == null) ||
+        typeof item.requiresReconciliation !== "boolean" ||
+        (item.orderId == null && item.requiresReconciliation !== true) ||
         !(item.createdAt instanceof Date) || Number.isNaN(item.createdAt.getTime()) ||
         typeof item.paymentSelection !== "object" || !Array.isArray(item.paymentSelection) ||
         typeof item.currency !== "string" || item.currency !== "EUR") {
         throw new Error("SCHEMA_VIOLATION: TransaccionesTPV state or metadata invalid");
     }
-    if (item.orderId !== null && typeof item.orderId !== "string") {
-        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV.orderId must be string or null");
+    if (item.orderId !== null && (typeof item.orderId !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.orderId))) {
+        throw new Error("SCHEMA_VIOLATION: TransaccionesTPV.orderId must be a Wix order GUID or null");
     }
     if (item.medioPago !== null && typeof item.medioPago !== "string") {
         throw new Error("SCHEMA_VIOLATION: TransaccionesTPV.medioPago must be string or null");

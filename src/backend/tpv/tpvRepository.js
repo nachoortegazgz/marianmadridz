@@ -630,6 +630,9 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
             if (collection === TPV_COLLECTIONS.PAGOS) {
                 const method = String(record.paymentMethod || "").toUpperCase();
                 const amount = Number(record.amountMinor || 0) / 100;
+                // Write V1 allows one full tender per sale, so one idempotent
+                // TPV_PAYMENT event represents one confirmed sale.
+                next.salesCount = Number(caja.salesCount || 0) + 1;
                 if (method === "EFECTIVO") next.cashAmount = Number(caja.cashAmount || 0) + amount;
                 else if (method === "TARJETA") next.cardAmount = Number(caja.cardAmount || 0) + amount;
                 else if (method === "BIZUM") next.bizumAmount = Number(caja.bizumAmount || 0) + amount;

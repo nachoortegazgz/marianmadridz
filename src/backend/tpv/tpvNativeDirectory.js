@@ -1,10 +1,11 @@
 import { auth } from "@wix/essentials";
 import { contactsV5 } from "@wix/crm";
-import { staffMembers } from "@wix/bookings";
+import { staffMembers, extendedBookings } from "@wix/bookings";
 import { BUSINESS_COLLECTIONS, RECORD_TYPE } from "backend/internalConfig";
 import { CONSISTENCY, queryItems, wql } from "backend/dataAccess";
 
 const queryStaffMembersElevated = auth.elevate(staffMembers.queryStaffMembers);
+const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const searchContactsElevated = auth.elevate(contactsV5.searchContacts);
 const getContactElevated = auth.elevate(contactsV5.getContact);
 
@@ -95,6 +96,82 @@ export async function resolveTpvContact(contactId) {
  * MapaStaff.resourceId is the TPV professional key; staffMemberId is the
  * distinct Wix Bookings Staff Member ID. Names are display-only.
  */
+export async function listCustomerBookings(contactId, options = {}) {
+    const id = _cleanText(contactId, 64);
+    if (!GUID_RE.test(id)) throw new Error("TPV_CUSTOMER_NOT_ALLOWED");
+
+    const limit = Number(options.limit ?? 50);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new Error("TPV_INVALID_BOOKINGS_PAGING");
+    }
+    const cursor = _cleanText(options.cursor, 16000);
+    if (String(options.cursor || "").length > 16000) {
+        throw new Error("TPV_INVALID_BOOKINGS_CURSOR");
+    }
+
+    const result = await queryExtendedBookingsElevated(
+        {
+            filter: {
+                "booking.contactDetails.contactId": id,
+                "booking.status": {
+                    $in: ["CONFIRMED", "PENDING", "CREATED"],
+                },
+            },
+            sort: [{
+                fieldName: "booking.startDate",
+                order: "DESC",
+            }],
+            cursorPaging: {
+                limit,
+                ...(cursor ? { cursor } : {}),
+            },
+        },
+        {
+            withBookingAllowedActions: true,
+        }
+    );
+
+    const items = (result?.extendedBookings || []).map((entry) => {
+        const booking = entry?.booking || {};
+        const bookingId = _cleanText(booking._id || booking.id, 64);
+        const bookedEntity = booking.bookedEntity || {};
+        const slot = bookedEntity.slot || bookedEntity.schedule || {};
+        const resource = slot.resource || {};
+        const location = slot.location || {};
+        const startDate = booking.startDate || slot.startDate || null;
+        const endDate = booking.endDate || slot.endDate || null;
+        const paymentStatus = String(booking.paymentStatus || "");
+        if (!GUID_RE.test(bookingId) ||
+            !["CREATED", "CONFIRMED", "PENDING"].includes(String(booking.status || "")) ||
+            !startDate || !endDate ||
+            !["UNDEFINED", "NOT_PAID", "PAID", "PARTIALLY_PAID", "REFUNDED", "EXEMPT", "FAILED"].includes(paymentStatus)) {
+            throw new Error("TPV_BOOKING_RECORD_INVALID");
+        }
+        return {
+            bookingId,
+            serviceId: slot.serviceId || null,
+            scheduleId: slot.scheduleId || null,
+            serviceName: bookedEntity.title || null,
+            startDate,
+            endDate,
+            status: booking.status,
+            paymentStatus,
+            selectedPaymentOption: booking.selectedPaymentOption || null,
+            totalParticipants: Number(booking.totalParticipants || 1),
+            staffName: resource.name || null,
+            locationName: location.name || location.formattedAddress || null,
+            revision: booking.revision || null,
+            doubleBooked: booking.doubleBooked === true,
+            allowedActions: entry.allowedActions || null,
+        };
+    });
+
+    return {
+        items,
+        pagingMetadata: result?.pagingMetadata || null,
+    };
+}
+
 export async function listAuthorizedProfessionals() {
     const mappingResult = await queryItems({
         dataCollectionId: BUSINESS_COLLECTIONS.MAPA_STAFF,

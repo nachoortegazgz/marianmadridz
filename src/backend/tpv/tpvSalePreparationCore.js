@@ -55,9 +55,9 @@ export function assertTpvPaymentMethodsSupported(payments) {
     if (payments === undefined || payments === null) return true;
     if (!Array.isArray(payments)) fail("TPV_INVALID_PAYMENTS");
     if (payments.some((payment) =>
-        ["BONO", "TARJETA_REGALO"].includes(String(payment?.medioPago || "").trim().toUpperCase())
+        String(payment?.medioPago || "").trim().toUpperCase() !== "EFECTIVO"
     )) {
-        fail("TPV_PAYMENT_METHOD_NOT_VERIFIED");
+        fail("TPV_PAYMENT_PROVIDER_NOT_CONFIGURED");
     }
     return true;
 }
