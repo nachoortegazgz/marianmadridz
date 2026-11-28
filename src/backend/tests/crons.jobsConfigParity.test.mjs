@@ -409,10 +409,10 @@ test('CRON-DAYS-CACHE-01 cleanExpiredDaysCache retires expired rows and preserve
   }
   assert.ok(new Date(rows.find((row) => row._id === 'days-active').expiresAt).getTime() > Date.now());
 });
-test('CRON-Z-ENTRY-01 cron uses a backend-only internal closing entry point', () => {
+test('CRON-Z-ENTRY-01 nightly cron verifies only; it never creates a fiscal close without an approved system identity', () => {
   const cronSource = fs.readFileSync(backendPath('crons.js'), 'utf8').replace(/\r\n/g, '\n');
   const cashSource = fs.readFileSync(backendPath('cajas.web.js'), 'utf8').replace(/\r\n/g, '\n');
-  assert.match(cronSource, /registerZClosingInternal/);
+  assert.doesNotMatch(cronSource, /registerZClosingInternal/);
   assert.match(cashSource, /export async function registerZClosingInternal/);
   assert.match(cashSource, /export const registerZClosing = webMethod/);
 });
@@ -434,8 +434,8 @@ test('CRON-Z-01 verifyNightlyZClosing is idempotent when the day is already clos
 
 test('CRON-Z-02 verifyNightlyZClosing raises MANUAL_REQUIRED alert when no close can be created', async () => {
   wixDataMock._reset();
-  // No Z row or movements seeded: the internal close path returns NO_MOVEMENTS.
-  // The cron records a deduplicated WARN alert without throwing.
+  // No Z row is seeded. The observational cron records a deduplicated WARN alert.
+  // It does not attempt a fiscal write without an approved system identity/domain.
   await CR.verifyNightlyZClosing();
   const alerts = (wixDataMock._store.get(IC.OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO) || [])
     .filter((r) => r.eventType === 'NIGHTLY_Z_CLOSING_MANUAL_REQUIRED');

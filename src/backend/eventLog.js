@@ -61,6 +61,7 @@ import {
     PROJECTION_STATUS,
     RECORD_TYPE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
+    TPV_LEDGER_SOURCE,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -322,6 +323,7 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
 async function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .gt("sequenceNumber", 0)
+        .ne("recordSource", TPV_LEDGER_SOURCE)
         .descending("sequenceNumber")
         .limit(20)
         .find({ consistencyMode: "strong" });
@@ -1046,6 +1048,7 @@ export async function reconciliarProyecciones() {
         const pending = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .ne("projectionStatus", PROJECTION_STATUS.OK)
             .gt("sequenceNumber", 0)
+            .ne("recordSource", TPV_LEDGER_SOURCE)
             .descending("sequenceNumber")
             .limit(PROYECCION_BATCH_LIMIT)
             .find();

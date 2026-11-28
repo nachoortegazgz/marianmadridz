@@ -43,6 +43,7 @@ import {
   SDK_CONFIG,
   MOVEMENT_TYPE,
   RECORD_TYPE,
+  TPV_LEDGER_SOURCE,
 } from "backend/internalConfig";
 
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
@@ -238,6 +239,7 @@ async function _fetchQuarterMovements(months, options = {}) {
     dalQuery(MOVIMIENTOS_CAJA_COL)
       .hasSome("fiscalPeriod", months)
       .gt("sequenceNumber", 0)
+      .ne("recordSource", TPV_LEDGER_SOURCE)
       .ascending("sequenceNumber")
       .limit(pageSize)
       .find(),

@@ -75,6 +75,15 @@ Métrica exigida: 100 % de condiciones bloqueantes/early return observables con 
 
 Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix Preview, Wix Runtime ni producción.
 
+## Remediación crítica TPV — 28-11-2026
+
+- Informe: [Remediación P0 TPV ledger / cierre Z](audits/2026-11-28-p0-tpv-ledger-zclosing-remediation.md).
+- B-BK-01: implementada en código la exclusión explícita de `recordSource=TPV_LEDGER` en los lectores fiscales y la conservación de `CajaActual.sequenceCounters` al abrir sesión TPV.
+- B-BK-02: el cron nocturno ahora verifica y alerta; deja de intentar crear un cierre sin identidad de sistema ni `recordDomain` aprobado. El cierre manual continúa pendiente del dominio aprobado y validación del contrato CMS.
+- Rama: `fix/p0-tpv-ledger-zclosing-2026-11-28`; base `82ed5257a0a0541412cc02a847ebb42040d5cc37`.
+- Se añadieron cuatro pruebas de regresión estáticas. CI PASS en HEAD `2d0ab3b48ae9cddb947071d37d50704c819cd3cb`: Layer 1 29/398, Layer 2 16/263, suite completa 93/847; Wix SDK checks, npm audit, ESLint y secret scanning PASS (runs `46163394360` y `46163394352`). Wix Runtime/E2E sigue PENDIENTE.
+- No se modificó CMS, no se realizaron cobros ni cierres, y no se publicó el sitio.
+
 ## Capa 0 — corregido e integrado
 
 - Fingerprints TPV: serialización estricta; rechaza valores no JSON, ciclos, arrays dispersos, fechas inválidas, getters y objetos no planos.
