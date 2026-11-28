@@ -474,9 +474,10 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     assert.match(html, /keyedAction\("TICKET_Z",\s*"TICKET_Z"/);
 });
 
-test("TPV repository paginates reads and blocks Z close while sales are incomplete", async () => {
+test("TPV repository paginates reads and reports unpaid sales without blocking cash closure", async () => {
     const repository = await source("tpv/tpvRepository.js");
     const closures = await source("tpv/tpvCierres.web.js");
+    const summaryCore = await source("tpv/tpvCierresCore.js");
     assert.match(repository, /while \(pages\.some\(\(page\) => page\.hasNext\) && records\.length < maxRecords\)/);
     assert.match(repository, /pages\[index\] = await pages\[index\]\.next\(\)/);
     assert.match(repository, /recordTimestamp ASC/);
@@ -488,8 +489,10 @@ test("TPV repository paginates reads and blocks Z close while sales are incomple
     assert.match(repository, /actualCashAmount !== expectedCash\.amountMinor/);
     assert.match(repository, /refundTotal !== Number\(refund\.amountMinor\)/);
     assert.match(closures, /input\.sessionId && input\.sessionId !== session\.sessionId/);
-    assert.match(closures, /getPendingTpvSales\(session\.sessionId\)/);
-    assert.match(closures, /TPV_PENDING_SALES_PREVENT_CLOSE/);
+    assert.doesNotMatch(closures, /TPV_PENDING_SALES_PREVENT_CLOSE/);
+    assert.match(summaryCore, /getPendingTpvSales\(session\.sessionId\)/);
+    assert.match(summaryCore, /pendingSalesCount: pendingSales\.length/);
+    assert.match(summaryCore, /pendingSalesGrossMinor/);
     assert.match(closures, /getPendingTpvRefunds\(session\.sessionId\)/);
     assert.match(closures, /TPV_PENDING_REFUNDS_PREVENT_CLOSE/);
     assert.match(closures, /totals\.reconciliationOk !== true/);
