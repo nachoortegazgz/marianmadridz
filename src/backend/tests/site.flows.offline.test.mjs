@@ -323,7 +323,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     transactionId: 'offline-tx-0001',
     channelType: 'PRESENCIAL',
     resourceId: 'frontend-resource-id-must-be-ignored',
@@ -364,7 +364,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
     totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
@@ -466,6 +466,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const txAfterZ = await cajas.registerManualTransaction({
     totalAmount: 10, tipoFactura: 'F2', operationDescription: 'Venta posterior a cierre (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
+    tipoImpositivo: 0.21,
     transactionId: 'offline-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
@@ -986,6 +987,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
     operationDescription: 'Prueba idempotencia concurrente',
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
+    tipoImpositivo: 0.21,
     transactionId,
   };
 
@@ -1048,6 +1050,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
         operationDescription: `Devolucion simulada ${movementType} (SIMULACION PREVIA A DESPLIEGUE REAL)`,
         paymentMethod: 'EFECTIVO',
         channelType: 'PRESENCIAL',
+        tipoImpositivo: 0.21,
         transactionId: `facsimil-refund-${movementType.toLowerCase()}`,
         correctionReason: 'OTRAS',
         previousInvoiceId: 'FACSIMIL-FAC-2026-00001',
@@ -1105,7 +1108,8 @@ test('FLOW-CAJA-10B manual presencial writer requires an explicitly open session
       totalAmount: 20,
       paymentMethod: 'EFECTIVO',
       channelType: 'PRESENCIAL',
-      transactionId: 'cash-no-session-001',
+      tipoImpositivo: 0.21,
+       transactionId: 'cash-no-session-001',
     });
     assert.equal(noSession.status, 'ERROR');
     assert.equal(noSession.error.code, 'CAJA_SESSION_NOT_OPEN');
@@ -1151,6 +1155,7 @@ test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior
       paymentMethod: 'EFECTIVO',
       channelType: 'PRESENCIAL',
       movementType: 'VENTA',
+      tipoImpositivo: 0.21,
       transactionId: 'cash-stale-closed-at-001',
       operationDescription: 'Venta de prueba aislada para normalización de sesión QA',
     });
@@ -1179,6 +1184,9 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
     operationDate,
     netAmount: 300,
     cashAmount: 300,
+    cardAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
     sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
   }]);
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
@@ -1192,7 +1200,8 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
-    transactionId: 'blocked-simulation-cash-001',
+    tipoImpositivo: 0.21,
+     transactionId: 'blocked-simulation-cash-001',
   });
   assert.equal(tx.status, 'ERROR');
   assert.equal(tx.error.code, 'CAJA_SESSION_NOT_OPEN');
@@ -1257,6 +1266,7 @@ test('FLOW-CAJA-12 explicit smoke rows are excluded from live fiscal sequence, c
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
+    tipoImpositivo: 0.21,
     transactionId: 'real-after-smoke-001',
   });
   assert.equal(tx.status, 'SUCCESS', JSON.stringify(tx.error));
@@ -1520,6 +1530,7 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
     tipoFactura: 'F2',
+    tipoImpositivo: 0.21,
     operationDescription: 'Prueba de contrato transactionId',
     channelType: 'PRESENCIAL',
   };
@@ -1543,6 +1554,93 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
   assert.strictEqual(maximumLength.data.transactionId.length, 128);
 });
 
+test('FLOW-CAJA-15 Z closing rejects a missing movement sequence', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+
+  const movement = await cajas.registerManualTransaction({
+    totalAmount: 25,
+    tipoFactura: 'F2',
+    operationDescription: 'Prueba de secuencia ausente',
+    paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
+    movementType: 'VENTA',
+    tipoImpositivo: 0.21,
+    transactionId: 'z-closing-missing-sequence-001',
+  });
+  assert.equal(movement.status, 'SUCCESS', JSON.stringify(movement.error));
+
+  wixDataMock._store.get('MovimientosCaja')[0].sequenceNumber = null;
+  const closingDate = movement.data.invoiceIssueDate || movement.data.fechaExpedicionFactura || operationDate;
+  const closing = await cajas.registerZClosingInternal(closingDate, {
+    recordDomain: 'CASH_REGISTER',
+    closedBy: GUID_ADMIN_RESOURCE,
+    traceId: 'trace-z-missing-sequence-001',
+  });
+
+  assert.equal(closing.status, 'ERROR');
+  assert.equal(closing.error.code, 'Z_LEDGER_SEQUENCE_INVALID');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+});
+
+test('FLOW-CAJA-14 cashier state rejects missing persisted balances instead of showing zero', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  const row = wixDataMock._store.get('CajaActual')[0];
+  row.cashAmount = null;
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+
+  const state = await cajas.getCashierState({});
+  assert.equal(state.status, 'ERROR');
+  assert.equal(state.error.code, 'CAJA_STATE_NUMERIC_FIELD_INVALID');
+  assert.equal((wixDataMock._store.get('CajaActual') || [])[0].cashAmount, null);
+  setMember(null);
+});
+
+test('P0-FISCAL-TX-03 manual fiscal writer rejects missing VAT rate before ledger append', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const result = await cajas.registerManualTransaction({
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta sin tipo impositivo',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    transactionId: 'p0-missing-vat-rate-0001',
+    channelType: 'PRESENCIAL',
+  });
+
+  assert.equal(result.status, 'ERROR');
+  assert.equal(result.error.code, 'FISCAL_TAX_RATE_REQUIRED');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+
+  const percentRate = await cajas.registerManualTransaction({
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta con tipo expresado en porcentaje',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoImpositivo: 21,
+    transactionId: 'p0-percent-vat-rate-0001',
+    channelType: 'PRESENCIAL',
+  });
+  assert.equal(percentRate.status, 'ERROR');
+  assert.equal(percentRate.error.code, 'FISCAL_TAX_RATE_REQUIRED');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+});
+
 test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
   wixDataMock._reset();
   seedCajaPrincipal(new Date(Date.now() - 60_000));
@@ -1557,7 +1655,7 @@ test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is re
     operationDescription: 'Venta de prueba idempotente',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     transactionId: 'p0-idempotency-contract-0001',
     channelType: 'PRESENCIAL',
   };
@@ -1606,6 +1704,7 @@ test('FLOW-CAJA-13 Z closing rejects missing ledger accounting amounts without p
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
+    tipoImpositivo: 0.21,
     transactionId: 'z-closing-missing-accounting-amount-001',
   });
   assert.equal(movement.status, 'SUCCESS', JSON.stringify(movement.error));

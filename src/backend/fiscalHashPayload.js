@@ -12,6 +12,7 @@ import {
     readInvoiceIssueDate,
     readMovementField,
     readTaxAmount,
+    readTotalAmount,
     readInvoiceType,
     readIssuerTaxId,
     readRecipientTaxId,
@@ -19,6 +20,21 @@ import {
 import { _safeTrim } from "public/mmUtils";
 
 const VAT_ACCRUAL_APLICACION_ANTICIPO = "APLICACION_ANTICIPO";
+
+function _readOptionalFiscalNumber(movement, field) {
+    const raw = movement?.[field];
+    if (raw === undefined || raw === null) return 0;
+    const validType = typeof raw === "number" ||
+        (typeof raw === "string" && raw.trim() !== "");
+    const value = validType ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(value)) {
+        const error = new Error("FISCAL_HASH_NUMERIC_FIELD_INVALID:" + field);
+        error.code = "FISCAL_HASH_NUMERIC_FIELD_INVALID";
+        error.meta = { field, movementId: movement?._id || null };
+        throw error;
+    }
+    return value;
+}
 
 function _formatAEATDate(ymd) {
     const clean = _safeTrim(ymd);
@@ -67,7 +83,7 @@ export function buildEventLogFiscalChainPayload(movement, generatedAt) {
     const fechaExpedicionFactura = _safeTrim(readInvoiceIssueDate(movement));
     const tipoFactura = readInvoiceType(movement) || TIPO_FACTURA.F1;
     const taxAmount = readTaxAmount(movement);
-    const totalAmount = Number(movement.totalAmount ?? 0);
+    const totalAmount = readTotalAmount(movement);
     const previousRecordHash = _safeTrim(movement.previousRecordHash);
     const nifEmisor = _safeTrim(readIssuerTaxId(movement));
     const tipoRectificativa = _safeTrim(readMovementField(movement, "tipoRectificativa"));
@@ -75,10 +91,10 @@ export function buildEventLogFiscalChainPayload(movement, generatedAt) {
     const correctionReason = _safeTrim(movement.correctionReason);
     const vatAccrualStatus = _safeTrim(movement.vatAccrualStatus);
     const linkedAdvanceId = _safeTrim(movement.linkedAdvanceId);
-    const irpfWithholdingAmount = Number(movement.irpfWithholdingAmount || 0);
-    const withholdingBase = Number(movement.withholdingBase || 0);
+    const irpfWithholdingAmount = _readOptionalFiscalNumber(movement, "irpfWithholdingAmount");
+    const withholdingBase = _readOptionalFiscalNumber(movement, "withholdingBase");
     const fiscalRole = _safeTrim(movement.fiscalRole);
-    const surchargeAmount = Number(movement.surchargeAmount ?? 0);
+    const surchargeAmount = _readOptionalFiscalNumber(movement, "surchargeAmount");
     const bankReconciliationReference = _safeTrim(movement.bankReconciliationReference);
 
     const fields = [

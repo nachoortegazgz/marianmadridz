@@ -54,7 +54,6 @@ import {
     OPERATIONAL_COLLECTIONS,
     SDK_CONFIG,
     MOVEMENT_TYPE,
-    IVA_RATES,
     TIPO_FACTURA,
     FISCAL_ROLE,
     EVENT_TYPE,
@@ -96,6 +95,26 @@ const REFUND_MOVEMENT_TYPES = new Set([
     MOVEMENT_TYPE.DEVOLUCION,
     MOVEMENT_TYPE.DEVOLUCION_SERVICIO,
 ]);
+
+function _readRequiredFiscalNumber(value, field, { min = null, max = null } = {}) {
+    const validType = typeof value === "number" ||
+        (typeof value === "string" && value.trim() !== "");
+    const amount = validType ? Number(value) : Number.NaN;
+    if (!Number.isFinite(amount) ||
+        (min !== null && amount < min) ||
+        (max !== null && amount > max)) {
+        const error = new Error("FISCAL_NUMERIC_FIELD_INVALID:" + field);
+        error.code = "FISCAL_NUMERIC_FIELD_INVALID";
+        error.meta = { field };
+        throw error;
+    }
+    return amount;
+}
+
+function _readOptionalFiscalNumber(value, field, { min = null, max = null } = {}) {
+    if (value === undefined || value === null) return 0;
+    return _readRequiredFiscalNumber(value, field, { min, max });
+}
 
 function normalizeAccountingAmount(input = {}) {
     const movementType = _safeTrim(input.movementType).toUpperCase();
@@ -386,7 +405,7 @@ function _normalizeRecipientAddress(storedAddress, suppliedAddress) {
 // TODA entrada antes de construir el snapshot; por tanto `input` solo contiene
 // claves canonicas. La lectura del snapshot es directa (cero doble lectura).
 function _buildFiscalPayloadSnapshot({
-    thirdParty, catalog, input, ts, previousRecordHash, movementHash, recordTimestamp, sistemaInformatico,
+    thirdParty, catalog, input, fiscalAmounts, ts, previousRecordHash, movementHash, recordTimestamp, sistemaInformatico,
 }) {
     return {
         idEmisorFactura: _safeTrim(input.nifEmisor),
@@ -403,15 +422,15 @@ function _buildFiscalPayloadSnapshot({
         tipoFactura: _safeTrim(input.tipoFactura) || TIPO_FACTURA.F1,
         tipoRectificativa: _safeTrim(input.tipoRectificativa) || null,
         descripcionOperacion: _safeTrim(input.operationDescription),
-        importeTotal: Number(input.totalAmount ?? 0),
-        baseImponibleOImporteNoSujeto: Number(input.taxBase ?? 0),
-        cuotaTotal: Number(input.taxAmount ?? catalog?.cuotaTotal ?? 0),
-        tipoImpositivo: Number(input.tipoImpositivo ?? catalog?.tipoImpositivo ?? 0),
-        tipoRecargoEquivalencia: Number(input.surchargeRate ?? 0),
-        cuotaRecargoEquivalencia: Number(input.surchargeAmount ?? 0),
-        importeRetencionIRPF: Number(input.irpfWithholdingAmount ?? 0),
-        tipoRetencionIRPF: Number(input.irpfWithholdingRate ?? 0),
-        baseImponibleRetencion: Number(input.withholdingBase ?? 0),
+        importeTotal: fiscalAmounts.totalAmount,
+        baseImponibleOImporteNoSujeto: fiscalAmounts.taxBase,
+        cuotaTotal: fiscalAmounts.taxAmount,
+        tipoImpositivo: fiscalAmounts.tipoImpositivo,
+        tipoRecargoEquivalencia: fiscalAmounts.surchargeRate,
+        cuotaRecargoEquivalencia: fiscalAmounts.surchargeAmount,
+        importeRetencionIRPF: fiscalAmounts.irpfWithholdingAmount,
+        tipoRetencionIRPF: fiscalAmounts.irpfWithholdingRate,
+        baseImponibleRetencion: fiscalAmounts.withholdingBase,
         claveRegimen: _safeTrim(input.claveRegimen || catalog?.aeatRegimeKey) || "01",
         calificacionOperacion: _safeTrim(input.calificacionOperacion || catalog?.aeatOperationClassification) || "S1",
         operacionExenta: _safeTrim(input.operacionExenta || catalog?.aeatExemptOperation) || null,
@@ -499,9 +518,41 @@ export async function registrarEventoEconomico(input) {
 
     const ts = new Date();
 
-    // 1. Resolver tercero (nifDestinatario/nifEmisor ya canonicos tras la
-    // normalizacion de entrada; los alias recipientTaxId/issuerTaxId fueron
-    // promovidos por normalizeMovementKeys).
+    // 1. Resolver catálogo y validar los importes antes de cualquier escritura.
+    const catalog = await _getServicioCatalogo(input.catalogId, traceId);
+    let fiscalAmounts;
+    try {
+        fiscalAmounts = {
+            amount: _readRequiredFiscalNumber(input.amount ?? input.taxBase, "amount"),
+            totalAmount: _readRequiredFiscalNumber(input.totalAmount, "totalAmount"),
+            taxBase: _readRequiredFiscalNumber(input.taxBase, "taxBase"),
+            taxAmount: _readRequiredFiscalNumber(input.taxAmount, "taxAmount"),
+            tipoImpositivo: _readRequiredFiscalNumber(
+                input.tipoImpositivo ?? catalog?.tipoImpositivo,
+                "tipoImpositivo",
+                { min: 0, max: 1 }
+            ),
+            accountingAmount: normalizeAccountingAmount(input),
+            surchargeRate: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
+            surchargeAmount: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
+            irpfWithholdingAmount: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
+            irpfWithholdingRate: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
+            withholdingBase: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
+        };
+    } catch (error) {
+        return {
+            status: "ERROR",
+            data: null,
+            error: {
+                code: error?.code || "FISCAL_NUMERIC_FIELD_INVALID",
+                message: "El movimiento fiscal contiene un importe o tipo impositivo ausente o inválido.",
+                field: error?.meta?.field || null,
+                traceId,
+            },
+        };
+    }
+
+    // 2. Resolver tercero después de validar importes.
     const thirdParty = await _upsertMapaStaff({
         taxId: input.nifDestinatario || input.nifEmisor,
         legalName: input.recipientLegalName || input.issuerLegalName,
@@ -511,9 +562,6 @@ export async function registrarEventoEconomico(input) {
         // SSOT-KEYFIELD: MapaStaff.address is the physical TEXT field.
         address: input.recipientAddress || null,
     }, traceId);
-
-    // 2. Resolver catalogo
-    const catalog = await _getServicioCatalogo(input.catalogId, traceId);
 
     // 3. Sistema informatico (ALN-09)
     const sistemaInformatico = await _getFiscalSystemConfig(traceId);
@@ -590,9 +638,9 @@ export async function registrarEventoEconomico(input) {
                         ? "REFUND_ORIGINAL_LEDGER_AMBIGUOUS"
                         : "REFUND_ORIGINAL_LEDGER_MISSING");
                 }
-                const originalAmountCents = Math.round(Math.abs(Number(
-                    originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount ?? 0
-                )) * 100);
+                const originalAmountRaw = originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount;
+                const originalAmount = _readRequiredFiscalNumber(originalAmountRaw, "refundOriginalAmount");
+                const originalAmountCents = Math.round(Math.abs(originalAmount) * 100);
                 if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
                     throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
                 }
@@ -614,10 +662,18 @@ export async function registrarEventoEconomico(input) {
                     throw new Error("REFUND_HISTORY_INCOMPLETE");
                 }
 
-                const refundedCents = refundRows.reduce((sum, movement) =>
-                    sum + Math.round(Math.abs(Number(
-                        movement?.accountingAmount ?? movement?.totalAmount ?? 0
-                    )) * 100), 0);
+                const refundedCents = refundRows.reduce((sum, movement) => {
+                    const rawAmount = movement?.accountingAmount ?? movement?.totalAmount;
+                    const validType = typeof rawAmount === "number" ||
+                        (typeof rawAmount === "string" && rawAmount.trim() !== "");
+                    const amount = validType ? Number(rawAmount) : Number.NaN;
+                    const cents = Math.round(Math.abs(amount) * 100);
+                    if (!Number.isFinite(amount) || !Number.isSafeInteger(cents) ||
+                        !Number.isSafeInteger(sum + cents)) {
+                        throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+                    }
+                    return sum + cents;
+                }, 0);
                 const requestedRefundCents = Math.round(Math.abs(Number(input.totalAmount)) * 100);
                 if (!Number.isSafeInteger(requestedRefundCents) || requestedRefundCents <= 0 ||
                     refundedCents + requestedRefundCents > originalAmountCents) {
@@ -644,7 +700,7 @@ export async function registrarEventoEconomico(input) {
     // literales AEAT; los aliases historical del caller ya fueron promovidos por
     // normalizeMovementKeys y NUNCA se persisten).
     const movementTypeRaw = _safeTrim(input.movementType);
-    const accountingAmount = normalizeAccountingAmount(input);
+    const accountingAmount = fiscalAmounts.accountingAmount;
     const canonInvoiceNumber = _safeTrim(input.numSerieFactura) || seq.numSerieFactura;
     const canonIssueDate = _safeTrim(input.fechaExpedicionFactura) ||
         _safeTrim(input.fechaOperacion) ||
@@ -672,26 +728,26 @@ export async function registrarEventoEconomico(input) {
         // fiscal. amount = importe base; totalAmount = total cobrado con
         // impuestos. El caller entrega amount canonico (no alias tras
         // normalizeMovementKeys).
-        amount: Number(input.amount ?? input.taxBase ?? 0),
-        totalAmount: Number(input.totalAmount ?? 0),
+        amount: fiscalAmounts.amount,
+        totalAmount: fiscalAmounts.totalAmount,
         accountingAmount,
         // SSOT Apartado 5 (claves fisicas canonicas): taxBase/taxAmount son
         // las claves del documento; los aliases del caller
         // (baseImponibleOImporteNoSujeto, taxableBaseOrNonSubjectAmount) ya
         // fueron promovidos por normalizeMovementKeys. cuotaTotal/tipoImpositivo
         // se derivan SIEMPRE de su canon (coherencia Veri*factu garantizada).
-        taxBase: Number(input.taxBase ?? 0),
-        taxAmount: Number(input.taxAmount ?? 0),
+        taxBase: fiscalAmounts.taxBase,
+        taxAmount: fiscalAmounts.taxAmount,
         // MATRIZ v15 Bloque 2: cuotaTotal ERRADICADA del ledger; la clave
         // fisica canónica de la cuota es taxAmount (arriba). El snapshot AEAT
         // interno (_buildFiscalPayloadSnapshot) usa la literal Veri*factu
         // "cuotaTotal" porque es contrato fiscal serializado, no key CMS.
-        tipoImpositivo: Number(input.tipoImpositivo ?? IVA_RATES.GENERAL),
-        surchargeRate: Number(input.surchargeRate ?? 0),
-        surchargeAmount: Number(input.surchargeAmount ?? 0),
-        irpfWithholdingAmount: Number(input.irpfWithholdingAmount ?? 0),
-        irpfWithholdingRate: Number(input.irpfWithholdingRate ?? 0),
-        withholdingBase: Number(input.withholdingBase ?? 0),
+        tipoImpositivo: fiscalAmounts.tipoImpositivo,
+        surchargeRate: fiscalAmounts.surchargeRate,
+        surchargeAmount: fiscalAmounts.surchargeAmount,
+        irpfWithholdingAmount: fiscalAmounts.irpfWithholdingAmount,
+        irpfWithholdingRate: fiscalAmounts.irpfWithholdingRate,
+        withholdingBase: fiscalAmounts.withholdingBase,
         fiscalRole: _safeTrim(input.fiscalRole) || FISCAL_ROLE.EMISOR,
 
         operationDescription: _cleanText(input.operationDescription || "", 500),
@@ -769,7 +825,7 @@ export async function registrarEventoEconomico(input) {
 
     // 7. Snapshot inmutable (ALN-09: sistemaInformatico resuelto)
     const fiscalPayload = _buildFiscalPayloadSnapshot({
-        thirdParty, catalog, input, ts,
+        thirdParty, catalog, input, fiscalAmounts, ts,
         previousRecordHash, movementHash,
         recordTimestamp,
         sistemaInformatico,

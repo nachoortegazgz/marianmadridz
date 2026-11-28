@@ -29,7 +29,6 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     CHANNEL_TYPE,
-    IVA_RATES,
     CASH_REGISTER_STATUS,
     TIPO_FACTURA,
     FISCAL_ROLE,
@@ -182,22 +181,41 @@ function readHistoricalPaymentMethod(movement) {
     return value;
 }
 
-function _readRequiredLedgerAmount(movement, field, raw = movement?.[field]) {
+function _readRequiredLedgerAmount(movement, field, raw = movement?.[field], errorCode = "Z_LEDGER_NUMERIC_FIELD_INVALID") {
     const validType = typeof raw === "number" ||
         (typeof raw === "string" && raw.trim() !== "");
     const amount = validType ? Number(raw) : Number.NaN;
     if (!Number.isFinite(amount)) {
-        const error = new Error(`Z_LEDGER_NUMERIC_FIELD_INVALID:${field}`);
-        error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+        const error = new Error(`${errorCode}:${field}`);
+        error.code = errorCode;
         error.meta = { field, movementId: movement?._id || null };
         throw error;
     }
     return amount;
 }
 
+function _readOptionalLedgerAmount(movement, field, errorCode = "FISCAL_NUMERIC_FIELD_INVALID") {
+    const raw = movement?.[field];
+    return raw === undefined || raw === null
+        ? 0
+        : _readRequiredLedgerAmount(movement, field, raw, errorCode);
+}
+
 function _signedFiscalValue(movement, reader, field) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
-    const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
+    const rawSign = movement?.accountingSign;
+    let sign = accountingAmount < 0 ? -1 : 1;
+    if (rawSign !== undefined && rawSign !== null) {
+        const explicitSign = Number(rawSign);
+        if (!Number.isFinite(explicitSign) || ![-1, 1].includes(explicitSign) ||
+            (accountingAmount !== 0 && explicitSign !== sign)) {
+            const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:accountingSign");
+            error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+            error.meta = { field: "accountingSign", movementId: movement?._id || null };
+            throw error;
+        }
+        sign = explicitSign;
+    }
     return Math.abs(_readRequiredLedgerAmount(movement, field, reader(movement))) * sign;
 }
 
@@ -277,6 +295,17 @@ async function _queueCompensation(params) {
             : [];
     const bookingIds = [...new Set(rawBookingIds.map((id) => _safeTrim(id)).filter(Boolean))].sort();
     const hasStableEntity = Boolean(p.transactionId || p.orderId || p.refundId || bookingIds.length > 0);
+    const totalAmount = p.totalAmount === undefined || p.totalAmount === null
+        ? null
+        : _readRequiredLedgerAmount(p, "totalAmount", p.totalAmount, "COMPENSATION_AMOUNT_INVALID");
+    const attempts = p.attempts === undefined || p.attempts === null
+        ? 0
+        : _readRequiredLedgerAmount(p, "attempts", p.attempts, "COMPENSATION_ATTEMPTS_INVALID");
+    if (!Number.isSafeInteger(attempts) || attempts < 0) {
+        const error = new Error("COMPENSATION_ATTEMPTS_INVALID");
+        error.code = "COMPENSATION_ATTEMPTS_INVALID";
+        throw error;
+    }
     const identity = {
         kind,
         transactionId: p.transactionId || null,
@@ -285,7 +314,7 @@ async function _queueCompensation(params) {
         bookingIds,
         phase,
         origin,
-        totalAmount: Number(p.totalAmount) || 0,
+        totalAmount,
         paymentMethod: p.paymentMethod || null,
         movementType: p.movementType || null,
         recoveryProcessor: p.recoveryProcessor || null,
@@ -301,10 +330,10 @@ async function _queueCompensation(params) {
         transactionId: p.transactionId || null,
         orderId: p.orderId || null,
         refundId: p.refundId || null,
-        totalAmount: Number(p.totalAmount) || 0,
+        ...(totalAmount === null ? {} : { totalAmount }),
         operationDescription: p.operationDescription || null,
         status: "PENDING_RECOVERY",
-        attempts: Number(p.attempts) || 0,
+        attempts,
         lastError: p.lastError || null,
         traceId,
         payload: {
@@ -415,6 +444,15 @@ async function _matchesManualTransactionReplay(existingMovement, transactionId, 
 }
 
 function validateFiscalMovementContract(movement) {
+    const numericFields = ["amount", "totalAmount", "accountingAmount", "taxBase", "taxAmount", "tipoImpositivo"];
+    for (const field of numericFields) {
+        if (typeof movement?.[field] !== "number" || !Number.isFinite(movement[field])) {
+            return { ok: false, code: "FISCAL_MOVEMENT_NUMERIC_FIELD_INVALID", field };
+        }
+    }
+    if (movement.tipoImpositivo < 0 || movement.tipoImpositivo > 1) {
+        return { ok: false, code: "FISCAL_MOVEMENT_TAX_RATE_INVALID", field: "tipoImpositivo" };
+    }
     const required = [
         "transactionId", "hash", "previousRecordHash", "sequenceNumber",
         "tipoFactura", "fiscalPeriod", "staffResourceId",
@@ -438,9 +476,9 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
         ["NumSerieFactura", movement.numSerieFactura || ""],
         ["FechaExpedicionFactura", _formatAEATDate(movement.fechaExpedicionFactura)],
         ["TipoFactura", movement.tipoFactura || TIPO_FACTURA.F1],
-        ["BaseImponibleOImporteNoSujeto", String(Number(movement.taxBase || 0).toFixed(2))],
-        ["CuotaRepercutida", String(Number(movement.taxAmount || 0).toFixed(2))],
-        ["ImporteTotal", String(Number(movement.totalAmount || 0).toFixed(2))],
+        ["BaseImponibleOImporteNoSujeto", String(_readRequiredLedgerAmount(movement, "taxBase", movement.taxBase, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
+        ["CuotaRepercutida", String(_readRequiredLedgerAmount(movement, "taxAmount", movement.taxAmount, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
+        ["ImporteTotal", String(_readRequiredLedgerAmount(movement, "totalAmount", movement.totalAmount, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
         ["Huella", movement.previousRecordHash || ""],
         ["FechaHoraHusoGenRegistro", _formatAEATDateTimeMadrid(generatedAt)],
     ];
@@ -456,18 +494,21 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
         }
     }
 
-    if (Number(movement.irpfWithholdingAmount || 0) > 0) {
-        fields.push(["ImporteRetencionIRPF", String(Number(movement.irpfWithholdingAmount).toFixed(2))]);
-        if (movement.withholdingBase > 0) {
-            fields.push(["BaseImponibleRetencion", String(Number(movement.withholdingBase).toFixed(2))]);
+    const irpfWithholdingAmount = _readOptionalLedgerAmount(movement, "irpfWithholdingAmount");
+    const withholdingBase = _readOptionalLedgerAmount(movement, "withholdingBase");
+    if (irpfWithholdingAmount > 0) {
+        fields.push(["ImporteRetencionIRPF", String(irpfWithholdingAmount.toFixed(2))]);
+        if (withholdingBase > 0) {
+            fields.push(["BaseImponibleRetencion", String(withholdingBase.toFixed(2))]);
         }
         if (movement.fiscalRole) {
             fields.push(["RolFiscal", String(movement.fiscalRole).slice(0, 10)]);
         }
     }
 
-    if (Number(movement.surchargeAmount || 0) > 0) {
-        fields.push(["ImporteRecargoEquivalencia", String(Number(movement.surchargeAmount).toFixed(2))]);
+    const surchargeAmount = _readOptionalLedgerAmount(movement, "surchargeAmount");
+    if (surchargeAmount > 0) {
+        fields.push(["ImporteRecargoEquivalencia", String(surchargeAmount.toFixed(2))]);
     }
 
     if (movement.correctionReason) fields.push(["MotivoRectificacion", String(movement.correctionReason).slice(0, 4)]);
@@ -577,28 +618,53 @@ async function _assertPeriodNotClosed(operationDate, traceId) {
     }
 }
 
-function _resolveFiscalBase({ amount, taxRate, withholdingBase, irpfWithholdingAmount, surchargeAmount }) {
-    if (withholdingBase > 0) {
-        const base = _roundMoney(withholdingBase);
-        const taxAmount = _roundMoney(base * taxRate);
-        const expectedTotal = _roundMoney(
-            base + taxAmount + (surchargeAmount || 0) - (irpfWithholdingAmount || 0)
-        );
-        const diff = Math.abs(expectedTotal - amount);
-        if (diff > MONEY_EPSILON_FISCAL) {
-            return {
-                ok: false,
-                code: "CUADRE_FISCAL_INVALIDO",
-                message: `Base ${base} + IVA ${taxAmount} + RE ${surchargeAmount || 0} - Ret ${irpfWithholdingAmount || 0} = ${expectedTotal}, amount ${amount}`,
-                base,
-                taxAmount,
-            };
-        }
-        return { ok: true, base, taxAmount };
+function _resolveFiscalBase({ amount, taxRate, taxBase, taxAmount, irpfWithholdingAmount, surchargeAmount }) {
+    const hasTaxBase = taxBase !== undefined && taxBase !== null;
+    const hasTaxAmount = taxAmount !== undefined && taxAmount !== null;
+    if (hasTaxBase !== hasTaxAmount) {
+        return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INCOMPLETE", message: "Base imponible y cuota deben proporcionarse conjuntamente." };
     }
-    const base = _roundMoney(amount / (1 + taxRate));
-    const taxAmount = _roundMoney(amount - base);
-    return { ok: true, base, taxAmount };
+
+    let base;
+    let resolvedTaxAmount;
+    if (hasTaxBase) {
+        const validBaseType = typeof taxBase === "number" ||
+            (typeof taxBase === "string" && taxBase.trim() !== "");
+        const validTaxType = typeof taxAmount === "number" ||
+            (typeof taxAmount === "string" && taxAmount.trim() !== "");
+        base = validBaseType ? Number(taxBase) : Number.NaN;
+        resolvedTaxAmount = validTaxType ? Number(taxAmount) : Number.NaN;
+        if (!Number.isFinite(base) || base < 0 ||
+            !Number.isFinite(resolvedTaxAmount) || resolvedTaxAmount < 0) {
+            return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INVALID", message: "Base imponible o cuota inválida." };
+        }
+        base = _roundMoney(base);
+        resolvedTaxAmount = _roundMoney(resolvedTaxAmount);
+        if (Math.abs(_roundMoney(base * taxRate) - resolvedTaxAmount) > MONEY_EPSILON_FISCAL) {
+            return { ok: false, code: "FISCAL_TAX_RATE_MISMATCH", message: "La base y la cuota no coinciden con el tipo impositivo declarado.", base, taxAmount: resolvedTaxAmount };
+        }
+    } else {
+        base = _roundMoney((amount + irpfWithholdingAmount - surchargeAmount) / (1 + taxRate));
+        resolvedTaxAmount = _roundMoney(base * taxRate);
+    }
+
+    if (!Number.isFinite(base) || base < 0 ||
+        !Number.isFinite(resolvedTaxAmount) || resolvedTaxAmount < 0) {
+        return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INVALID", message: "El cálculo fiscal produjo una base o cuota inválida." };
+    }
+    const expectedTotal = _roundMoney(
+        base + resolvedTaxAmount + surchargeAmount - irpfWithholdingAmount
+    );
+    if (Math.abs(expectedTotal - amount) > MONEY_EPSILON_FISCAL) {
+        return {
+            ok: false,
+            code: "CUADRE_FISCAL_INVALIDO",
+            message: `Base ${base} + IVA ${resolvedTaxAmount} + RE ${surchargeAmount} - Ret ${irpfWithholdingAmount} = ${expectedTotal}, importe ${amount}`,
+            base,
+            taxAmount: resolvedTaxAmount,
+        };
+    }
+    return { ok: true, base, taxAmount: resolvedTaxAmount };
 }
 
 // ============================================================================
@@ -707,21 +773,49 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             };
         }
 
-        const irpfWithholdingRate = Number(inDto.irpfWithholdingRate) || 0;
-        const withholdingBase = Number(inDto.withholdingBase) || 0;
-        let irpfWithholdingAmount = Number(inDto.irpfWithholdingAmount) || 0;
+        const readOptionalFiscalNumber = (value, field, max = null) => {
+            if (value === undefined || value === null) return 0;
+            const validType = typeof value === "number" ||
+                (typeof value === "string" && value.trim() !== "");
+            const parsed = validType ? Number(value) : Number.NaN;
+            if (!Number.isFinite(parsed) || parsed < 0 ||
+                (max !== null && parsed > max)) {
+                const error = new Error("FISCAL_NUMERIC_FIELD_INVALID:" + field);
+                error.code = "FISCAL_NUMERIC_FIELD_INVALID";
+                error.meta = { field };
+                throw error;
+            }
+            return parsed;
+        };
+        const rawTaxRate = inDto.tipoImpositivo;
+        const validTaxRateType = typeof rawTaxRate === "number" ||
+            (typeof rawTaxRate === "string" && rawTaxRate.trim() !== "");
+        const taxRate = validTaxRateType ? Number(rawTaxRate) : Number.NaN;
+        if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 1) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "FISCAL_TAX_RATE_REQUIRED", message: "tipoImpositivo es obligatorio y debe ser una proporción entre 0 y 1." },
+                traceId,
+            };
+        }
+        const irpfWithholdingRate = readOptionalFiscalNumber(inDto.irpfWithholdingRate, "irpfWithholdingRate", 1);
+        const withholdingBase = readOptionalFiscalNumber(inDto.withholdingBase, "withholdingBase");
+        let irpfWithholdingAmount = readOptionalFiscalNumber(inDto.irpfWithholdingAmount, "irpfWithholdingAmount");
 
         if (irpfWithholdingRate > 0 && withholdingBase > 0 && irpfWithholdingAmount === 0) {
             irpfWithholdingAmount = _roundMoney(withholdingBase * irpfWithholdingRate);
         }
 
-        const surchargeRate = Number(inDto.surchargeRate) || 0;
-        let surchargeAmount = Number(inDto.surchargeAmount) || 0;
+        const surchargeRate = readOptionalFiscalNumber(inDto.surchargeRate, "surchargeRate", 1);
+        let surchargeAmount = readOptionalFiscalNumber(inDto.surchargeAmount, "surchargeAmount");
 
         if (surchargeRate > 0 && surchargeAmount === 0) {
-            const baseForSurcharge = withholdingBase > 0
-                ? withholdingBase
-                : _roundMoney(amount / (1 + (Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL)));
+            const baseForSurcharge = inDto.taxBase === undefined || inDto.taxBase === null
+                ? _roundMoney((amount + irpfWithholdingAmount) / (1 + taxRate))
+                : _readRequiredLedgerAmount(
+                    inDto, "taxBase", inDto.taxBase, "FISCAL_NUMERIC_FIELD_INVALID"
+                );
             surchargeAmount = _roundMoney(baseForSurcharge * surchargeRate);
         }
 
@@ -749,7 +843,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             paymentMethod,
             movementType,
             channelType,
-            tipoImpositivo: Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL,
+            tipoImpositivo: taxRate,
             lineItems: inDto.lineItems || [],
             nifDestinatario,
             recipientLegalName,
@@ -810,9 +904,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "No se pueden registrar cobros presenciales sin una sesión de caja abierta y con hora de apertura válida." }, traceId };
         }
 
-        const taxRate = Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL;
         const fiscalCalc = _resolveFiscalBase({
-            amount, taxRate, withholdingBase, irpfWithholdingAmount, surchargeAmount,
+            amount,
+            taxRate,
+            taxBase: inDto.taxBase,
+            taxAmount: inDto.taxAmount,
+            irpfWithholdingAmount,
+            surchargeAmount,
         });
 
         if (!fiscalCalc.ok) {
@@ -1280,29 +1378,42 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
                 return { status: "SUCCESS", idempotent: true, movementId: movementKey };
             }
 
-            const amount = _roundMoney(Number(movement.accountingAmount) || 0);
+            const amount = _roundMoney(_readRequiredLedgerAmount(
+                movement, "accountingAmount", movement?.accountingAmount, "CAJA_PROJECTION_AMOUNT_INVALID"
+            ));
             const amountField = method === PAYMENT_METHOD.EFECTIVO
                 ? CAJA_KEYS.CASH
                 : method === PAYMENT_METHOD.TARJETA
                     ? CAJA_KEYS.CARD
                     : CAJA_KEYS.OTHER;
 
-            cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
+            const currentBalance = _readRequiredLedgerAmount(
+                cashRegister, amountField, cashRegister?.[amountField], "CAJA_PROJECTION_BALANCE_INVALID"
+            );
+            cashRegister[amountField] = _roundMoney(currentBalance + amount);
             // Only cash changes the expected physical drawer balance. Card
             // and Bizum never change physical cash. This cashier projection
             // deliberately aggregates Bizum into otherAmount; the physical CMS
             // schema also declares bizumAmount, but this writer does not use it.
             // Method detail remains in MovimientosCaja.
             if (method === PAYMENT_METHOD.EFECTIVO) {
-                cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+                cashRegister.expectedCash = _roundMoney(_readRequiredLedgerAmount(
+                    cashRegister, CAJA_KEYS.CASH, cashRegister?.[CAJA_KEYS.CASH], "CAJA_PROJECTION_BALANCE_INVALID"
+                ));
             }
             // netAmount is the physical cash balance, never the sum of all
             // payment methods.
-            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(_readRequiredLedgerAmount(
+                cashRegister, CAJA_KEYS.CASH, cashRegister?.[CAJA_KEYS.CASH], "CAJA_PROJECTION_BALANCE_INVALID"
+            ));
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
             if (_safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.VENTA) {
-                cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+                const operations = Number(cashRegister[CAJA_KEYS.OPERATIONS]);
+                if (!Number.isSafeInteger(operations) || operations < 0) {
+                    throw new Error("CAJA_PROJECTION_OPERATIONS_INVALID");
+                }
+                cashRegister[CAJA_KEYS.OPERATIONS] = operations + 1;
             }
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
@@ -1322,10 +1433,19 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
     } catch (err) {
         log.error("_updateCajaActual failed; queuing resync", { traceId, error: err?.message });
         try {
+            const rawRecoveryAmount = movement?.accountingAmount;
+            const validRecoveryAmountType = typeof rawRecoveryAmount === "number" ||
+                (typeof rawRecoveryAmount === "string" && rawRecoveryAmount.trim() !== "");
+            const parsedRecoveryAmount = validRecoveryAmountType
+                ? Number(rawRecoveryAmount)
+                : Number.NaN;
+            const recoveryAmount = Number.isFinite(parsedRecoveryAmount)
+                ? parsedRecoveryAmount
+                : null;
             await _queueCompensation({
                 kind: "RESYNC_CAJA_BALANCE",
                 transactionId: movement?.transactionId || null,
-                totalAmount: Number(movement?.accountingAmount) || 0,
+                totalAmount: recoveryAmount,
                 paymentMethod: movement?.paymentMethod || null,
                 operationDescription: "Sincronizacion de sesion tras fallo en proyeccion CajaActual",
                 phase: "WAIT_FOR_CAJA_RESYNC",
@@ -1387,12 +1507,15 @@ export async function registerBookingPayment(bookingIds, totalAmount, method, me
         recipientLegalName: m.recipientLegalName || null,
         isB2B: m.isB2B === true,
 
-        irpfWithholdingRate: m.irpfWithholdingRate || 0,
-        withholdingBase: m.withholdingBase || 0,
-        irpfWithholdingAmount: m.irpfWithholdingAmount || 0,
+        irpfWithholdingRate: m.irpfWithholdingRate ?? 0,
+        withholdingBase: m.withholdingBase ?? 0,
+        irpfWithholdingAmount: m.irpfWithholdingAmount ?? 0,
         fiscalRole: m.fiscalRole || FISCAL_ROLE.EMISOR,
 
-        surchargeRate: m.surchargeRate || 0,
+        surchargeRate: m.surchargeRate ?? 0,
+        taxBase: m.taxBase,
+        taxAmount: m.taxAmount,
+        tipoImpositivo: m.tipoImpositivo,
 
         linkedAdvanceId: m.linkedAdvanceId || null,
         vatAccrualStatus,
@@ -1426,7 +1549,9 @@ export async function queueFiscalRecovery(recoveryData = {}) {
             bookingIds: recoveryData.bookingIds,
             orderId: recoveryData.orderId,
             refundId: recoveryData.refundId,
-            totalAmount: Number(recoveryData.totalAmount) || 0,
+            totalAmount: recoveryData.totalAmount === undefined || recoveryData.totalAmount === null
+                ? null
+                : _readRequiredLedgerAmount(recoveryData, "totalAmount", recoveryData.totalAmount, "FISCAL_RECOVERY_AMOUNT_INVALID"),
             paymentMethod: recoveryData.paymentMethod,
             operationDescription: recoveryData.operationDescription || "Fiscal recovery",
             movementType: recoveryData.movementType || recoveryData.tipoMovimiento,
@@ -1485,9 +1610,10 @@ async function _readCashierSessionSummary(cashRegister) {
         for (const movement of (res.items || [])) {
             const method = _safeTrim(movement.paymentMethod).toUpperCase();
             if (!summary[method] || !movement._id) continue;
-            summary[method].amount = _roundMoney(
-                summary[method].amount + (Number(movement.accountingAmount) || 0)
+            const amount = _readRequiredLedgerAmount(
+                movement, "accountingAmount", movement?.accountingAmount, "CAJA_SESSION_SUMMARY_AMOUNT_INVALID"
             );
+            summary[method].amount = _roundMoney(summary[method].amount + amount);
             summary[method].ticketCount += 1;
             if (!lastMovement) lastMovement = movement;
         }
@@ -1518,6 +1644,46 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     try {
         await requireCajero(traceId);
         const cashRegister = await getCashRegisterSingleton();
+        if (!cashRegister) throw new Error("CAJA_PRINCIPAL_MISSING");
+        const cashRegisterStatus = _safeTrim(cashRegister[CAJA_KEYS.STATUS]).toUpperCase();
+        if (!Object.values(CASH_REGISTER_STATUS).includes(cashRegisterStatus)) {
+            throw new Error("CAJA_PRINCIPAL_STATUS_INVALID");
+        }
+        const stateAmounts = {
+            netAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.TOTAL, cashRegister[CAJA_KEYS.TOTAL], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            cashAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.CASH, cashRegister[CAJA_KEYS.CASH], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            cardAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.CARD, cashRegister[CAJA_KEYS.CARD], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            otherAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.OTHER, cashRegister[CAJA_KEYS.OTHER], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+        };
+        const salesCount = _readRequiredLedgerAmount(
+            cashRegister, CAJA_KEYS.OPERATIONS, cashRegister[CAJA_KEYS.OPERATIONS], "CAJA_STATE_OPERATIONS_INVALID"
+        );
+        if (!Number.isSafeInteger(salesCount) || salesCount < 0) {
+            throw new Error("CAJA_STATE_OPERATIONS_INVALID");
+        }
+        const openingCashAmount = cashRegister[CAJA_KEYS.OPENING_CASH] == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.OPENING_CASH, cashRegister[CAJA_KEYS.OPENING_CASH], "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        const expectedCash = cashRegister.expectedCash == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "expectedCash", cashRegister.expectedCash, "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        if (cashRegisterStatus === CASH_REGISTER_STATUS.ABIERTA &&
+            (openingCashAmount === null || expectedCash === null)) {
+            throw new Error("CAJA_OPEN_SESSION_BALANCE_MISSING");
+        }
+        const openedAt = cashRegister[CAJA_KEYS.OPENED_AT] instanceof Date
+            ? cashRegister[CAJA_KEYS.OPENED_AT]
+            : new Date(cashRegister[CAJA_KEYS.OPENED_AT] || "");
+        if (cashRegisterStatus === CASH_REGISTER_STATUS.ABIERTA &&
+            (!cashRegister[CAJA_KEYS.OPENED_AT] || Number.isNaN(openedAt.getTime()))) {
+            throw new Error("CAJA_OPEN_SESSION_TIMESTAMP_INVALID");
+        }
+        const countedCash = cashRegister.countedCash == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "countedCash", cashRegister.countedCash, "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        const difference = cashRegister.difference == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "difference", cashRegister.difference, "CAJA_STATE_NUMERIC_FIELD_INVALID");
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
@@ -1537,6 +1703,14 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             _resolveStaffDisplayName(cashRegister?.closedBy),
             actorVerified ? _resolveStaffDisplayName(lastActorId) : Promise.resolve(null),
         ]);
+        const lastOperationSequence = lastMovement
+            ? _readRequiredLedgerAmount(
+                lastMovement, "sequenceNumber", lastMovement.sequenceNumber, "CAJA_SESSION_SEQUENCE_INVALID"
+            )
+            : null;
+        if (lastMovement && (!Number.isSafeInteger(lastOperationSequence) || lastOperationSequence <= 0)) {
+            throw new Error("CAJA_SESSION_SEQUENCE_INVALID");
+        }
         const lastOperation = lastMovement ? {
             movementId: lastMovement._id,
             sourceMovementIds: [lastMovement._id],
@@ -1549,11 +1723,16 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             operationDate: readOperationDate(lastMovement) || null,
             movementType: lastMovement.movementType || null,
             description: lastMovement.operationDescription || null,
-            amount: Number(lastMovement.accountingAmount ?? lastMovement.totalAmount) || 0,
+            amount: _readRequiredLedgerAmount(
+                lastMovement,
+                "accountingAmount",
+                lastMovement.accountingAmount ?? lastMovement.totalAmount,
+                "CAJA_SESSION_LAST_MOVEMENT_AMOUNT_INVALID"
+            ),
             paymentMethod: lastMovement.paymentMethod || null,
             hash: lastMovement.hash || null,
             previousRecordHash: lastMovement.previousRecordHash || null,
-            sequenceNumber: Number(lastMovement.sequenceNumber) || null,
+            sequenceNumber: lastOperationSequence,
             recordTimestamp: lastMovement.recordTimestamp || null,
             digitalSignature: lastMovement.digitalSignature || null,
             traceId: lastMovement.traceId || null,
@@ -1561,22 +1740,19 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         return {
             status: "SUCCESS",
             data: {
-                _id: cashRegister?._id || CASH_REGISTER_ID,
-                singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
-                operationDate: _getSessionDayKey(cashRegister?.[CAJA_KEYS.OPENED_AT]),
-                cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
-                netAmount: cashRegister?.[CAJA_KEYS.TOTAL] ?? 0,
-                cashAmount: cashRegister?.[CAJA_KEYS.CASH] ?? 0,
-                cardAmount: cashRegister?.[CAJA_KEYS.CARD] ?? 0,
-                otherAmount: cashRegister?.[CAJA_KEYS.OTHER] ?? 0,
-                salesCount: cashRegister?.[CAJA_KEYS.OPERATIONS] ?? 0,
+                _id: cashRegister._id,
+                singletonKey: cashRegister[CAJA_KEYS.SINGLETON_KEY],
+                operationDate: _getSessionDayKey(cashRegister[CAJA_KEYS.OPENED_AT]),
+                cashRegisterStatus,
+                ...stateAmounts,
+                salesCount,
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
-                openingCashAmount: cashRegister?.[CAJA_KEYS.OPENING_CASH] ?? null,
-                expectedCash: cashRegister?.expectedCash ?? null,
-                countedCash: cashRegister?.countedCash ?? null,
-                difference: cashRegister?.difference ?? null,
+                openingCashAmount,
+                expectedCash,
+                countedCash,
+                difference,
                 differenceReason: cashRegister?.differenceReason ?? null,
                 openedByName,
                 closedAt: _effectiveSessionClosedAt(cashRegister),
@@ -1656,7 +1832,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_HISTORICAL_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq(dateField, cleanDiaKey)
-                .gt("sequenceNumber", 0)
+                // Include malformed sequence values so the integrity check below can reject them.
                 .ne("recordSource", "SMOKE_TEST")
                 .ascending("sequenceNumber")
                 .limit(LEDGER_PAGE_SIZE);
@@ -1681,8 +1857,19 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 error: { code: "Z_MOVEMENT_PAGE_LIMIT", message: "No se puede cerrar un periodo con movimientos sin auditar." },
             };
         }
-        allMovements = allMovements;
-        allMovements.sort((a, b) => (Number(a.sequenceNumber) || 0) - (Number(b.sequenceNumber) || 0));
+        for (const movement of allMovements) {
+            const sequenceNumber = _readRequiredLedgerAmount(
+                movement, "sequenceNumber", movement?.sequenceNumber, "Z_LEDGER_SEQUENCE_INVALID"
+            );
+            if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber <= 0) {
+                const error = new Error("Z_LEDGER_SEQUENCE_INVALID:sequenceNumber");
+                error.code = "Z_LEDGER_SEQUENCE_INVALID";
+                error.meta = { field: "sequenceNumber", movementId: movement?._id || null };
+                throw error;
+            }
+            movement.sequenceNumber = sequenceNumber;
+        }
+        allMovements.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
         if (allMovements.length === 0) {
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
@@ -1740,6 +1927,12 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         for (const m of fiscalMovements) {
             const rawRate = readMovementField(m, "tipoImpositivo");
             const rateValue = _readRequiredLedgerAmount(m, "tipoImpositivo", rawRate);
+            if (rateValue < 0 || rateValue > 1) {
+                const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:tipoImpositivo");
+                error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+                error.meta = { field: "tipoImpositivo", movementId: m?._id || null };
+                throw error;
+            }
             const rate = String(rateValue);
             if (!taxTypeBreakdown[rate]) {
                 taxTypeBreakdown[rate] = { taxableBaseOrNonSubjectAmount: 0, taxAmount: 0, total: 0, operations: 0 };
@@ -1825,8 +2018,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             netTaxableAmount: _roundMoney(netTaxableAmount),
             netTaxAmount: _roundMoney(netTaxAmount),
             totalOperations: allMovements.length,
-            startSequence: Number(firstMovement?.sequenceNumber) || 0,
-            endSequence: Number(lastMovement?.sequenceNumber) || 0,
+            startSequence: firstMovement.sequenceNumber,
+            endSequence: lastMovement.sequenceNumber,
         });
         const closingHash = await hashSHA256(closingPayload);
 
@@ -1872,8 +2065,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             totalTips: _roundMoney(totalTips),
             totalAdjustments: _roundMoney(totalAdjustments),
             totalOperations: allMovements.length,
-            startSequence: Number(firstMovement?.sequenceNumber) || 0,
-            endSequence: Number(lastMovement?.sequenceNumber) || 0,
+            startSequence: firstMovement.sequenceNumber,
+            endSequence: lastMovement.sequenceNumber,
             startTicketNumber: readInvoiceNumber(firstMovement) || "",
             endTicketNumber: readInvoiceNumber(lastMovement) || "",
             startRecordHash: firstMovement?.previousRecordHash || GENESIS_HASH,
@@ -1940,6 +2133,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             PERIOD_CLOSED: "El periodo fiscal esta cerrado.",
             Z_CLOSING_RESULT_UNKNOWN: "El resultado del cierre es incierto y requiere reconciliacion.",
             Z_LEDGER_NUMERIC_FIELD_INVALID: "El cierre no puede continuar: un movimiento contiene un importe fiscal ausente o invalido.",
+            Z_LEDGER_SEQUENCE_INVALID: "El cierre no puede continuar: la secuencia de movimientos contiene un valor ausente o invalido.",
         };
         const publicCodes = new Set(Object.keys(publicMessages));
         const publicCode = publicCodes.has(normalized.code) ? normalized.code : "Z_CLOSING_FAIL";
@@ -2189,9 +2383,21 @@ export const getMovimientoByBooking = webMethod(
                 };
             }
 
+            const readMovementTimestamp = (movement) => {
+                const rawTimestamp = movement?.recordTimestamp ?? movement?._createdDate;
+                if (rawTimestamp === undefined || rawTimestamp === null || rawTimestamp === "") {
+                    throw new Error("MOVEMENT_TIMESTAMP_MISSING");
+                }
+                const timestamp = rawTimestamp instanceof Date
+                    ? rawTimestamp
+                    : new Date(rawTimestamp);
+                if (Number.isNaN(timestamp.getTime())) {
+                    throw new Error("MOVEMENT_TIMESTAMP_INVALID");
+                }
+                return timestamp.getTime();
+            };
             const mov = items.sort(
-                (a, b) => new Date(b.recordTimestamp || b._createdDate || 0) -
-                          new Date(a.recordTimestamp || a._createdDate || 0)
+                (a, b) => readMovementTimestamp(b) - readMovementTimestamp(a)
             )[0];
 
             return {

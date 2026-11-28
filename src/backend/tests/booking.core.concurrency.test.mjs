@@ -510,6 +510,27 @@ test('BCORE-PER-01B canonical CitasF2 references are root fields, not duplicated
   }
 });
 
+test('BCORE-PER-01C CitasF2 writer requires explicit amount, canonical type and valid revision', async () => {
+  for (const overrides of [
+    { totalAmount: undefined },
+    { totalAmount: 'not-money' },
+    { bookingType: undefined, tipo: undefined },
+    { revision: 'not-a-revision' },
+    { revision: 0 },
+  ]) {
+    wixDataMock._reset();
+    await assert.rejects(
+      () => BC._persistBooking(baseParams(overrides), 'tr-invalid-citasf2-contract'),
+      (error) => error.code === BC.ERROR_CODES.INVALID_PAYLOAD
+    );
+    assert.equal((wixDataMock._store.get(CITAS) || []).length, 0);
+  }
+
+  wixDataMock._reset();
+  const freeBooking = await BC._persistBooking(baseParams({ totalAmount: 0 }), 'tr-explicit-zero-booking');
+  assert.equal(freeBooking.item.totalAmount, 0);
+});
+
 test('BCORE-PER-02 missing traceId rejected (SSOT-12 audit trail)', async () => {
   wixDataMock._reset();
   await assert.rejects(
@@ -789,6 +810,9 @@ test('BOOKING-AMOUNT-01 booking writer does not coerce invalid totalAmount to ze
   const end = source.indexOf('const doc =', start);
   assert.ok(start >= 0 && end > start);
   const amountBlock = source.slice(start, end);
-  assert.match(amountBlock, /const totalAmount = _roundMoney\(rawTotalAmount\)/);
-  assert.doesNotMatch(amountBlock, /Number\(|\|\|\s*0/);
+  assert.match(amountBlock, /validTotalAmountType/);
+  assert.match(amountBlock, /Number\.isFinite\(parsedTotalAmount\)/);
+  assert.match(amountBlock, /const totalAmount = _roundMoney\(parsedTotalAmount\)/);
+  assert.match(amountBlock, /totalAmount is required and must be a finite non-negative amount/);
+  assert.doesNotMatch(amountBlock, /\|\|\s*0/);
 });

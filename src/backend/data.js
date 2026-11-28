@@ -123,25 +123,43 @@ export function readInvoiceIssueDate(item) {
     return readMovementField(item, "fechaExpedicionFactura");
 }
 
+function _readRequiredMovementNumber(item, field) {
+    const raw = readMovementField(item, field);
+    const validType = typeof raw === "number" ||
+        (typeof raw === "string" && raw.trim() !== "");
+    const amount = validType ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(amount)) {
+        const error = new Error("MOVEMENT_NUMERIC_FIELD_INVALID:" + field);
+        error.code = "MOVEMENT_NUMERIC_FIELD_INVALID";
+        error.meta = { field, movementId: item?._id || null };
+        throw error;
+    }
+    return amount;
+}
+
+function _readOptionalMovementNumber(item, field) {
+    const raw = readMovementField(item, field);
+    return raw === undefined || raw === null
+        ? 0
+        : _readRequiredMovementNumber(item, field);
+}
+
 export function readTotalAmount(item) {
-    // MATRIZ v15: totalAmount es clave canonica propia (total cobrado con
-    // impuestos); "importeTotal" se tolera solo como alias historico via el
-    // contrato unico MOVEMENT_HISTORICAL_READ_ALIASES.
-    return Number(readMovementField(item, "totalAmount")) || 0;
+    // Canonical total with tax; historical aliases are resolved only by readMovementField.
+    return _readRequiredMovementNumber(item, "totalAmount");
 }
 
 export function readBaseAmount(item) {
-    // MATRIZ v15: amount es clave canonica propia (importe base) hasta cerrar
-    // el ADR de la formula fiscal; aliases historicos via contrato unico.
-    return Number(readMovementField(item, "amount")) || 0;
+    // Canonical taxable/non-taxable base; historical aliases are resolved only by readMovementField.
+    return _readRequiredMovementNumber(item, "amount");
 }
 
 export function readTaxBase(item) {
-    return Number(readMovementField(item, "taxBase")) || 0;
+    return _readRequiredMovementNumber(item, "taxBase");
 }
 
 export function readTaxAmount(item) {
-    return Number(readMovementField(item, "taxAmount")) || 0;
+    return _readRequiredMovementNumber(item, "taxAmount");
 }
 
 export function readInvoiceType(item) {
@@ -205,7 +223,7 @@ export function readRecordTimestamp(item) {
 }
 
 export function readSurchargeAmount(item) {
-    return Number(readMovementField(item, "surchargeAmount")) || 0;
+    return _readOptionalMovementNumber(item, "surchargeAmount");
 }
 
 export function readFiscalPayload(item) {
@@ -279,27 +297,59 @@ function _isV5Fiscal(item) {
 }
 
 function _readBreakdownBaseAndTax(item) {
+    const breakdown = readBreakdown(item);
+    if (breakdown === undefined || breakdown === null || breakdown === "") {
+        return { hasBreakdown: false, base: null, tax: null };
+    }
+
+    let rows;
+    try {
+        rows = typeof breakdown === "string" ? JSON.parse(breakdown) : breakdown;
+    } catch (error) {
+        _schemaError("detailedBreakdown/desgloseDetallado no es JSON valido");
+    }
+    if (!Array.isArray(rows)) {
+        _schemaError("detailedBreakdown/desgloseDetallado debe ser un array");
+    }
+    if (rows.length === 0) {
+        return { hasBreakdown: false, base: null, tax: null };
+    }
+
+    const readBreakdownNumber = (row, fields, label) => {
+        let raw;
+        for (const field of fields) {
+            if (row?.[field] !== undefined && row?.[field] !== null) {
+                raw = row[field];
+                break;
+            }
+        }
+        const validType = typeof raw === "number" ||
+            (typeof raw === "string" && raw.trim() !== "");
+        const value = validType ? Number(raw) : Number.NaN;
+        if (!Number.isFinite(value)) {
+            _schemaError(`detailedBreakdown ${label} ausente o invalido`);
+        }
+        return value;
+    };
+
     let base = 0;
     let tax = 0;
-    const breakdown = readBreakdown(item);
-    if (breakdown) {
-        try {
-            const arr = typeof breakdown === "string" ? JSON.parse(breakdown) : breakdown;
-            if (Array.isArray(arr) && arr.length > 0) {
-                base = arr.reduce(
-                    (sum, d) => sum + Number(d.taxableBaseOrNonSubjectAmount ?? d.baseImponibleOImporteNoSujeto ?? d.base ?? 0),
-                    0
-                );
-                tax = arr.reduce(
-                    (sum, d) => sum + Number(d.chargedTaxAmount ?? d.cuotaRepercutida ?? d.cuota ?? 0),
-                    0
-                );
-            }
-        } catch (e) {
-            _schemaError("detailedBreakdown/desgloseDetallado no es JSON valido");
+    for (const row of rows) {
+        base += readBreakdownNumber(
+            row,
+            ["taxableBaseOrNonSubjectAmount", "baseImponibleOImporteNoSujeto", "base"],
+            "base"
+        );
+        tax += readBreakdownNumber(
+            row,
+            ["chargedTaxAmount", "cuotaRepercutida", "cuota"],
+            "cuota"
+        );
+        if (!Number.isFinite(base) || !Number.isFinite(tax)) {
+            _schemaError("detailedBreakdown contiene importes fuera de rango");
         }
     }
-    return { base, tax };
+    return { hasBreakdown: true, base, tax };
 }
 
 function _validateF1Requirements(item) {
@@ -429,15 +479,27 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("nifDestinatario no tiene formato valido (espanol o VAT UE)");
     }
 
-    const { base, tax } = _readBreakdownBaseAndTax(item);
-    const finalBase = base > 0 ? base : readTaxBase(item);
-    const finalTax = tax > 0 ? tax : readTaxAmount(item);
+    let breakdown;
+    let finalBase;
+    let finalTax;
+    let withholding;
+    let surcharge;
+    let total;
+    try {
+        breakdown = _readBreakdownBaseAndTax(item);
+        finalBase = breakdown.hasBreakdown ? breakdown.base : readTaxBase(item);
+        finalTax = breakdown.hasBreakdown ? breakdown.tax : readTaxAmount(item);
+        withholding = _readOptionalMovementNumber(item, "irpfWithholdingAmount");
+        surcharge = readSurchargeAmount(item);
+        total = readTotalAmount(item);
+    } catch (error) {
+        if (error?.code === "MOVEMENT_NUMERIC_FIELD_INVALID") {
+            _schemaError(error.message);
+        }
+        throw error;
+    }
 
-    const withholding = Number(item.irpfWithholdingAmount) || 0;
-    const surcharge = readSurchargeAmount(item);
-    const total = readTotalAmount(item);
-
-    if (finalBase > 0 || finalTax > 0 || withholding > 0 || surcharge > 0) {
+    if (finalBase !== 0 || finalTax !== 0 || withholding !== 0 || surcharge !== 0) {
         const role = _safeTrim(item.fiscalRole).toUpperCase() || FISCAL_ROLE.EMISOR;
         const withholdingFactor = role === FISCAL_ROLE.RECEPTOR ? 1 : -1;
         const expected = _roundItem(finalBase + finalTax + surcharge + withholdingFactor * withholding);
@@ -455,19 +517,12 @@ export function MovimientosCaja_beforeInsert(item) {
     _validateFiscalRole(item);
     _validateFiscalPayload(item);
 
-    const breakdownArr = readBreakdown(item);
-    if (Array.isArray(breakdownArr) && breakdownArr.length > 0) {
-        let sumBase = 0;
-        let sumTax = 0;
-        for (const d of breakdownArr) {
-            sumBase += Number(d.taxableBaseOrNonSubjectAmount ?? d.base ?? 0);
-            sumTax += Number(d.chargedTaxAmount ?? d.cuota ?? 0);
+    if (breakdown.hasBreakdown) {
+        if (Math.abs(_roundItem(breakdown.base) - finalBase) > 0.02) {
+            _schemaError(`desgloseDetallado.base (${breakdown.base}) no cuadra con cabecera (${finalBase})`);
         }
-        if (Math.abs(_roundItem(sumBase) - finalBase) > 0.02) {
-            _schemaError(`desgloseDetallado.base (${sumBase}) no cuadra con cabecera (${finalBase})`);
-        }
-        if (Math.abs(_roundItem(sumTax) - finalTax) > 0.02) {
-            _schemaError(`desgloseDetallado.cuota (${sumTax}) no cuadra con cabecera (${finalTax})`);
+        if (Math.abs(_roundItem(breakdown.tax) - finalTax) > 0.02) {
+            _schemaError(`desgloseDetallado.cuota (${breakdown.tax}) no cuadra con cabecera (${finalTax})`);
         }
     }
 

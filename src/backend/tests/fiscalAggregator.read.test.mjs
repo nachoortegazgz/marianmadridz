@@ -13,10 +13,36 @@ import assert from 'node:assert';
 const { wixDataMock } = await import('./loader.mjs');
 // ADR-06 Etapa A: convencion unica backend/<modulo>.web.js (incl. tests)
 const FA = await import('backend/fiscalAggregator.web.js');
+const D = await import('backend/data');
 const IC = await import('backend/internalConfig');
 const loggerMod = await import('backend/logger');
 
 const T = FA.__test__;
+
+test('DATA-NUM-01 shared fiscal readers reject absent and malformed ledger numbers', () => {
+  for (const [reader, item, field] of [
+    [D.readTotalAmount, {}, 'totalAmount'],
+    [D.readBaseAmount, {}, 'amount'],
+    [D.readTaxBase, {}, 'taxBase'],
+    [D.readTaxAmount, { taxAmount: 'not-money' }, 'taxAmount'],
+  ]) {
+    assert.throws(
+      () => reader(item),
+      (error) => error.code === 'MOVEMENT_NUMERIC_FIELD_INVALID' &&
+        error.meta?.field === field
+    );
+  }
+
+  assert.equal(D.readTotalAmount({ totalAmount: 0 }), 0);
+  assert.equal(D.readTaxBase({ taxBase: 0 }), 0);
+  assert.equal(D.readTaxAmount({ taxAmount: 0 }), 0);
+  assert.equal(D.readSurchargeAmount({}), 0);
+  assert.throws(
+    () => D.readSurchargeAmount({ surchargeAmount: 'invalid' }),
+    (error) => error.code === 'MOVEMENT_NUMERIC_FIELD_INVALID' &&
+      error.meta?.field === 'surchargeAmount'
+  );
+});
 
 test('READ-01 taxable amount prefers canonical baseImponibleOImporteNoSujeto', () => {
   const v = T.readTaxableAmount({

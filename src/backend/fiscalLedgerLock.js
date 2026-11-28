@@ -81,8 +81,16 @@ function _localYear() {
 }
 
 function _counter(value) {
-    const number = Number(value);
-    return Number.isSafeInteger(number) && number > 0 ? number : 0;
+    if (value === undefined || value === null) return 0;
+    const validType = typeof value === "number" ||
+        (typeof value === "string" && value.trim() !== "");
+    const number = validType ? Number(value) : Number.NaN;
+    if (!Number.isSafeInteger(number) || number < 0) {
+        const error = new Error("FISCAL_SEQUENCE_COUNTER_INVALID");
+        error.code = "FISCAL_SEQUENCE_COUNTER_INVALID";
+        throw error;
+    }
+    return number;
 }
 
 function _sequenceUnknown(writeError, readError) {
@@ -96,8 +104,25 @@ function _sequenceUnknown(writeError, readError) {
 export async function allocateFiscalSequence(lock, lastMovement) {
     await assertFiscalLedgerLock(lock);
     const yearKey = _localYear();
-    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(String(lastMovement?.numSerieFactura || ""));
+    const rawLastInvoiceNumber = lastMovement?.numSerieFactura;
+    const lastInvoiceNumber = rawLastInvoiceNumber == null
+        ? ""
+        : String(rawLastInvoiceNumber).trim();
+    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(lastInvoiceNumber);
+    if (rawLastInvoiceNumber != null && (!lastInvoiceNumber || !invoiceMatch)) {
+        const error = new Error("FISCAL_SEQUENCE_LAST_INVOICE_INVALID");
+        error.code = "FISCAL_SEQUENCE_LAST_INVOICE_INVALID";
+        throw error;
+    }
     const lastYearSequence = invoiceMatch?.[1] === yearKey ? _counter(invoiceMatch[2]) : 0;
+    const lastMovementSequence = lastMovement
+        ? _counter(lastMovement.sequenceNumber)
+        : 0;
+    if (lastMovement && lastMovementSequence <= 0) {
+        const error = new Error("FISCAL_SEQUENCE_LAST_MOVEMENT_INVALID");
+        error.code = "FISCAL_SEQUENCE_LAST_MOVEMENT_INVALID";
+        throw error;
+    }
 
     for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
         const cashRegister = await getCashRegisterSingleton();
@@ -108,7 +133,7 @@ export async function allocateFiscalSequence(lock, lastMovement) {
         }
 
         const counters = { ...(cashRegister.sequenceCounters || {}) };
-        const previousGlobal = Math.max(_counter(counters.seqGlobal), _counter(lastMovement?.sequenceNumber));
+        const previousGlobal = Math.max(_counter(counters.seqGlobal), lastMovementSequence);
         const previousYear = Math.max(_counter(counters[yearKey]), lastYearSequence);
         const sequenceNumber = previousGlobal + 1;
         const yearSequence = previousYear + 1;

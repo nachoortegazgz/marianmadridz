@@ -46,8 +46,9 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   );
 
   const lineItemsStart = source.indexOf('function _getOrderBookingLineItems(');
-  const lineItemsEnd = source.indexOf('function _getBookingLineItemsTotal(', lineItemsStart);
+  const lineItemsEnd = source.indexOf('function _isOnlinePaymentAllowed(', lineItemsStart);
   assert.ok(lineItemsStart >= 0 && lineItemsEnd > lineItemsStart, 'order booking item resolver must exist');
+  assert.doesNotMatch(source, /function _getBookingLineItemsTotal\(/, 'duplicated fallback amount resolver must stay removed');
   const lineItemsResolver = source.slice(lineItemsStart, lineItemsEnd);
   assert.match(lineItemsResolver, /WIX_CATALOG_APP_IDS\.BOOKINGS/);
   assert.equal(lineItemsResolver.includes('const bookingsAppId = APP_IDS.BOOKINGS;'), false);
@@ -63,6 +64,11 @@ test('PAY-GUARD-02 payment confirmation preserves booking approval state and use
   assert.ok(pairExpansionIndex >= 0, 'staff payment reconciliation must expand the dual pair');
   assert.ok(paymentValidationIndex > pairExpansionIndex, 'paired F2 must be included before payment validation');
   assert.match(confirmFlow, /const linkedBookingIds = citas\.map/);
+  assert.match(source, /resolveOrderLedgerAmount\(order\)/);
+  assert.match(source, /resolveOrderFiscalTaxData\(order\)/);
+  assert.match(confirmFlow, /taxBase: fiscalTaxData\.taxBase/);
+  assert.match(confirmFlow, /taxAmount: fiscalTaxData\.taxAmount/);
+  assert.match(confirmFlow, /tipoImpositivo: fiscalTaxData\.tipoImpositivo/);
 });
 
 

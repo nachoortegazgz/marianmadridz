@@ -51,6 +51,7 @@ import { toUtcRange } from "backend/booking/bookingUtils";
 import { executeBookingSaga, _startLockHeartbeat } from "backend/booking/bookingSaga";
 import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot, generateSlotKey, _lockSlotKeyOrFail, _unlockSlotKey } from "backend/booking/bookingCore";
 import { registerBookingPayment } from "backend/cajas.web.js";
+import { resolveOrderLedgerAmount, resolveOrderFiscalTaxData } from "backend/fiscalOrderData";
 import { rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
 import { logAuditEvent } from "backend/audit";
@@ -207,14 +208,6 @@ function _getOrderBookingLineItems(order) {
     return lineItems.filter(
         (item) => item?.catalogReference?.appId === bookingsAppId
     );
-}
-
-function _getBookingLineItemsTotal(lineItems) {
-    return (lineItems || []).reduce((sum, item) => {
-        const amount = Number(item?.price?.amount ?? item?.price ?? 0) || 0;
-        const quantity = Number(item?.quantity) || 1;
-        return sum + amount * quantity;
-    }, 0);
 }
 
 // REVIEW-BY: 2027-01-31. Retirar el fallback cuando no existan filas
@@ -587,7 +580,7 @@ export const confirmPayment = webMethod(
                 };
             }
 
-            const { finalAmount } = await _getValidatedPaidOrder(
+            const { finalAmount, fiscalTaxData } = await _getValidatedPaidOrder(
                 orderId,
                 bookingIds,
                 requestedAmount,
@@ -609,6 +602,9 @@ export const confirmPayment = webMethod(
                     origen: "WIX_ECOM_PAYMENT_CONFIRM",
                     movementType: MOVEMENT_TYPE.VENTA_ONLINE,
                     channelType: CHANNEL_TYPE.ONLINE,
+                    taxBase: fiscalTaxData.taxBase,
+                    taxAmount: fiscalTaxData.taxAmount,
+                    tipoImpositivo: fiscalTaxData.tipoImpositivo,
                 }
             );
 
@@ -816,15 +812,22 @@ async function _getValidatedPaidOrder(
         }
     }
 
-    const orderTotal =
-        Number(order?.priceSummary?.total?.amount ?? 0) || 0;
-    const lineItemsTotal = _getBookingLineItemsTotal(bookingLineItems);
-    const finalAmount = orderTotal > 0 ? orderTotal : lineItemsTotal;
-
-    if (
-        requestedTotalAmount &&
-        Math.abs(finalAmount - requestedTotalAmount) > 0.01
-    ) {
+    const finalAmount = resolveOrderLedgerAmount(order);
+    if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "Paid order must contain a positive, verifiable total.",
+            { traceId, orderId: normalizedOrderId }
+        );
+    }
+    const fiscalTaxData = resolveOrderFiscalTaxData(order);
+    const requestedAmount = requestedTotalAmount == null
+        ? null
+        : Number(requestedTotalAmount);
+    if (requestedAmount !== null && (
+        !Number.isFinite(requestedAmount) ||
+        Math.abs(finalAmount - requestedAmount) > 0.01
+    )) {
         throw createBookingError(
             ERROR_CODES.INVALID_PAYLOAD,
             "Amount does not match the order.",
@@ -832,7 +835,7 @@ async function _getValidatedPaidOrder(
         );
     }
 
-    return { order, finalAmount, bookingLineItems };
+    return { order, finalAmount, bookingLineItems, fiscalTaxData };
 }
 
 async function _validatePaymentCitaSet(citas, orderId, traceId) {
