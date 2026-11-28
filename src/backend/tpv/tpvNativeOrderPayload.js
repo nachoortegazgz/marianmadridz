@@ -73,7 +73,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
         fail("TPV_ORDER_PREPARATION_INVALID");
     }
     if (typeof prepared.taxIncludedInPrice !== "boolean") fail("TPV_ORDER_TAX_MODE_INVALID");
-    if (String(prepared.taxCurrency || SDK_CONFIG.CURRENCY_CODE).toUpperCase() !== "EUR") {
+    if (String(prepared.taxCurrency || "").toUpperCase() !== SDK_CONFIG.CURRENCY_CODE) {
         fail("TPV_ORDER_CURRENCY_INVALID");
     }
 
@@ -100,10 +100,17 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
         const lineSubtotalMinor = toMinorUnits(line.subtotalNeto, "ORDER_LINE_SUBTOTAL");
         const lineTaxMinor = toMinorUnits(line.impuestosImporte, "ORDER_LINE_TAX");
         const lineTotalMinor = toMinorUnits(line.totalLinea, "ORDER_LINE_TOTAL");
-        if (unitPriceMinor <= 0 || !Number.isSafeInteger(unitPriceMinor * quantity) ||
+        const catalogLineTotalMinor = unitPriceMinor * quantity;
+        const expectedCatalogAmountMinor = line.taxIncludedInPrice ? lineTotalMinor : lineSubtotalMinor;
+        if (unitPriceMinor <= 0 || !Number.isSafeInteger(catalogLineTotalMinor) ||
+            catalogLineTotalMinor !== expectedCatalogAmountMinor ||
             lineSubtotalMinor + lineTaxMinor !== lineTotalMinor) {
             fail("TPV_ORDER_LINE_TOTAL_MISMATCH:" + index);
         }
+        if (line.varianteId && !GUID.test(String(line.varianteId))) {
+            fail("TPV_ORDER_VARIANT_INVALID:" + index);
+        }
+        if (!String(line.concepto || "").trim()) fail("TPV_ORDER_LINE_NAME_MISSING:" + index);
 
         const { taxRate, taxBreakdown } = mapTaxBreakdown(line.desgloseImpuestos);
         const breakdownTaxMinor = taxBreakdown.reduce((sum, item) =>
@@ -151,11 +158,18 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
         fail("TPV_ORDER_SUMMARY_MISMATCH");
     }
 
+    const buyerContactId = String(buyer.contactId || "").trim();
+    if (buyerContactId && !GUID.test(buyerContactId)) fail("TPV_ORDER_BUYER_CONTACT_INVALID");
+    const buyerEmail = String(buyer.email || "").trim().toLowerCase();
+    if (buyerEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(buyerEmail)) {
+        fail("TPV_ORDER_BUYER_EMAIL_INVALID");
+    }
+
     const order = {
-        ...(GUID.test(String(buyer.contactId || "")) ? {
+        ...(buyerContactId ? {
             buyerInfo: {
-                contactId: String(buyer.contactId),
-                ...(buyer.email ? { email: String(buyer.email).trim().toLowerCase() } : {}),
+                contactId: buyerContactId,
+                ...(buyerEmail ? { email: buyerEmail } : {}),
             },
         } : {}),
         lineItems,
