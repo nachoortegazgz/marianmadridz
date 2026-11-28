@@ -5,7 +5,7 @@
  * HTML Component contract: MM_READY/MM_CONTEXT and request/response pairs.
  */
 import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widgetBridge";
-import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial, cerrarSesionCaja } from "backend/tpv/tpvCaja.web";
+import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial } from "backend/tpv/tpvCaja.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
 import { exportarMovimientos } from "backend/tpv/tpvExport.web";
@@ -18,7 +18,6 @@ import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 const REQUEST_TYPES = Object.freeze([
     "CASHIER_STATE",
     "SESSION_OPEN",
-    "SESSION_CLOSE",
     "MOVEMENTS_EXPORT",
     "CATALOG_SERVICES",
     "CATALOG_PRODUCTS",
@@ -302,16 +301,6 @@ async function dispatch(message) {
                 reason: optionalString(payload.reason, 200) || "Apertura desde TPV",
             });
         }
-        case "SESSION_CLOSE":
-            return cerrarSesionCaja({
-                sessionId: optionalString(payload.sessionId, 160) || "",
-                arqueo: {
-                    contadoEfectivo: numeric(payload.contadoEfectivo, "COUNTED_CASH"),
-                    ...(payload.contadoTarjeta === undefined ? {} : { contadoTarjeta: numeric(payload.contadoTarjeta, "COUNTED_CARD") }),
-                },
-                observaciones: optionalString(payload.observaciones, 500) || "",
-                idempotencyKey: key,
-            });
         case "MOVEMENTS_EXPORT":
             return exportarMovimientos({
                 desde: optionalString(payload.desde, 80),
