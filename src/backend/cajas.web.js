@@ -618,6 +618,10 @@ function _resolveFiscalBase({ amount, taxRate, taxBase, taxAmount, irpfWithholdi
         resolvedTaxAmount = _roundMoney(base * taxRate);
     }
 
+    if (!Number.isFinite(base) || base < 0 ||
+        !Number.isFinite(resolvedTaxAmount) || resolvedTaxAmount < 0) {
+        return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INVALID", message: "El cálculo fiscal produjo una base o cuota inválida." };
+    }
     const expectedTotal = _roundMoney(
         base + resolvedTaxAmount + surchargeAmount - irpfWithholdingAmount
     );
@@ -776,9 +780,11 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
         let surchargeAmount = readOptionalFiscalNumber(inDto.surchargeAmount, "surchargeAmount");
 
         if (surchargeRate > 0 && surchargeAmount === 0) {
-            const baseForSurcharge = _roundMoney(
-                amount / (1 + taxRate)
-            );
+            const baseForSurcharge = inDto.taxBase === undefined || inDto.taxBase === null
+                ? _roundMoney((amount + irpfWithholdingAmount) / (1 + taxRate))
+                : _readRequiredLedgerAmount(
+                    inDto, "taxBase", inDto.taxBase, "FISCAL_NUMERIC_FIELD_INVALID"
+                );
             surchargeAmount = _roundMoney(baseForSurcharge * surchargeRate);
         }
 
