@@ -317,6 +317,7 @@ body {
           Ticket actual
           <span>
             <button id="selectClient" class="btn">Cliente</button>
+            <button id="viewCustomerBookings" class="btn" disabled>Reservas</button>
             <button id="clearTicket" class="btn danger">Vaciar</button>
           </span>
         </h2>
@@ -538,6 +539,7 @@ body {
     tabServicios: "readCatalog",
     tabProductos: "readCatalog",
     selectClient: "searchCustomers",
+    viewCustomerBookings: "searchCustomers",
     printLast: "printReceipt",
   });
   const SESSION_REQUIRED_CAPABILITIES = new Set([
@@ -750,6 +752,8 @@ body {
     $("selectClient").textContent = state.customerIdentityId
       ? "Cliente: " + state.customerLabel
       : "Cliente";
+    $("viewCustomerBookings").disabled = !state.customerIdentityId ||
+      state.capabilities.searchCustomers !== true;
   }
 
   async function searchCustomers() {
@@ -779,6 +783,73 @@ body {
     });
   }
 
+  async function viewCustomerBookings() {
+    if (!state.customerIdentityId) throw new Error("Selecciona primero un cliente.");
+    let cursor = null;
+    const items = [];
+    openModal("Reservas de " + (state.customerLabel || "cliente"), `
+      <div id="customerBookingsList" class="status">Cargando reservas de Wix Bookings…</div>
+      <button id="loadMoreCustomerBookings" type="button" class="btn" style="display:none;margin-top:10px;">Cargar más</button>
+    `, async () => ({ keepOpen: true }));
+
+    const list = $("customerBookingsList");
+    const more = $("loadMoreCustomerBookings");
+    const render = () => {
+      list.innerHTML = items.length
+        ? items.map((booking) => {
+            const start = new Date(booking.startDate);
+            const date = Number.isNaN(start.getTime()) ? "Fecha no disponible" :
+              new Intl.DateTimeFormat("es-ES", {
+                timeZone: "Europe/Madrid",
+                dateStyle: "short",
+                timeStyle: "short",
+              }).format(start);
+            const payment = ({
+              PAID: "Pagada",
+              PARTIALLY_PAID: "Parcial",
+              NOT_PAID: "Pendiente de pago",
+              UNDEFINED: "Pago no definido",
+              EXEMPT: "Exenta",
+              REFUNDED: "Reembolsada",
+              FAILED: "Pago fallido",
+            })[booking.paymentStatus] || booking.paymentStatus;
+            const status = ({
+              CONFIRMED: "Confirmada",
+              PENDING: "Pendiente de confirmación",
+              CREATED: "Creada",
+            })[booking.status] || booking.status;
+            return `
+              <article class="ticket-line" style="margin:8px 0;padding:10px;border:1px solid var(--border);border-radius:8px;">
+                <strong>${esc(booking.serviceName || "Servicio")}</strong>
+                <div>${esc(date)}</div>
+                <div>${esc(status)} · ${esc(payment)}</div>
+                <div>${esc(booking.staffName || "Profesional sin asignar")}</div>
+                <div>${esc(booking.locationName || "Ubicación no indicada")}</div>
+                ${booking.doubleBooked ? '<strong class="danger">Conflicto de agenda: doble reserva</strong>' : ""}
+              </article>`;
+          }).join("")
+        : "<p>Este cliente no tiene reservas activas en Wix Bookings.</p>";
+    };
+    const loadPage = async () => {
+      more.disabled = true;
+      more.textContent = "Cargando…";
+      const result = await call("CUSTOMER_BOOKINGS", {
+        contactId: state.customerIdentityId,
+        limit: 50,
+        cursor,
+      }, "CUSTOMER_BOOKINGS_RES");
+      const pageItems = Array.isArray(result?.items) ? result.items : [];
+      items.push(...pageItems);
+      cursor = result?.pagingMetadata?.cursors?.next || null;
+      render();
+      more.style.display = cursor ? "" : "none";
+      more.disabled = false;
+      more.textContent = "Cargar más";
+    };
+    more.onclick = () => loadPage().catch((e) => error(e));
+    await loadPage();
+  }
+
   $("selectClient").onclick = () => {
     openModal("Seleccionar cliente", `
       <input id="customerSearch" class="field" maxlength="100" placeholder="Nombre o correo del cliente">
@@ -800,6 +871,8 @@ body {
       toast("Cliente quitado.");
     };
   };
+
+  $("viewCustomerBookings").onclick = () => runOperation(viewCustomerBookings);
 
   function updateControlAvailability() {
     const operationalStatus = state.session?.operationalStatus || state.session?.status || "SIN_SESION";
