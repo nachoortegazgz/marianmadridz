@@ -527,6 +527,7 @@ export async function registrarEventoEconomico(input) {
                 "tipoImpositivo",
                 { min: 0, max: 1 }
             ),
+            accountingAmount: normalizeAccountingAmount(input),
         };
     } catch (error) {
         return {
@@ -681,7 +682,7 @@ export async function registrarEventoEconomico(input) {
     // literales AEAT; los aliases historical del caller ya fueron promovidos por
     // normalizeMovementKeys y NUNCA se persisten).
     const movementTypeRaw = _safeTrim(input.movementType);
-    const accountingAmount = normalizeAccountingAmount(input);
+    const accountingAmount = fiscalAmounts.accountingAmount;
     const canonInvoiceNumber = _safeTrim(input.numSerieFactura) || seq.numSerieFactura;
     const canonIssueDate = _safeTrim(input.fechaExpedicionFactura) ||
         _safeTrim(input.fechaOperacion) ||
