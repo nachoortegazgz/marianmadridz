@@ -7,6 +7,30 @@ on:
         description: HTTPS Preview URL opened from Wix Editor / Local Editor for this commit
         required: true
         type: string
+      mode:
+        description: Start with read-only smoke; E2E writes require explicit isolation confirmation
+        required: true
+        type: choice
+        options:
+          - read-only
+          - e2e
+        default: read-only
+      confirm_writes:
+        description: Type YES only when explicitly authorizing operational test writes
+        required: true
+        type: choice
+        options:
+          - NO
+          - YES
+        default: NO
+      data_isolation_confirmed:
+        description: Type YES only after confirming the Wix CMS Sandbox is enabled and isolated
+        required: true
+        type: choice
+        options:
+          - NO
+          - YES
+        default: NO
 
 permissions:
   contents: read
@@ -49,6 +73,14 @@ jobs:
             throw new Error("WIX_PREVIEW_URL must be an HTTPS Wix Editor Preview URL");
           }
           NODE
+      - name: Require explicit authorization for operational E2E
+        if: inputs.mode == 'e2e'
+        env:
+          CONFIRM_WRITES: ${{ inputs.confirm_writes }}
+          DATA_ISOLATION_CONFIRMED: ${{ inputs.data_isolation_confirmed }}
+        run: |
+          test "$CONFIRM_WRITES" = "YES" || { echo "::error::E2E writes were not explicitly authorized"; exit 1; }
+          test "$DATA_ISOLATION_CONFIRMED" = "YES" || { echo "::error::Wix CMS Sandbox isolation has not been confirmed"; exit 1; }
       - run: npm ci
       - name: Decode authenticated browser state
         env:
@@ -70,6 +102,9 @@ jobs:
           WIX_STORAGE_STATE_PATH: ${{ runner.temp }}/wix-auth/storage-state.json
           WIX_TPV_E2E_REPORT: ${{ runner.temp }}/wix-tpv-e2e.json
           WIX_TPV_PAGE_PATH: /tpv
+          WIX_TPV_E2E_MODE: ${{ inputs.mode }}
+          WIX_TPV_E2E_ALLOW_WRITES: ${{ inputs.confirm_writes }}
+          WIX_TPV_DATA_ISOLATION_CONFIRMED: ${{ inputs.data_isolation_confirmed }}
         run: |
           export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
           node scripts/wix-preview-tpv-e2e.mjs
