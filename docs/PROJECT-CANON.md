@@ -15,6 +15,32 @@ El estado operativo se consulta en [STATE-NOW](STATE-NOW.md); los gates en [RELE
 
 Ante contradicciones, separar autoridad de negocio, contrato técnico, implementación y comportamiento observado. Registrar evidencia y resolver antes de cambiar código/datos.
 
+
+## Directriz clave — cero bloqueos silenciosos
+
+**Regla obligatoria para todas las capas y todos los flujos:** ningún writer, webhook, WebMethod, job, proceso de recuperación ni validación puede detener, omitir, descartar o dejar una operación sin persistir de forma silenciosa.
+
+1. Todo rechazo o salida anticipada debe producir un resultado explícito, estructurado y observable. Como mínimo: `code` estable, operación/flujo, condición que falló, campo o dependencia afectada, causa técnica disponible, severidad, `traceId` y corrección/requisito para continuar. Incluir `transactionId` y claves de correlación cuando existan; nunca inventarlos.
+2. Cuando el dato recibido sea válido pero esté en una representación admitida no canónica, aplicar una función de normalización determinista, pura y documentada antes de validar/persistir. La normalización debe preservar el significado y no descartar información relevante.
+3. Cuando falten datos obligatorios, haya ambigüedad, contradicción o un valor inválido, no inventar defaults ni convertirlo silenciosamente a `0`, `null`, `false`, cadena vacía, estado alternativo o éxito. Devolver error accionable y generar log estructurado con contexto seguro.
+4. Si el flujo puede continuar de forma segura sin el paso secundario, persistir el resultado principal y marcar explícitamente `PARTIAL` / `PENDING_RECOVERY`, con claim/outbox o mecanismo de recuperación trazable. Nunca devolver `SUCCESS` si la persistencia o proyección esperada no se completó.
+5. Los logs deben usar el generador canónico de errores/eventos, con redacción de secretos y PII. No duplicar mensajes ad hoc ni registrar payloads sensibles. El log no sustituye al error devuelto al consumidor ni al registro transaccional requerido.
+6. Los errores de proveedor, Wix Data, permisos, configuración, esquema, concurrencia, idempotencia y timeout incierto se distinguen; no convertir un fallo de lectura en ausencia, un fallo de insert en éxito, ni una respuesta inválida en colección vacía.
+7. Cada condición de bloqueo/early return debe tener prueba positiva y negativa que demuestre: código estable, log emitido, datos no perdidos, ausencia de mutación indebida y posibilidad de recuperación cuando corresponda.
+8. La observabilidad debe permitir calcular por flujo: datos recibidos, datos esperados aplicables, datos normalizados, datos rechazados con causa, datos persistidos, datos conciliados y pendientes de recuperación. Los rechazos no se excluyen del denominador para maquillar el 100 %.
+
+**Distinción esencial:** normalizar no significa reparar silenciosamente datos incorrectos. Normalizar es convertir representaciones equivalentes permitidas por el contrato; si el significado o la validez no puede demostrarse, se rechaza con error detallado. Los bloqueos justificados pueden existir, pero nunca ser silenciosos ni genéricos.
+
+**Criterio de aceptación:** cero bloqueos silenciosos; 100 % de salidas bloqueantes/anticipadas con error accionable y log correlacionado; 100 % de datos aplicables contabilizados como persistidos, rechazados con causa o pendientes explícitos, sin pérdidas ni ocultación.
+
+## Datos sensibles y fixtures de prueba
+
+- En documentación, fixtures, capturas, logs y evidencias se sustituyen los datos sensibles por placeholders realistas, coherentes y claramente sintéticos. No copiar datos reales de clientes, empleados o terceros.
+- **Excepción explícita del propietario para este proyecto:** Nacho Ortega es un cliente de prueba. Los contactos `nachoortegazgz@gmail.com` y `666724634` quedan autorizados como datos de contacto seguros para identificar ese fixture de prueba en los flujos controlados del proyecto.
+- Esta excepción es específica de ese cliente de prueba y de esos dos valores. No convierte otros datos personales en seguros ni autoriza a reutilizarlos como credenciales, secretos, datos de otros clientes o contactos de producción.
+- Los logs deben seguir minimizando datos: usar identificadores de fixture/correlación y no volcar payloads completos. La excepción de fixture no justifica registrar indiscriminadamente información personal.
+- Mantener metadatos de procedencia y condición sintética conforme al contrato; no presentar el fixture como cliente real ni como operación económica real.
+
 ## Capas y responsabilidades
 
 - **Capa 0 — fundación transversal:** configuración, seguridad, validación, normalización, errores, acceso a datos, logging, utilidades compartidas y primitivas de persistencia.

@@ -7,6 +7,7 @@
 
 - [STATE-NOW](STATE-NOW.md): estado, evidencia fechada y pendientes. Fuente del estado actual.
 - [PROJECT-CANON](PROJECT-CANON.md): arquitectura, autoridad e invariantes.
+- Directriz transversal obligatoria en PROJECT-CANON: cero bloqueos silenciosos; normalización determinista cuando proceda y error/log detallado, correlacionado y accionable para cada rechazo o salida anticipada.
 - [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores.
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
 - [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix y lectura CMS; snapshot 27-11-2026, no live.
