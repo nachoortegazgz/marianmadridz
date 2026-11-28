@@ -78,7 +78,7 @@ export const registrarMovimientoCaja = webMethod(
         const traceId = makeTraceId("tpv-cash-movement");
 
         try {
-            await requireAdmin(traceId);
+            await requireCajero(traceId);
             assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const movementType = String(input.movementType || "").trim().toUpperCase();
