@@ -2,6 +2,7 @@ import { auth } from "@wix/essentials";
 import { orders, orderTransactions } from "@wix/ecom";
 import { buildTpvNativeOrderPayload } from "backend/tpv/tpvNativeOrderPayload";
 import { fromMinorUnits, toMinorUnits } from "backend/tpv/tpvUtils";
+import { SDK_CONFIG } from "backend/internalConfig";
 
 const createOrderElevated = auth.elevate(orders.createOrder);
 const getOrderElevated = auth.elevate(orders.getOrder);
@@ -214,6 +215,7 @@ export async function addTpvNativeCashPayment(orderId, amountMinor, { allowCreat
     }
 
     const order = await readTpvNativeOrder(orderId);
+    if (order.currency !== SDK_CONFIG.CURRENCY_CODE) fail("TPV_WIX_ORDER_CURRENCY_MISMATCH");
     if (amountMinor !== order.totalMinor) fail("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH");
 
     const existing = await listTpvNativeOrderPayments(orderId);
@@ -233,7 +235,7 @@ export async function addTpvNativeCashPayment(orderId, amountMinor, { allowCreat
         const amount = fromMinorUnits(amountMinor).toFixed(2);
         try {
             await addPaymentsElevated(orderId, [{
-                amount: { amount },
+                amount: { amount, currency: SDK_CONFIG.CURRENCY_CODE },
                 refundDisabled: false,
                 status: "APPROVED",
                 regularPaymentDetails: {
