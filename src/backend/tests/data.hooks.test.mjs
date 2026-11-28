@@ -138,8 +138,10 @@ function cajaBase() {
   return {
     eventType: IC.EVENT_TYPE ? Object.values(IC.EVENT_TYPE)[0] : 'VENTA_LINEA',
     movementType: IC.MOVEMENT_TYPE.VENTA,
-    amount: 100,
+    amount: 82.64,
     totalAmount: 100,
+    taxBase: 82.64,
+    taxAmount: 17.36,
     numSerieFactura: 'FAC-SANDBOX-0001',
     sequenceNumber: 1,
     transactionId: 'TX-SANDBOX-0001',
@@ -437,6 +439,9 @@ test('HOOK-CAJA-07 persists exact CMS field IDs and OBJECT payloads', () => {
   const item = {
     ...cajaBase(),
     totalAmount: 15,
+    amount: 0,
+    taxBase: 0,
+    taxAmount: 0,
     fiscalRole: 'RECEPTOR',
     nifEmisor: 'B12345674',
     nifDestinatario: '12345678Z',
