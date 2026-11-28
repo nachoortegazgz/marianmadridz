@@ -1,7 +1,7 @@
 # ESQUEMA CMS — Marian Madrid
 
 **Estado:** baseline físico consolidado, solo lectura.  
-**Corte Wix:** 27-11-2026.  
+**Corte Wix:** 28-11-2026.  
 **Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
 **Entorno:** Wix Editor clásico, Velo habilitado, sitio Draft.  
 **Fuente:** Wix Data Collections API y Data Items API con consistentRead=true.  
@@ -16,7 +16,7 @@
 - Los campos _id, _createdDate, _updatedDate y _owner son campos de sistema cuando aparecen en el esquema.
 - Los campos TEXT que contienen IDs no son referencias CMS tipadas salvo que Wix declare REFERENCE o MULTI_REFERENCE.
 - Los nombres, tipos y referencias siguientes se copian de la lectura física. No se infieren enums ni reglas de negocio a partir del tipo.
-- Los recuentos son lecturas de items en el corte, no prueba de que los registros sean operaciones económicas reales. Por política del proyecto, todo registro anterior al despliegue oficial de producción de 2027 es sintético.
+- Los recuentos son lecturas de items en el corte, no prueba de que los registros sean operaciones económicas reales. Los registros no se clasifican por entorno ni por marcadores; la fecha y el cliente de prueba seleccionado son el único contexto diferenciador.
 
 ## 2. Inventario actual
 
@@ -180,11 +180,11 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 | CitasF2 | 12 items: 11 CONFIRMED, 1 PENDING; 10 NOT_PAID, 2 PENDING_LEDGER; 6 SIMPLE, 3 DUAL_F1 y 3 DUAL_F2. Todos los 11 campos required y los tipos físicos pasan. |
 | ComplementosCatalogo | 36 items. |
 | ControlOperativo | 81 items: 9 SLOT_LOCK liberados, 6 IDEMPOTENCY completados, 6 DAYS_CACHE (1 INVALIDATED y 5 sin status), 4 RATE_LIMIT activos, 15 WEBHOOK_EVENT completados, 33 WEBHOOK_CLAIM completados, 5 TPV_FUNCTIONAL_TEST completados y 3 COMPENSATION PENDING_RECOVERY. |
-| HistoricoCierresZ | 1 item SIMULATED / TPV_CUSTOM_QA; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required. Se conserva sin modificar por append-only. |
-| LibroAsientosContablesDetalle | 3 items; los 3 tienen projectionStatus=SIMULATED_ONLY. |
+| HistoricoCierresZ | 1 item; faltan fiscalPeriod, totalTaxAmount, totalTaxBase y operationDate, todos required. Se conserva sin modificar por append-only. |
+| LibroAsientosContablesDetalle | 3 items; la proyección histórica no satisface el contrato de un asiento contabilizado. |
 | MapaStaff | 5 items: STAFF=3, TERCERO=1, GESTORIA=1. No existe CONFIG_SISTEMA. Se retiró schemaVersion="N/A" de los 3 STAFF; el campo es opcional y no se infirió una versión. |
-| MovimientosCaja | 5 items: movementType SALE=2 y REFUND=1; recordSource=TPV_QA_DEVELOPMENT en 3. Un item no tiene transactionId. |
-| RegistroIntegracion | 3 items, todos deliveryStatus=NOT_SENT; 2 TPV_SALE_SIMULATED y 1 TPV_REFUND_SIMULATED. |
+| MovimientosCaja | 5 items históricos: movementType SALE=2 y REFUND=1. Un item no tiene transactionId; las filas no contienen el sobre canónico de sesión/hash/secuencia y se conservan sin modificación. |
+| RegistroIntegracion | 3 items, todos deliveryStatus=NOT_SENT. |
 | RegistrosHorariosStaff | 0 items. |
 | ServiciosCatalogo | 95 items: 94 SERVICE y 1 PRICING_PLAN. bookingsStaffNames/bookingsStaff son ARRAY_STRING; los 93 valores existentes son arrays de cadenas y 2 items los dejan vacíos. |
 | TransaccionesTPV | 0 items. |
@@ -192,8 +192,8 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 ### Incidencias de conformidad de datos
 
 1. MovimientosCaja: los cinco items carecen de varios campos required del esquema físico: hash, numSerieFactura, sequenceNumber, previousRecordHash, recordTimestamp, schemaVersion, operationDescription, staffResourceId, tipoFactura, fechaExpedicionFactura, tipoImpositivo y fiscalPeriod. Dos items carecen además de movementType, totalAmount y channelType; uno carece de transactionId.
-2. MovimientosCaja: existen claves persistidas que no están declaradas en el esquema actual, entre ellas synthetic, cashDelta, source, gatewayResponse, operationType, reconciliationStatus, testCase, changeReturned, operationDateHour, status, customer, cardDelta, otherDelta, amountReceived y createdAt. Wix Data permite persistir propiedades ajenas al esquema; esto no las convierte en campos canónicos.
-3. HistoricoCierresZ: el único item no satisface cuatro campos required. Su estado SIMULATED/Z_SIMULATED impide tratarlo como cierre operativo válido.
+2. MovimientosCaja: existen propiedades adicionales persistidas que no están declaradas en el esquema actual. Wix Data permite persistir propiedades ajenas al esquema; esto no las convierte en campos canónicos.
+3. HistoricoCierresZ: el único item no satisface cuatro campos required; no acredita un cierre operativo válido.
 4. CajaActual: el registro incluye posOrderId, posTransactionId y posPaymentId, que no existen en el esquema físico. La sesión está ABIERTA; no cerrarla ni reutilizarla como fixture.
 5. MapaStaff: un item contiene la clave no declarada email. No existe CONFIG_SISTEMA en los cinco items leídos, aunque el esquema sí contiene los campos para recordType, taxId, legalName, productionActivationAt y configuración fiscal.
 6. TransaccionesTPV: la colección está vacía y su esquema no declara transactionId. No confundir sessionId/requestFingerprint de la intención TPV con transactionId del movimiento fiscal en MovimientosCaja.
@@ -205,7 +205,7 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 
 Se releen las 41 colecciones con paginación completa y consistentRead=true: 12 NATIVE (242 items) y 29 WIX_APP (489 items). En las colecciones propias, tras las dos correcciones descritas en el informe enlazado, no quedan discrepancias de tipo en los campos declarados. Persisten anomalías históricas en ledgers append-only y propiedades raíz no declaradas en tres colecciones; no se han reescrito. La colección WIX_APP StoreCatalog/Products omite variantsInfo en 24 items, pero el API oficial Catalog V3 confirma 24 productos y 30 variantes con correspondencia de los 24 IDs; no se parchea una colección administrada por Wix. Informe completo: [auditoría integral CMS 27-11-2026](audits/2026-11-27-full-cms-collections-audit.md).
 
-Los datos actuales son anteriores al despliegue oficial de producción de 2027 y, por la política del proyecto, son sintéticos. Los marcadores explícitos no son uniformes: por ejemplo, solo tres de los cinco movimientos indican recordSource=TPV_QA_DEVELOPMENT. No inferir naturaleza real a partir de la ausencia de marcador.
+Los registros se conservan como evidencia histórica. No se utilizan etiquetas de entorno para decidir su tratamiento. Los nuevos movimientos se crean mediante el writer TPV canónico con sesión, transactionId, secuencia, hash y correlación; las correcciones históricas se realizan mediante nuevos eventos append-only.
 
 **Acción de seguridad:** no modificar, completar, borrar ni reconciliar estos items desde esta auditoría. Los defectos de conformidad deben resolverse mediante los writers y procedimientos de recuperación autorizados, preservando append-only donde corresponda.
 
