@@ -1568,6 +1568,20 @@ test('P0-FISCAL-TX-03 manual fiscal writer rejects missing VAT rate before ledge
   assert.equal(result.status, 'ERROR');
   assert.equal(result.error.code, 'FISCAL_TAX_RATE_REQUIRED');
   assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+
+  const percentRate = await cajas.registerManualTransaction({
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta con tipo expresado en porcentaje',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    tipoImpositivo: 21,
+    transactionId: 'p0-percent-vat-rate-0001',
+    channelType: 'PRESENCIAL',
+  });
+  assert.equal(percentRate.status, 'ERROR');
+  assert.equal(percentRate.error.code, 'FISCAL_TAX_RATE_REQUIRED');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
 });
 
 test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
