@@ -91,7 +91,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
     assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
-    assert.match(permissions, /registerCashMovement: staff.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
     for (const capability of ["issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
@@ -380,7 +380,7 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(permissions, /readCatalog: true/);
     assert.match(permissions, /searchCustomers: true/);
     assert.match(permissions, /readCashSummary: true/);
-    assert.match(permissions, /readAudit: true/);
+    assert.match(permissions, /readAudit: staff\.rolWebsite !== "ESTILISTA"/);
     assert.match(permissions, /acceptPayment: false/);
     assert.match(permissions, /printReceipt: false/);
     assert.match(html, /SESSION_REQUIRED_CAPABILITIES/);
