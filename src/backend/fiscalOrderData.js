@@ -196,7 +196,6 @@ export function resolveOrderFiscalTaxData(order) {
     };
 }
 
-const log = logger;
 const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const getOrderElevated = auth.elevate(orders.getOrder);
 const listTransactionsForSingleOrderElevated = auth.elevate(orderTransactions.listTransactionsForSingleOrder);
