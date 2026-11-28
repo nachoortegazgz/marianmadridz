@@ -12,6 +12,7 @@ import {
     readInvoiceIssueDate,
     readMovementField,
     readTaxAmount,
+    readTotalAmount,
     readInvoiceType,
     readIssuerTaxId,
     readRecipientTaxId,
@@ -67,7 +68,7 @@ export function buildEventLogFiscalChainPayload(movement, generatedAt) {
     const fechaExpedicionFactura = _safeTrim(readInvoiceIssueDate(movement));
     const tipoFactura = readInvoiceType(movement) || TIPO_FACTURA.F1;
     const taxAmount = readTaxAmount(movement);
-    const totalAmount = Number(movement.totalAmount ?? 0);
+    const totalAmount = readTotalAmount(movement);
     const previousRecordHash = _safeTrim(movement.previousRecordHash);
     const nifEmisor = _safeTrim(readIssuerTaxId(movement));
     const tipoRectificativa = _safeTrim(readMovementField(movement, "tipoRectificativa"));
