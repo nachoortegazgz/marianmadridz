@@ -44,16 +44,16 @@ for (const suite of suites) {
   totalFail += fail;
   if (status !== 'OK') {
     failedSuites += 1;
-    const failureLines = output.split(/\\r?\\n/)
+    const failureLines = output.split(/\r?\n/)
       .filter((line) => /^(not ok |Error:|AssertionError|TypeError:|ReferenceError:|SyntaxError:|ERR_[A-Z_]+)/.test(line.trim()))
       .slice(0, 12);
     const failureSummary = (failureLines.length
       ? failureLines.join(' | ')
-      : output.slice(-1800).replace(/\\s+/g, ' ')).slice(0, 3000);
+      : output.slice(-1800).replace(/\s+/g, ' ')).slice(0, 3000);
     const annotation = failureSummary
       .replace(/%/g, '%25')
-      .replace(/\\r/g, '%0D')
-      .replace(/\\n/g, '%0A');
+      .replace(/\r/g, '%0D')
+      .replace(/\n/g, '%0A');
     console.error(`::error title=Offline suite failure (${suite})::${annotation}`);
   }
   report.push({
