@@ -2751,7 +2751,7 @@ async function _persistReaderBookingProjection(booking, intent, pairToken, trace
         startDate,
         endDate,
         bookingType: intent.bookingType,
-        revision: Number(booking?.revision) || 1,
+        revision,
         bookingStatus: booking?.status || intent.bookingStatus,
         paymentStatus: booking?.paymentStatus || intent.paymentStatus,
         totalAmount,
