@@ -51,7 +51,7 @@ import { toUtcRange } from "backend/booking/bookingUtils";
 import { executeBookingSaga, _startLockHeartbeat } from "backend/booking/bookingSaga";
 import { normalizeError, _handleError, ERROR_CODES, createBookingError, _updateCitaSafe, _forceStaffInPristineSlot, generateSlotKey, _lockSlotKeyOrFail, _unlockSlotKey } from "backend/booking/bookingCore";
 import { registerBookingPayment } from "backend/cajas.web.js";
-import { resolveOrderLedgerAmount, resolveOrderFiscalTaxData } from "backend/events.js";
+import { resolveOrderLedgerAmount, resolveOrderFiscalTaxData } from "backend/fiscalOrderData";
 import { rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
 import { logAuditEvent } from "backend/audit";
