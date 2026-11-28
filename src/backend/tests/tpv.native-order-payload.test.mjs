@@ -69,6 +69,8 @@ test("maps mixed Wix Stores and Bookings lines to one POS order", () => {
     assert.equal(result.order.channelInfo.type, "POS");
     assert.equal(result.order.channelInfo.externalOrderId, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19");
     assert.equal(result.order.currency, "EUR");
+    assert.equal(result.order.status, "APPROVED");
+    assert.equal(result.order.paymentStatus, "NOT_PAID");
     assert.equal(result.order.buyerInfo.contactId, "9f1f0a0a-1111-4111-8111-111111111111");
     assert.equal(result.order.lineItems.length, 2);
     assert.deepEqual(result.order.lineItems[0].catalogReference, {
