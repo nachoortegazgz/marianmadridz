@@ -1,6 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
-import { requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvLedgerTypeSupported, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
@@ -15,7 +15,7 @@ export const obtenerResumenCaja = webMethod(
         const traceId = makeTraceId("tpv-session-summary");
 
         try {
-            await requireCajero(traceId);
+            await requireTpvOperator(traceId);
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
             const session = await latestOpenTpvSession();
