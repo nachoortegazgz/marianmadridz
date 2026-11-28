@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { getMyCajeroContext, requireCajero } from "backend/security";
+import { getMyCajeroContext, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { validateSaleDraft } from "backend/tpv/tpvValidation";
 import { error as tpvError, ok as tpvOk, pending as tpvPending } from "backend/tpv/tpvEnvelope";
@@ -99,7 +99,7 @@ export const validarVentaBorrador = webMethod(
     Permissions.SiteMember,
     async (venta = {}) => {
         const traceId = makeTraceId("tpv-sale-prepare");
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
         try {
             assertTpvPaymentMethodsSupported(venta?.pagos);
             const prepared = await prepareTpvSaleCatalog(venta?.lineas);
