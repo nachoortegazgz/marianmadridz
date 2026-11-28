@@ -398,7 +398,7 @@ test('FISCAL-BOOK-02 issued-sales ledger rejects missing accountingAmount', asyn
   );
 });
 
-test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
+test('FISCAL-SINGLE-01 all sequence-valid movements contribute regardless of smoke or simulation markers', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
     { _id: 'CONFIG_SISTEMA_FISCAL', recordType: IC.RECORD_TYPE.CONFIG_SISTEMA, taxId: 'B12345674', legalName: 'Marian Madrid', thirdPartyType: 'EMISOR' },
@@ -407,7 +407,7 @@ test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly 
     {
       _id: 'smoke-movement-001',
       fiscalPeriod: '2026-11',
-      sequenceNumber: 0,
+      sequenceNumber: 2,
       recordSource: 'SMOKE_TEST',
       eventType: 'SIMULATED_PAYMENT',
       movementType: 'VENTA_POS_SIMULADA',
@@ -417,13 +417,13 @@ test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly 
       totalAmount: 25,
       paymentMethod: 'EFECTIVO',
       tipoImpositivo: 0.21,
-      hash: 'SIMULATED_HASH',
-      previousRecordHash: 'SIMULATED_PREVIOUS_HASH',
+      hash: 'b'.repeat(64),
+      previousRecordHash: 'a'.repeat(64),
     },
     {
       _id: 'unmarked-simulated-movement-001',
       fiscalPeriod: '2026-11',
-      sequenceNumber: 5,
+      sequenceNumber: 3,
       eventType: 'RESERVA_CONFIRMADA',
       movementType: 'SIMULATED_PAYMENT',
       accountingAmount: 999,
@@ -432,8 +432,8 @@ test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly 
       totalAmount: 999,
       paymentMethod: 'WIX_PAYMENTS',
       tipoImpositivo: 0.21,
-      hash: 'b'.repeat(64),
-      previousRecordHash: 'a'.repeat(64),
+      hash: 'c'.repeat(64),
+      previousRecordHash: 'b'.repeat(64),
     },
     {
       _id: 'real-movement-001',
@@ -456,14 +456,14 @@ test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly 
   const result = await FA.getQuarterlyTaxSummaryInternal(2026, 4, { traceId: 'trace-fiscal-smoke-001' });
 
   assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
-  assert.equal(result.data.totalOperaciones, 1);
-  assert.equal(result.data.totalOperacionesFiscales, 1);
-  assert.equal(result.data.totales.totalVentasBrutas, 27.71);
-  assert.equal(result.data.borradorIva.baseImponibleRegistrada, 22.9);
-  assert.equal(result.data.borradorIva.cuotaIvaRegistrada, 4.81);
+  assert.equal(result.data.totalOperaciones, 3);
+  assert.equal(result.data.totalOperacionesFiscales, 3);
+  assert.equal(result.data.totales.totalVentasBrutas, 1051.71);
+  assert.equal(result.data.borradorIva.baseImponibleRegistrada, 869.18);
+  assert.equal(result.data.borradorIva.cuotaIvaRegistrada, 182.53);
 });
 
-test('FISCAL-SMOKE-02 explicit simulated movements are excluded from issued-sales ledger', async () => {
+test('FISCAL-SINGLE-02 issued-sales ledger includes sequence-valid movements regardless of marker labels', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
     {
@@ -515,8 +515,14 @@ test('FISCAL-SMOKE-02 explicit simulated movements are excluded from issued-sale
   });
 
   assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
-  assert.equal(result.data.totalRegistros, 1);
-  assert.equal(result.data.filas.length, 1);
-  assert.equal(result.data.filas[0].movementType, 'VENTA_ONLINE');
-  assert.equal(result.data.filas[0].totalAmount, 27.71);
+  assert.equal(result.data.totalRegistros, 3);
+  assert.equal(result.data.filas.length, 3);
+  assert.deepEqual(
+    result.data.filas.map((row) => row.movementType),
+    ['VENTA_ONLINE', 'SIMULATED_PAYMENT', 'VENTA_POS_SIMULADA']
+  );
+  assert.deepEqual(
+    result.data.filas.map((row) => row.totalAmount),
+    [27.71, 999, 250]
+  );
 });
