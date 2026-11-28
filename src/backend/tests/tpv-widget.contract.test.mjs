@@ -70,7 +70,8 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
     assert.match(controller, /case "SALE_REGISTER":[\s\S]*?return registrarVenta\(\{/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?return obtenerAuditoriaTPVLista\(/);
-    assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{/);
+    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
+    assert.doesNotMatch(controller, /registrarDevolucion/);
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
