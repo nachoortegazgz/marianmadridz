@@ -64,7 +64,7 @@ export async function uploadAndVerifySharePointPackage(artifact) {
         secret(SECRETS.GRAPH_DRIVE_ID),
         secret(SECRETS.GRAPH_FOLDER_PATH),
     ]);
-    const normalizedFolderPath = String(folderPath || "").trim().replace(/^\\/+|\\/+$/g, "");
+    const normalizedFolderPath = String(folderPath || "").trim().replace(/^\/+|\/+$/g, "");
     if (!normalizedFolderPath || normalizedFolderPath.split("/").some((part) =>
         !part || part === "." || part === ".." || part.includes("\\") || part.includes(":")
     )) throw fail("C3_GRAPH_FOLDER_PATH_INVALID");
