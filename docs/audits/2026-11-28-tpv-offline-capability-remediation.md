@@ -29,7 +29,8 @@ El TPV mantiene un único flujo y no clasifica operaciones como prueba, sandbox 
 
 ## Validación
 
-- Se añadieron aserciones de contrato para la resolución de respuestas PENDING, los mensajes neutrales, apertura por roles autorizados, Ticket Z ADMIN y recuperación idempotente del movimiento/proyección de cierre.
-- CI de esta rama pendiente de ejecución.
+- CI PASS, run `46170554978`: Layer 1 29 suites / 398 tests; Layer 2 16 suites / 263 tests; suite completa 95 suites / 854 tests; SDK eCommerce Cart, Transactions y TPV PASS; npm audit y ESLint PASS.
+- Secret scanning PASS, run `46170554976`.
+- PR #712 fusionada en `main`, commit `2113da1e8b8928ca7e3eb0259ba37bc29a3c922f`.
 - No se hicieron escrituras CMS, cobros, reembolsos, notificaciones, impresiones ni llamadas a AEAT.
 - Wix Runtime y E2E siguen pendientes; la fusión no acredita sincronización con el Editor Wix.
