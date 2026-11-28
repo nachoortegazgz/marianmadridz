@@ -175,27 +175,61 @@ export async function listTpvNativeOrderPayments(orderId) {
  * Records cash already physically received by the cashier.
  * Wix Add Payments records the tender; it does not collect the cash.
  */
-export async function addTpvNativeCashPayment(orderId, amountMinor) {
+async function waitForCashPayment(orderId, amountMinor, attempts = 5) {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const payments = await listTpvNativeOrderPayments(orderId);
+        const matches = payments.filter((payment) => isCashPayment(payment, amountMinor));
+        if (matches.length > 1) fail("TPV_WIX_CASH_PAYMENT_DUPLICATED");
+        if (matches.length === 1) return matches[0];
+        if (attempt + 1 < attempts) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+        }
+    }
+    return null;
+}
+
+async function waitForOrderPaymentStatus(orderId, expectedStatus, attempts = 6) {
+    let order = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        order = await readTpvNativeOrder(orderId);
+        if (order.paymentStatus === expectedStatus) return order;
+        if (order.paymentStatus !== "NOT_PAID" && order.paymentStatus !== "PARTIALLY_PAID") {
+            fail("TPV_WIX_ORDER_PAYMENT_STATUS_UNEXPECTED");
+        }
+        if (attempt + 1 < attempts) {
+            await new Promise((resolve) => setTimeout(resolve, 400));
+        }
+    }
+    return order;
+}
+
+/**
+ * Records cash already physically received by the cashier.
+ * Wix Add Payments records the tender; it does not collect the cash.
+ * allowCreate=false is mandatory when recovering an uncertain previous write.
+ */
+export async function addTpvNativeCashPayment(orderId, amountMinor, { allowCreate = true } = {}) {
     if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) {
         fail("TPV_CASH_PAYMENT_AMOUNT_INVALID");
     }
 
     const order = await readTpvNativeOrder(orderId);
-    if (order.status !== "APPROVED" || order.paymentStatus !== "NOT_PAID") {
-        fail("TPV_WIX_ORDER_NOT_PAYABLE");
-    }
     if (amountMinor !== order.totalMinor) fail("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH");
 
     const existing = await listTpvNativeOrderPayments(orderId);
     const matchingExisting = existing.filter((payment) => isCashPayment(payment, amountMinor));
     if (matchingExisting.length > 1) fail("TPV_WIX_CASH_PAYMENT_DUPLICATED");
+
     let payment = matchingExisting[0] || null;
+    if (payment) {
+        if (payment.status !== "APPROVED") fail("TPV_WIX_CASH_PAYMENT_NOT_APPROVED");
+    } else {
+        if (existing.length > 0) fail("TPV_WIX_ORDER_ALREADY_HAS_PAYMENTS");
+        if (order.status !== "APPROVED" || order.paymentStatus !== "NOT_PAID") {
+            fail("TPV_WIX_ORDER_NOT_PAYABLE");
+        }
+        if (!allowCreate) fail("TPV_WIX_CASH_PAYMENT_NOT_FOUND_AFTER_WRITE");
 
-    if (!payment && existing.length > 0) {
-        fail("TPV_WIX_ORDER_ALREADY_HAS_PAYMENTS");
-    }
-
-    if (!payment) {
         const amount = fromMinorUnits(amountMinor).toFixed(2);
         try {
             await addPaymentsElevated(orderId, [{
@@ -210,28 +244,22 @@ export async function addTpvNativeCashPayment(orderId, amountMinor) {
                 },
             }]);
         } catch (error) {
-            const afterError = await listTpvNativeOrderPayments(orderId);
-            const recovered = afterError.filter((item) => isCashPayment(item, amountMinor));
-            if (recovered.length !== 1) fail("TPV_WIX_CASH_PAYMENT_WRITE_UNKNOWN", error);
-            payment = recovered[0];
+            payment = await waitForCashPayment(orderId, amountMinor);
+            if (!payment) fail("TPV_WIX_CASH_PAYMENT_WRITE_UNKNOWN", error);
         }
-    }
 
-    if (!payment) {
-        const afterWrite = await listTpvNativeOrderPayments(orderId);
-        const matches = afterWrite.filter((item) => isCashPayment(item, amountMinor));
-        if (matches.length !== 1) fail("TPV_WIX_CASH_PAYMENT_READBACK_FAILED");
-        payment = matches[0];
+        if (!payment) payment = await waitForCashPayment(orderId, amountMinor);
+        if (!payment) fail("TPV_WIX_CASH_PAYMENT_READBACK_PENDING");
+        if (payment.status !== "APPROVED") fail("TPV_WIX_CASH_PAYMENT_NOT_APPROVED");
     }
 
     const paymentId = String(payment?._id || payment?.id || "");
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId) ||
-        payment.status !== "APPROVED") {
-        fail("TPV_WIX_CASH_PAYMENT_NOT_APPROVED");
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentId)) {
+        fail("TPV_WIX_CASH_PAYMENT_ID_INVALID");
     }
 
-    const updatedOrder = await readTpvNativeOrder(orderId);
-    if (updatedOrder.paymentStatus !== "PAID") {
+    const updatedOrder = await waitForOrderPaymentStatus(orderId, "PAID");
+    if (updatedOrder?.paymentStatus !== "PAID") {
         fail("TPV_WIX_ORDER_PAYMENT_STATUS_PENDING");
     }
 
