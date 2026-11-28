@@ -183,25 +183,35 @@ export const obtenerReservasClienteTPV = webMethod(
                     },
                 },
                 {
-                    withBookingAllowedActions: false,
+                    withBookingAllowedActions: true,
                 }
             );
 
             const items = (result?.extendedBookings || []).map((entry) => {
                 const booking = entry?.booking || {};
+                const bookingId = String(booking._id || booking.id || "");
                 const bookedEntity = booking.bookedEntity || {};
                 const slot = bookedEntity.slot || bookedEntity.schedule || {};
                 const resource = slot.resource || {};
                 const location = slot.location || {};
+                const startDate = booking.startDate || slot.startDate || null;
+                const endDate = booking.endDate || slot.endDate || null;
+                const paymentStatus = String(booking.paymentStatus || "");
+                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId) ||
+                    !["CREATED", "CONFIRMED", "PENDING"].includes(String(booking.status || "")) ||
+                    !startDate || !endDate ||
+                    !["UNDEFINED", "NOT_PAID", "PAID", "PARTIALLY_PAID", "REFUNDED", "EXEMPT", "FAILED"].includes(paymentStatus)) {
+                    throw new Error("TPV_BOOKING_RECORD_INVALID");
+                }
                 return {
-                    bookingId: booking._id || booking.id || null,
+                    bookingId,
                     serviceId: slot.serviceId || null,
                     scheduleId: slot.scheduleId || null,
                     serviceName: bookedEntity.title || null,
-                    startDate: booking.startDate || slot.startDate || null,
-                    endDate: booking.endDate || slot.endDate || null,
-                    status: booking.status || "UNKNOWN",
-                    paymentStatus: booking.paymentStatus || "UNKNOWN",
+                    startDate,
+                    endDate,
+                    status: booking.status,
+                    paymentStatus,
                     selectedPaymentOption: booking.selectedPaymentOption || null,
                     totalParticipants: Number(booking.totalParticipants || 1),
                     staffName: resource.name || null,
