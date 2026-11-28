@@ -53,11 +53,6 @@ El archivo contiene evidencia técnica útil, pero mezcla snapshots de distintos
 | `VELO-MANIFEST-BOOTSTRAP.md` | EPHEMERAL ARTIFACT — RETAIN | Artefacto temporal de bootstrap. No ejecutar como runbook; consultar workflows y documentación Wix CLI actuales. |
 
 
-### Documentos raíz (0)
-
-| Documento | Clasificación | Resultado y acción |
-|---|---|---|
-
 ### Decisiones ADR (6)
 
 | Documento | Clasificación | Resultado y acción |
