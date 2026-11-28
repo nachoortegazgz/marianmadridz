@@ -27,6 +27,7 @@
 - [Auditoría Capa 0 — 28-11-2026](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente; el nombre del archivo conserva la fecha original.
 - [Conciliación de bugs Capa 0 — 28-11-2026](audits/2026-11-28-capa0-bug-reconciliation.md): hallazgos BUG-001…020 y resultados integrados en PR #670.
 - [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md): cambios integrados y CI offline PASS.
+- [Hardening Capa 0 posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md): sort Wix estricto, redacción ampliada, metadatos JSON-safe y bookingType canónico; 91 suites / 816 tests PASS en el SHA correctivo.
 - [Secretos, importes y configuración Capa 0](audits/2026-11-28-capa0-secrets-money-config.md): errores de secretos, validación monetaria y constantes canónicas.
 - [Contrato transactionId fiscal — 27-11-2026](qa/2026-11-27-p0-fiscal-transaction-contract.md).
 - [Contrato de errores TPV — 27-11-2026](qa/2026-11-27-tpv-actionable-error-contract.md).
