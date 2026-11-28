@@ -14,6 +14,14 @@ test("Ticket Z closes the physical cash projection and writes one CIERRE movemen
     assert.match(cierres, /movementType: "CIERRE"/);
     assert.match(cierres, /await closeTpvCajaSessionProjection\(/);
     assert.match(cierres, /await persistTpvSessionClose\(\{[\s\S]*?sessionId: session\.sessionId/);
+    const summaryCore = await source("src/backend/tpv/tpvCierresCore.js");
+    const html = await source("#htmlTPV.txt");
+    assert.match(summaryCore, /getPendingTpvSales\(session\.sessionId\)/);
+    assert.match(summaryCore, /pendingSalesCount: pendingSales\.length/);
+    assert.match(summaryCore, /pendingSalesGrossMinor/);
+    assert.match(cierres, /pendingSalesCount: Number\(totals\.pendingSalesCount \|\| 0\)/);
+    assert.match(cierres, /pendingSalesGross: fromMinorUnits\(Number\(totals\.pendingSalesGrossMinor \|\| 0\)\)/);
+    assert.match(html, /ventas pendientes de cobro/);
 });
 
 test("Ticket Z retry repairs a missing physical closure without duplicating it", async () => {
