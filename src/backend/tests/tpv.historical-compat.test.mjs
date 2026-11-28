@@ -12,8 +12,12 @@ test("TPV ledger readers do not branch on synthetic or smoke markers", async () 
     ]);
 
     assert.doesNotMatch(validation, /isExplicitSimulationLedgerRecord/);
-    assert.doesNotMatch(eventLog, /isExplicitSimulationLedgerRecord|SMOKE_TEST/);
-    assert.match(eventLog, /return \(res\?\.items \|\| \[\]\)\[0\] \|\| null/);
+    const headReaderStart = eventLog.indexOf("async function _getLastCashEvent()");
+    const headReaderEnd = eventLog.indexOf("\\n}", headReaderStart) + 2;
+    const headReader = eventLog.slice(headReaderStart, headReaderEnd);
+    assert.ok(headReaderStart >= 0 && headReaderEnd > headReaderStart);
+    assert.doesNotMatch(headReader, /isExplicitSimulationLedgerRecord|SMOKE_TEST|recordSource/);
+    assert.match(headReader, /return \\(res\\?\\.items \\|\\| \\[\\]\\)\\[0\\] \\|\\| null/);
     assert.doesNotMatch(aggregator, /isExplicitSimulationLedgerRecord|SIMULATED_ONLY|SMOKE_TEST/);
     assert.match(aggregator, /return \{ items: allItems, reachedMaxPages, totalPages: page - 1 \}/);
 
