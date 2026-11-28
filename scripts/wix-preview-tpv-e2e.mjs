@@ -231,6 +231,10 @@ function cashTotalFromMovements(items) {
                 totalMinor -= minor;
                 break;
             case "ARQUEO_PARCIAL":
+            case "CONTROL_X":
+            case "CIERRE_Z":
+            case "VENTA":
+            case "DEVOLUCION":
             case "CIERRE":
                 break;
             default:
