@@ -32,7 +32,7 @@ test("TPV bootstrap receives the trace identifier from its authorized WebMethod"
 test("CASHIER_STATE is read-only and never bootstraps CajaActual", async () => {
     const source = await readFile(pageUrl, "utf8");
     const start = source.indexOf("export const obtenerEstadoCaja = webMethod(");
-    const end = source.indexOf("\\nexport const abrirSesionCaja = webMethod(", start);
+    const end = source.indexOf("\nexport const abrirSesionCaja = webMethod(", start);
     assert.ok(start >= 0 && end > start);
     const reader = source.slice(start, end);
     assert.match(reader, /await readTpvCajaSnapshot\\(\\)/);
@@ -43,7 +43,7 @@ test("CASHIER_STATE is read-only and never bootstraps CajaActual", async () => {
 test("SESSION_OPEN explicitly bootstraps CajaActual before acquiring the session lock", async () => {
     const source = await readFile(pageUrl, "utf8");
     const start = source.indexOf("export const abrirSesionCaja = webMethod(");
-    const end = source.indexOf("\\nexport const registrarArqueoParcial = webMethod(", start);
+    const end = source.indexOf("\nexport const registrarArqueoParcial = webMethod(", start);
     assert.ok(start >= 0 && end > start);
     const writer = source.slice(start, end);
     assert.match(writer, /await initializeTpvCaja\\(traceId\\);[\\s\\S]*?withTpvSessionLock\\(/);
