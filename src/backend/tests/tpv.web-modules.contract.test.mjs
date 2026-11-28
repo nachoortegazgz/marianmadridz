@@ -22,21 +22,23 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
             concepto: "Servicio SANDBOX",
             cantidad: 1,
             precioUnitario: 100,
-            descuentoImporte: 10,
-            subtotalNeto: 90,
+            descuentoImporte: 0,
+            subtotalNeto: 100,
             impuestosImporte: 18.9,
-            totalLinea: 108.9,
+            totalLinea: 118.9,
         }],
         pagos: [
             { medioPago: "EFECTIVO", importe: 40 },
-            { medioPago: "TARJETA", importe: 68.9 },
+            { medioPago: "TARJETA", importe: 78.9 },
         ],
     });
 
-    assert.equal(result.totalVenta, 108.9);
-    assert.equal(result.importePagado, 108.9);
-    assert.equal(result.importePendiente, 0);
-    assert.equal(result.estadoVenta, "COBRADA");
+    assert.equal(result.totalVenta, 118.9);
+    assert.equal(result.importeAsignado, 118.9);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.persisted, false);
     assert.equal(result.realPayment, undefined);
 });
@@ -62,8 +64,8 @@ test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT t
     assert.equal(result.lineas[0].taxIncludedInPrice, true);
 });
 
-test("TPV custom tariff lines remain explicitly typed and validated", () => {
-    const result = validateSaleDraft({
+test("TPV custom tariff lines are rejected until a server-owned catalog contract exists", () => {
+    assert.throws(() => validateSaleDraft({
         lineas: [{
             tipoLinea: "PERSONALIZADA",
             concepto: "Tarifa especial acordada",
@@ -73,10 +75,7 @@ test("TPV custom tariff lines remain explicitly typed and validated", () => {
             impuestosImporte: 0,
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 25 }],
-    });
-    assert.equal(result.lineas[0].tipoLinea, "PERSONALIZADA");
-    assert.equal(result.totalVenta, 25);
-    assert.equal(result.importePendiente, 0);
+    }), /TPV_INVALID_LINE_TYPE/);
 });
 
 test("TPV product variant identity is retained and restricted to product lines", () => {
@@ -118,8 +117,10 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 50, importeCambio: 10 }],
     });
-    assert.equal(result.importePagado, 40);
-    assert.equal(result.importePendiente, 0);
+    assert.equal(result.importeAsignado, 40);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.pagos[0].importeAplicado, 40);
     assert.throws(
         () => validateSaleDraft({
@@ -153,15 +154,18 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
         ],
     });
 
-    assert.equal(result.totalCobrado, 100);
-    assert.equal(result.desgloseMedios.EFECTIVO, 40);
-    assert.equal(result.desgloseMedios.TARJETA, 35);
-    assert.equal(result.desgloseMedios.BIZUM, 25);
-    assert.equal(result.desgloseMedios.OTROS, 0);
-    assert.equal(result.efectivoRecibido, 45);
-    assert.equal(result.cambioEntregado, 5);
-    assert.equal(result.efectivoAplicado, 40);
-    assert.equal(result.importePendiente, 0);
+    assert.equal(result.importeAsignado, 100);
+    assert.equal(result.desgloseMediosSeleccionados.EFECTIVO, 40);
+    assert.equal(result.desgloseMediosSeleccionados.TARJETA, 35);
+    assert.equal(result.desgloseMediosSeleccionados.BIZUM, 25);
+    assert.equal(result.desgloseMediosSeleccionados.OTROS, 0);
+    assert.equal(result.efectivoDeclarado, 45);
+    assert.equal(result.cambioDeclarado, 5);
+    assert.equal(result.efectivoAsignado, 40);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.realPayment, undefined);
 });
 
@@ -180,6 +184,10 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     assert.throws(
         () => validateSaleDraft({ ...valid, lineas: [{ ...valid.lineas[0], subtotalNeto: 9 }] }),
         /TPV_LINE_SUBTOTAL_MISMATCH/
+    );
+    assert.throws(
+        () => validateSaleDraft({ ...valid, lineas: [{ ...valid.lineas[0], descuentoImporte: 1 }] }),
+        /TPV_DISCOUNT_NOT_CONFIGURED/
     );
     assert.throws(
         () => validateSaleDraft({ ...valid, pagos: [{ medioPago: "EFECTIVO", importe: 20 }] }),
