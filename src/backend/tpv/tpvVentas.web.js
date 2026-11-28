@@ -610,6 +610,7 @@ export const registrarVenta = webMethod(
                     lineas,
                     subtotalNeto: validated.subtotalNeto,
                     impuestosTotal: validated.impuestosTotal,
+                    impuestosTotalMinor: toMinorUnits(validated.impuestosTotal, "SALE_TAX"),
                     totalVenta: validated.totalVenta,
                     totalVentaMinor: toMinorUnits(validated.totalVenta, "SALE_TOTAL"),
                     medioPago: paymentSelection.length === 1 ? paymentSelection[0].medioPago : null,
