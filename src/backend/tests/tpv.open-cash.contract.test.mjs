@@ -23,6 +23,11 @@ test("cash opening writes an append-only APERTURA movement and returns its recei
     assert.match(method, /ticketType:\s*"APERTURA_CAJA"/);
     assert.match(method, /openingMovement\.item\._id/);
     assert.match(method, /openingTransactionId:/);
+    assert.match(method, /operator\.operatorResourceId/);
+    assert.match(method, /TPV_OPERATOR_RESOURCE_REQUIRED/);
+    assert.ok(method.indexOf("TPV_OPERATOR_RESOURCE_REQUIRED") < method.indexOf("withTpvSessionLock("),
+        "staff resource must be validated before any session or ledger write");
+    assert.match(method, /\{ allowLegacyProjection: true \}/);
 });
 
 test("APERTURA movement is reflected in CajaActual without adding the opening amount twice", async () => {
