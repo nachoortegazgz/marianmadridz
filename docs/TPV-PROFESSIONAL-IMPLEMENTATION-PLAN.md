@@ -54,7 +54,14 @@ La documentación de Wix permite usar `@wix/ecom/orders.createOrder()` para regi
 - Confirmar en Runtime que la venta de productos reduce stock una sola vez, en la ubicación correcta y solo en el momento acordado.
 - Verificar la limitación documentada de `Create Order`: 5 llamadas/hora/sitio para apps aún no publicadas en Wix App Market. Debe comprobarse si aplica al contexto de este sitio Velo antes de declarar capacidad productiva. No crear una cola de reintentos que dispare pedidos duplicados.
 
-**Riesgo técnico pendiente:** Wix `Create Order` no documenta en el contrato consultado una clave idempotente equivalente a la de nuestro writer. Antes de habilitarlo, hay que demostrar recuperación de timeout incierto mediante una correlación que Wix permita consultar de forma documentada. No asumir que `customFields` o `channelInfo.externalOrderId` son filtrables hasta verificar el contrato de Search Orders. Si no existe lookup inequívoco, mantener la operación en `ORDER_CREATE_UNKNOWN / PENDING_RECOVERY` y no repetir automáticamente la creación.
+**Idempotencia y recuperación de Create Order:** el contrato oficial expone `channelInfo.externalOrderId` (máximo 100 caracteres) como referencia al pedido del sistema externo. Usar el `transactionId` UUID de la intención TPV como `externalOrderId`. Search Orders no documenta ese campo como filtrable, por lo que la recuperación debe:
+1. Persistir la intención local y el `externalOrderId` antes de llamar a Wix.
+2. En caso de timeout, buscar pedidos por intervalo corto de `purchasedDate` y, si existe, `buyerInfo.contactId`/email.
+3. Paginar todos los resultados necesarios y comparar en código `channelInfo.externalOrderId === transactionId`.
+4. Si aparece exactamente uno, recuperar su `orderId`; si aparecen varios, marcar duplicidad y bloquear el cobro; si no aparece, repetir solo la búsqueda por la consistencia eventual del índice.
+5. Nunca repetir automáticamente `Create Order` por el mero hecho de que no haya respuesta. Si no se puede demostrar ausencia, marcar `ORDER_CREATE_UNKNOWN / PENDING_RECOVERY` y resolver la operación sin volver a crear el pedido.
+
+El campo de correlación sí está documentado como parte de `ChannelInfo`; su filtro directo no. Esta recuperación se debe probar en Preview con un timeout inyectado antes de habilitar reintentos de creación.
 
 ### 3.3 Cobro
 
@@ -192,6 +199,7 @@ Pruebas obligatorias de fallo: timeout después de Create Order, Add Payments ac
 - Add Payments: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/add-payments
 - Update Payment Status: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/update-payment-status
 - Search Orders: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/search-orders
+- Find and Report on Orders (filtros y paginación soportados): https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/skills/find-and-report-on-orders
 - Refund Payments: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-billing/refund-payments
 - Get Order Refundability: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-billing/get-order-refundability
 - Inventory decrement: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/inventory-items-v3/bulk-decrement-inventory-items-by-variant-and-location
