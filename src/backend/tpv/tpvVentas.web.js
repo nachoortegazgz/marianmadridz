@@ -380,6 +380,14 @@ async function resumeExistingSale(record, { buyer, replayed, traceId }) {
         auditPersisted = false;
         auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
     }
+    if (current.orderId) {
+        try {
+            await appendSaleOrderAudit(current, traceId);
+        } catch (error) {
+            auditPersisted = false;
+            auditErrorCode = auditErrorCode || _safeTpvErrorCode(error, "TPV_ORDER_AUDIT_WRITE_FAILED");
+        }
+    }
     if (current.status === "CONFIRMADA" && current.paymentSelection?.[0]?.ledgerMovementId) {
         try {
             await appendSalePaymentAudit(current, traceId);
@@ -657,6 +665,14 @@ export const registrarVenta = webMethod(
                 } catch (error) {
                     auditPersisted = false;
                     auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
+                }
+                if (saved.orderId) {
+                    try {
+                        await appendSaleOrderAudit(saved, traceId);
+                    } catch (error) {
+                        auditPersisted = false;
+                        auditErrorCode = auditErrorCode || _safeTpvErrorCode(error, "TPV_ORDER_AUDIT_WRITE_FAILED");
+                    }
                 }
                 if (saved.status === "CONFIRMADA" && saved.paymentSelection?.[0]?.ledgerMovementId) {
                     try {
