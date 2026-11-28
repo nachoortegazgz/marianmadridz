@@ -1,3 +1,78 @@
+He contrastado los **40 bloqueos** de tu lista directamente contra el código real de los **29 módulos** auditados.
+
+### Hallazgos previos importantes (discrepancias con el código actual)
+Antes de ver el detalle, hay **4 puntos donde tu tabla no coincide con el código vigente** o genera **errores silenciosos graves**:
+1. **Bloqueos #3, #4 y #5 (Contradicción crítica):** `TPV_PENDING_SALE_PAYMENTS_NOT_ALLOWED` **no existe** en el código actual. De hecho, `tpvPageController.js` **sí** envía `pagos` y `medioPago` a `registrarVenta()`, y `tpvWriteV1Contract.js` **exige** exactamente 1 pago (`TPV_WRITE_V1_PAYMENT_REQUIRED`). Si intentas guardar una venta sin pago (como sugiere la UI *"Registrar venta pendiente"*), **falla con `TPV_SALE_NOT_READY`**.
+2. **Bloqueo #29 + #30 (Error silencioso de carrito):** Si una venta devuelve `PENDING` o `TPV_TIMEOUT`, `keyedAction()` deja `tpv_key_SALE` guardada en `sessionStorage`. Si el cajero modifica líneas del carrito y vuelve a guardar, **reutiliza silenciosamente la clave anterior** y falla con `TPV_IDEMPOTENCY_CONFLICT`.
+3. **Bloqueo #37 (`traceId` en `tpvCatalogo.web.js`):** Ese fallo **ya está corregido** en el código actual (todos los `webMethod` declaran `const traceId = ...` al inicio).
+4. **Bloqueo #38 (`exportarAuditoriaTPV`):** `tpvMovimientos.web.js` llama a `requireCajero(traceId)` **sin haberlo importado** (crash en runtime). Además, si falla `appendSaleAudit` en `registrarVenta`, devuelve `auditPersisted: false` dentro de un `PENDING` que el widget no inspecciona (**auditoría incompleta silenciosa**).
+
+---
+
+## Evaluación de los 40 bloqueos
+
+**Leyenda de clasificación:**
+* **Seguridad / Normativa / Integridad:** Bloqueo necesario e irrenunciable (no debe eliminarse).
+* **Fricción temporal (V1):** Bloqueo puesto porque falta implementar el módulo/proveedor; impide operar como TPV profesional hasta completarlo.
+* **Desalineado / Bug:** El bloqueo contradice otro módulo o produce un fallo silencioso.
+
+| Nº | Bloqueo | Clasificación | ¿Error silencioso / colateral? | Verificación en código real |
+|---:|---|---|---|---|
+| **1** | Modo consulta global (`operationalWritesAvailable`) | **Seguridad / Integridad** | **Sí (UX):** deshabilita botones en `updateControlAvailability()` sin explicar al cajero qué permiso/sesión falta. | En `obtenerPermisosTPV` está en `true`, pero `issueTicketZ` y `exportAudit` vienen en `false`. |
+| **2** | Cobros deshabilitados (`data-method disabled`) | **Fricción temporal (V1)** | **Sí (Flujo):** contradice a `tpvWriteV1Contract.js`, que exige 1 pago para registrar la venta. | Solo `EFECTIVO` y `TARJETA` se habilitan si `saleQuote` es válido; el texto sigue diciendo *"Cobros deshabilitados"*. |
+| **3** | Ventas sin pagos (`SALE_REGISTER`) | **Desalineado / Bug** | **Sí:** hoy el backend **rechaza** ventas sin pago (`TPV_WRITE_V1_PAYMENT_REQUIRED`). | `getTpvWriteV1Blockers` bloquea si `pagos.length === 0`. |
+| **4** | `TPV_PENDING_SALE_PAYMENTS_NOT_ALLOWED` | **Desalineado (Obsoleto)** | **No existe en código:** la tabla describe una regla antigua ya invertida. | `tpvPageController.js` sí mapea y envía `pagos` a `registrarVenta()`. |
+| **5** | `medioPago` omitido en `registrarVenta()` | **Desalineado (Obsoleto)** | **No existe en código:** `tpvPageController.js` sí envía `medioPago`. | `registrarVenta` recibe `medioPago` y `pagos`, aunque los marca `confirmed: false`. |
+| **6** | Devoluciones bloqueadas (`case "REFUND"`) | **Fricción temporal (V1)** | **No:** lanza `TPV_REFUND_DISABLED` explícito (no `TPV_REFUND_PROVIDER_NOT_CONFIGURED`, que viene de `tpvDevoluciones.web.js`). | Impide pruebas `DEV-01` a `DEV-04`. |
+| **7** | Botón `#refund` bloqueado | **Fricción temporal (V1)** | **Sí (UX):** `PERMANENTLY_DISABLED` ignora incluso si el backend habilitara `requestRefund`. | Bloqueo doble UI + Controller + Backend. |
+| **8** | Tarifa personalizada (`#tabPersonalizada`) | **Fricción temporal (V1)** | **No:** muestra *toast* explicativo al pulsar. | Bloquea `VEN-06` y precios libres. |
+| **9** | Bizum bloqueado | **Fricción temporal (V1)** | **No:** botón deshabilitado con *tooltip*. | `PAYMENT_METHODS` en widget solo incluye `EFECTIVO` y `TARJETA`. |
+| **10** | Bono bloqueado | **Fricción temporal (V1)** | **No:** backend devuelve `TPV_PAYMENT_METHOD_NOT_VERIFIED`. | Falta consultar saldo real. |
+| **11** | Tarjeta regalo bloqueada | **Fricción temporal (V1)** | **No:** `consultarTarjetaRegalo` devuelve `TPV_GIFT_CARDS_NOT_CONFIGURED`. | Falta integración nativa. |
+| **12** | Otros medios bloqueados | **Fricción temporal (V1)** | **No:** rechazado por contrato V1 (`TPV_PAYMENT_METHOD_UNSUPPORTED`). | Correcto mientras no exista conciliación. |
+| **13** | Pago dividido bloqueado (`payments.length >= 1`) | **Fricción temporal (V1)** | **No:** muestra *toast* en UI y `TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED` en backend. | Impide `PAG-05` (pago mixto), aunque `tpvPagos.web.js` ya calcula mixtos. |
+| **14** | Cambio limitado al efectivo | **Seguridad / Integridad** | **No:** valida en UI (`#htmlTPV.txt`) y en backend (`TPV_CHANGE_REQUIRES_CASH`). | Correcto: tarjeta no da cambio. |
+| **15** | Ticket vacío bloqueado | **Integridad** | **No:** *toast* en UI y `TPV_LINES_REQUIRED` en backend. | Correcto. |
+| **16** | Registro sin sesión bloqueado | **Seguridad / Integridad** | **No:** `TPV_SESSION_REQUIRED` / `TPV_SESSION_NOT_OPEN`. | Imprescindible para cuadre de caja. |
+| **17** | Apertura sin previsualización | **Integridad** | **No:** `TPV_SESSION_PREVIEW_REQUIRED`. | Evita aperturas ciegas. |
+| **18** | Apertura duplicada (`abrirSesionCaja`) | **Seguridad / Integridad** | **No:** `TPV_PREVIOUS_SESSION_NOT_CLOSED` / `TPV_SESSION_ALREADY_CLOSED_TODAY`. | Imprescindible. |
+| **19** | Apertura con previsualización obsoleta | **Integridad** | **No:** `TPV_SESSION_PREVIEW_STALE`. | Imprescindible frente a concurrencia. |
+| **20** | Cierre con ventas pendientes | **Normativa / Integridad** | **Sí (Bloqueo total):** hoy **todas** las ventas quedan en `PENDING_PAYMENT`, bloqueando el 100 % de cierres Z. | La regla es correcta, pero requiere implementar confirmación de ventas (`CONFIRMED`). |
+| **21** | Cierre con devoluciones pendientes | **Normativa / Integridad** | **No:** `TPV_PENDING_REFUNDS_PREVENT_CLOSE`. | Correcto y necesario. |
+| **22** | Cierre con diferencias no justificadas | **Normativa / Integridad** | **No:** `TPV_COUNT_DIFFERENCE_REASON_REQUIRED` (≥3 caracteres). | Correcto para auditoría de descuadres. |
+| **23** | Producto sin variante válida | **Integridad** | **No:** *toast* en UI y `TPV_PRODUCT_VARIANT_REQUIRED` en backend. | Correcto. |
+| **24** | Servicio sin precio fijo | **Integridad** | **No:** `TPV_SERVICE_PRICE_NOT_FIXED`. | Correcto mientras no exista tarifa libre autorizada. |
+| **25** | Línea sin clasificación fiscal | **Normativa (Fiscal)** | **No:** `TPV_LINE_TAX_CLASSIFICATION_UNSUPPORTED`. | Imprescindible para IVA correcto. |
+| **26** | Cálculo fiscal incompleto | **Normativa (Fiscal)** | **No:** valida contra `@wix/ecom` (`taxCalculation`). | Imprescindible. |
+| **27** | Moneda distinta de EUR | **Normativa / Integridad** | **No:** `TPV_CATALOG_CURRENCY_MISMATCH` / `TPV_TAX_CURRENCY_MISMATCH`. | Correcto. |
+| **28** | Descuentos bloqueados | **Fricción temporal (V1)** | **No:** `TPV_DISCOUNT_NOT_CONFIGURED`. | Necesario hasta definir permisos y recálculo fiscal de descuentos; hoy bloquea `VEN-06`. |
+| **29** | Reintento tras timeout (`TPV_TIMEOUT`) | **Integridad (Idempotencia)** | **Sí (Colateral):** si tras el timeout el usuario edita el carrito, `sessionStorage` conserva la `idempotencyKey` anterior y la nueva venta falla con `TPV_IDEMPOTENCY_CONFLICT`. | Falta limpiar `tpv_key_SALE` al modificar `state.items` o usar clave derivada del carrito. |
+| **30** | Operación con clave inválida | **Seguridad / Integridad** | **No:** `TPV_INVALID_IDEMPOTENCY_KEY`. | Imprescindible. |
+| **31** | Exportación truncada | **Integridad / Normativa** | **No:** aborta descarga CSV si `truncated === true`. | Correcto; evita libros incompletos. |
+| **32** | Comunicación sin origen (`PARENT_ORIGIN_UNAVAILABLE`) | **Seguridad** | **Sí (Entornos):** si cambias de subdominio de Preview en Wix, falla cerrado sin poder operar. | Correcto por seguridad; mantener `PARENT_ORIGIN_ALLOWLIST` al día. |
+| **33** | Mensajes de otra ventana (`event.source`) | **Seguridad** | **Sí (Silencioso):** `return;` silencioso en listener. | Correcto (anti-spoofing). |
+| **34** | Respuestas de otro origen (`event.origin`) | **Seguridad** | **Sí (Silencioso):** `return;` silencioso en listener. | Correcto (anti-XSS/CSRF en iframe). |
+| **35** | Protocolo incompatible (`MM_READY`/`MM_CONTEXT`) | **Integridad** | **No:** verifica `component === "htmlTPV"`, `protocolVersion === 1` y `HANDSHAKE_NONCE`. | Correcto. |
+| **36** | Catálogo sin precio | **Integridad** | **No:** `TPV_CATALOG_PRICE_UNAVAILABLE`. | Correcto. |
+| **37** | Error de catálogo por `traceId` | **Desalineado (Corregido)** | **No:** `traceId` ya está declarado en `tpvCatalogo.web.js`. | Ya resuelto en el código actual. |
+| **38** | Auditoría sin trazabilidad | **Normativa / Bug** | **Sí (2 fallos):** 1) `exportarAuditoriaTPV` crashea (`requireCajero` no importado); 2) si falla `appendSaleAudit` en `registrarVenta`, devuelve `auditPersisted: false` dentro de `PENDING` y la UI no avisa. | La exigencia es correcta, pero su implementación actual tiene bug de runtime y fallo silencioso en UI. |
+| **39** | Operación sin permiso | **Seguridad** | **No:** cada `webMethod` valida `requireTpvOperator` / `requireAdmin` en servidor. | Imprescindible. *(Fricción aparte: `obtenerPermisosTPV` tiene `issueTicketZ: false` y `exportAudit: false` para `ADMIN` aunque existen).* |
+| **40** | Contexto Wix no autorizado (`onContextReady`) | **Seguridad** | **No:** bloquea el arranque si falla config o permisos. | Imprescindible. |
+
+---
+
+## Conclusión práctica
+
+* **Mantén intactos** los bloqueos de **seguridad, idempotencia, origen/nonce, permisos en backend, integridad de sesión/caja y validación fiscal** (`#1, #14–#27, #29–#36, #38–#40`). No son fricción innecesaria: son lo que evita descuadres, cobros duplicados y fraudes.
+* **Resuelve primero los 4 errores silenciosos / contradicciones reales:**
+  1. Alinear `#saveSale` / `registrarVenta` / `tpvWriteV1Contract.js` (decidir si la venta sin pago se permite o si al pagar en efectivo/tarjeta se confirma a `CONFIRMED` para no bloquear el Cierre Z #20).
+  2. Limpiar `tpv_key_SALE` en `sessionStorage` cuando cambie el contenido del ticket (evita el falso `TPV_IDEMPOTENCY_CONFLICT` tras #29).
+  3. Corregir `requireCajero` en `exportarAuditoriaTPV` y mostrar alerta explícita si `auditPersisted === false` (#38).
+  4. Habilitar `issueTicketZ` y `exportAudit` para `ADMIN` en `obtenerPermisosTPV` (#39).
+* **Levanta progresivamente las fricciones temporales V1** (`#2, #7, #8, #9–#13, #28`) conforme conectes cada integración (Wix Payments/Manual, Wix Invoices, Descuentos e Inventario).
+
+* 
+
 He auditado los **29 módulos** completos (`#htmlTPV.txt`, `TPV.c518w.js`, `tpvPageController.js` y toda la capa `backend/tpv/*`).
 
 ### Diagnóstico general
