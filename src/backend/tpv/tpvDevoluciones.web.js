@@ -85,7 +85,7 @@ export const registrarDevolucion = webMethod(
                     financialLedgerWritten: false,
                 },
             });
-        } catch (error) {
+        } catch {
             return tpvError(
                 "TPV_REFUND_AUDIT_FAILED",
                 "La devolución sigue bloqueada y no se ha podido persistir su intento de auditoría.",
