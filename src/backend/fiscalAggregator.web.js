@@ -411,7 +411,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
       orden: orderIndex++,
       invoiceNumber: _readInvoiceNumber(m),
       fechaExpedicion: _readOperationDate(m),
-      tipoFactura: isRefund ? "R1" : "BORRADOR_INTERNO",
+      tipoFactura: "BORRADOR_INTERNO",
       movementType: _readMovementType(m),
       operationNature: operationNature || "VENTA",
       taxTreatment: (isTip || isAdjustment) ? "PENDIENTE_VALIDACION" : "DEVENGADO",
