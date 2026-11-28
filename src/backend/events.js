@@ -1868,7 +1868,7 @@ async function _handleWixEcom_onOrderPaymentStatusUpdated(eventPayload) {
         ].includes(paymentStatus);
         if (isRefundedStatus) {
             const refundResult = await processOrderRefundTransactions(orderId, order?.currency, traceId);
-            if (eventId) await markEventAsProcessed(eventId, "ORDER_REFUND_STATUS_UPDATED");
+            if (eventId) await markEventAsProcessed(eventId, "ORDER_PAYMENT_STATUS_UPDATED", traceId, { orderId, refund: true });
             return { status: "OK", orderId, ...refundResult };
         }
         if (!isPaidStatus) return { status: "OK" };
@@ -2570,7 +2570,7 @@ async function _handleWixEcom_onOrderUpdated(eventPayload) {
         }
 
         const refundResult = await processOrderRefundTransactions(orderId, verifiedOrder?.currency, traceId);
-        await markEventAsProcessed(eventId, "ORDER_REFUND_ORDER_UPDATED");
+        await markEventAsProcessed(eventId, "ORDER_UPDATED", traceId, { orderId, refund: true });
         return { status: "OK", orderId, ...refundResult };
     } catch (error) {
         _handleError(error, "wixEcom_onOrderUpdated", traceId);
