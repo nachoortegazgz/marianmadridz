@@ -905,3 +905,18 @@ test("TPV operational ledger assertions and operator resolution are inside WebMe
         }
     }
 });
+
+test("TPV close summary uses canonical sale states, normalized line totals and session-scoped payments", async () => {
+    const repository = await source("tpv/tpvRepository.js");
+    const closeCore = await source("tpv/tpvCierresCore.js");
+    const permissions = await source("tpv/tpvPermisos.web.js");
+
+    assert.match(repository, /item\.status === "CONFIRMADA" \|\| item\.status === "CONFIRMED"/);
+    assert.match(repository, /saleId: item\._id/);
+    assert.match(repository, /totalMinor: item\.totalVentaMinor/);
+    assert.match(repository, /item\.sessionId === sessionId \|\| item\.payload\?\.sessionId === sessionId/);
+    assert.doesNotMatch(closeCore, /queryTpvRecords\(TPV_COLLECTIONS\.VENTA_LINEAS/);
+    assert.match(closeCore, /for \(const line of Array\.isArray\(sale\.lineas\) \? sale\.lineas : \[\]\)/);
+    assert.match(closeCore, /TPV_SALE_LINE_AMOUNT_INVALID/);
+    assert.match(permissions, /exportAudit: staff\.rolWebsite === "ADMIN"/);
+});
