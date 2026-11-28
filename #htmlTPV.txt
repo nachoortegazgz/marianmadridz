@@ -338,7 +338,7 @@ body {
 
         <p id="paymentNotice" class="status">Cobros deshabilitados: el TPV registra ventas pendientes, no ejecuta cobros ni confirma pagos.</p>
         <div class="payment-methods" id="paymentMethods">
-          <button class="btn active" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
+          <button class="btn" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
           <button class="btn" data-method="TARJETA" disabled>Tarjeta (no habilitada)</button>
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
@@ -508,7 +508,7 @@ body {
     catalogKind: "SERVICES",
     items: [],
     payments: [],
-    paymentMethod: "EFECTIVO",
+    paymentMethod: null,
     busy: false,
     lastSale: null,
     // Compatibility transport key: this value is a native Wix Contacts _id.
@@ -1122,7 +1122,7 @@ body {
     renderTicket();
   };
 
-  /* ---------- Pagos (simulación local; NO se envían en SALE_REGISTER) ---------- */
+  /* ---------- Pago: controles condicionados a capability backend ---------- */
   function paymentTotals() {
     const totalsMinor = Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]));
     state.payments.forEach((payment) => {
@@ -1141,7 +1141,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.commercialRecordReady === true && state.operationalWritesAvailable === true;
+    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.commercialRecordReady === true && state.operationalWritesAvailable === true && state.capabilities.acceptPayment === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1204,7 +1204,7 @@ body {
 
   $("addPayment").onclick = () => {
     if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se aceptan pagos: el backend no ha autorizado la venta.");
+      toast("No se aceptan pagos: el backend no ha habilitado la capacidad de cobro.");
       return;
     }
     if (state.payments.length >= 1) {
@@ -1226,7 +1226,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const remainingMinor = totalMinor - appliedMinor;
     if (!state.items.length || remainingMinor <= 0) {
-      toast("No hay importe pendiente para el pago simulado.");
+      toast("No hay importe pendiente para asignar.");
       return;
     }
     if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
