@@ -515,7 +515,8 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
 test("registrarVenta blocks unready intents and avoids external Wix orders", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /draftOrders|createDraftOrder|auth\.elevate/);
-    assert.match(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED/);
+    assert.match(sales, /TPV_DRAFT_ORDER_NOT_CONFIGURED/);
+    assert.doesNotMatch(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED|SANDBOX|SIMULATION/);
     assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
     assert.match(sales, /status: "PENDING_PAYMENT"/);
     assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
