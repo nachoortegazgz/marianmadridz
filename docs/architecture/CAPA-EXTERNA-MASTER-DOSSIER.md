@@ -49,6 +49,12 @@ La auditoría operativa del 28-11-2026 detectó divergencias entre algunas proye
 
 **C3-FINDING-004 — seis dígitos es restricción local, no requisito PGC (MEDIO).** accountingLedger.js valida accountCode con patrón de seis dígitos. El PGC español no impone con carácter general seis dígitos a la numeración/denominación de cuentas. Puede ser convención de subcuenta de proyecto/gestoría, pero debe justificarse y contrastarse con el plan real antes de aprobar mapeos.
 
+**C3-FINDING-005 — singleton fiscal emisor ausente en CMS live (BLOQUEO PARA EXPORT REAL).** La consulta live del 28-11-2026 encontró cinco elementos en `MapaStaff`: `GESTORIA`, `TERCERO` y tres `STAFF`; cero con `recordType=CONFIG_SISTEMA`. `_getBusinessTaxId()` exige además `_id=CONFIG_SISTEMA_FISCAL`, por lo que el export de cualquier ejercicio productivo falla con `FISCAL_CONFIG_MISSING`. Se habilita únicamente para ejercicios anteriores a 2027 un paquete de prueba con `issuerTaxId=null`, sin NIF inventado; desde 2027 se exige el singleton validado. No copiar el NIF de `GESTORIA` al emisor.
+
+**C3-FINDING-006 — RegistroIntegracion contiene solo tres eventos legacy de QA; no es aún un outbox operativo.** La consulta live encontró tres elementos `TPV_CUSTOM_QA`, todos `NOT_SENT`, con payload que contiene una clave `customer` y sin `payloadHash`. No se borran ni reenvían. La colección física sí existe, pero falta un writer del backend autorizado por la política DAL, validación de payload minimizado, idempotencia, hash, control de concurrencia y read-back de entrega. Antes de conectar Graph, implementar ese contrato append-only y segregar los eventos legacy.
+
+**C3-FINDING-007 — cierre Z de QA aislado.** `HistoricoCierresZ` contiene un único elemento `TPV_CUSTOM_QA` / `Z_SIMULATED`; no tiene `packageStatus` ni `sentAt`. Sus campos históricos `summaryData`/`invoiceData` no convierten la colección en un repositorio documental. No reutilizarla para paquetes de gestoría.
+
 Los hallazgos son revisión estática del código consultado en main; no son prueba de fallo runtime ni de pérdida de datos reales.
 
 ## 3. Principios y límites
