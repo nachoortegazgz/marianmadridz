@@ -1,0 +1,502 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+
+const previewUrl = process.env.WIX_PREVIEW_URL;
+const statePath = process.env.WIX_STORAGE_STATE_PATH;
+const reportPath = process.env.WIX_TPV_E2E_REPORT;
+const moduleRoot = process.env.PLAYWRIGHT_MODULE_ROOT;
+const tpvPagePath = process.env.WIX_TPV_PAGE_PATH || "/tpv";
+
+assert.ok(previewUrl && statePath && reportPath && moduleRoot, "Missing Preview E2E configuration");
+assert.ok(tpvPagePath.startsWith("/") && !tpvPagePath.startsWith("//"), "TPV page path must be site-relative");
+
+const storageState = JSON.parse(await readFile(statePath, "utf8"));
+assert.ok(Array.isArray(storageState.cookies) && Array.isArray(storageState.origins), "Invalid Playwright storageState");
+
+const require = createRequire(moduleRoot + "/@playwright/test/index.js");
+const { chromium } = require("playwright");
+
+const wixHost = (hostname) =>
+    hostname === "wix.to" ||
+    hostname === "wix.com" ||
+    hostname.endsWith(".wix.com") ||
+    hostname === "wixsite.com" ||
+    hostname.endsWith(".wixsite.com");
+
+const allowedParentOrigins = [
+    "https://www.marianmadrid.es",
+    "https://marianmadrid.es",
+    "https://nachoortegazgz-marianmadrid.editor.wix.com",
+];
+
+const report = {
+    result: "FAIL",
+    environment: "WIX_PREVIEW",
+    dataEnvironment: "SANDBOX_EXPECTED_CMS_SANDBOX_MUST_BE_ENABLED",
+    previewHttpStatus: null,
+    tpvPageHttpStatus: null,
+    previewHost: null,
+    tpvPageHost: null,
+    authenticatedBrowser: false,
+    operationalWritesAuthorized: false,
+    businessWebMethodsInvoked: 0,
+    paymentsInvoked: false,
+    refundsInvoked: false,
+    ticketZInvoked: false,
+    hardwareInvoked: false,
+    sessionId: null,
+    operations: [],
+    postChecks: null,
+    timestamp: new Date().toISOString(),
+};
+
+let browser;
+let page;
+let frame;
+let phase = "bootstrap";
+
+async function persistReport() {
+    report.timestamp = new Date().toISOString();
+    await writeFile(reportPath, JSON.stringify(report, null, 2) + "\n");
+}
+
+function redact(value) {
+    if (Array.isArray(value)) return value.map(redact);
+    if (!value || typeof value !== "object") return value;
+    const result = {};
+    for (const [key, nested] of Object.entries(value)) {
+        if (/^(operatorId|actorId|authenticatedOperatorId|authenticatedActorId|authenticatedDisplayName|operatorDisplayName|operatorResourceId|memberId|email|token|cookie|secret)$/i.test(key)) continue;
+        result[key] = redact(nested);
+    }
+    return result;
+}
+
+function recordOperation(name, envelope, messageId = null) {
+    report.businessWebMethodsInvoked += 1;
+    const operation = {
+        name,
+        transport: "Velo webMethod via Wix HTML Component bridge",
+        httpStatus: null,
+        messageId,
+        applicationStatus: envelope?.status || "UNKNOWN",
+        traceId: envelope?.traceId || null,
+        response: redact(envelope),
+    };
+    report.operations.push(operation);
+    return persistReport();
+}
+
+function assertSuccess(envelope, name) {
+    if (envelope?.status !== "SUCCESS") {
+        const code = envelope?.error?.code || envelope?.reason || "TPV_WEBMETHOD_FAILED";
+        const error = new Error(name + " failed: " + code);
+        error.code = code;
+        error.response = redact(envelope);
+        throw error;
+    }
+    return envelope.data ?? envelope;
+}
+
+async function waitForTpvFrame(targetPage, timeoutMs = 90000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        for (const candidate of targetPage.frames()) {
+            try {
+                if (await candidate.locator("#connLabel").count()) return candidate;
+            } catch (_) {
+                // A frame can be replaced while Wix hydrates the HTML Component.
+            }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw Object.assign(new Error("TPV_WIDGET_FRAME_NOT_FOUND"), { code: "TPV_WIDGET_FRAME_NOT_FOUND" });
+}
+
+async function installResponseCapture(targetFrame) {
+    await targetFrame.evaluate(() => {
+        window.__tpvE2eResponses = [];
+        window.addEventListener("message", (event) => {
+            if (event.source !== window.parent) return;
+            const data = event.data || {};
+            if (typeof data.type !== "string" || !data.type.endsWith("_RES")) return;
+            window.__tpvE2eResponses.push({
+                type: data.type,
+                messageId: data.messageId || null,
+                payload: data.payload || {},
+            });
+        });
+    });
+}
+
+async function clearCapturedResponses(targetFrame) {
+    await targetFrame.evaluate(() => { window.__tpvE2eResponses = []; });
+}
+
+async function waitForCapturedResponse(targetFrame, responseType, timeoutMs = 30000) {
+    await targetFrame.waitForFunction(
+        (type) => Array.isArray(window.__tpvE2eResponses) &&
+            window.__tpvE2eResponses.some((item) => item.type === type),
+        responseType,
+        { timeout: timeoutMs }
+    );
+    const captured = await targetFrame.evaluate((type) =>
+        window.__tpvE2eResponses.filter((item) => item.type === type), responseType);
+    return captured[captured.length - 1];
+}
+
+async function invokeWidget(targetFrame, type, payload = {}, timeoutMs = 30000) {
+    const messageId = "e2e-" + randomUUID().replace(/-/g, "");
+    const targetOrigin = await targetFrame.evaluate((origins) => {
+        const candidates = Array.from(window.location.ancestorOrigins || []);
+        if (document.referrer) candidates.push(document.referrer);
+        for (const candidate of candidates) {
+            try {
+                const origin = new URL(candidate).origin;
+                if (origins.includes(origin)) return origin;
+            } catch (_) {
+                // Ignore non-URL ancestor values; no wildcard fallback is allowed.
+            }
+        }
+        return null;
+    }, allowedParentOrigins);
+
+    assert.ok(targetOrigin, "TPV_PARENT_ORIGIN_UNAVAILABLE: no allowed parent origin found");
+
+    const envelope = await targetFrame.evaluate(({ type, payload, messageId, targetOrigin, timeoutMs }) =>
+        new Promise((resolve, reject) => {
+            let timer;
+            const cleanup = () => {
+                window.removeEventListener("message", handler);
+                if (timer) clearTimeout(timer);
+            };
+            const handler = (event) => {
+                if (event.source !== window.parent) return;
+                if (event.origin && event.origin !== "null" && event.origin !== targetOrigin) return;
+                const data = event.data || {};
+                if (data.type !== type + "_RES" || data.messageId !== messageId) return;
+                cleanup();
+                resolve(data.payload || {});
+            };
+            window.addEventListener("message", handler);
+            timer = setTimeout(() => {
+                cleanup();
+                reject(new Error(type + "_TIMEOUT"));
+            }, timeoutMs);
+            window.parent.postMessage({
+                type,
+                payload,
+                messageId,
+                version: 1,
+            }, targetOrigin);
+        }), { type, payload, messageId, targetOrigin, timeoutMs });
+
+    await recordOperation(type, envelope, messageId);
+    return envelope;
+}
+
+async function captureUiOperation(targetFrame, responseType, operationName) {
+    const captured = await waitForCapturedResponse(targetFrame, responseType);
+    await recordOperation(operationName, captured.payload, captured.messageId);
+    return captured.payload;
+}
+
+function cashTotalFromMovements(items) {
+    let totalMinor = 0;
+    for (const item of items) {
+        const amount = Number(item.amount);
+        if (!Number.isFinite(amount)) throw new Error("TPV_MOVEMENT_AMOUNT_INVALID");
+        const minor = Math.round(amount * 100);
+        switch (String(item.movementType || "").toUpperCase()) {
+            case "APERTURA":
+            case "ENTRADA":
+                totalMinor += minor;
+                break;
+            case "SALIDA":
+            case "RETIRADA":
+                totalMinor -= minor;
+                break;
+            case "CIERRE":
+                break;
+            default:
+                throw new Error("TPV_UNEXPECTED_MOVEMENT_TYPE:" + String(item.movementType || "UNKNOWN"));
+        }
+    }
+    return totalMinor / 100;
+}
+
+async function run() {
+    const startUrl = new URL(previewUrl);
+    assert.equal(startUrl.protocol, "https:", "Preview URL must use HTTPS");
+    assert.ok(wixHost(startUrl.hostname), "Preview URL is not a Wix Preview host");
+
+    browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({ storageState, serviceWorkers: "block" });
+    page = await context.newPage();
+
+    page.on("pageerror", (error) => {
+        report.pageErrors = report.pageErrors || [];
+        report.pageErrors.push(String(error?.message || error).slice(0, 500));
+    });
+    page.on("console", (message) => {
+        if (message.type() !== "error") return;
+        report.consoleErrors = report.consoleErrors || [];
+        report.consoleErrors.push(message.text().slice(0, 500));
+    });
+
+    phase = "preview-navigation";
+    const previewResponse = await page.goto(previewUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 90000,
+    });
+    assert.ok(previewResponse, "Preview returned no main-document response");
+    assert.ok(previewResponse.status() >= 200 && previewResponse.status() < 400,
+        "Preview HTTP " + previewResponse.status());
+    report.previewHttpStatus = previewResponse.status();
+
+    const landingUrl = new URL(page.url());
+    assert.ok(wixHost(landingUrl.hostname), "Preview redirected outside Wix");
+    assert.notEqual(landingUrl.hostname, "wix.to", "Wix Preview short link did not resolve");
+    report.previewHost = landingUrl.hostname;
+
+    phase = "tpv-page-navigation";
+    const tpvUrl = new URL(tpvPagePath, landingUrl);
+    tpvUrl.search = landingUrl.search;
+    assert.equal(tpvUrl.origin, landingUrl.origin, "TPV route must remain on the Preview origin");
+    const tpvResponse = await page.goto(tpvUrl.href, {
+        waitUntil: "domcontentloaded",
+        timeout: 90000,
+    });
+    assert.ok(tpvResponse, "TPV Preview route returned no main-document response");
+    assert.ok(tpvResponse.status() >= 200 && tpvResponse.status() < 400,
+        "TPV Preview HTTP " + tpvResponse.status());
+    report.tpvPageHttpStatus = tpvResponse.status();
+
+    const tpvFinalUrl = new URL(page.url());
+    assert.ok(wixHost(tpvFinalUrl.hostname), "TPV route redirected outside Wix");
+    assert.equal(tpvFinalUrl.hostname, landingUrl.hostname, "TPV route changed Preview host");
+    report.tpvPageHost = tpvFinalUrl.hostname;
+
+    phase = "widget-handshake";
+    await page.locator("body").waitFor({ state: "visible", timeout: 30000 });
+    frame = await waitForTpvFrame(page);
+    await frame.waitForFunction(
+        () => /Conectado/.test(document.querySelector("#connLabel")?.textContent || ""),
+        null,
+        { timeout: 90000 }
+    );
+    const connectionLabel = (await frame.locator("#connLabel").innerText()).trim();
+    report.authenticatedBrowser = true;
+    report.operationalWritesAuthorized = connectionLabel.includes("Operaciones autorizadas");
+    report.connectionLabel = connectionLabel;
+    assert.ok(report.operationalWritesAuthorized,
+        "TPV is not authorized for operational writes: " + connectionLabel);
+
+    await installResponseCapture(frame);
+
+    phase = "initial-cash-state";
+    let stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
+    let state = assertSuccess(stateEnvelope, "CASHIER_STATE");
+    report.initialCashState = redact({
+        status: state.status,
+        operationalStatus: state.operationalStatus,
+        canOpenSession: state.canOpenSession,
+        sessionId: state.sessionId || null,
+        expectedCash: state.expectedCash ?? null,
+        projectionStatus: state.cajaActual?.projectionStatus || null,
+    });
+
+    if (state.operationalStatus === "ABIERTA" && state.sessionId) {
+        phase = "close-existing-session";
+        const expectedCash = Number(state.expectedCash);
+        assert.ok(Number.isFinite(expectedCash) && expectedCash >= 0,
+            "Existing open session has no reliable expectedCash; refusing to close it");
+        const closeExisting = await invokeWidget(frame, "SESSION_CLOSE", {
+            sessionId: state.sessionId,
+            contadoEfectivo: expectedCash,
+            observaciones: "Cierre previo autorizado antes de la comprobación funcional",
+        });
+        const closeExistingData = assertSuccess(closeExisting, "SESSION_CLOSE_EXISTING");
+        assert.equal(closeExistingData.sessionId, state.sessionId);
+        stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
+        state = assertSuccess(stateEnvelope, "CASHIER_STATE_AFTER_EXISTING_CLOSE");
+        if (state.canOpenSession !== true) {
+            report.result = "BLOCKED";
+            report.blockReason = "EXISTING_SESSION_CLOSED_BUT_TODAY_CANNOT_BE_REOPENED";
+            report.closedExistingSessionId = closeExistingData.sessionId;
+            throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
+        }
+    } else if (state.operationalStatus === "ABIERTA" && !state.sessionId) {
+        throw Object.assign(new Error("OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION"), {
+            code: "OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION",
+        });
+    }
+
+    if (state.canOpenSession !== true) {
+        report.result = "BLOCKED";
+        report.blockReason = state.operationalStatus === "CERRADA"
+            ? "SESSION_ALREADY_CLOSED_OR_NOT_REOPENABLE_TODAY"
+            : "TPV_SESSION_OPEN_NOT_ALLOWED";
+        throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
+    }
+
+    phase = "session-open";
+    await clearCapturedResponses(frame);
+    await frame.locator("#openCash").click();
+    await frame.locator("#openingCash").waitFor({ state: "visible", timeout: 15000 });
+    await frame.locator("#openingCash").fill("0,00");
+    await frame.locator("#openingReason").fill("");
+    await frame.locator("#modalConfirm").click();
+
+    const openEnvelope = await captureUiOperation(frame, "SESSION_OPEN_RES", "SESSION_OPEN");
+    const openData = assertSuccess(openEnvelope, "SESSION_OPEN");
+    const sessionId = String(openData.sessionId || "");
+    assert.ok(sessionId, "SESSION_OPEN did not return sessionId");
+    assert.ok(openData.openingMovementId, "SESSION_OPEN did not return openingMovementId");
+    assert.ok(openData.openingTransactionId, "SESSION_OPEN did not return openingTransactionId");
+    assert.equal(openData.openingMovementId, openData.openingTransactionId,
+        "Opening movement ID and transactionId differ");
+    report.sessionId = sessionId;
+    report.openingMovementId = openData.openingMovementId;
+    report.openingTransactionId = openData.openingTransactionId;
+
+    await frame.locator("#modalConfirm").waitFor({ state: "visible", timeout: 15000 });
+    await frame.waitForFunction(
+        () => (document.querySelector("#modalConfirm")?.textContent || "").includes("Cerrar y continuar"),
+        null,
+        { timeout: 15000 }
+    );
+    await frame.locator("#modalConfirm").click();
+    await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
+
+    phase = "cash-movement";
+    await clearCapturedResponses(frame);
+    await frame.locator("#cashIn").click();
+    await frame.locator("#movementAmount").waitFor({ state: "visible", timeout: 15000 });
+    await frame.locator("#movementAmount").fill("1,00");
+    await frame.locator("#movementConcept").fill("Entrada de efectivo para comprobación funcional");
+    await frame.locator("#modalConfirm").click();
+
+    const cashEnvelope = await captureUiOperation(frame, "CASH_MOVEMENT_RES", "CASH_MOVEMENT");
+    const cashData = assertSuccess(cashEnvelope, "CASH_MOVEMENT");
+    assert.ok(cashData.movementId, "CASH_MOVEMENT did not return movementId");
+    report.cashMovementId = cashData.movementId;
+
+    phase = "ticket-x";
+    await clearCapturedResponses(frame);
+    await frame.locator("#ticketX").click();
+    const ticketEnvelope = await captureUiOperation(frame, "TICKET_X_RES", "TICKET_X");
+    const ticketData = assertSuccess(ticketEnvelope, "TICKET_X");
+    const ticketX = ticketData.ticketX || ticketData.data?.ticketX;
+    assert.equal(ticketX?.ticketType, "CONTROL_PARCIAL_X");
+    assert.equal(ticketX?.sessionId, sessionId);
+    report.ticketX = {
+        ticketType: ticketX.ticketType,
+        sessionId: ticketX.sessionId,
+        nOperaciones: ticketX.nOperaciones,
+        closesSession: ticketX.closesSession,
+    };
+    await frame.locator("#modalConfirm").click();
+    await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
+
+    phase = "pre-close-ledger-query";
+    const beforeCloseEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
+    const beforeClose = assertSuccess(beforeCloseEnvelope, "CASH_MOVEMENTS_EXPORT_BEFORE_CLOSE");
+    const beforeItems = Array.isArray(beforeClose.items) ? beforeClose.items : [];
+    const openingItem = beforeItems.find((item) => item.movementId === openData.openingMovementId);
+    const cashItem = beforeItems.find((item) => item.movementId === cashData.movementId);
+    assert.ok(openingItem, "Opening movement was not found in the post-write ledger query");
+    assert.ok(cashItem, "Cash movement was not found in the post-write ledger query");
+    assert.ok(openingItem.transactionId, "Opening transactionId missing from ledger query");
+    assert.ok(cashItem.transactionId, "Cash movement transactionId missing from ledger query");
+    assert.equal(openingItem.movementId, openingItem.transactionId);
+    assert.equal(cashItem.movementId, cashItem.transactionId);
+    const expectedCash = cashTotalFromMovements(beforeItems);
+    assert.equal(Math.round(expectedCash * 100), 100,
+        "Expected cash differs from the controlled opening and cash-in operations");
+
+    phase = "session-close";
+    const closeEnvelope = await invokeWidget(frame, "SESSION_CLOSE", {
+        sessionId,
+        contadoEfectivo: expectedCash,
+        observaciones: "Cierre tras comprobación funcional",
+    });
+    const closeData = assertSuccess(closeEnvelope, "SESSION_CLOSE");
+    assert.equal(closeData.sessionId, sessionId);
+    assert.equal(Math.round(Number(closeData.saldoFinal) * 100), 100);
+    assert.equal(Math.round(Number(closeData.diferencia) * 100), 0);
+
+    phase = "post-close-state-query";
+    const finalStateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
+    const finalState = assertSuccess(finalStateEnvelope, "CASHIER_STATE_AFTER_CLOSE");
+    assert.equal(finalState.operationalStatus, "CERRADA");
+    assert.equal(finalState.sessionId, sessionId);
+
+    phase = "post-close-ledger-query";
+    const finalLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
+    const finalLedger = assertSuccess(finalLedgerEnvelope, "CASH_MOVEMENTS_EXPORT_AFTER_CLOSE");
+    const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
+    const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
+    assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
+    assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
+    assert.equal(closingItem.movementId, closingItem.transactionId);
+    for (const item of finalItems) {
+        assert.ok(item.transactionId, "Ledger item has no transactionId: " + item.movementId);
+        assert.ok(Number.isSafeInteger(Number(item.sequenceNumber)) && Number(item.sequenceNumber) > 0,
+            "Ledger item has invalid sequenceNumber: " + item.movementId);
+        assert.match(String(item.hash || ""), /^[a-f0-9]{64}$/i,
+            "Ledger item has invalid hash: " + item.movementId);
+    }
+
+    phase = "audit-query";
+    const auditEnvelope = await invokeWidget(frame, "AUDIT_LIST", { sessionId, limit: 100 });
+    const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST");
+    const auditItems = Array.isArray(auditData.items) ? auditData.items : [];
+    const ticketAudit = auditItems.find((item) => item.action === "TICKET_X_GENERATED");
+    const closeAudit = auditItems.find((item) => item.action === "CAJA_SESSION_CLOSED");
+    assert.ok(ticketAudit?.id, "Ticket X audit record not found");
+    assert.ok(closeAudit?.id, "Session close audit record not found");
+
+    report.postChecks = {
+        cashRegisterStatus: finalState.operationalStatus,
+        sessionId: finalState.sessionId,
+        movementCount: finalItems.length,
+        movements: finalItems.map((item) => ({
+            _id: item.movementId,
+            transactionId: item.transactionId,
+            movementType: item.movementType,
+            amount: item.amount,
+            sequenceNumber: item.sequenceNumber,
+            hash: item.hash,
+            previousRecordHash: item.previousRecordHash || null,
+            traceId: item.traceId || null,
+        })),
+        ticketXAuditId: ticketAudit.id,
+        closeAuditId: closeAudit.id,
+        auditActions: auditItems.map((item) => item.action),
+    };
+
+    report.result = "PASS";
+    report.completedPhase = phase;
+    await persistReport();
+}
+
+try {
+    await run();
+    process.stdout.write(JSON.stringify(report, null, 2) + "\n");
+} catch (error) {
+    if (report.result !== "BLOCKED") report.result = "FAIL";
+    report.failedPhase = phase;
+    report.error = {
+        code: error?.code || "TPV_PREVIEW_E2E_FAILED",
+        message: String(error?.message || error).slice(0, 1000),
+        response: redact(error?.response || null),
+    };
+    await persistReport();
+    process.stderr.write(JSON.stringify(report, null, 2) + "\n");
+    throw error;
+} finally {
+    await browser?.close();
+    await persistReport();
+}

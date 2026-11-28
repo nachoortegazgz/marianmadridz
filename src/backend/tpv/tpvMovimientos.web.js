@@ -35,6 +35,12 @@ function mapMovementRecord(record) {
             : null;
     return {
         movementId: record._id,
+        transactionId: record.transactionId || null,
+        sequenceNumber: Number.isSafeInteger(Number(record.sequenceNumber)) ? Number(record.sequenceNumber) : null,
+        hash: String(record.hash || ""),
+        previousRecordHash: String(record.previousRecordHash || ""),
+        recordTimestamp: record.recordTimestamp || null,
+        traceId: record.traceId || null,
         sessionId: sessionOf(record) || null,
         movementType: TPV_LEDGER_DISPLAY_TYPES[sourceType] || String(record.movementType || "MOVIMIENTO_CAJA"),
         sourceType: TPV_LEDGER_SOURCE,
