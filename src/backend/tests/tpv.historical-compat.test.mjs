@@ -17,17 +17,17 @@ test("fiscal readers isolate the TPV ledger without synthetic or smoke classific
     const headReader = eventLog.slice(headReaderStart, headReaderEnd);
     assert.ok(headReaderStart >= 0 && headReaderEnd > headReaderStart);
     assert.doesNotMatch(headReader, /isExplicitSimulationLedgerRecord|SMOKE_TEST/);
-    assert.match(headReader, /\\.ne\\("recordSource", TPV_LEDGER_SOURCE\\)/);
+    assert.match(headReader, /\.ne\("recordSource", TPV_LEDGER_SOURCE\)/);
     assert.match(headReader, /return \(res\?\.items \|\| \[\]\)\[0\] \|\| null/);
     assert.doesNotMatch(aggregator, /isExplicitSimulationLedgerRecord|SIMULATED_ONLY|SMOKE_TEST/);
-    assert.match(aggregator, /\\.ne\\("recordSource", TPV_LEDGER_SOURCE\\)/);
+    assert.match(aggregator, /\.ne\("recordSource", TPV_LEDGER_SOURCE\)/);
     assert.match(aggregator, /return \{ items: allItems, reachedMaxPages, totalPages: page - 1 \}/);
     const reconciliationStart = eventLog.indexOf("export async function reconciliarProyecciones()");
     const reconciliationEnd = eventLog.indexOf("for (const evento", reconciliationStart);
     const reconciliationQuery = eventLog.slice(reconciliationStart, reconciliationEnd);
     assert.ok(reconciliationStart >= 0 && reconciliationEnd > reconciliationStart);
     assert.doesNotMatch(reconciliationQuery, /SMOKE_TEST/);
-    assert.match(reconciliationQuery, /\\.ne\\("recordSource", TPV_LEDGER_SOURCE\\)/);
+    assert.match(reconciliationQuery, /\.ne\("recordSource", TPV_LEDGER_SOURCE\)/);
     assert.match(reconciliationQuery, /\.gt\("sequenceNumber", 0\)/);
 
     // Keep neutral TPV origin and ledger integrity metadata; neither denotes
