@@ -353,8 +353,8 @@ test('HOOK-CAJA-TPV-01 accepts physical TPV events without fiscal invoice fields
   assert.equal(item.tipoFactura, undefined);
 });
 
-test('HOOK-CAJA-TPV-02 rejects legacy and environment-labelled TPV discriminators on new inserts', () => {
-  for (const movementType of new Set(Object.values(IC.TPV_LEGACY_EVENT_MOVEMENT_TYPES))) {
+test('HOOK-CAJA-TPV-02 rejects non-canonical movement discriminators and record sources', () => {
+  for (const movementType of ["SIMULATED_TPV_PAYMENT", "SIMULATED_TPV_REFUND", "UNKNOWN_MOVEMENT"]) {
     assert.throws(() => H.MovimientosCaja_beforeInsert({
       ...cajaBase(),
       recordSource: "TPV_LEDGER",
