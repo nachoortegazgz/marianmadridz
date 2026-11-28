@@ -164,3 +164,18 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Indexa herramientas AEAT: SIF/VERI*FACTU, SII, IVA, censos, certificados, apoderamientos y expedientes.
 - Hallazgos estáticos altos C3-FINDING-001 (resumen y detalle pueden filtrar poblaciones diferentes) y C3-FINDING-002 (tipoFactura se etiqueta BORRADOR_INTERNO/R1 sin derivar de factura real). El paquete actual no es apto como libro fiscal oficial ni como paquete final de gestoría hasta corregir y probar.
 - **Estado:** diseño documental consolidado; SharePoint, gestoría, AEAT y E2E externos no verificados. No se ejecutaron pruebas de código ni mutaciones externas.
+
+
+## Consolidación TPV Runtime y pruebas — 28-11-2026
+
+- Documentación de flujos de éxito y matriz reproducible: [TPV-RUNTIME-AND-TEST-FLOWS](TPV-RUNTIME-AND-TEST-FLOWS.md).
+- Contrato unificado TPV actualizado: [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md).
+- Plan de aceptación Wix actualizado: [RUNTIME-TEST-PLAN](../tests/runtime/RUNTIME-TEST-PLAN.md).
+- Regla vigente: un único código y comportamiento de dominio; no diferenciar procesos ni registros por origen real/prueba. Los casos se identifican por cliente de prueba acordado y periodo. Los registros previos a 2027 se limpiarán en el reinicio previo a la puesta en marcha; esa limpieza no forma parte del runtime.
+- Última lectura CMS reportada: `CajaActual` 1 (proyección antigua ABIERTA, sin `conceptOperations.tpvRuntime` canónico); `MovimientosCaja` 5; `TransaccionesTPV` 0; `ControlOperativo` 90; `HistoricoCierresZ` 1. No reutilizar ni alterar registros históricos.
+- Código inspeccionado: `abrirSesionCaja`, `registrarVenta`, `registrarMovimientoCaja`, `registrarArqueoParcial`, `generarTicketX`. Se documentan precondiciones y read-back esperado; no se ejecutó ninguno en Wix Runtime durante esta intervención.
+- Evidencia disponible: lectura CMS y escritura/read-back CMS REST de evidencias previas. Esta evidencia no equivale a invocación Velo, integración TPV ni E2E.
+- Divergencia pendiente: `registrarVenta` incluye `sourceType` desde `TPV_RUNTIME_POLICY`; revisar esquema CMS, consumidores y writers antes de retirar el campo. No declarar alineada la directriz hasta resolverla en código.
+- Wix permanece Draft/no publicado. No hay fingerprint que acredite que el SHA Git inspeccionado está instalado en Wix. No se ha certificado apertura, venta, movimiento, arqueo, Ticket X, cierre Z ni permisos de cajero/estilista en Runtime.
+- Sin cambios en colecciones Wix, pagos o datos operativos durante esta consolidación documental.
+- **Estado:** DOCUMENTACIÓN ACTUALIZADA en rama de trabajo; implementación y Runtime E2E PENDIENTES. No se declara CI ni tests PASS porque no se ejecutaron en esta intervención.
