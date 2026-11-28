@@ -481,6 +481,9 @@ async function run() {
     });
     const cashSale = assertSuccess(cashSaleEnvelope, "SALE_REGISTER_CASH");
     assert.equal(cashSale.orderPersisted, true);
+    assert.equal(cashSale.paymentPersisted, true);
+    assert.equal(cashSale.ledgerPersisted, true);
+    assert.equal(cashSale.auditPersisted, true);
     assert.ok(cashSale.orderId, "Cash sale Wix orderId missing");
     assert.equal(cashSale.paymentStatus, "PAID");
     assert.ok(cashSale.paymentId, "Wix offline cash paymentId missing");
