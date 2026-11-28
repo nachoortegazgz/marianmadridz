@@ -12,7 +12,8 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | ¿Cuál es el estado actual? | [STATE-NOW](STATE-NOW.md) | [RELEASE-READINESS](RELEASE-READINESS.md) |
 | ¿Qué arquitectura y reglas prevalecen? | [PROJECT-CANON](PROJECT-CANON.md) | AI-ENTRYPOINT |
 | ¿Cómo funciona TPV/caja/pago/cierre? | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | [TPV backend README](../src/backend/tpv/README.md) |
-| ¿Cómo funciona Capa 3, registro externo y SharePoint? | [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Auditoría de preparación [PR #641](audits/2026-11-27-capa3-export-preparation.md), esquema CMS y documentos históricos enlazados en el dossier |\n| ¿Cómo implementar VERI*FACTU, facturas simplificadas y QR tributario? | [Dossier VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | BOE, especificaciones técnicas/FAQ AEAT, contrato SIF y pruebas Epson/Wix Runtime |
+| ¿Cómo funciona Capa 3, registro externo y SharePoint? | [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Auditoría de preparación [PR #641](audits/2026-11-27-capa3-export-preparation.md), esquema CMS y documentos históricos enlazados en el dossier |
+| ¿Cómo implementar VERI*FACTU, facturas simplificadas y QR tributario? | [Dossier VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | BOE, especificaciones técnicas/FAQ AEAT, contrato SIF y pruebas Epson/Wix Runtime |
 | ¿Qué APIs Wix usar? | Documentación oficial del método concreto | Backend README y tests del consumidor |
 | ¿Cuál es el esquema físico CMS? | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Auditorías CMS fechadas |
 | ¿Qué se necesita para liberar? | [RELEASE-READINESS](RELEASE-READINESS.md) | [RUNTIME-TEST-PLAN](../tests/runtime/RUNTIME-TEST-PLAN.md) |
