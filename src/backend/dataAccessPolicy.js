@@ -13,6 +13,7 @@ const APPEND_ONLY_COLLECTIONS = Object.freeze([
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
     BUSINESS_COLLECTIONS.REGISTROS_HORARIOS_STAFF,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
+    BUSINESS_COLLECTIONS.REGISTRO_INTEGRACION,
 ]);
 
 function _appendOnlyError(collection, operation) {
@@ -128,6 +129,48 @@ export function assertInsertAllowed(collection, item) {
             "CMS_INSERT_CONTROL_TYPE_INVALID",
             false
         );
+    }
+
+    if (collection === BUSINESS_COLLECTIONS.REGISTRO_INTEGRACION) {
+        const requiredStrings = [
+            "eventId", "eventType", "sourceModule", "traceId",
+            "correlationId", "idempotencyKey", "payloadHash",
+        ];
+        if (requiredStrings.some((field) => typeof item[field] !== "string" || !item[field].trim())) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_REQUIRED_FIELD");
+        }
+        if (!/^[a-f0-9]{64}$/.test(item.eventId) ||
+            !/^[a-f0-9]{64}$/.test(item.payloadHash) ||
+            !/^C3_[A-Z0-9_]{3,80}$/.test(item.eventType) ||
+            typeof item.schemaVersion !== "string" || !/^[1-9]\d*$/.test(item.schemaVersion) ||
+            !(item.occurredAt instanceof Date) || !Number.isFinite(item.occurredAt.getTime()) ||
+            !Number.isSafeInteger(item.deliveryAttempts) || item.deliveryAttempts < 0 ||
+            !["PREPARED", "PENDING", "DELIVERED", "VERIFIED", "RETRYABLE_ERROR", "TERMINAL_ERROR"].includes(item.deliveryStatus)) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_INVALID");
+        }
+        const payload = item.payload;
+        const allowedPayloadKeys = new Set([
+            "exportId", "artifactId", "fileName", "sharePointItemId", "webUrl",
+            "contentChecksum", "responseStatus", "errorCode", "attemptNumber",
+            "nextAttemptAt", "year", "quarter", "recordCount", "dataClassification",
+            "artifactPurpose", "legalUseStatus", "reconciliationStatus",
+        ]);
+        if (!_isRecord(payload)) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PAYLOAD_INVALID");
+        }
+        if (Object.keys(payload).some((key) => {
+            const normalizedKey = String(key).toLowerCase();
+            return normalizedKey === "name" ||
+                /customer|email|phone|taxid|nif|address|card|iban|contact|member/i.test(normalizedKey);
+        })) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PII_PROHIBITED");
+        }
+        if (Object.keys(payload).some((key) => !allowedPayloadKeys.has(key))) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PAYLOAD_INVALID");
+        }
+        if (typeof item._id !== "string" || !item._id.trim()) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_ID_REQUIRED");
+        }
     }
 
     if (collection === BUSINESS_COLLECTIONS.CITAS_F2 && !item.bookingId) {
