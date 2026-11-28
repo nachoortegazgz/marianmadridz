@@ -70,9 +70,9 @@ Añadidas cuatro regresiones estáticas:
 - cron nocturno no fabrica identidad de cierre;
 - cierre público no acepta `recordDomain` del navegador.
 
-**CI:** PENDIENTE en el HEAD de esta rama.  
-**Unitarias/integración:** PENDIENTE de ejecución CI.  
-**Wix Runtime/E2E:** PENDIENTE.  
+**CI:** PASS en HEAD `2d0ab3b48ae9cddb947071d37d50704c819cd3cb`. Backend offline quality gates run `46163394360`; Layer 1: 29 suites / 398 tests PASS; Layer 2: 16 suites / 263 tests PASS; suite completa: 93 suites / 847 tests PASS. npm audit, verificaciones Wix eCommerce Cart / Transactions / TPV SDK y ESLint: PASS. Secret scanning run `46163394352`: PASS.  
+**Unitarias/offline:** PASS; incluye las cuatro regresiones P0.  
+**Wix Runtime/E2E:** PENDIENTE.
 **CMS:** sin escrituras ni modificaciones.  
 **Pagos/cobros:** ninguno ejecutado.  
 **Publicación:** no realizada; el sitio permanece Draft/no publicado.
