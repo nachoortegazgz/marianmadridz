@@ -2,7 +2,7 @@
 
 **Proyecto:** Marian Madrid · Wix Classic + Velo  
 **Fecha de revisión:** 2026-11-28  
-**Estado:** DISEÑO DOCUMENTAL CONSOLIDADO · CONFIGURACIÓN EXTERNA NO VERIFICADA
+**Estado:** OUTBOX C3 IMPLEMENTADO EN CÓDIGO · TRANSPORTE SHAREPOINT NO CONFIGURADO NI VALIDADO
 
 > Punto de entrada operativo para configurar SharePoint, gestoría, PGC, correspondencia entre capas, informes derivados y herramientas AEAT. No acredita que tenant, biblioteca, gestoría, autorizaciones AEAT o transporte estén conectados.
 
@@ -24,12 +24,12 @@ Decisiones recomendadas: un sitio SharePoint administrativo con bibliotecas sepa
 
 ### 2.1 Verificado en repositorio/código
 - Existe src/backend/exports/exportContract.js: contrato JSON 1.0.0, serialización determinista, SHA-256, IDs deterministas y minimización.
-- Existe src/backend/exports/exportService.web.js: WebMethod Admin, requireAdmin, rate limit y preparación trimestral en memoria.
+- Existe src/backend/exports/exportService.web.js: WebMethod SiteMember con requireMarianManager, rate limit, preparación trimestral y alta idempotente de metadatos en RegistroIntegracion.
 - Existe src/backend/fiscalAggregator.web.js: agregación trimestral y generación de filas de un libro interno.
 - Existe src/backend/accountingLedger.js: primitiva append-only de líneas contables equilibradas, idempotencia, hash-chain y lock. No tiene mapeo automático de eventos a cuentas.
 - Existe la colección RegistroIntegracion con campos de evento, origen, correlación, idempotencia, hash, estado, intentos, siguiente intento, entrega y último error.
 - Existen LibroAsientosContablesDetalle, MovimientosCaja, CajaActual, HistoricoCierresZ, RegistrosHorariosStaff, CitasF2, ControlOperativo, ServiciosCatalogo, ComplementosCatalogo, MapaStaff y TransaccionesTPV.
-- El contrato de exportación prepara un objeto en memoria. No sube a SharePoint, no llama a Graph, no envía correo, no ejecuta Power Automate ni crea jobs.
+- El contrato de exportación genera un artefacto determinista en memoria y registra su manifiesto minimizado en RegistroIntegracion mediante un evento C3 append-only e idempotente. Todavía no sube a SharePoint, no llama a Graph, no envía correo, no ejecuta Power Automate ni crea jobs.
 - No hay evidencia de tenant, site, biblioteca, identidad técnica, permisos, retención, DLP, conector SharePoint o aceptación de gestoría.
 - El sitio figura Draft/no publicado en la última evidencia del proyecto; Runtime y producción no están acreditados.
 
@@ -320,3 +320,14 @@ BOE/AEAT prevalecen para fiscalidad; ICAC/PGC para contabilidad; Microsoft Learn
 Orden óptimo: (1) corregir y probar FINDING-001/002; (2) obtener software, plan de cuentas, formato y canal de gestoría; (3) confirmar PGC/PGC PYMES, régimen tributario, SII/VERI*FACTU y poderes AEAT; (4) configurar SharePoint; (5) aprobar ADR de transporte y gestoría; (6) implementar Graph, ledger de entrega y read-back; (7) construir informes derivados trazables; (8) E2E sintético Wix→SharePoint→gestoría y pruebas AEAT externas si aplican; (9) GO solo con Runtime validado, revisión profesional y autorización del propietario.
 
 **Estado global:** DISEÑO DOCUMENTAL CONSOLIDADO · CONFIGURACIÓN EXTERNA PENDIENTE · EXPORT FISCAL NO APTO PARA USO LEGAL HASTA CORREGIR HALLAZGOS · PGC AUTOMÁTICO NO APROBADO · E2E EXTERNO NO VERIFICADO.
+
+### 2.4 Implementación C3 outbox (28-11-2026)
+
+- `RegistroIntegracion` ha sido verificada en Wix CMS: colección NATIVE, 21 campos incluidos los campos de sistema; `schemaVersion` es TEXT, `payload` OBJECT, `occurredAt` DATETIME y `deliveryAttempts` NUMBER.
+- El DAL permite insertar eventos C3 y mantiene la colección append-only: no autoriza update, save ni delete.
+- `integrationOutbox.js` construye un `eventId` SHA-256 determinista y un `_id` UUIDv8 derivado de ese hash. En una colisión/reintento lee el item con consistencia fuerte y compara `eventId`, `idempotencyKey` y `payloadHash`; un contenido distinto genera conflicto explícito.
+- El payload solo contiene metadatos de exportación permitidos; las claves de PII se rechazan. No se copian clientes, NIF, direcciones ni datos de contacto al outbox.
+- El panel ZONA MARIAN ya no llama a los métodos retirados de almacenamiento de paquetes. Prepara el manifiesto y lista eventos C3 desde RegistroIntegracion.
+- Estado de entrega devuelto por la aplicación: `PENDING_CONFIGURATION`. Esto significa evento en cola, no archivo subido. La conexión Microsoft Graph, la lectura de vuelta y la verificación de checksum siguen pendientes de credenciales y permisos de SharePoint.
+- La lectura de la colección se mantiene protegida por `requireMarianManager`; el acceso Wix SiteMember no sustituye la autorización de rol.
+- La validación en Wix Preview y la escritura real de un evento aún deben ejecutarse antes de considerar el flujo E2E validado.
