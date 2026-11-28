@@ -99,7 +99,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
     assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
-    assert.match(permissions, /exportAudit: false/);
+    assert.match(permissions, /exportAudit: staff\.rolWebsite === "ADMIN"/);
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
