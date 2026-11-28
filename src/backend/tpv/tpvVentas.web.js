@@ -411,7 +411,7 @@ async function appendSaleAudit(record, traceId) {
     return appendTpvAudit({
         idempotencyKey: record._id + ":SALE_AUDIT",
         action: "VENTA_TPV_REGISTRADA",
-        actorId: record.operatorId,
+        actorId: record.actorId || record.operatorId,
         entityType: "TRANSACCION_TPV",
         entityId: record._id,
         traceId,
@@ -422,6 +422,9 @@ async function appendSaleAudit(record, traceId) {
             impuestosTotal: record.impuestosTotal,
             totalVenta: record.totalVenta,
             medioPago: record.medioPago || null,
+            paymentStatus: record.status === "CONFIRMADA" ? "PAID" : "NOT_PAID",
+            paymentIds: (record.paymentSelection || []).map((payment) => payment.paymentId).filter(Boolean),
+            ledgerMovementIds: (record.paymentSelection || []).map((payment) => payment.ledgerMovementId).filter(Boolean),
             lineCount: Array.isArray(record.lineas) ? record.lineas.length : 0,
             currency: record.currency,
             status: record.status,
@@ -438,7 +441,9 @@ export const registrarVenta = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sale-register");
         try {
+            await requireTpvOperator(traceId);
             const operator = await getMyCajeroContext(traceId);
+            if (!operator?.operatorId) throw new Error("TPV_OPERATOR_CONTEXT_UNAVAILABLE");
             const idempotencyKey = String(input.idempotencyKey || "").trim();
             const sessionId = String(input.sessionId || "").trim();
             if (!UUID_V4.test(idempotencyKey)) throw new Error("TPV_IDEMPOTENCY_KEY_INVALID");
