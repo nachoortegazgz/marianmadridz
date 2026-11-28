@@ -7,7 +7,7 @@ import {
     resolveTpvContact,
     listAuthorizedProfessionals,
 } from "backend/tpv/tpvNativeDirectory";
-import { requireCajero } from "backend/security";
+import { requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { toMinorUnits as toMinorUnitsStrict } from "backend/tpv/tpvUtils";
 import { normalizeTpvError } from "backend/tpv/tpvError";
@@ -107,7 +107,7 @@ export const buscarClientesTPV = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-customer-search");
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             const result = await searchTpvContacts(input.search);
@@ -137,7 +137,7 @@ export const obtenerReservasClienteTPV = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-customer-bookings");
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             const contactId = String(
@@ -185,7 +185,7 @@ export const obtenerServicios = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-services-read");
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             const paging = normalizePage(input);
@@ -258,7 +258,7 @@ export const obtenerStaff = webMethod(
     async () => {
         const traceId = makeTraceId("tpv-staff-read");
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             return {
@@ -289,7 +289,7 @@ export const obtenerProductos = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-products-read");
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             const version = await getStoresCatalogVersion();
@@ -396,7 +396,7 @@ export const obtenerVariantesProducto = webMethod(
             "tpv-product-variants-read"
         );
 
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         try {
             const productId = String(
