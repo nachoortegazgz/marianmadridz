@@ -12,8 +12,9 @@ function normalizeRate(value) {
 }
 
 /**
- * Evaluates the deliberately narrow first operational writer contract.
- * It does not authorize persistence or confirm that a payment was received.
+ * Evaluates the narrow operational writer contract.
+ * An empty tender list is an unpaid commercial intent, not a payment.
+ * This function never authorizes persistence or confirms that money was received.
  */
 export function getTpvWriteV1Blockers({ lineas, pagos, totalVenta } = {}) {
     const blockers = [];
@@ -44,11 +45,11 @@ export function getTpvWriteV1Blockers({ lineas, pagos, totalVenta } = {}) {
         if (rates.size > 1) blockers.push("TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED");
     }
 
-    if (!Array.isArray(pagos) || pagos.length === 0) {
-        blockers.push("TPV_WRITE_V1_PAYMENT_REQUIRED");
-    } else if (pagos.length !== 1) {
+    if (pagos !== undefined && pagos !== null && !Array.isArray(pagos)) {
+        blockers.push("TPV_WRITE_V1_PAYMENTS_INVALID");
+    } else if (Array.isArray(pagos) && pagos.length > 1) {
         blockers.push("TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED");
-    } else {
+    } else if (Array.isArray(pagos) && pagos.length === 1) {
         const payment = pagos[0];
         const method = String(payment?.medioPago || "").trim().toUpperCase();
         if (!SUPPORTED_WRITE_V1_PAYMENT_METHODS.has(method)) {
