@@ -318,14 +318,14 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
 
     for (const [fileName, methodNames] of protectedMethods) {
         const source = await readFile(new URL("../tpv/" + fileName, import.meta.url), "utf8");
-        assert.match(source, /require(?:Admin|Cajero)|getMyCajeroContext/, fileName + " must retain backend role authorization");
+        assert.match(source, /require(?:Admin|Cajero|TpvOperator)|getMyCajeroContext/, fileName + " must retain backend role authorization");
         for (const methodName of methodNames) {
             const declaration = "export const " + methodName + " = webMethod(";
             const start = source.indexOf(declaration);
             assert.notEqual(start, -1, fileName + " must expose " + methodName);
             const nextExport = source.indexOf("\nexport const ", start + declaration.length);
             const block = source.slice(start, nextExport < 0 ? source.length : nextExport);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero|TpvOperator)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the server");
             const access = block.search(repositoryAccess);
             assert.ok(access < 0 || authorization < access, methodName + " must authorize before repository access");
@@ -396,7 +396,7 @@ test("every exported TPV WebMethod has an explicit runtime policy classification
 
         for (const methodName of policy.guarded || []) {
             const block = getWebMethodSource(source, methodName);
-            const authorization = block.search(/await require(?:Admin|Cajero)\(|await getMyCajeroContext\(/);
+            const authorization = block.search(/await require(?:Admin|Cajero|TpvOperator)\(|await getMyCajeroContext\(/);
             assert.notEqual(authorization, -1, methodName + " must authorize on the backend");
             const firstWrite = block.search(writeOperations);
             assert.ok(firstWrite < 0 || authorization < firstWrite, methodName + " must authorize before writes");
