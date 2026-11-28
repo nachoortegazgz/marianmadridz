@@ -9,6 +9,10 @@
 - marcar como PARTIAL/PENDING_RECOVERY cualquier paso secundario pendiente, con recuperación trazable;
 - disponer de pruebas para cada condición de bloqueo/early return.
 
+
+
+**Datos sensibles y pruebas:** utilizar placeholders realistas para datos sensibles. Excepción acotada autorizada por el propietario: Nacho Ortega es cliente de prueba; `nachoortegazgz@gmail.com` y `666724634` son contactos seguros para ese fixture. No ampliar esta excepción a otros datos ni registrar payloads completos; ver PROJECT-CANON.
+
 Métrica exigida: 100 % de condiciones bloqueantes/early return observables con error y log correlacionados; 100 % de datos esperados aplicables contabilizados como persistidos, rechazados con causa o pendientes explícitos. Esta directriz no elimina validaciones justificadas ni autoriza datos ficticios.
 
 
