@@ -492,7 +492,6 @@ function _isLegacyUnverifiedProjection(caja) {
     return caja?.cashRegisterStatus === "ABIERTA" &&
         caja?.snapshotSource === "MOVIMIENTOS_CAJA_RECONCILIADOS" &&
         String(caja?.traceId || "") === "0" &&
-        caja?.lastOperationStatus === "SIMULATED_SUCCESS" &&
         !String(state?.sessionId || "").trim();
 }
 
