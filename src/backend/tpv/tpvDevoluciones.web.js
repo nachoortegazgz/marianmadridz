@@ -1,5 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireAdmin } from "backend/security";
+import { getMyCajeroContext, requireAdmin } from "backend/security";
+import { appendTpvAudit } from "backend/tpv/tpvRepository";
 import { makeTraceId } from "public/mmUtils";
 import { error as tpvError } from "backend/tpv/tpvEnvelope";
 
@@ -45,6 +46,7 @@ export const registrarDevolucion = webMethod(
     async (input = {}) => {
         const traceId = makeTraceId("tpv-refund-write-block");
         await requireAdmin(traceId);
+        const operator = await getMyCajeroContext(traceId);
         let request;
         try {
             request = validateRefundRequest(input);
@@ -62,6 +64,42 @@ export const registrarDevolucion = webMethod(
                 }
             );
         }
+        let audit;
+        try {
+            audit = await appendTpvAudit({
+                idempotencyKey: "REFUND_BLOCKED:" + request.idempotencyKey,
+                action: "TPV_REFUND_BLOCKED",
+                actorId: operator.operatorId,
+                entityType: "TPV_REFUND_ATTEMPT",
+                entityId: request.saleId,
+                traceId,
+                payload: {
+                    sessionId: request.sessionId,
+                    paymentMethod: request.paymentMethod,
+                    amount: request.amount,
+                    reason: request.reason,
+                    idempotencyKey: request.idempotencyKey,
+                    outcome: "BLOCKED",
+                    providerConfigured: false,
+                    refundExecuted: false,
+                    financialLedgerWritten: false,
+                },
+            });
+        } catch (error) {
+            return tpvError(
+                "TPV_REFUND_AUDIT_FAILED",
+                "La devolución sigue bloqueada y no se ha podido persistir su intento de auditoría.",
+                ["Conserva el traceId y la clave idempotente; no repitas ni ejecutes la devolución hasta comprobar ControlOperativo."],
+                {
+                    persisted: false,
+                    auditPersisted: false,
+                    recoverable: true,
+                    retryable: false,
+                    requiresReconciliation: true,
+                    traceId,
+                }
+            );
+        }
         return tpvError(
             "TPV_REFUND_PROVIDER_NOT_CONFIGURED",
             "La estructura de la solicitud de devolución se ha validado, pero no se ha registrado ni ejecutado.",
@@ -71,6 +109,9 @@ export const registrarDevolucion = webMethod(
             ],
             {
                 persisted: false,
+                auditPersisted: true,
+                auditEventId: audit.item?._id || null,
+                auditReplayed: audit.replayed === true,
                 recoverable: false,
                 retryable: false,
                 requiresReconciliation: false,
