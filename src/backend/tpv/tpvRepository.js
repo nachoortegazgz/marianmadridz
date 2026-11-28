@@ -923,7 +923,7 @@ export async function insertTpvEvent(collection, idempotencyKey, data, { ledgerT
     if (ledgerType !== undefined && ledgerType !== derivedLedgerType) {
         throw new Error("TPV_LEDGER_TYPE_COLLECTION_MISMATCH");
     }
-    assertTpvOperationalLedgerConfigured(derivedLedgerType);
+    assertTpvLedgerTypeSupported(derivedLedgerType);
     if (collection === TPV_COLLECTIONS.VENTAS) {
         throw new Error("TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV");
     }
