@@ -28,6 +28,7 @@ const REQUEST_TYPES = Object.freeze([
     "CUSTOMER_BOOKINGS",
     "SALE_VALIDATE",
     "SALE_REGISTER",
+    "SALE_READBACK",
     "CASH_MOVEMENT",
     "PARTIAL_CASH_COUNT",
     "REFUND",
@@ -369,6 +370,11 @@ async function dispatch(message) {
             });
             return validarVentaBorrador({ lineas, pagos });
         }
+        case "SALE_READBACK":
+            return obtenerEstadoVentaTPV({
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
+            });
         case "SALE_REGISTER": {
             if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
             if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
