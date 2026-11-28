@@ -1650,6 +1650,13 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             (openingCashAmount === null || expectedCash === null)) {
             throw new Error("CAJA_OPEN_SESSION_BALANCE_MISSING");
         }
+        const openedAt = cashRegister[CAJA_KEYS.OPENED_AT] instanceof Date
+            ? cashRegister[CAJA_KEYS.OPENED_AT]
+            : new Date(cashRegister[CAJA_KEYS.OPENED_AT] || "");
+        if (cashRegisterStatus === CASH_REGISTER_STATUS.ABIERTA &&
+            (!cashRegister[CAJA_KEYS.OPENED_AT] || Number.isNaN(openedAt.getTime()))) {
+            throw new Error("CAJA_OPEN_SESSION_TIMESTAMP_INVALID");
+        }
         const countedCash = cashRegister.countedCash == null
             ? null
             : _readRequiredLedgerAmount(cashRegister, "countedCash", cashRegister.countedCash, "CAJA_STATE_NUMERIC_FIELD_INVALID");
