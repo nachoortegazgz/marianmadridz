@@ -844,7 +844,7 @@ async function _validatePaymentCitaSet(citas, orderId, traceId) {
         const currentPaymentStatus = String(
             cita?.[FIELD_PAYMENT_STATUS] || meta.paymentStatus || ""
         ).toUpperCase();
-        const existingOrderId = _safeTrim(meta.orderId || "");
+        const existingOrderId = _safeTrim(cita?.[FIELD_ORDER_ID] || meta.orderId || "");
         const bookingId = _safeTrim(
             cita?.[FIELD_BOOKING_ID] || cita?.bookingId || ""
         );
