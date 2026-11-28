@@ -67,24 +67,19 @@ test("rejects client-originated discounts until a backend discount contract exis
     );
 });
 
-test("rejects voucher and gift-card tenders until balance validation is integrated", () => {
+test("accepts cash and rejects card, vouchers and gift cards until their native integrations exist", () => {
     assert.equal(assertTpvPaymentMethodsSupported([
         { medioPago: "EFECTIVO", importe: 10 },
-        { medioPago: "TARJETA", importe: 5 },
     ]), true);
-    assert.throws(
-        () => assertTpvPaymentMethodsSupported([
-            { medioPago: "TARJETA_REGALO", importe: 10 },
-        ]),
-        { code: "TPV_PAYMENT_METHOD_NOT_VERIFIED" },
-    );
-    assert.throws(
-        () => assertTpvPaymentMethodsSupported([
-            { medioPago: "BONO", importe: 10 },
-        ]),
-        { code: "TPV_PAYMENT_METHOD_NOT_VERIFIED" },
-    );
+    for (const medioPago of ["TARJETA", "TARJETA_REGALO", "BONO", "BIZUM", "OTROS"]) {
+        assert.throws(
+            () => assertTpvPaymentMethodsSupported([{ medioPago, importe: 10 }]),
+            { code: "TPV_PAYMENT_PROVIDER_NOT_CONFIGURED" },
+            medioPago
+        );
+    }
 });
+
 
 test("rejects a syntactically valid but unauthorized Wix tax catalog app ID", () => {
     assert.throws(() => buildTpvTaxCalculationLines([{
