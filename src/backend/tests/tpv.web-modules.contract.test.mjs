@@ -772,6 +772,10 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
     assert.equal(first.manifest.contentChecksum, second.manifest.contentChecksum);
     assert.equal(first.manifest.recordCount, 1);
     assert.equal(first.manifest.deliveryStatus, "PREPARED_NOT_DELIVERED");
+    assert.equal(first.manifest.dataClassification, "SYNTHETIC_TEST");
+    assert.equal(first.manifest.artifactPurpose, "ACCOUNTING_REVIEW_DRAFT");
+    assert.equal(first.manifest.legalUseStatus, "INTERNAL_DRAFT_ONLY");
+    assert.equal(first.manifest.reconciliationStatus, "SOURCE_RECONCILIATION_REQUIRED");
     assert.equal(first.manifest.period.periodStart, "2026-10-01");
     assert.equal(first.manifest.period.periodEndExclusive, "2027-01-01");
     assert.equal(first.content.records[0].taxableAmountMinor, 10000);
@@ -827,7 +831,7 @@ test("Capa 3 export WebMethod is admin-only and has no delivery or write side ef
     assert.match(service, /getQuarterlyTaxSummaryInternal/);
     assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
     assert.match(service, /buildQuarterlyRegistryPackage/);
-    assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph/);
+    assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph|requireRealRecords/);
 });
 
 
