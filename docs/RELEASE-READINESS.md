@@ -26,7 +26,7 @@ Consultar [STATE-NOW](STATE-NOW.md) para el detalle fechado. A 2026-11-28:
 - PR #679 está integrada (merge `d44501c3c224ac417b283f687718ec9eb7538606`) y su commit correctivo final de `main` es `944eb225b63260353cf283c87b0c0b6f07af6caf`; los workflows post-correction reportaron 91 suites / 816 tests PASS (run `46085827875`) y secret scanning PASS (run `46085827842`).
 - La evidencia CI pertenece a los HEAD validados de cada PR; no se debe trasladar automáticamente a commits posteriores.
 - Capa 0 continúa EN EJECUCIÓN: quedan propagación de fallos del almacén de secretos, verificación de cobertura de Staff Members v1 para todos los resourceId, conversiones monetarias, configuración de moneda, matriz de writers/idempotencia, deuda/código muerto y validación Runtime.
-- El último read-back Wix documentado es 27-11-2026 y es histórico: Draft, una `CajaActual` ABIERTA, movimientos e históricos existentes y divergencias Bookings/CitasF2. No usar esos registros como fixtures ni asumir que los recuentos siguen vigentes.
+- Read-back Wix verificado el 28-11-2026: `CajaActual` contiene una proyección heredada ABIERTA sin sesión TPV canónica; `MovimientosCaja` contiene 5 filas históricas en formato no canónico. El flujo de apertura debe sustituir la proyección mediante el writer y conservar las filas históricas.
 - No se ha acreditado sincronización entre el SHA de Git y el código instalado en Wix.
 - No se han acreditado venta, cobro, movimiento físico, devolución, arqueo, cierre Z ni jornada en Wix Runtime.
 
@@ -36,7 +36,7 @@ Consultar [STATE-NOW](STATE-NOW.md) para el detalle fechado. A 2026-11-28:
 - No usar bloqueos globales por entorno ni bloqueos fiscales genéricos para impedir pruebas de dominio.
 - No borrar registros ni purgar físicamente. Los ledgers y registros append-only se conservan; las correcciones se realizan con eventos rectificativos.
 - No modificar ni reutilizar la caja singleton ABIERTA ni históricos compartidos.
-- Las pruebas usan fixtures y adaptadores simulados. Ningún pago, reembolso, remesa AEAT, terminal o notificación real.
+- Las pruebas recorren el flujo interno normal. Solo se simula la respuesta del proveedor de pagos; no se ejecutan capturas, reembolsos ni efectos externos reales.
 - Las escrituras Wix de prueba requieren ámbito aislado inequívoco y writer canónico. Los registros append-only de prueba se conservan y rectifican mediante nuevos eventos.
 - Errores específicos, estables y accionables; no exponer mensajes brutos ni secretos.
 - CI verde no autoriza publicación ni habilitación productiva.
@@ -62,6 +62,6 @@ Cada PASS identifica:
 - Flujo/método ejecutado y precondiciones.
 - Identidad/rol y ámbito de datos cuando aplique.
 - Resultado, logs seguros, correlación y read-back.
-- Efectos externos: deben ser cero durante QA.
+- Efectos económicos externos: cero. La simulación se limita a la respuesta de la pasarela; los registros internos se persisten y concilian normalmente.
 
 Un smoke HTTP, test estático, mock o CI offline no acredita Runtime E2E. Un read-back de Site Context no acredita sincronización Git-Wix. No extrapolar evidencia entre niveles.
