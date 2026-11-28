@@ -638,9 +638,9 @@ export async function registrarEventoEconomico(input) {
                         ? "REFUND_ORIGINAL_LEDGER_AMBIGUOUS"
                         : "REFUND_ORIGINAL_LEDGER_MISSING");
                 }
-                const originalAmountCents = Math.round(Math.abs(Number(
-                    originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount ?? 0
-                )) * 100);
+                const originalAmountRaw = originalRes.items[0]?.totalAmount ?? originalRes.items[0]?.accountingAmount;
+                const originalAmount = _readRequiredFiscalNumber(originalAmountRaw, "refundOriginalAmount");
+                const originalAmountCents = Math.round(Math.abs(originalAmount) * 100);
                 if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
                     throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
                 }
