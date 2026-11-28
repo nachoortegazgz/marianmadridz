@@ -1188,7 +1188,7 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
+        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true || state.capabilities.acceptPayment !== true) {
           toast("No hay una cotización fiscal válida para la venta.");
           return;
         }
