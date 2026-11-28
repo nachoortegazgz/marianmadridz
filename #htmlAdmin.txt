@@ -161,13 +161,13 @@
         <button class="btn btn-outline" id="btnLoadPrepared" type="button">Actualizar cola</button>
       </div>
       <div id="externalDeliveryStatus" style="margin:10px 0;padding:12px;border-radius:10px;background:var(--warning-soft);color:var(--warning);font-size:12px;">
-        Estado de transporte: PENDIENTE DE CONFIGURACIÓN. No se ha realizado ningún envío.
+        Estado de transporte: se comprobará la configuración Graph al actualizar la cola.
       </div>
       <div class="scroll">
         <table class="table">
-          <thead><tr><th>Evento</th><th>Periodo</th><th>Estado</th><th>Intentos</th></tr></thead>
+          <thead><tr><th>Evento</th><th>Periodo</th><th>Estado</th><th>Intentos</th><th>Acción</th></tr></thead>
           <tbody id="documentsBody">
-            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Pulsa "Actualizar cola"</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Pulsa "Actualizar cola"</td></tr>
           </tbody>
         </table>
       </div>
@@ -188,6 +188,7 @@
         FISCAL_BOOK:'FISCAL_BOOK', FISCAL_BOOK_RES:'FISCAL_BOOK_RES',
         EXTERNAL_EVENTS:'EXTERNAL_EVENTS', EXTERNAL_EVENTS_RES:'EXTERNAL_EVENTS_RES',
         EXTERNAL_PREPARE:'EXTERNAL_PREPARE', EXTERNAL_PREPARE_RES:'EXTERNAL_PREPARE_RES',
+        EXTERNAL_DELIVER:'EXTERNAL_DELIVER', EXTERNAL_DELIVER_RES:'EXTERNAL_DELIVER_RES',
       };
 
       const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
@@ -218,6 +219,8 @@
       const btnLoadPrepared=$('btnLoadPrepared'), btnCreateSnapshot=$('btnCreateSnapshot'), documentsBody=$('documentsBody');
       const externalDeliveryStatus=$('externalDeliveryStatus');
       let activeExternalRequest = false;
+      let activeDeliveryButton = null;
+      let externalTransportConfigured = false;
 
 
       function send(type, payload={}) {
@@ -237,6 +240,11 @@
             setLoading(btnCreateSnapshot, false);
           }
           if (type === MESSAGE_TYPES.EXTERNAL_EVENTS) setLoading(btnLoadPrepared, false);
+          if (type === MESSAGE_TYPES.EXTERNAL_DELIVER) {
+            activeExternalRequest = false;
+            if (activeDeliveryButton) setLoading(activeDeliveryButton, false);
+            activeDeliveryButton = null;
+          }
           err('No se pudo comunicar con el controlador de administración. Recarga la página y conserva el traceId.');
         }
       }
@@ -403,10 +411,14 @@
       function renderDocuments(items) {
         documentsBody.replaceChildren();
         const rows = Array.isArray(items) ? items : [];
+        const verifiedArtifactIds = new Set(rows
+          .filter((event) => event?.eventType === 'C3_PACKAGE_VERIFIED')
+          .map((event) => String(event?.payload?.artifactId || ''))
+          .filter(Boolean));
         if (rows.length === 0) {
           const tr = document.createElement('tr');
           const td = document.createElement('td');
-          td.colSpan = 4;
+          td.colSpan = 5;
           td.style.textAlign = 'center';
           td.style.color = 'var(--muted)';
           td.textContent = 'No hay eventos C3 en la cola.';
@@ -428,6 +440,31 @@
             td.textContent = value;
             tr.appendChild(td);
           });
+          const actionCell = document.createElement('td');
+          const artifactId = String(payload.artifactId || '');
+          if (event.eventType === 'C3_PACKAGE_PREPARED' &&
+              event.deliveryStatus === 'PENDING' &&
+              !verifiedArtifactIds.has(artifactId)) {
+            if (externalTransportConfigured && /^[a-f0-9]{64}$/.test(artifactId)) {
+              const deliverButton = document.createElement('button');
+              deliverButton.type = 'button';
+              deliverButton.className = 'btn btn-outline';
+              deliverButton.textContent = 'Enviar y verificar';
+              deliverButton.addEventListener('click', () => {
+                if (activeExternalRequest) return;
+                activeExternalRequest = true;
+                activeDeliveryButton = deliverButton;
+                setLoading(deliverButton, true);
+                send(MESSAGE_TYPES.EXTERNAL_DELIVER, { artifactId });
+              });
+              actionCell.appendChild(deliverButton);
+            } else {
+              actionCell.textContent = 'Configurar Graph';
+            }
+          } else {
+            actionCell.textContent = event.eventType === 'C3_PACKAGE_VERIFIED' ? 'Verificado' : '—';
+          }
+          tr.appendChild(actionCell);
           documentsBody.appendChild(tr);
         });
       }
@@ -513,10 +550,15 @@
             if (ok) {
               renderDocuments(data?.items || []);
               const items = data?.items || [];
-              const pending = items.filter((item) => item.eventType === 'C3_PACKAGE_PREPARED' && item.deliveryStatus === 'PENDING').length;
+              const verifiedIds = new Set(items.filter((item) => item.eventType === 'C3_PACKAGE_VERIFIED').map((item) => String(item?.payload?.artifactId || '')));
+              const pending = items.filter((item) => item.eventType === 'C3_PACKAGE_PREPARED' && item.deliveryStatus === 'PENDING' && !verifiedIds.has(String(item?.payload?.artifactId || ''))).length;
+              externalTransportConfigured = data?.transport?.configured === true;
+              const missingSecrets = Array.isArray(data?.transport?.missingSecrets) ? data.transport.missingSecrets : [];
               if (externalDeliveryStatus) externalDeliveryStatus.textContent =
                 'Eventos C3: ' + String(data?.totalCount ?? items.length) +
-                ' · Pendientes de envío: ' + pending + ' · Transporte: PENDIENTE DE CONFIGURACIÓN.';
+                ' · Verificados: ' + verifiedIds.size + ' · Pendientes: ' + pending +
+                (externalTransportConfigured ? ' · Configuración Graph completa; conectividad se verifica al enviar.' :
+                  ' · PENDIENTE DE CONFIGURACIÓN: ' + (missingSecrets.length ? missingSecrets.join(', ') : 'secrets no disponibles') + '.');
             } else err(error?.message || 'No se pudo consultar RegistroIntegracion.');
             break;
           case 'EXTERNAL_PREPARE_RES':
@@ -526,13 +568,29 @@
               const manifest = data?.manifest || {};
               const duplicate = data?.outbox?.duplicate === true;
               info((duplicate ? 'El evento ya existía (reintento idempotente). ' : 'Paquete preparado y evento añadido a RegistroIntegracion. ') +
-                'ID: ' + String(manifest.exportId || '—') + '. El envío queda pendiente de configuración; no se ha enviado a SharePoint.');
+                'ID: ' + String(manifest.exportId || '—') + '. Actualiza la cola para comprobar Graph y habilitar el envío verificado.');
               if (externalDeliveryStatus) externalDeliveryStatus.textContent =
-                'PREPARADO · Outbox persistido · PENDIENTE DE CONFIGURACIÓN SharePoint. No enviado.';
+                'PREPARADO · Outbox persistido · Pendiente de comprobación de configuración y envío SharePoint.';
               setLoading(btnLoadPrepared, true);
               send(MESSAGE_TYPES.EXTERNAL_EVENTS, { limit: 25 });
             } else {
               err(error?.message || 'No se pudo preparar el paquete ni registrar el evento.');
+            }
+            break;
+          case 'EXTERNAL_DELIVER_RES':
+            activeExternalRequest = false;
+            if (activeDeliveryButton) setLoading(activeDeliveryButton, false);
+            activeDeliveryButton = null;
+            if (ok) {
+              info('Archivo entregado y checksum SHA-256 verificado mediante lectura desde SharePoint.');
+              if (externalDeliveryStatus) externalDeliveryStatus.textContent =
+                'VERIFICADO · ' + String(data?.fileName || 'Paquete C3') + ' · SHA-256 confirmado.';
+              setLoading(btnLoadPrepared, true);
+              send(MESSAGE_TYPES.EXTERNAL_EVENTS, { limit: 25 });
+            } else {
+              err(error?.message || 'No se pudo completar y verificar la entrega en SharePoint.');
+              if (externalDeliveryStatus) externalDeliveryStatus.textContent =
+                'ENTREGA NO CONFIRMADA · ' + String(error?.code || 'C3_DELIVERY_FAILED');
             }
             break;
         }
