@@ -19,6 +19,8 @@ const suites = [
   'tpv-ui.qa-source.test.mjs',
   'tpv.qa.persistence.policy.test.mjs',
   'tpv-widget.contract.test.mjs',
+  'tpv.caja-singleton-bootstrap.regression.test.mjs',
+  'tpv-preview-e2e.runner.test.mjs',
   'members.sdk.contract.test.mjs',
   'booking.members-required.contract.test.mjs',
   'staff.identity.contract.test.mjs',
