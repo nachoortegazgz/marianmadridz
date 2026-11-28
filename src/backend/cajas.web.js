@@ -1625,6 +1625,37 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
     try {
         await requireCajero(traceId);
         const cashRegister = await getCashRegisterSingleton();
+        if (!cashRegister) throw new Error("CAJA_PRINCIPAL_MISSING");
+        const cashRegisterStatus = _safeTrim(cashRegister[CAJA_KEYS.STATUS]).toUpperCase();
+        if (!Object.values(CASH_REGISTER_STATUS).includes(cashRegisterStatus)) {
+            throw new Error("CAJA_PRINCIPAL_STATUS_INVALID");
+        }
+        const stateAmounts = {
+            netAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.TOTAL, cashRegister[CAJA_KEYS.TOTAL], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            cashAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.CASH, cashRegister[CAJA_KEYS.CASH], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            cardAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.CARD, cashRegister[CAJA_KEYS.CARD], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+            otherAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.OTHER, cashRegister[CAJA_KEYS.OTHER], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
+        };
+        const salesCount = Number(cashRegister[CAJA_KEYS.OPERATIONS]);
+        if (!Number.isSafeInteger(salesCount) || salesCount < 0) {
+            throw new Error("CAJA_STATE_OPERATIONS_INVALID");
+        }
+        const openingCashAmount = cashRegister[CAJA_KEYS.OPENING_CASH] == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.OPENING_CASH, cashRegister[CAJA_KEYS.OPENING_CASH], "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        const expectedCash = cashRegister.expectedCash == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "expectedCash", cashRegister.expectedCash, "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        if (cashRegisterStatus === CASH_REGISTER_STATUS.ABIERTA &&
+            (openingCashAmount === null || expectedCash === null)) {
+            throw new Error("CAJA_OPEN_SESSION_BALANCE_MISSING");
+        }
+        const countedCash = cashRegister.countedCash == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "countedCash", cashRegister.countedCash, "CAJA_STATE_NUMERIC_FIELD_INVALID");
+        const difference = cashRegister.difference == null
+            ? null
+            : _readRequiredLedgerAmount(cashRegister, "difference", cashRegister.difference, "CAJA_STATE_NUMERIC_FIELD_INVALID");
         const day = diaKey || new Date().toLocaleDateString("sv-SE", { timeZone: SDK_CONFIG.TZ });
         const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .eq("fechaExpedicionFactura", day)
@@ -1675,22 +1706,19 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
         return {
             status: "SUCCESS",
             data: {
-                _id: cashRegister?._id || CASH_REGISTER_ID,
-                singletonKey: cashRegister?.[CAJA_KEYS.SINGLETON_KEY] || SINGLETONS.CAJA_PRINCIPAL,
-                operationDate: _getSessionDayKey(cashRegister?.[CAJA_KEYS.OPENED_AT]),
-                cashRegisterStatus: cashRegister?.[CAJA_KEYS.STATUS] || CASH_REGISTER_STATUS.CERRADA,
-                netAmount: cashRegister?.[CAJA_KEYS.TOTAL] ?? 0,
-                cashAmount: cashRegister?.[CAJA_KEYS.CASH] ?? 0,
-                cardAmount: cashRegister?.[CAJA_KEYS.CARD] ?? 0,
-                otherAmount: cashRegister?.[CAJA_KEYS.OTHER] ?? 0,
-                salesCount: cashRegister?.[CAJA_KEYS.OPERATIONS] ?? 0,
+                _id: cashRegister._id,
+                singletonKey: cashRegister[CAJA_KEYS.SINGLETON_KEY],
+                operationDate: _getSessionDayKey(cashRegister[CAJA_KEYS.OPENED_AT]),
+                cashRegisterStatus,
+                ...stateAmounts,
+                salesCount,
                 totalOperations,
                 openedAt: cashRegister?.[CAJA_KEYS.OPENED_AT] ?? null,
                 openedBy: cashRegister?.openedBy ?? null,
-                openingCashAmount: cashRegister?.[CAJA_KEYS.OPENING_CASH] ?? null,
-                expectedCash: cashRegister?.expectedCash ?? null,
-                countedCash: cashRegister?.countedCash ?? null,
-                difference: cashRegister?.difference ?? null,
+                openingCashAmount,
+                expectedCash,
+                countedCash,
+                difference,
                 differenceReason: cashRegister?.differenceReason ?? null,
                 openedByName,
                 closedAt: _effectiveSessionClosedAt(cashRegister),
