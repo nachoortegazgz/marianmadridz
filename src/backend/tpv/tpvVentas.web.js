@@ -412,6 +412,24 @@ async function resumeExistingSale(record, { buyer, replayed, traceId }) {
         }
     }
 
+    const paymentReconciled = !current.paymentSelection?.length ||
+        (current.paymentSelection[0]?.confirmed === true && Boolean(current.paymentSelection[0]?.ledgerMovementId));
+    if (auditPersisted && current.orderId && paymentReconciled && current.requiresReconciliation === true) {
+        try {
+            current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                ...current,
+                requiresReconciliation: false,
+                draftOrderReason: null,
+            }, { consistency: CONSISTENCY.STRONG });
+        } catch (updateError) {
+            logger.error("TPV sale reconciliation completion update failed", {
+                traceId,
+                idempotencyKey: current._id,
+                errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+            });
+        }
+    }
+
     if (current.status === "CONFIRMADA" && current.requiresReconciliation !== true &&
         auditPersisted && current.paymentSelection?.[0]?.ledgerMovementId) {
         return saleSuccessEnvelope(current, { replayed, auditPersisted, traceId });
