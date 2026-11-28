@@ -66,7 +66,7 @@ export async function uploadAndVerifySharePointPackage(artifact) {
     ]);
     const normalizedFolderPath = String(folderPath || "").trim().replace(/^\\/+|\\/+$/g, "");
     if (!normalizedFolderPath || normalizedFolderPath.split("/").some((part) =>
-        !part || part === "." || part === ".." || part.includes("\\\\") || part.includes(":")
+        !part || part === "." || part === ".." || part.includes("\\") || part.includes(":")
     )) throw fail("C3_GRAPH_FOLDER_PATH_INVALID");
 
     const serialized = serializeQuarterlyRegistryContent(artifact.content);
