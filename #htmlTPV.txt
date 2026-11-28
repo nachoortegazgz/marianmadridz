@@ -609,7 +609,6 @@ body {
       TPV_SESSION_CLOSED: "La sesión está cerrada. Abre una nueva sesión para continuar.",
       TPV_SESSION_MISMATCH: "La sesión seleccionada ya no es la sesión activa. Actualiza el estado de caja y vuelve a seleccionar la sesión.",
       TPV_COUNT_DIFFERENCE_REASON_REQUIRED: "Hay una diferencia entre el efectivo esperado y el contado. Explica el motivo con al menos 3 caracteres.",
-      TPV_PENDING_SALES_PREVENT_CLOSE: "No se puede cerrar la caja: hay ventas pendientes de completar o conciliar. Consulta el detalle antes de volver a intentarlo.",
       TPV_PENDING_REFUNDS_PREVENT_CLOSE: "No se puede cerrar la caja: hay devoluciones pendientes de completar o conciliar.",
       TPV_RECONCILIATION_FAILED: "No se puede cerrar la caja porque los movimientos no cuadran. Revisa el resumen y los movimientos pendientes.",
       TPV_IDEMPOTENCY_KEY_INVALID: "No se ha podido validar la clave de operación. No repitas la acción; actualiza la página y consulta el estado antes de reintentar.",
@@ -1039,7 +1038,7 @@ body {
       container.innerHTML = `
         <div class="ticket-line"><strong>VENTA</strong></div>
         <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
-        <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
+        <div class="ticket-line"><span>Total pendiente de cobro</span><strong>${money(sale.totalVenta || 0)}</strong></div>
         <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
         ${hasProducts ? '<div class="ticket-line"><span>Stock</span><strong>No consultado ni modificado</strong></div>' : ''}
       `;
@@ -1093,7 +1092,6 @@ body {
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
       if (blockers.includes("TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE")) messages.push("La tasa impositiva de alguna línea no puede verificarse.");
       if (blockers.includes("TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED")) messages.push("La venta combina varias tasas de IVA; la escritura V1 solo admite una.");
-      if (blockers.includes("TPV_WRITE_V1_PAYMENT_REQUIRED")) messages.push("Añade un medio de pago.");
       if (blockers.includes("TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED")) messages.push("La escritura V1 admite un único medio de pago por venta.");
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_METHOD_UNSUPPORTED")) messages.push("El medio de pago no está habilitado en el contrato V1.");
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
