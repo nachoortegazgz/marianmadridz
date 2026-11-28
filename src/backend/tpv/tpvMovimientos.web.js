@@ -9,6 +9,9 @@ import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "bac
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
 import { normalizeTpvError } from "backend/tpv/tpvError";
 
+// APPEND_ONLY_COLLECTIONS and direct historical ledger writes must surface
+// CMS_TPV_HISTORICAL_LEDGER_WRITE_DENIED at the CMS policy boundary.
+
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_SALE: "VENTA",
     TPV_CASH_MOVEMENT: null,

@@ -423,10 +423,11 @@ body {
 (function () {
   "use strict";
 
+  // Wix documents the site's URL as targetOrigin. Keep an explicit fallback for
+  // sandboxed Preview frames where referrer/ancestorOrigins can be unavailable.
   const PARENT_ORIGIN_ALLOWLIST = Object.freeze([
-    // >>> CONFIGURAR AQUÍ el/los orígenes reales del controlador Wix <<<
-    // "https://usuario.wixsite.com",
-    // "https://www.dominio-real.com",
+    "https://marianmadrid.es",
+    "https://www.marianmadrid.es",
   ]);
 
   function resolveParentOrigin() {
@@ -441,7 +442,7 @@ body {
         }
       } catch (_) {}
     }
-    return null;
+    return PARENT_ORIGIN_ALLOWLIST[0];
   }
   const PARENT_ORIGIN = resolveParentOrigin();
 
@@ -688,8 +689,11 @@ body {
         reject(operationError);
       };
       const handler = (event) => {
-        if (!PARENT_ORIGIN) return;
-        if (event.source !== window.parent || event.origin !== PARENT_ORIGIN) return;
+        if (event.source !== window.parent) return;
+        // HtmlComponent Preview may deliver an opaque origin. The Wix
+        // component boundary plus backend authorization remain the trust
+        // boundary; normal browser origins still require the resolved origin.
+        if (event.origin && event.origin !== "null" && event.origin !== PARENT_ORIGIN) return;
         const data = event.data || {};
         if (data.type !== responseType || (data.messageId !== id && data.requestId !== id)) return;
         cleanup();
@@ -1136,7 +1140,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.saleReady === true && state.operationalWritesAvailable === true;
+    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.commercialRecordReady === true && state.operationalWritesAvailable === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1185,7 +1189,7 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
+        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
           toast("No hay una cotización fiscal válida para la venta.");
           return;
         }
@@ -1198,7 +1202,7 @@ body {
   });
 
   $("addPayment").onclick = () => {
-    if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
+    if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
       toast("No se aceptan pagos: el backend no ha autorizado la venta.");
       return;
     }
@@ -1248,7 +1252,7 @@ body {
       toast("El ticket está vacío.");
       return;
     }
-    if (!state.saleQuote || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
+    if (!state.saleQuote || state.saleQuote.commercialRecordReady !== true || state.saleQuote.saleReady !== true || state.operationalWritesAvailable !== true) {
       toast("No se puede registrar la venta: faltan catálogo, cálculo fiscal o permiso de escritura.");
       return;
     }
@@ -1261,11 +1265,16 @@ body {
         cantidad: item.qty,
         profesionalId: state.profesionalId,
       })),
-      payments: [],
+      medioPago: state.paymentMethod || null,
+      payments: state.payments.map((payment) => ({
+        method: payment.method,
+        amount: payment.amountMinor / 100,
+        change: payment.changeMinor / 100,
+      })),
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada como pendiente de cobro. No se ha realizado ningún pago.");
+    toast(state.payments.length ? "Venta registrada con el pago declarado." : "Venta registrada como pendiente de cobro.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;

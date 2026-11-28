@@ -32,7 +32,6 @@ test("TPV controller imports operational WebMethods and no longer imports the se
         "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
         "src/backend/tpv/tpvVentas.web.js": ["validarVentaBorrador", "registrarVenta"],
         "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
-        "src/backend/tpv/tpvDevoluciones.web.js": ["registrarDevolucion"],
         "src/backend/tpv/tpvCierres.web.js": ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"],
         "src/backend/tpv/tpvExport.web.js": ["exportarMovimientos"],
         "src/backend/tpv/tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
@@ -58,7 +57,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     const types = [
         "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS",
         "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "SALE_VALIDATE", "CASH_MOVEMENT",
-        "PARTIAL_CASH_COUNT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
+        "PARTIAL_CASH_COUNT", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
         "CASH_MOVEMENTS_EXPORT", "AUDIT_EXPORT",
     ];
     for (const type of types) {
@@ -71,6 +70,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
     assert.match(controller, /case "SALE_REGISTER":[\s\S]*?return registrarVenta\(\{/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?return obtenerAuditoriaTPVLista\(/);
+    assert.match(controller, /case "REFUND":[\s\S]*?TPV_REFUND_DISABLED/);
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
