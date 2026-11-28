@@ -33,6 +33,8 @@ Documentación oficial:
 - Git Integration + CLI for Sites: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/setting-up-git-integration-wix-cli-for-sites
 - Wix CLI for Sites: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/wix-cli-for-sites-commands
 - Local Editor: https://dev.wix.com/docs/develop-websites/articles/workspace-tools/developer-tools/git-integration-wix-cli-for-sites/test-your-code-in-the-local-editor
+- Create Order (incluye estrategia de aprobación e inventario): https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/orders/create-order
+- Add Payments (registra pagos offline; no realiza el cargo): https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/orders/order-transactions/add-payments
 - Sandbox y Live (ES): https://support.wix.com/es/article/cms-accessing-and-syncing-your-sandbox-and-live-collections
 
 ## 3. Preview, Sandbox y efectos de datos
@@ -90,10 +92,10 @@ La sesión usa actualmente el identificador diario `TPV-SESSION-YYYYMMDD`; por d
 ## 6. Integración nativa Wix actualmente incorporada
 
 - Pedidos: `orders.createOrder`, `orders.getOrder`, `orders.searchOrders`, `orders.cancelOrder`.
-- Cobros: `orderTransactions.addPayments` y `listTransactionsForSingleOrder`. AddPayments registra el cobro offline; no recauda efectivo ni procesa tarjeta. El cajero debe haber recibido físicamente el efectivo antes de confirmar el pago.
+- Cobros: `orderTransactions.addPayments` y `listTransactionsForSingleOrder`. AddPayments registra un pago offline; no recauda efectivo ni procesa tarjeta. El cajero debe haber recibido físicamente el efectivo antes de confirmar el pago en la TPV. El estado aprobado se concilia con el pedido y con el ledger de caja.
 - CRM: el contacto seleccionado se asocia a `buyerInfo.contactId` del pedido.
 - Bookings: `extendedBookings.queryExtendedBookings` mediante el adaptador `tpvNativeDirectory.js`; lectura paginada y acciones permitidas.
-- El inventario de Wix Stores se reserva por el pedido nativo Wix; no se mantiene un stock paralelo del TPV.
+- El pedido nativo Wix usa `settings.orderApprovalStrategy: DEFAULT`; la documentación oficial indica que el inventario se reduce automáticamente según la estrategia de aprobación configurada. El TPV no mantiene un stock paralelo ni decrementa manualmente una segunda vez.
 - Tarjeta no se habilita hasta integrar un proveedor/terminal real. Efectivo es el único medio de cobro implementado en este alcance.
 - Las devoluciones aún requieren integración nativa con Payments/Order Billing y su ledger inverso; no se deben simular como reembolso confirmado.
 
