@@ -106,3 +106,243 @@ Sin embargo, **en su estado actual el TPV tiene bugs bloqueantes que impiden com
    * Sustituir en `exportarMovimientosCaja` y `exportarAuditoriaTPV` las descargas completas de 6 colecciones (`maxRecords: 10000`) por consultas filtradas por `sessionId` o paginadas por cursor (como ya hace `tpvExport.web.js`) para evitar *timeouts* de Wix Velo (~14 s).
    * Habilitar la impresión térmica 80 mm de tickets de venta (`#printLast`) reutilizando el motor `@media print` ya presente en `#htmlTPV.txt`.
    * Desbloquear devoluciones (`tpvDevoluciones.web.js` + retirar `refund` de `PERMANENTLY_DISABLED`) una vez integrado el proveedor de reembolsos.
+  
+BLOQUE 2
+
+## Lista técnica consolidada de bugs y mejoras pendientes
+
+### 1. Registro de ventas pendientes
+
+- Eliminar `medioPago` de `SALE_REGISTER`.
+- Mantener siempre `payments: []` al registrar una venta pendiente.
+- Rechazar en backend cualquier venta pendiente que reciba pagos:
+  - Código: `TPV_PENDING_SALE_PAYMENTS_NOT_ALLOWED`.
+- Validar nuevamente el estado fiscal y comercial antes de persistir.
+- No mostrar ni almacenar una venta pendiente como cobrada.
+- Diferenciar claramente:
+  - Venta registrada.
+  - Pago confirmado.
+  - Venta conciliada.
+  - Factura o ledger fiscal emitido.
+
+### 2. Devoluciones
+
+- Deshabilitar completamente el botón de devolución en el frontend.
+- Cambiar el texto a: **“Devoluciones deshabilitadas”**.
+- Mantener una respuesta controlada para llamadas antiguas:
+  ```js
+  case "REFUND":
+      throw new Error("TPV_REFUND_PROVIDER_NOT_CONFIGURED");
+  ```
+- No importar ni ejecutar `registrarDevolucion` mientras no exista proveedor autorizado.
+- No registrar devoluciones sintéticas como si fueran reembolsos reales.
+
+### 3. Error crítico `traceId`
+
+- Corregir `backend/tpv/tpvCatalogo.web.js`.
+- Declarar `traceId` antes de utilizarlo en las líneas reportadas:
+  - Línea 163.
+  - Línea 248.
+  - Línea 313.
+- Usar un identificador de trazabilidad consistente por operación.
+- No reutilizar variables fuera de su ámbito.
+- Añadir pruebas de despliegue para:
+  - Servicios.
+  - Productos.
+  - Variantes.
+  - Personal.
+  - Búsqueda de clientes.
+- El controlador principal no contiene el error; la corrección debe hacerse en el módulo de catálogo.
+
+### 4. Protocolo del widget Wix
+
+- Mantener sin cambios:
+  - `MM_READY`.
+  - `MM_CONTEXT`.
+  - `version: 1`.
+- No sustituir el protocolo por `TPV_READY`.
+- Validar:
+  - Componente `htmlTPV`.
+  - Versión de protocolo.
+  - Estado de contexto.
+  - Identificador de solicitud y respuesta.
+- Validar un nonce o identificador de handshake para evitar aceptar contextos no relacionados.
+- Mantener respuestas con pares consistentes:
+  - `SALE_VALIDATE_RES`.
+  - `SALE_REGISTER_RES`.
+  - `CASHIER_STATE_RES`.
+  - Etc.
+
+### 5. Seguridad de `postMessage`
+
+- No aceptar cualquier origen derivado de `document.referrer`.
+- Usar una lista blanca de orígenes permitidos y configurados.
+- Rechazar mensajes cuando:
+  - El origen no esté autorizado.
+  - `event.source` no sea `window.parent`.
+  - Falte el nonce o contexto válido.
+  - El tipo de respuesta no coincida con la solicitud.
+- No confiar únicamente en controles visuales del frontend; la autorización real debe permanecer en backend.
+
+### 6. Control de permisos y modo consulta
+
+- Mantener `operationalWritesAvailable` como control global.
+- Si está en modo consulta:
+  - Deshabilitar cobros.
+  - Deshabilitar devoluciones.
+  - Deshabilitar aperturas, cierres y movimientos si no están autorizados.
+  - Permitir únicamente lecturas y cálculos.
+- No mostrar “operaciones autorizadas” si el backend no ha confirmado las escrituras.
+- Cada operación sensible debe volver a validarse en backend, aunque el frontend la haya deshabilitado.
+
+### 7. Pagos simulados
+
+- Separar claramente:
+  - Simulación de pago para pruebas.
+  - Cobro real.
+  - Registro comercial pendiente.
+- No activar métodos de pago reales sin autorización explícita.
+- No presentar efectivo, tarjeta o Bizum como pagos confirmados si solo se han introducido en pantalla.
+- Mantener bloqueados:
+  - Bizum.
+  - Bono.
+  - Tarjeta regalo.
+  - Otros medios no verificados.
+- Documentar que los importes introducidos en pruebas no generan cobros reales.
+
+### 8. Coherencia frontend–backend
+
+- Unificar nombres de propiedades entre ambos lados:
+  - `lineItems` ↔ `lineas`.
+  - `payments` ↔ `pagos`.
+  - `method` ↔ `medioPago`.
+  - `amount` ↔ `importe`.
+  - `change` ↔ `importeCambio`.
+- Evitar enviar campos no contemplados por el contrato de escritura.
+- Validar cantidades como enteros positivos cuando el backend lo requiera.
+- Validar importes con máximo de dos decimales.
+- Rechazar líneas sin:
+  - Tipo válido.
+  - Identificador de catálogo.
+  - Cantidad válida.
+
+### 9. Idempotencia y operaciones pendientes
+
+- Conservar claves idempotentes para aperturas, movimientos y ventas.
+- No generar una nueva clave automáticamente cuando una operación haya quedado en estado desconocido.
+- Mostrar al usuario que debe consultar el estado antes de repetir una operación.
+- Mantener los códigos:
+  - `TPV_TIMEOUT`.
+  - `TPV_RECONCILIATION_REQUIRED`.
+  - `TPV_IDEMPOTENCY_CONFLICT`.
+- Verificar la respuesta persistida antes de mostrar “operación completada”.
+
+### 10. Caja y sesiones
+
+- Confirmar siempre:
+  - Estado de sesión.
+  - Operador autenticado.
+  - Identificador de sesión.
+  - Fecha de operación.
+  - Fondo inicial.
+- Impedir:
+  - Abrir dos sesiones simultáneas.
+  - Reabrir una sesión cerrada.
+  - Cerrar con ventas pendientes no conciliadas.
+  - Operar sin sesión abierta.
+- Verificar después de cada escritura el estado real de `CajaActual`.
+
+### 11. Cierre Z y Control X
+
+- Mantener Control X como informe informativo sin modificar saldos.
+- Mantener Cierre Z como operación bloqueante e irreversible para la sesión.
+- Validar diferencias de efectivo y exigir motivo cuando proceda.
+- No permitir cierre si existen:
+  - Ventas pendientes.
+  - Devoluciones pendientes.
+  - Movimientos no conciliados.
+  - Diferencias no justificadas.
+
+### 12. Catálogo fiscal
+
+- No permitir líneas con precio inexistente o no verificable.
+- Validar moneda EUR.
+- Validar precio fijo de servicios.
+- Validar variantes y disponibilidad de productos.
+- Rechazar artículos sin clasificación fiscal.
+- Mostrar claramente cuándo el cálculo fiscal de Wix no está disponible.
+- No permitir registrar una venta si el cálculo fiscal está incompleto o inconsistente.
+
+### 13. HTML y estructura
+
+- Mantener un único documento HTML completo.
+- Eliminar duplicaciones de `DOCTYPE`, `<html>`, `<head>` y `<body>`.
+- Revisar que todos los identificadores usados por JavaScript existan en el HTML.
+- Evitar botones visualmente activos que ejecuten operaciones deshabilitadas.
+- Cambiar textos ambiguos como:
+  - “Devolución no habilitada”.
+  - “Impresión pendiente”.
+  - “Pago aplicado”.
+- Usar textos que distingan consulta, simulación y operación real.
+
+### 14. Exportaciones y auditoría
+
+- Unificar `MOVEMENTS_EXPORT` y `CASH_MOVEMENTS_EXPORT` si representan la misma función.
+- Eliminar tipos de mensaje no utilizados.
+- Verificar que las exportaciones no incluyan datos sensibles innecesarios.
+- Declarar siempre `traceId` cuando forme parte de la auditoría.
+- Mantener protección contra fórmulas CSV.
+- Informar si la exportación está truncada o incompleta.
+
+### 15. Control de errores
+
+- Añadir al catálogo todos los códigos usados por frontend y backend.
+- Evitar respuestas genéricas cuando exista un código técnico conocido.
+- Mantener mensajes en español para el usuario.
+- Separar:
+  - Mensaje público.
+  - Detalle técnico.
+  - Acción de recuperación.
+  - Requiere conciliación.
+  - Puede reintentarse.
+- No afirmar que una operación se completó sin confirmación de persistencia.
+
+### 16. Publicación y pruebas
+
+- Confirmar de forma independiente:
+  - Sitio publicado.
+  - Pasarela real bloqueada.
+  - Modo de prueba activo.
+  - TPV accesible en `/tpv`.
+  - Backend desplegado sin errores.
+- Ejecutar pruebas sin pagos reales:
+  - Carga de catálogo.
+  - Selección de servicio.
+  - Selección de producto y variante.
+  - Cálculo fiscal.
+  - Registro de venta pendiente.
+  - Apertura de caja.
+  - Entrada y salida de efectivo.
+  - Control X.
+  - Cierre Z.
+  - Auditoría.
+  - Exportaciones.
+  - Rechazo de devoluciones.
+  - Rechazo de pagos en ventas pendientes.
+- Documentar por prueba:
+  - Entrada.
+  - Respuesta esperada.
+  - Resultado real.
+  - Evidencia.
+  - Estado: aprobado, bloqueado o pendiente.
+
+### Prioridad recomendada
+
+1. Corregir `traceId` en `tpvCatalogo.web.js`.
+2. Eliminar `medioPago` y forzar `payments: []`.
+3. Bloquear devoluciones en frontend y backend.
+4. Validar protocolo, origen y nonce.
+5. Confirmar despliegue sin errores.
+6. Ejecutar la batería de pruebas en modo simulado.
+7. Publicar únicamente cuando todas las comprobaciones críticas estén aprobadas.
+
