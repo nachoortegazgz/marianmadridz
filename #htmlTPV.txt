@@ -700,7 +700,9 @@ body {
         if (data.error || response.error || response.status === "ERROR") {
           rejectStructured(response.error || data.error || response, "TPV_OPERATION_FAILED");
         } else if (response.status === "PENDING") {
-          rejectStructured({ code: response.reason || "TPV_OPERATION_PENDING", status: "PENDING", retryable: false, requiresReconciliation: response.requiresReconciliation === true, outcomeUnknown: true, operationMayContinue: true }, "TPV_OPERATION_PENDING");
+          // A persisted pending result is an operation outcome, not a transport failure.
+          // Resolve it so the caller can show the status and release its idempotency key.
+          resolve(response);
         } else {
           resolve(response.data !== undefined ? response.data : response);
         }
@@ -1242,10 +1244,10 @@ body {
     $("paymentAmount").value = "";
     renderPaymentSummary();
     refreshSaleQuote();
-    if (changeMinor > 0) toast("Importe de prueba añadido. Cambio simulado: " + money(changeMinor / 100));
+    if (changeMinor > 0) toast("Importe añadido. Cambio calculado: " + money(changeMinor / 100));
   };
 
-  /* ---------- Guardar venta (SIN medioPago, SIN payments reales) ---------- */
+  /* ---------- Registrar venta; el pago permanece pendiente hasta su confirmación ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
     if (!state.items.length) {
       toast("El ticket está vacío.");
@@ -1273,7 +1275,7 @@ body {
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast(state.payments.length ? "Venta registrada con el pago declarado." : "Venta registrada como pendiente de cobro.");
+    toast("Venta registrada. Pago pendiente de confirmación.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
