@@ -144,8 +144,8 @@ test("FISCAL-ORDER-12 rejects boolean tax amounts and rates", () => {
             taxInfo: { totalTax: { amount: true } },
             lineItems: [{
                 quantity: 1,
-                totalPriceAfterTax: { amount: 1 },
-                taxInfo: { taxableAmount: 1, taxAmount: 0, taxRate: 0.21 },
+                totalPriceAfterTax: { amount: 1.21 },
+                taxInfo: { taxableAmount: 1, taxAmount: 0.21, taxRate: 0.21 },
             }],
         }),
         /FISCAL_TAX_FIELD_INVALID/
@@ -169,6 +169,7 @@ test("FISCAL-ORDER-10 rejects a tax summary that does not reconcile to line tax 
             taxInfo: { totalTax: { amount: "8.00" } },
             priceSummary: { tax: { amount: "8.00" }, total: { amount: "45.50" } },
             lineItems: [{
+                quantity: 1,
                 totalPriceAfterTax: { amount: "45.50" },
                 taxInfo: {
                     taxableAmount: { amount: "37.60" },
