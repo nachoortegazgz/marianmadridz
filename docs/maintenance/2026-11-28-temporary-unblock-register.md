@@ -10,7 +10,7 @@
 
 ## 1. Dictamen ejecutivo
 
-Se consolida la evidencia disponible en GitHub y la auditoría de lectura Wix CMS del 2026-11-28. Esta intervención es documental: **no modifica lógica de negocio, permisos, flags, datos CMS, pagos ni configuración de Wix**.
+Se consolida la evidencia disponible en GitHub y la auditoría de lectura Wix CMS del 2026-11-28. Esta consolidación incluye un cambio acotado de autorización TPV aprobado por el propietario del proyecto: incorpora ESTILISTA a ventas y movimientos ordinarios de caja. No modifica flags de pagos, hardware, notificaciones, fiscalidad, CMS ni configuración de Wix.
 
 Estado global: **IMPLEMENTACIÓN PARCIAL · LECTURA CMS EJECUTADA · E2E/RUNTIME NO ACREDITADO · PRODUCCIÓN NO VERIFICADA**.
 
@@ -42,6 +42,7 @@ Los valores siguientes se verificaron en los archivos de `main` consultados:
 | `STAFF_CLOCKING_CONFIG.WRITES_ENABLED` | `false` | `registrarFichaje` devuelve `CLOCKING_WRITES_DISABLED` antes de insertar |
 | `STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED` | `false` | `registrarAjusteHorario` devuelve `CLOCKING_ADJUSTMENTS_DISABLED` |
 | TPV `acceptPayment` | `false` | No se confirma ni captura un pago mediante esta capacidad |
+| TPV `registerCashMovement` | `true` para ADMIN, GESTION y ESTILISTA autenticados | La capacidad se entrega tras resolver y validar el rol en backend |
 | TPV `printReceipt` | `false` | Impresión física deshabilitada |
 | TPV `requestRefund` | `false` | Reembolso TPV deshabilitado |
 | TPV `issueTicketZ` | `false` | Cierre Z TPV deshabilitado |
@@ -50,7 +51,7 @@ Los valores siguientes se verificaron en los archivos de `main` consultados:
 | `TPV_RUNTIME_POLICY.HARDWARE_ENABLED` | `false` | Hardware físico deshabilitado |
 | `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED` | `false` | Envío externo a gestoría deshabilitado |
 
-El módulo `tpvPermisos.web.js` permite capacidades de lectura y expone algunas capacidades operativas condicionadas al rol ADMIN. Eso no elimina los bloqueos específicos anteriores ni sustituye las validaciones de cada writer.
+El módulo `tpvPermisos.web.js` expone las capacidades de lectura, venta y anotación ordinaria de movimientos a los tres roles TPV autenticados (ADMIN, GESTION y ESTILISTA). Las operaciones de apertura/cierre de sesión, arqueo parcial, Ticket X, exportación de movimientos y otras operaciones administrativas conservan autorización ADMIN. La confirmación de pago, reembolso, Ticket Z, impresión física, hardware y notificaciones permanecen deshabilitados.
 
 No se ha encontrado ni aplicado un interruptor global de escritura CMS. Las escrituras se gobiernan por writer, permisos, validación, hooks físicos, contrato de colección, locks e idempotencia.
 
@@ -135,11 +136,14 @@ La consulta de estado combinado de GitHub para `796e8eaf8317d35d02744f40d0504e9a
 ## 9. Registro de cambios de esta intervención
 
 - Se actualiza este documento en la rama `maintenance/temporary-unblock-register-2026-11-28`.
-- No se modifica código de aplicación.
-- No se modifican flags ni permisos.
+- `src/backend/security.js`: incorpora ESTILISTA a los roles de operador TPV mediante una lista canónica compartida por `isCajero` y `getMyCajeroContext`. La identidad sigue resolviéndose contra el miembro Wix actual y Bookings Staff.
+- `src/backend/tpv/tpvPermisos.web.js`: habilita `registerCashMovement` para operadores TPV ya autorizados; no amplía apertura, arqueo, cierre, Ticket X/Z ni exportaciones.
+- `src/backend/tpv/tpvMovimientos.web.js`: cambia exclusivamente el guard de `registrarMovimientoCaja` a `requireCajero`. Los métodos de exportación mantienen `requireAdmin`.
+- Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs` y `tpv.web-modules.contract.test.mjs` para reflejar el nuevo perímetro de autorización.
 - No se realizan escrituras CMS, pagos, reembolsos, fichajes, cierres, comunicaciones ni operaciones físicas.
 - No se despliega a Wix.
-- La rama se propone mediante PR para revisión; no se fusiona automáticamente.
+- No se han ejecutado tests ni CI en esta intervención. El cambio está implementado en la rama y pendiente de validación.
+- La rama se propone mediante el PR existente #708; no se fusiona automáticamente.
 
 ## 10. Fuentes internas
 
