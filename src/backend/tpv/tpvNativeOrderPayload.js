@@ -67,7 +67,11 @@ function mapTaxBreakdown(items) {
  * Maps a backend-prepared, Wix-tax-verified sale into the native Wix eCommerce
  * Create Order contract. No client-supplied price, tax, quantity or total is read.
  */
-export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
+export function buildTpvNativeOrderPayload(prepared, buyer = {}, externalOrderId) {
+    const correlationId = String(externalOrderId || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(correlationId)) {
+        fail("TPV_ORDER_EXTERNAL_ID_INVALID");
+    }
     if (!prepared || typeof prepared !== "object" || !Array.isArray(prepared.lineas) ||
         prepared.lineas.length === 0 || prepared.lineas.length > 100) {
         fail("TPV_ORDER_PREPARATION_INVALID");
@@ -180,7 +184,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
             discount: price(0, "ORDER_DISCOUNT"),
             total: price(fromMinorUnits(totalMinor), "ORDER_TOTAL"),
         },
-        channelInfo: { type: "POS" },
+        channelInfo: { type: "POS", externalOrderId: correlationId },
         currency: SDK_CONFIG.CURRENCY_CODE,
         taxIncludedInPrices: prepared.taxIncludedInPrice,
     };
