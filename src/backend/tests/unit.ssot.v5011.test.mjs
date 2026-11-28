@@ -250,19 +250,12 @@ test('SSOT-09 suppressAuth eliminated from active backend modules', () => {
   }
 });
 
-// SSOT-10 (PEND-D1 cierre definitivo, 2026-10): dos guards complementarios.
-// (a) fiscalDocuments.web.js fue el ultimo consumidor con suppressAuth:true
-//     literal; no debe regresar. (b) La elevacion vive SOLO en dataAccess.js
-//     (DA-ELEV-01): todo acceso via wixData en esa capa pasa por auth.elevate,
-//     por lo que los call-sites no necesitan (ni deben) declarar flags de
-//     identidad. Se verifica que dataAccess.js importa @wix/essentials y que
-//     ninguna operacion de lectura/escritura queda sin envolver.
-test('SSOT-10 suppression flag gone + elevation centralized in dataAccess', () => {
+// SSOT-10: retired adapters and package endpoints stay absent; Wix Data
+// elevation is centralized in the single data access layer.
+test('SSOT-10 retired adapters stay absent + elevation centralized in dataAccess', () => {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  const fd = readFileSync(resolve(root, 'fiscalDocuments.web.js'), 'utf8');
-  assert.ok(!/suppressAuth\s*:/.test(fd), 'fiscalDocuments.web.js uses suppressAuth option');
-  // DAL-RETIRE-01 (2026-10): dataLegacyAdapter eliminado del repo; el guard
-  // verifica su ausencia (el import top-level de fs ya trae readFileSync).
+  assert.equal(existsSync(resolve(root, 'fiscalDocuments.web.js')), false,
+    'retired fiscalDocuments.web.js must not be reintroduced');
   assert.ok(!existsSync(resolve(root, 'dataLegacyAdapter.js')), 'dataLegacyAdapter.js must be retired');
   const da = readFileSync(resolve(root, 'dataAccess.js'), 'utf8');
   assert.ok(/from "@wix\/data"/.test(da), 'dataAccess.js must use the Wix Data SDK');
