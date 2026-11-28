@@ -54,6 +54,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 ### QA, contratos y decisiones
 
 - [Contrato transactionId fiscal — 2026-11-27](qa/2026-11-27-p0-fiscal-transaction-contract.md).
+- [Corrección SSOT escritores fiscales append-only — 2026-11-28](qa/2026-11-28-fiscal-writer-append-only-ssot.md): regla vigente, comprobación de ausencia de interruptor global, pruebas positivas y prerequisitos de configuración.
 - [Contrato de errores accionables TPV — 2026-11-27](qa/2026-11-27-tpv-actionable-error-contract.md).
 - [ADR transporte HtmlComponent — 2026-11-26](architecture/ADR-2026-11-26-WIX-HTMLCOMPONENT-TRANSPORT.md).
 - [Plan de aceptación Wix Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): procedimiento pendiente de ejecución.

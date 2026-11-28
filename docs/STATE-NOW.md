@@ -114,3 +114,13 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Wix Data Query / Paging: https://dev.wix.com/docs/velo/apis/wix-data/query
 
 **CI PASS ≠ Runtime PASS ≠ Producción verificada.** Mantener NO-GO hasta obtener evidencia del entorno correspondiente.
+
+
+## Corrección SSOT fiscal — 28-11-2026
+
+- Decisión vigente: la inmutabilidad prohíbe editar/borrar registros existentes; **no impide insertar nuevos registros válidos**.
+- Código activo en el HEAD base `51c42cdf5b514e79079de0c7e6cb78be8e2fe3fa`: no contiene un bloqueo global `FISCAL_LEDGER_WRITES_DISABLED` / `LEDGER_WRITES_ENABLED=false`. La prueba `operational-writers.fail-closed.contract.test.mjs` comprueba que los writers no dependan de interruptores globales.
+- Prueba positiva disponible: `events.native-booking-sync.test.mjs::EVENT-PAYMENT-09` valida insert fiscal sintético en `MovimientosCaja`, campos económicos, hash/secuencia, correlación y replay idempotente. Tests de locking cubren serialización/fencing.
+- CI de PR #681: 91 suites / 816 tests PASS; quality gates run `46085729210`, secret scan `46085729219`. Es evidencia del HEAD de esa PR, no del runtime instalado.
+- Sigue pendiente resolver la configuración real `CONFIG_SISTEMA_FISCAL` y secretos del emisor con datos verificados. Es un requisito de validez/configuración, no una prohibición legal a escribir.
+- Detalle: [corrección SSOT fiscal append-only](qa/2026-11-28-fiscal-writer-append-only-ssot.md).

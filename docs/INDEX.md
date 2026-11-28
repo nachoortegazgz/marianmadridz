@@ -34,6 +34,7 @@
 - [Preparación export Capa 3 — PR #641](audits/2026-11-27-capa3-export-preparation.md): contrato JSON y preparación backend; no acredita transporte SharePoint.
 - [Secretos, importes y configuración Capa 0](audits/2026-11-28-capa0-secrets-money-config.md): errores de secretos, validación monetaria y constantes canónicas.
 - [Contrato transactionId fiscal — 27-11-2026](qa/2026-11-27-p0-fiscal-transaction-contract.md).
+- [Corrección SSOT escritores fiscales append-only — 28-11-2026](qa/2026-11-28-fiscal-writer-append-only-ssot.md): elimina la interpretación errónea de un bloqueo normativo global; diferencia append-only de prerequisitos reales de configuración.
 - [Contrato de errores TPV — 27-11-2026](qa/2026-11-27-tpv-actionable-error-contract.md).
 - [ADR transporte HtmlComponent — 26-11-2026](architecture/ADR-2026-11-26-WIX-HTMLCOMPONENT-TRANSPORT.md).
 

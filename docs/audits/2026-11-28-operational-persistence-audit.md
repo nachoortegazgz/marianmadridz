@@ -215,3 +215,14 @@ No hay evidencia de transporte externo ni read-back de SharePoint. La preparaci�
 **NO CONFORME para declarar persistencia integral.** Las colecciones y writers existen, pero hay operaciones bloqueadas, registros sintéticos incompletos, recuperaciones pendientes y proyecciones divergentes. El estado correcto es: implementación parcial, lectura CMS real completada para colecciones propias, conciliación nativa Bookings/eCommerce ejecutada, Runtime no aceptado y producción no verificada.
 
 No se ha modificado ningún dato. La siguiente intervención debe ser una remediación controlada por P0, sin limpiar ni sobrescribir históricos.
+
+
+## 10. Aclaración SSOT — escritores fiscales append-only (28-11-2026)
+
+La revisión de la instrucción del propietario corrige cualquier interpretación según la cual la inmutabilidad impediría nuevas escrituras. **La inmutabilidad prohíbe editar o borrar registros existentes; no prohíbe insertar registros nuevos válidos.**
+
+En el HEAD actual auditado (`51c42cdf5b514e79079de0c7e6cb78be8e2fe3fa`), la revisión estática confirma que no existe un interruptor global `FISCAL_LEDGER_WRITES_DISABLED` ni políticas `LEDGER_WRITES_ENABLED` / `FISCAL_RUNTIME_POLICY` en los módulos activos de escritura fiscal. La prueba `operational-writers.fail-closed.contract.test.mjs` protege esta condición. El caso `EVENT-PAYMENT-09` de `events.native-booking-sync.test.mjs` ejercita un insert fiscal sintético positivo y su replay idempotente; los tests de locking verifican secuencia y fencing.
+
+La ausencia live de `CONFIG_SISTEMA_FISCAL` en `MapaStaff` sigue siendo un prerequisito de datos/configuración para construir un snapshot fiscal válido. No equivale a una prohibición normativa ni justifica un bloqueo general de todos los writers. Los secretos de emisor, validación de payload, autorización, contrato físico CMS, secuencia y hash-chain siguen siendo controles válidos.
+
+La evidencia CI offline de PR #681 (91 suites / 816 tests PASS; runs `46085729210` y `46085729219`) valida el HEAD de esa intervención, no Wix Runtime ni producción. El sitio continúa Draft. Ver [corrección SSOT de escritores append-only](../qa/2026-11-28-fiscal-writer-append-only-ssot.md).
