@@ -50,6 +50,44 @@ test('READ-04 tax rate prefers canonical tipoImpositivo', () => {
   assert.strictEqual(T.readTaxRate({ tipoImpositivo: 0.21, taxRate: 0.1, tasaIva: 0.04 }), 0.21);
 });
 
+test('READ-06 numeric fiscal fields reject missing or invalid values without masking them as zero', () => {
+  for (const [reader, value, field] of [
+    [T.readTaxableAmount, null, 'taxBase'],
+    [T.readTaxAmount, '', 'taxAmount'],
+    [T.readTaxRate, 'not-a-number', 'tipoImpositivo'],
+  ]) {
+    assert.throws(
+      () => reader({ taxBase: value, taxAmount: value, tipoImpositivo: value }),
+      (error) => error.code === 'FISCAL_LEDGER_NUMERIC_FIELD_INVALID' &&
+        error.meta?.field === field
+    );
+  }
+});
+
+test('READ-07 zero remains a valid fiscal numeric value', () => {
+  assert.strictEqual(T.readTaxableAmount({ taxBase: 0 }), 0);
+  assert.strictEqual(T.readTaxAmount({ taxAmount: 0 }), 0);
+  assert.strictEqual(T.readTaxRate({ tipoImpositivo: 0 }), 0);
+});
+
+test('READ-08 fiscal aggregation rejects a movement without accountingAmount', () => {
+  const state = T.initTaxAccumulator(['2026-01']);
+  assert.throws(
+    () => T.accumulatePage([{
+      _id: 'missing-accounting-amount',
+      fiscalPeriod: '2026-01',
+      movementType: 'VENTA',
+      operationNature: 'VENTA',
+      paymentMethod: 'EFECTIVO',
+      taxBase: 8.26,
+      taxAmount: 1.74,
+      tipoImpositivo: 0.21,
+    }], state),
+    (error) => error.code === 'FISCAL_LEDGER_NUMERIC_FIELD_INVALID' &&
+      error.meta?.field === 'accountingAmount'
+  );
+});
+
 test('READ-05 tax rate historical emits warn', () => {
   const warns = [];
   const orig = loggerMod.logger.warn;
