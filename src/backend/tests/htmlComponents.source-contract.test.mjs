@@ -164,7 +164,11 @@ test("admin C3 widget uses the versioned bridge and exposes only the outbox work
   assert.match(adminHtml, /Enviar y verificar/);
   assert.match(adminHtml, /RegistroIntegracion/);
   assert.match(adminHtml, /PENDIENTE DE CONFIGURACIÓN/);
-  assert.doesNotMatch(adminHtml, /DOCUMENT_DOWNLOAD|DOCUMENT_PREPARED|CREATE_SNAPSHOT|EXTERNAL_DELIVER|Enviar y verificar/);
+  assert.doesNotMatch(adminHtml, /DOCUMENT_DOWNLOAD|DOCUMENT_PREPARED|CREATE_SNAPSHOT/);
+  assert.match(adminHtml, /EXTERNAL_DELIVER_RES/);
+  assert.match(adminHtml, /externalTransportConfigured/);
+  assert.match(adminHtml, /Enviar y verificar/);
+  assert.match(adminPage, /EXTERNAL_DELIVER:/);
   assert.match(adminPage, /prepareExternalRegistryPackage/);
   assert.match(adminPage, /getExternalIntegrationEvents/);
   assert.match(adminPage, /deliverExternalRegistryPackage/);
