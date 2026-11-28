@@ -447,7 +447,7 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     for (const method of [
         "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial",
         "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja",
-        "generarTicketX", "generarCierreZ", "cerrarSesionCaja", "exportarMovimientos",
+        "generarTicketX", "generarCierreZ", "exportarMovimientos",
         "obtenerResumenCaja", "obtenerAuditoriaTPVLista", "obtenerConfiguracionTPV",
         "obtenerServicios", "obtenerProductos", "obtenerVariantesProducto",
         "obtenerStaff", "buscarClientesTPV", "obtenerPermisosTPV",
@@ -671,31 +671,25 @@ test("TPV envelope helpers expose the complete status/data/error contract", asyn
 });
 
 
-test("TPV close session uses the operational ledger and a separate CajaActual projection without fiscal Z", async () => {
-    const [cash, repository] = await Promise.all([
+test("Ticket Z is the sole idempotent physical session close route", async () => {
+    const [cash, closures, controller, repository] = await Promise.all([
         source("tpv/tpvCaja.web.js"),
+        source("tpv/tpvCierres.web.js"),
+        source("../public/tpvPageController.js"),
         source("tpv/tpvRepository.js"),
     ]);
-    assert.match(cash, /export const cerrarSesionCaja = webMethod\(/);
-    assert.match(cash, /withTpvSessionLock\(sessionId/);
-    assert.match(cash, /movementType: "CIERRE"/);
-    const sessionCloseBlock = cash.slice(cash.indexOf("export const cerrarSesionCaja"));
-    assert.match(sessionCloseBlock, /const closeIdempotencyKey = sessionId \+ "-CIERRE"/);
-    assert.match(sessionCloseBlock, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA,\s*closeIdempotencyKey/);
-    assert.doesNotMatch(sessionCloseBlock, /idempotencyKey \+ ":CIERRE"/);
-    assert.match(cash, /insertTpvEvent\(\s*TPV_COLLECTIONS\.MOVIMIENTOS_CAJA/);
-    assert.match(cash, /closeTpvCajaSessionProjection/);
-    assert.match(cash, /data: resultData/);
-    assert.match(cash, /replayed: true/);
-    assert.match(cash, /TPV_CLOSE_MOVEMENT_MISSING/);
-    assert.ok(cash.includes('"CAJA_CIERRE:" + sessionId.slice(0, 70) + ":AUDIT"'));
+    assert.doesNotMatch(cash, /cerrarSesionCaja|closeTpvCajaSessionProjection/);
+    assert.doesNotMatch(controller, /SESSION_CLOSE|cerrarSesionCaja/);
+    assert.match(closures, /async function persistTpvSessionClose\(/);
+    assert.match(closures, /movementType: "CIERRE"/);
+    assert.match(closures, /sessionId \+ "-CIERRE"/);
+    assert.match(closures, /closeTpvCajaSessionProjection/);
+    assert.match(closures, /export const generarCierreZ = webMethod/);
+    assert.match(closures, /insertTpvEvent\(TPV_COLLECTIONS\.TICKET_Z/);
     assert.match(repository, /export async function closeTpvCajaSessionProjection/);
     assert.match(repository, /cashRegisterStatus: "CERRADA"/);
-    assert.equal(sessionCloseBlock.includes("TPV_COLLECTIONS.TICKET_Z"), false);
-    assert.equal(sessionCloseBlock.includes("HistoricoCierresZ"), false);
-    assert.equal(sessionCloseBlock.includes("eventLog"), false);
 });
-
+ 
 test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", async () => {
     const exportModule = await source("tpv/tpvExport.web.js");
     const permissions = await source("tpv/tpvPermisos.web.js");
@@ -707,7 +701,6 @@ test("TPV export is ADMIN-only, paginated and excludes fiscal payload fields", a
     assert.match(exportModule, /recordSource/);
     assert.ok(exportModule.includes("TPV_EVENT_MOVEMENT_TYPES[TPV_COLLECTIONS.MOVIMIENTOS_CAJA]"));
     assert.doesNotMatch(exportModule, /payloadFiscal:|taxAmount|taxBase|invoice/);
-    assert.match(permissions, /closeSession: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /issueTicketX: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /exportMovements: staff\.rolWebsite === "ADMIN"/);
 });
