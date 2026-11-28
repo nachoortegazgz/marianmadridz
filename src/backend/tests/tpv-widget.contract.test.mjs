@@ -15,6 +15,10 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
     assert.match(html, /function resolveParentOrigin/);
     assert.match(html, /window\.parent\.postMessage\(message, PARENT_ORIGIN\)/);
     assert.doesNotMatch(html, /window\.parent\.postMessage\([^;]*,\s*["']\*["']\)/);
+    assert.match(html, /"https:\/\/www\.marianmadrid\.es"/);
+    assert.match(html, /"https:\/\/nachoortegazgz-marianmadrid\.editor\.wix\.com"/);
+    assert.match(html, /return null;/);
+    assert.doesNotMatch(html, /return PARENT_ORIGIN_ALLOWLIST\[0\]/);
     assert.match(page, /\$w\("#htmlTPV"\)/);
     assert.match(page, /initializeTpvPage\(widget\)/);
     assert.match(controller, /export function initializeTpvPage\(widget\)/);
