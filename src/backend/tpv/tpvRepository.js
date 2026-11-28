@@ -608,6 +608,11 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                 next.difference = Number(record.totals?.differenceMinor || 0) / 100;
                 next.differenceReason = String(record.totals?.differenceReason || "");
                 next.lastOperationType = "TPV_SESSION_CLOSE";
+            } else if (
+                collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA &&
+                String(record.movementType || "").toUpperCase() === "APERTURA"
+            ) {
+                next.lastOperationType = "TPV_SESSION_OPEN";
             } else {
                 next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
             }
