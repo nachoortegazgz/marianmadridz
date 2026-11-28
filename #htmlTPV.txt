@@ -409,12 +409,10 @@ body {
 
    SEGURIDAD DEL HANDSHAKE
    ----------------------
-   - PARENT_ORIGIN_ALLOWLIST: lista blanca de orígenes autorizados
-     para el controlador Wix. Está VACÍA por defecto → el widget
-     falla cerrado hasta que se configure con el dominio real.
-     Ejemplos:
-       "https://usuario.wixsite.com"
-       "https://www.midominio.com"
+   - PARENT_ORIGIN_ALLOWLIST: lista cerrada de orígenes del sitio
+     publicado y de su Preview. Nunca se usa "*".
+   - Si referrer y ancestorOrigins no identifican un origen permitido,
+     el widget falla cerrado; no se supone un dominio alternativo.
    - HANDSHAKE_NONCE: nonce criptográfico por carga que se envía en
      MM_READY. El controlador DEBE devolverlo en su MM_CONTEXT
      (bien como data.nonce, bien como payload.nonce). Si no coincide,
@@ -426,8 +424,9 @@ body {
   // Wix documents the site's URL as targetOrigin. Keep an explicit fallback for
   // sandboxed Preview frames where referrer/ancestorOrigins can be unavailable.
   const PARENT_ORIGIN_ALLOWLIST = Object.freeze([
-    "https://marianmadrid.es",
     "https://www.marianmadrid.es",
+    "https://marianmadrid.es",
+    "https://nachoortegazgz-marianmadrid.editor.wix.com",
   ]);
 
   function resolveParentOrigin() {
@@ -442,7 +441,7 @@ body {
         }
       } catch (_) {}
     }
-    return PARENT_ORIGIN_ALLOWLIST[0];
+    return null;
   }
   const PARENT_ORIGIN = resolveParentOrigin();
 
