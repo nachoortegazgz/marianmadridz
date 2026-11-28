@@ -337,10 +337,10 @@ body {
       <section class="panel">
         <h2>Pago presencial</h2>
 
-        <p id="paymentNotice" class="status">Cobros deshabilitados: el TPV registra ventas pendientes, no ejecuta cobros ni confirma pagos.</p>
+        <p id="paymentNotice" class="status">Efectivo disponible: se registra en Wix al confirmar la entrega. Tarjeta requiere integrar el terminal de pago.</p>
         <div class="payment-methods" id="paymentMethods">
-          <button class="btn" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
-          <button class="btn" data-method="TARJETA" disabled>Tarjeta (no habilitada)</button>
+          <button class="btn" data-method="EFECTIVO">Efectivo</button>
+          <button class="btn" data-method="TARJETA" disabled title="Pendiente de integrar el terminal de pago">Tarjeta (pendiente)</button>
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
           <button class="btn" data-method="TARJETA_REGALO" disabled title="Saldo no verificable en esta versión">Tarjeta regalo (no verificada)</button>
@@ -498,7 +498,7 @@ body {
   }
   const num = (v) => v === null || v === undefined || v === "" ? 0 : (parseLocalizedAmount(v) ?? Number.NaN);
   const money = (n) => num(n).toFixed(2).replace(".", ",") + " €";
-  const PAYMENT_METHODS = ["EFECTIVO", "TARJETA"];
+  const PAYMENT_METHODS = ["EFECTIVO"];
 
   /* ---------- Estado local ---------- */
   const state = {
@@ -1225,9 +1225,9 @@ body {
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
     $("paymentMethods").querySelectorAll("button[data-method]").forEach((button) => {
-      const unsupportedTender = ["BONO", "TARJETA_REGALO", "OTROS"].includes(button.dataset.method);
+      const unsupportedTender = button.dataset.method !== "EFECTIVO";
       button.disabled = !paymentReady || unsupportedTender;
-      if (unsupportedTender) button.title = "Pendiente de validación de saldo en backend.";
+      if (unsupportedTender && !button.title) button.title = "Medio de pago pendiente de integración.";
     });
     $("applied").textContent = money(appliedMinor / 100);
     $("pending").textContent = pendingMinor === null ? (state.quoteLoading ? "Calculando…" : "—") : money(pendingMinor / 100);
