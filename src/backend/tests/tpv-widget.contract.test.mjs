@@ -93,6 +93,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
+    assert.match(permissions, /acceptPayment: false/);
     assert.match(permissions, /openSession: true/);
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
@@ -110,7 +111,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
     assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
     assert.match(html, /Venta registrada\. Pago pendiente de confirmación\./);
-    assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado/);
+    assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado|Total simulado|pago simulado/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
     assert.match(sales, /PENDING_PAYMENT/);
