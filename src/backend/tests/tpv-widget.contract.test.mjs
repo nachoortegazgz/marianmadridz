@@ -300,6 +300,7 @@ test("TPV bridge trusts the Wix HtmlComponent transport boundary while preservin
     bridge.destroy();
 });
 
+// The Wix HtmlComponent wrapper is the trust boundary; nonce binds the context response to this handshake.
 test("Wix HtmlComponent requires a nonce before accepting MM_READY", () => {
     let receive;
     const errors = [];
