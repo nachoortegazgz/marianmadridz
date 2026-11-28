@@ -81,8 +81,16 @@ function _localYear() {
 }
 
 function _counter(value) {
-    const number = Number(value);
-    return Number.isSafeInteger(number) && number > 0 ? number : 0;
+    if (value === undefined || value === null) return 0;
+    const validType = typeof value === "number" ||
+        (typeof value === "string" && value.trim() !== "");
+    const number = validType ? Number(value) : Number.NaN;
+    if (!Number.isSafeInteger(number) || number < 0) {
+        const error = new Error("FISCAL_SEQUENCE_COUNTER_INVALID");
+        error.code = "FISCAL_SEQUENCE_COUNTER_INVALID";
+        throw error;
+    }
+    return number;
 }
 
 function _sequenceUnknown(writeError, readError) {
