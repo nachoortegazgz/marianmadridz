@@ -172,6 +172,9 @@ export const abrirSesionCaja = webMethod(
             await requireAdmin(traceId);
             assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
+            if (!String(operator.operatorResourceId || "").trim()) {
+                throw new Error("TPV_OPERATOR_RESOURCE_REQUIRED");
+            }
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
             const sessionId = "TPV-SESSION-" + dayKey;
