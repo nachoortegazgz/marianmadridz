@@ -47,14 +47,15 @@ test("new CitasF2 inserts require an explicit valid bookingType", () => {
 });
 
 test("historical aliases remain readable but cannot be persisted by a new insert", () => {
-  const historicalAlias = { ...baseRecord, bookingType: "DUALF1" };
+  const pairToken = "pair-token-1";
+  const historicalAlias = { ...baseRecord, bookingType: "DUALF1", pairToken };
   assert.equal(assertCitasF2(historicalAlias), true);
   assert.throws(
     () => assertCitasF2Insert(historicalAlias),
     { code: "BOOKING_TYPE_NON_CANONICAL" }
   );
   assert.equal(
-    assertCitasF2Insert({ ...baseRecord, bookingType: BOOKING_TYPE.DUAL_F1 }),
+    assertCitasF2Insert({ ...baseRecord, bookingType: BOOKING_TYPE.DUAL_F1, pairToken }),
     true
   );
 });
