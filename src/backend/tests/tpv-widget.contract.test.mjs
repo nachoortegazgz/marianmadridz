@@ -89,11 +89,14 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerCashMovement: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
-    assert.match(permissions, /requestRefund: staff\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /requestRefund: false/);
     for (const capability of ["issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
+    assert.match(html, /id="refund"[^>]*disabled/);
+    assert.match(html, /const PERMANENTLY_DISABLED = new Set\(\["refund"\]\)/);
+    assert.doesNotMatch(html, /\$\("refund"\)\.onclick|keyedAction\("REFUND"/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /MODO CONSULTA/);
