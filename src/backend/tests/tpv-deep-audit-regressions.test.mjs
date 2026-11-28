@@ -33,9 +33,8 @@ test("cash session state read returns normalized errors with trace correlation",
 
 test("Bookings payment idempotency reads the canonical root orderId with legacy fallback", async () => {
     const citas = await source("src/backend/citasManager.web.js");
-    assert.equal(
-        citas.split('cita?.[FIELD_ORDER_ID] || meta.orderId || ""').length - 1,
-        2
+    assert.ok(
+        citas.split('cita?.[FIELD_ORDER_ID] || meta.orderId || ""').length - 1 >= 3
     );
 });
 
