@@ -33,6 +33,14 @@ Ante contradicciones, separar autoridad de negocio, contrato técnico, implement
 
 **Criterio de aceptación:** cero bloqueos silenciosos; 100 % de salidas bloqueantes/anticipadas con error accionable y log correlacionado; 100 % de datos aplicables contabilizados como persistidos, rechazados con causa o pendientes explícitos, sin pérdidas ni ocultación.
 
+## Datos sensibles y fixtures de prueba
+
+- En documentación, fixtures, capturas, logs y evidencias se sustituyen los datos sensibles por placeholders realistas, coherentes y claramente sintéticos. No copiar datos reales de clientes, empleados o terceros.
+- **Excepción explícita del propietario para este proyecto:** Nacho Ortega es un cliente de prueba. Los contactos `nachoortegazgz@gmail.com` y `666724634` quedan autorizados como datos de contacto seguros para identificar ese fixture de prueba en los flujos controlados del proyecto.
+- Esta excepción es específica de ese cliente de prueba y de esos dos valores. No convierte otros datos personales en seguros ni autoriza a reutilizarlos como credenciales, secretos, datos de otros clientes o contactos de producción.
+- Los logs deben seguir minimizando datos: usar identificadores de fixture/correlación y no volcar payloads completos. La excepción de fixture no justifica registrar indiscriminadamente información personal.
+- Mantener metadatos de procedencia y condición sintética conforme al contrato; no presentar el fixture como cliente real ni como operación económica real.
+
 ## Capas y responsabilidades
 
 - **Capa 0 — fundación transversal:** configuración, seguridad, validación, normalización, errores, acceso a datos, logging, utilidades compartidas y primitivas de persistencia.
