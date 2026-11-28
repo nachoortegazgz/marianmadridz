@@ -275,7 +275,7 @@ export const exportarAuditoriaTPV = webMethod(
         const traceId = makeTraceId("tpv-audit-export");
 
         try {
-            await requireCajero(traceId);
+            await requireAdmin(traceId);
             assertTpvLedgerTypeSupported("audit");
             const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);
