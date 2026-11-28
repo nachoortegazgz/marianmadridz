@@ -16,7 +16,7 @@ import {
     queryItems,
     wql,
 } from "backend/dataAccess";
-import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEGACY_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
+import { TPV_COLLECTIONS, TPV_EVENT_MOVEMENT_TYPES, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD, TPV_RUNTIME_POLICY, CONTROL_TYPE, OPERATIONAL_COLLECTIONS, BUSINESS_COLLECTIONS, SINGLETONS } from "backend/internalConfig";
 import { logger } from "backend/logger";
 import { createPersistedTpvProjectionError } from "backend/tpv/tpvMovementContracts";
 import {
@@ -324,16 +324,13 @@ function _isTpvLedgerItem(item) {
     if (!envelope) return false;
 
     const logicalCollection = String(envelope.logicalCollection || "");
-    const expectedMovementType = TPV_EVENT_MOVEMENT_TYPES[logicalCollection] ||
-        TPV_LEGACY_EVENT_MOVEMENT_TYPES[logicalCollection];
+    const expectedMovementType = TPV_EVENT_MOVEMENT_TYPES[logicalCollection];
     const sequenceNumber = Number(item.sequenceNumber);
     const recordTimestamp = item.recordTimestamp instanceof Date
         ? item.recordTimestamp
         : new Date(item.recordTimestamp);
     const ledgerRecord = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object" &&
         !Array.isArray(envelope.ledgerRecord);
-    const legacyRecord = envelope.sandboxRecord && typeof envelope.sandboxRecord === "object" &&
-        !Array.isArray(envelope.sandboxRecord);
     const previousHashValid = sequenceNumber === 0 ||
         /^[a-f0-9]{64}$/i.test(String(item.previousRecordHash || ""));
 
@@ -352,7 +349,7 @@ function _isTpvLedgerItem(item) {
         Number(envelope.schemaVersion) >= 1 &&
         (sequenceNumber === 0 || /^[a-f0-9]{64}$/i.test(String(envelope.requestFingerprint || ""))) &&
         (logicalCollection === TPV_COLLECTIONS.AUDITORIA || Boolean(String(envelope.sessionId || "").trim())) &&
-        (ledgerRecord || legacyRecord);
+        Boolean(ledgerRecord);
 }
 
 function _virtualRecord(item) {
@@ -361,9 +358,7 @@ function _virtualRecord(item) {
         : {};
     const record = envelope.ledgerRecord && typeof envelope.ledgerRecord === "object"
         ? envelope.ledgerRecord
-        : envelope.sandboxRecord && typeof envelope.sandboxRecord === "object"
-            ? envelope.sandboxRecord
-            : {};
+        : {};
     return {
         ...record,
         _id: item._id,
