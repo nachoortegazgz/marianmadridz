@@ -43,6 +43,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 - [Auditoría TPV widget/action — 2026-11-27](audits/2026-11-27-tpv-widget-action-alignment.md): correspondencia de UI, bridge y acciones; verificar que no haya revisión posterior.
 - [Auditoría Capa 0 — 2026-11-28](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente. Nombre de archivo conserva fecha 27, contenido actualizado a 28.
 - [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md): cambios integrados y CI offline PASS (89 suites / 804 tests); queda pendiente verificar cobertura de service providers y resolver secretos.
+- [Hardening Capa 0 posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md): sort Wix estricto, redacción ampliada, metadatos JSON-safe y bookingType canónico; `main` 91 suites / 816 tests PASS en el SHA correctivo.
 - [Conciliación bugs Capa 0 — 2026-11-28](audits/2026-11-28-capa0-bug-reconciliation.md): análisis BUG-001…020; hallazgos y resultados integrados en PR #670; contrastar el estado vigente con STATE-NOW.
 
 ### QA, contratos y decisiones
