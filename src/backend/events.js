@@ -140,13 +140,17 @@ export function resolveOrderLedgerAmount(order) {
         ) {
             continue;
         }
-        const orderTotal = Number(rawOrderTotal);
-        if (Number.isFinite(orderTotal) && orderTotal >= 0) {
-            return orderTotal;
+        const validType = typeof rawOrderTotal === "number" ||
+            (typeof rawOrderTotal === "string" && rawOrderTotal.trim() !== "");
+        const orderTotal = validType ? Number(rawOrderTotal) : Number.NaN;
+        if (!Number.isFinite(orderTotal) || orderTotal < 0) {
+            throw new Error("FISCAL_ORDER_TOTAL_INVALID");
         }
+        return orderTotal;
     }
 
     const lineItems = Array.isArray(order?.lineItems) ? order.lineItems : [];
+    if (!lineItems.length) throw new Error("FISCAL_ORDER_TOTAL_MISSING");
     return lineItems.reduce((sum, item) => {
         const lineTotalCandidates = [
             item?.totalPriceAfterTax?.amount,
@@ -161,20 +165,28 @@ export function resolveOrderLedgerAmount(order) {
             ) {
                 continue;
             }
-            const lineTotal = Number(rawLineTotal);
-            if (Number.isFinite(lineTotal) && lineTotal >= 0) {
-                return sum + lineTotal;
+            const validType = typeof rawLineTotal === "number" ||
+                (typeof rawLineTotal === "string" && rawLineTotal.trim() !== "");
+            const lineTotal = validType ? Number(rawLineTotal) : Number.NaN;
+            if (!Number.isFinite(lineTotal) || lineTotal < 0) {
+                throw new Error("FISCAL_ORDER_LINE_TOTAL_INVALID");
             }
+            return sum + lineTotal;
         }
 
         const rawUnitPrice = item?.price?.amount ?? item?.price;
-        const unitPrice = Number(rawUnitPrice);
-        const quantity = Number(item?.quantity) || 1;
-        return sum + (
-            Number.isFinite(unitPrice) && unitPrice >= 0
-                ? unitPrice * quantity
-                : 0
-        );
+        const rawQuantity = item?.quantity;
+        const validPriceType = typeof rawUnitPrice === "number" ||
+            (typeof rawUnitPrice === "string" && rawUnitPrice.trim() !== "");
+        const validQuantityType = typeof rawQuantity === "number" ||
+            (typeof rawQuantity === "string" && rawQuantity.trim() !== "");
+        const unitPrice = validPriceType ? Number(rawUnitPrice) : Number.NaN;
+        const quantity = validQuantityType ? Number(rawQuantity) : Number.NaN;
+        if (!Number.isFinite(unitPrice) || unitPrice < 0 ||
+            !Number.isFinite(quantity) || quantity <= 0) {
+            throw new Error("FISCAL_ORDER_LINE_AMOUNT_INVALID");
+        }
+        return sum + unitPrice * quantity;
     }, 0);
 }
 
@@ -190,7 +202,9 @@ export function resolveOrderFiscalTaxData(order) {
         if (raw === undefined || raw === null || String(raw).trim() === "") {
             throw new Error("FISCAL_TAX_FIELD_MISSING:" + field);
         }
-        const amount = Number(raw);
+        const validType = typeof raw === "number" ||
+            (typeof raw === "string" && raw.trim() !== "");
+        const amount = validType ? Number(raw) : Number.NaN;
         if (!Number.isFinite(amount) || amount < 0) {
             throw new Error("FISCAL_TAX_FIELD_INVALID:" + field);
         }
@@ -231,7 +245,9 @@ export function resolveOrderFiscalTaxData(order) {
         const base = readMoney(taxInfo.taxableAmount, "lineItems[" + index + "].taxInfo.taxableAmount");
         const tax = readMoney(taxInfo.taxAmount, "lineItems[" + index + "].taxInfo.taxAmount");
         const rawRate = taxInfo.taxRate ?? taxInfo.taxBreakdown?.[0]?.rate;
-        const rate = Number(rawRate);
+        const validRateType = typeof rawRate === "number" ||
+            (typeof rawRate === "string" && rawRate.trim() !== "");
+        const rate = validRateType ? Number(rawRate) : Number.NaN;
         if (!Number.isFinite(rate) || rate <= 0 || rate > 1) {
             throw new Error("FISCAL_LINE_TAX_RATE_INVALID:" + index);
         }
@@ -251,13 +267,22 @@ export function resolveOrderFiscalTaxData(order) {
         taxBase += base;
         taxAmount += tax;
         lineTotal += afterTax;
-        rates.add(roundMoney(rate * 100));
+        rates.add(rate);
         breakdown.push({
             base,
             tipo: roundMoney(rate * 100),
             cuota: tax,
             operationDescription: String(item?.productName?.original || item?.name || "Wix order line").slice(0, 180),
-            units: Number(item?.quantity) > 0 ? Number(item.quantity) : 1,
+            units: (() => {
+                const rawQuantity = item?.quantity;
+                const validType = typeof rawQuantity === "number" ||
+                    (typeof rawQuantity === "string" && rawQuantity.trim() !== "");
+                const quantity = validType ? Number(rawQuantity) : Number.NaN;
+                if (!Number.isFinite(quantity) || quantity <= 0) {
+                    throw new Error("FISCAL_ORDER_LINE_QUANTITY_INVALID:" + index);
+                }
+                return quantity;
+            })(),
             magnitude: 1,
         });
     }
