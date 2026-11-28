@@ -577,28 +577,49 @@ async function _assertPeriodNotClosed(operationDate, traceId) {
     }
 }
 
-function _resolveFiscalBase({ amount, taxRate, withholdingBase, irpfWithholdingAmount, surchargeAmount }) {
-    if (withholdingBase > 0) {
-        const base = _roundMoney(withholdingBase);
-        const taxAmount = _roundMoney(base * taxRate);
-        const expectedTotal = _roundMoney(
-            base + taxAmount + (surchargeAmount || 0) - (irpfWithholdingAmount || 0)
-        );
-        const diff = Math.abs(expectedTotal - amount);
-        if (diff > MONEY_EPSILON_FISCAL) {
-            return {
-                ok: false,
-                code: "CUADRE_FISCAL_INVALIDO",
-                message: `Base ${base} + IVA ${taxAmount} + RE ${surchargeAmount || 0} - Ret ${irpfWithholdingAmount || 0} = ${expectedTotal}, amount ${amount}`,
-                base,
-                taxAmount,
-            };
-        }
-        return { ok: true, base, taxAmount };
+function _resolveFiscalBase({ amount, taxRate, taxBase, taxAmount, irpfWithholdingAmount, surchargeAmount }) {
+    const hasTaxBase = taxBase !== undefined && taxBase !== null && taxBase !== "";
+    const hasTaxAmount = taxAmount !== undefined && taxAmount !== null && taxAmount !== "";
+    if (hasTaxBase !== hasTaxAmount) {
+        return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INCOMPLETE", message: "Base imponible y cuota deben proporcionarse conjuntamente." };
     }
-    const base = _roundMoney(amount / (1 + taxRate));
-    const taxAmount = _roundMoney(amount - base);
-    return { ok: true, base, taxAmount };
+
+    let base;
+    let resolvedTaxAmount;
+    if (hasTaxBase) {
+        const validBaseType = typeof taxBase === "number" ||
+            (typeof taxBase === "string" && taxBase.trim() !== "");
+        const validTaxType = typeof taxAmount === "number" ||
+            (typeof taxAmount === "string" && taxAmount.trim() !== "");
+        base = validBaseType ? Number(taxBase) : Number.NaN;
+        resolvedTaxAmount = validTaxType ? Number(taxAmount) : Number.NaN;
+        if (!Number.isFinite(base) || base < 0 ||
+            !Number.isFinite(resolvedTaxAmount) || resolvedTaxAmount < 0) {
+            return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INVALID", message: "Base imponible o cuota inválida." };
+        }
+        base = _roundMoney(base);
+        resolvedTaxAmount = _roundMoney(resolvedTaxAmount);
+        if (Math.abs(_roundMoney(base * taxRate) - resolvedTaxAmount) > MONEY_EPSILON_FISCAL) {
+            return { ok: false, code: "FISCAL_TAX_RATE_MISMATCH", message: "La base y la cuota no coinciden con el tipo impositivo declarado.", base, taxAmount: resolvedTaxAmount };
+        }
+    } else {
+        base = _roundMoney((amount + irpfWithholdingAmount - surchargeAmount) / (1 + taxRate));
+        resolvedTaxAmount = _roundMoney(base * taxRate);
+    }
+
+    const expectedTotal = _roundMoney(
+        base + resolvedTaxAmount + surchargeAmount - irpfWithholdingAmount
+    );
+    if (Math.abs(expectedTotal - amount) > MONEY_EPSILON_FISCAL) {
+        return {
+            ok: false,
+            code: "CUADRE_FISCAL_INVALIDO",
+            message: `Base ${base} + IVA ${resolvedTaxAmount} + RE ${surchargeAmount} - Ret ${irpfWithholdingAmount} = ${expectedTotal}, importe ${amount}`,
+            base,
+            taxAmount: resolvedTaxAmount,
+        };
+    }
+    return { ok: true, base, taxAmount: resolvedTaxAmount };
 }
 
 // ============================================================================
@@ -707,21 +728,46 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             };
         }
 
-        const irpfWithholdingRate = Number(inDto.irpfWithholdingRate) || 0;
-        const withholdingBase = Number(inDto.withholdingBase) || 0;
-        let irpfWithholdingAmount = Number(inDto.irpfWithholdingAmount) || 0;
+        const readOptionalFiscalNumber = (value, field) => {
+            if (value === undefined || value === null) return 0;
+            const validType = typeof value === "number" ||
+                (typeof value === "string" && value.trim() !== "");
+            const parsed = validType ? Number(value) : Number.NaN;
+            if (!Number.isFinite(parsed) || parsed < 0) {
+                const error = new Error("FISCAL_NUMERIC_FIELD_INVALID:" + field);
+                error.code = "FISCAL_NUMERIC_FIELD_INVALID";
+                error.meta = { field };
+                throw error;
+            }
+            return parsed;
+        };
+        const rawTaxRate = inDto.tipoImpositivo;
+        const validTaxRateType = typeof rawTaxRate === "number" ||
+            (typeof rawTaxRate === "string" && rawTaxRate.trim() !== "");
+        const taxRate = validTaxRateType ? Number(rawTaxRate) : Number.NaN;
+        if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 1) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: { code: "FISCAL_TAX_RATE_REQUIRED", message: "tipoImpositivo es obligatorio y debe ser una proporción entre 0 y 1." },
+                traceId,
+            };
+        }
+        const irpfWithholdingRate = readOptionalFiscalNumber(inDto.irpfWithholdingRate, "irpfWithholdingRate");
+        const withholdingBase = readOptionalFiscalNumber(inDto.withholdingBase, "withholdingBase");
+        let irpfWithholdingAmount = readOptionalFiscalNumber(inDto.irpfWithholdingAmount, "irpfWithholdingAmount");
 
         if (irpfWithholdingRate > 0 && withholdingBase > 0 && irpfWithholdingAmount === 0) {
             irpfWithholdingAmount = _roundMoney(withholdingBase * irpfWithholdingRate);
         }
 
-        const surchargeRate = Number(inDto.surchargeRate) || 0;
-        let surchargeAmount = Number(inDto.surchargeAmount) || 0;
+        const surchargeRate = readOptionalFiscalNumber(inDto.surchargeRate, "surchargeRate");
+        let surchargeAmount = readOptionalFiscalNumber(inDto.surchargeAmount, "surchargeAmount");
 
         if (surchargeRate > 0 && surchargeAmount === 0) {
-            const baseForSurcharge = withholdingBase > 0
-                ? withholdingBase
-                : _roundMoney(amount / (1 + (Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL)));
+            const baseForSurcharge = _roundMoney(
+                amount / (1 + taxRate)
+            );
             surchargeAmount = _roundMoney(baseForSurcharge * surchargeRate);
         }
 
@@ -749,7 +795,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             paymentMethod,
             movementType,
             channelType,
-            tipoImpositivo: Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL,
+            tipoImpositivo: taxRate,
             lineItems: inDto.lineItems || [],
             nifDestinatario,
             recipientLegalName,
@@ -810,9 +856,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             return { status: "ERROR", data: null, error: { code: "CAJA_SESSION_NOT_OPEN", message: "No se pueden registrar cobros presenciales sin una sesión de caja abierta y con hora de apertura válida." }, traceId };
         }
 
-        const taxRate = Number(inDto.tipoImpositivo) || IVA_RATES.GENERAL;
         const fiscalCalc = _resolveFiscalBase({
-            amount, taxRate, withholdingBase, irpfWithholdingAmount, surchargeAmount,
+            amount,
+            taxRate,
+            taxBase: inDto.taxBase,
+            taxAmount: inDto.taxAmount,
+            irpfWithholdingAmount,
+            surchargeAmount,
         });
 
         if (!fiscalCalc.ok) {
@@ -1393,6 +1443,9 @@ export async function registerBookingPayment(bookingIds, totalAmount, method, me
         fiscalRole: m.fiscalRole || FISCAL_ROLE.EMISOR,
 
         surchargeRate: m.surchargeRate || 0,
+        taxBase: m.taxBase,
+        taxAmount: m.taxAmount,
+        tipoImpositivo: m.tipoImpositivo,
 
         linkedAdvanceId: m.linkedAdvanceId || null,
         vatAccrualStatus,
