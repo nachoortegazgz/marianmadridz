@@ -19,7 +19,7 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
         lineas: [{
             tipoLinea: "SERVICIO",
             itemId: "service-1",
-            concepto: "Servicio SANDBOX",
+            concepto: "Servicio de catálogo",
             cantidad: 1,
             precioUnitario: 100,
             descuentoImporte: 0,
@@ -41,6 +41,24 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     assert.equal(result.paymentVerified, false);
     assert.equal(result.persisted, false);
     assert.equal(result.realPayment, undefined);
+});
+
+test("TPV sale draft with no payment selection remains unverified and does not throw", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            concepto: "Servicio pendiente de cobro",
+            cantidad: 1,
+            precioUnitario: 25,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+    });
+    assert.equal(result.importeAsignado, 0);
+    assert.equal(result.importePendienteAsignacion, 25);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
 });
 
 test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT twice", () => {
@@ -141,7 +159,7 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            concepto: "Venta mixta SANDBOX",
+            concepto: "Venta mixta",
             cantidad: 1,
             precioUnitario: 100,
             descuentoImporte: 0,
@@ -173,7 +191,7 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     const valid = {
         lineas: [{
             tipoLinea: "PRODUCTO",
-            concepto: "Producto SANDBOX",
+            concepto: "Producto de catálogo",
             cantidad: 1,
             precioUnitario: 10,
             descuentoImporte: 0,
@@ -211,8 +229,19 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
                 impuestosImporte: 0,
             }],
         }),
-        /TPV_INVALID_LINE_AMOUNT/
+        /TPV_INVALID_QUANTITY/
     );
+});
+
+test("TPV caja advertises operational writes only while a session is open", async () => {
+    const caja = await source("tpv/tpvCaja.web.js");
+    const start = caja.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const end = caja.indexOf("export const abrirSesionCaja = webMethod(", start);
+    assert.ok(start >= 0 && end > start);
+    const method = caja.slice(start, end);
+    assert.match(method, /operationalWritesAvailable: false/);
+    assert.match(method, /operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS\.OPEN/);
+    assert.match(method, /operationalWritesUnavailableReason: status === OPERATIONAL_CASH_STATUS\.OPEN \? null : "TPV_SESSION_NOT_OPEN"/);
 });
 
 test("TPV dependency manifest and npm lockfile remain synchronized", async () => {
