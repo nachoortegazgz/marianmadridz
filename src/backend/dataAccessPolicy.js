@@ -142,7 +142,7 @@ export function assertInsertAllowed(collection, item) {
         if (!/^[a-f0-9]{64}$/.test(item.eventId) ||
             !/^[a-f0-9]{64}$/.test(item.payloadHash) ||
             !/^C3_[A-Z0-9_]{3,80}$/.test(item.eventType) ||
-            !Number.isSafeInteger(item.schemaVersion) || item.schemaVersion < 1 ||
+            typeof item.schemaVersion !== "string" || !/^[1-9]\\d*$/.test(item.schemaVersion) ||
             !(item.occurredAt instanceof Date) || !Number.isFinite(item.occurredAt.getTime()) ||
             !Number.isSafeInteger(item.deliveryAttempts) || item.deliveryAttempts < 0 ||
             !["PREPARED", "PENDING", "DELIVERED", "VERIFIED", "RETRYABLE_ERROR", "TERMINAL_ERROR"].includes(item.deliveryStatus)) {
@@ -155,13 +155,13 @@ export function assertInsertAllowed(collection, item) {
             "nextAttemptAt", "year", "quarter", "recordCount", "dataClassification",
             "artifactPurpose", "legalUseStatus", "reconciliationStatus",
         ]);
-        if (!_isRecord(payload) || Object.keys(payload).some((key) => !allowedPayloadKeys.has(key))) {
-            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PAYLOAD_INVALID");
-        }
         if (Object.keys(payload).some((key) =>
             /customer|name|email|phone|taxid|nif|address|card|iban|contact|member/i.test(key)
         )) {
             throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PII_PROHIBITED");
+        }
+        if (!_isRecord(payload) || Object.keys(payload).some((key) => !allowedPayloadKeys.has(key))) {
+            throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PAYLOAD_INVALID");
         }
         if (typeof item._id !== "string" || !item._id.trim()) {
             throw _policyError("CMS_INSERT_INTEGRATION_EVENT_ID_REQUIRED");
