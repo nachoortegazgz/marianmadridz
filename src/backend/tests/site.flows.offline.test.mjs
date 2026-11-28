@@ -323,7 +323,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
     operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     transactionId: 'offline-tx-0001',
     channelType: 'PRESENCIAL',
     resourceId: 'frontend-resource-id-must-be-ignored',
@@ -364,7 +364,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   // Paso 1b: idempotencia - mismo transactionId devuelve el registro original
   const dup = await cajas.registerManualTransaction({
     totalAmount: 50.0, tipoFactura: 'F2', operationDescription: 'Venta mostrador offline (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     channelType: 'PRESENCIAL',
     transactionId: 'offline-tx-0001',
   });
@@ -1557,7 +1557,7 @@ test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is re
     operationDescription: 'Venta de prueba idempotente',
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
-    tipoImpositivo: 21,
+    tipoImpositivo: 0.21,
     transactionId: 'p0-idempotency-contract-0001',
     channelType: 'PRESENCIAL',
   };
