@@ -31,6 +31,14 @@ export const SECRETS = Object.freeze({
     FISCAL_SIGNER_ENDPOINT: "FISCAL_SIGNER_ENDPOINT",
     FISCAL_SIGNER_BEARER: "FISCAL_SIGNER_BEARER",
 
+    // Microsoft Graph app-only SharePoint delivery. Values live only in Wix Secrets Manager.
+    GRAPH_TENANT_ID: "MM_GRAPH_TENANT_ID",
+    GRAPH_CLIENT_ID: "MM_GRAPH_CLIENT_ID",
+    GRAPH_CLIENT_SECRET: "MM_GRAPH_CLIENT_SECRET",
+    GRAPH_SITE_ID: "MM_GRAPH_SITE_ID",
+    GRAPH_DRIVE_ID: "MM_GRAPH_DRIVE_ID",
+    GRAPH_FOLDER_PATH: "MM_GRAPH_FOLDER_PATH",
+
     // CERO-DEUDA ZC-07: eliminados AUTH_JWT_KEY (securityEngine ya no
     // emite JWT), ADMIN_EMAILS y CAJERO_EMAILS (roles viven en
     // MapaStaff.rolWebsite desde v5010; consumidor null verificado grep).
