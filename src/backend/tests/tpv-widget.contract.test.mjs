@@ -58,7 +58,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     const types = [
         "CASHIER_STATE", "SESSION_OPEN", "CATALOG_SERVICES", "CATALOG_PRODUCTS", "CATALOG_VARIANTS",
         "CATALOG_STAFF", "CUSTOMERS_SEARCH", "SALE_REGISTER", "SALE_VALIDATE", "CASH_MOVEMENT",
-        "PARTIAL_CASH_COUNT", "REFUND", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
+        "PARTIAL_CASH_COUNT", "TICKET_X", "TICKET_Z", "SESSION_SUMMARY", "AUDIT_LIST",
         "CASH_MOVEMENTS_EXPORT", "AUDIT_EXPORT",
     ];
     for (const type of types) {
@@ -71,6 +71,9 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
     assert.match(controller, /case "SALE_REGISTER":[\s\S]*?return registrarVenta\(\{/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?return obtenerAuditoriaTPVLista\(/);
+    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
+    assert.match(html, /id="refund"[^>]*disabled/);
+    assert.doesNotMatch(html, /keyedAction\("REFUND",\s*"REFUND"/);
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
