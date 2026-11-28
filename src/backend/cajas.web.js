@@ -303,7 +303,7 @@ async function _queueCompensation(params) {
         transactionId: p.transactionId || null,
         orderId: p.orderId || null,
         refundId: p.refundId || null,
-        totalAmount,
+        ...(totalAmount === null ? {} : { totalAmount }),
         operationDescription: p.operationDescription || null,
         status: "PENDING_RECOVERY",
         attempts: Number(p.attempts) || 0,
@@ -1402,10 +1402,19 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
     } catch (err) {
         log.error("_updateCajaActual failed; queuing resync", { traceId, error: err?.message });
         try {
+            const rawRecoveryAmount = movement?.accountingAmount;
+            const validRecoveryAmountType = typeof rawRecoveryAmount === "number" ||
+                (typeof rawRecoveryAmount === "string" && rawRecoveryAmount.trim() !== "");
+            const parsedRecoveryAmount = validRecoveryAmountType
+                ? Number(rawRecoveryAmount)
+                : Number.NaN;
+            const recoveryAmount = Number.isFinite(parsedRecoveryAmount)
+                ? parsedRecoveryAmount
+                : null;
             await _queueCompensation({
                 kind: "RESYNC_CAJA_BALANCE",
                 transactionId: movement?.transactionId || null,
-                totalAmount: movement?.accountingAmount ?? null,
+                totalAmount: recoveryAmount,
                 paymentMethod: movement?.paymentMethod || null,
                 operationDescription: "Sincronizacion de sesion tras fallo en proyeccion CajaActual",
                 phase: "WAIT_FOR_CAJA_RESYNC",
