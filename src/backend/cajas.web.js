@@ -35,6 +35,7 @@ import {
     CONTROL_TYPE,
     EVENT_TYPE,
     MOVEMENT_HISTORICAL_READ_ALIASES,
+    TPV_LEDGER_SOURCE,
     normalizeMovementKeys,
 } from "backend/internalConfig";
 
@@ -604,6 +605,7 @@ async function _getLastMovement() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .gt("sequenceNumber", 0)
         .ne("recordSource", "SMOKE_TEST")
+        .ne("recordSource", TPV_LEDGER_SOURCE)
         .descending("sequenceNumber")
         .limit(20)
         .find(STRONG_READ);
@@ -1775,6 +1777,7 @@ async function _countMovementsOfDay(diaKey) {
         .eq("fechaExpedicionFactura", diaKey)
         .gt("sequenceNumber", 0)
         .ne("recordSource", "SMOKE_TEST")
+        .ne("recordSource", TPV_LEDGER_SOURCE)
         .limit(LEDGER_PAGE_SIZE)
         .find();
     count += (res.items || []).length;
@@ -1834,6 +1837,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 .eq(dateField, cleanDiaKey)
                 // Include malformed sequence values so the integrity check below can reject them.
                 .ne("recordSource", "SMOKE_TEST")
+        .ne("recordSource", TPV_LEDGER_SOURCE)
                 .ascending("sequenceNumber")
                 .limit(LEDGER_PAGE_SIZE);
             let res = await query.find();
@@ -1949,6 +1953,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             const predecessorResult = await dalQuery(MOVIMIENTOS_CAJA_COL)
                 .gt("sequenceNumber", 0)
                 .ne("recordSource", "SMOKE_TEST")
+        .ne("recordSource", TPV_LEDGER_SOURCE)
                 .lt("sequenceNumber", firstSequence)
                 .descending("sequenceNumber")
                 .limit(1)
@@ -2195,6 +2200,7 @@ export async function verifyFiscalHashChainIntegrity(options = {}) {
         let movements = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .gt("sequenceNumber", 0)
             .ne("recordSource", "SMOKE_TEST")
+        .ne("recordSource", TPV_LEDGER_SOURCE)
             .ascending("sequenceNumber")
             .limit(batchSize)
             .find();
