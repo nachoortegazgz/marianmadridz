@@ -464,6 +464,8 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(repository, /assertTpvLedgerTypeSupported/);
     assert.doesNotMatch(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
     assert.match(repository, /assertTpvLedgerTypeSupported\(ledgerType = "fiscal"\)/);
+    assert.doesNotMatch(repository, /assertTpvOperationalLedgerConfigured/);
+    assert.match(repository, /assertTpvLedgerTypeSupported\(derivedLedgerType\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isTpvLedgerItem/);
     assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
