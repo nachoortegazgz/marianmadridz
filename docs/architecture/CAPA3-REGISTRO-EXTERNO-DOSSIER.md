@@ -244,27 +244,16 @@ No insertar códigos de cuenta ni reglas de reconocimiento por intuición. La ap
 
 ## 10. Facturación y normativa SIF / VERI*FACTU
 
-El repositorio contiene auditoría y ADR históricos con referencias a:
-- Real Decreto 1007/2023, requisitos de los sistemas informáticos de facturación.
-- Orden HAC/1177/2024, especificaciones técnicas y funcionales.
-- Especificaciones técnicas AEAT, XSD/WSDL, validaciones y algoritmo de huella.
-- Tipos de factura y rectificación según documentación AEAT.
+La facturación y remisión VERI*FACTU constituyen un flujo normativo separado de la exportación documental Capa 3. AEAT es el destino oficial de la remisión; SharePoint solo custodia copias y evidencias.
 
-Reglas técnicas recogidas en los documentos:
-- Separar registros de facturación de alta/anulación y registros de evento; no confundirlos con eventos económicos internos.
-- En modalidad VERI*FACTU, aplicar huella SHA-256 y encadenamiento de registros según especificación; no asumir que la firma individual de cada registro es obligatoria para esa modalidad.
-- La remisión oficial se dirige a AEAT por el canal/protocolo y autenticación exigidos; SharePoint no la sustituye.
-- Ante incidencia de remisión, preservar el registro y aplicar el procedimiento de contingencia/reintento e indicadores exigidos por la especificación vigente; no detener automáticamente la facturación por una caída de red sin analizar la regla aplicable.
-- No llamar hash interno de Marian a un hash normativo AEAT ni reutilizar payloads internos como XML normativo sin transformación y validación contractual.
+La fuente activa de diseño es el [Dossier VERI*FACTU y QR tributario](VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md), que actualiza la normativa y especificaciones a 28-11-2026, incluido el RDL 43/2026, y documenta:
+- ámbito y exclusiones, modalidad VERI*FACTU/no verificable y distinción entre factura simplificada y justificante no-factura;
+- QR tributario, URL, parámetros, dimensiones, nivel de corrección, quiet zone y textos;
+- registros de alta/anulación, XML/XSD/WSDL, huella y encadenamiento AEAT;
+- remisión, control de flujo, respuesta, incidencias, reintentos, idempotencia y recuperación;
+- arquitectura Wix/Velo, impresión Epson, pruebas e hitos VQ-01…VQ-10.
 
-**Pendiente crítico:** la auditoría VERI*FACTU y ADR están archivados y fueron clasificados como históricos/propuesta no aprobada en la revisión documental del 28-11. Revalidar modalidad, fechas de aplicación, especificación técnica, certificado/representación, datos del emisor, serie, software/SIF y estado normativo actual con AEAT y asesoría antes de diseñar o activar remisión. No copiar al runtime reglas históricas sin contrastarlas.
-
-Fuentes oficiales de partida (revalidar versión vigente antes de implementación):
-- BOE — RD 1007/2023: https://www.boe.es/eli/es/rd/2023/12/05/1007
-- BOE — Orden HAC/1177/2024: https://www.boe.es/diario_boe/txt.php?id=BOE-A-2024-22138
-- AEAT — Información técnica SIF/VERI*FACTU: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica.html
-- AEAT — Especificaciones de remisión: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/especificaciones-servicios-remision-voluntaria-registros-validaciones.html
-- AEAT — Algoritmo de huella/hash: https://sede.agenciatributaria.gob.es/Sede/iva/sistemas-informaticos-facturacion-verifactu/informacion-tecnica/algoritmo-calculo-codificacion-huella-hash.html
+**Estado:** DISEÑO DOCUMENTADO; SIF, modalidad, declaración responsable, integración, QR impreso y remisión real NO ACREDITADOS. No activar transporte AEAT ni tratar el ledger TPV, el cierre Z o SharePoint como sustitutos del SIF. Revalidar aplicabilidad y emisor con asesoría antes de implementación productiva.
 
 ## 11. Registro horario y documentación laboral
 
@@ -330,19 +319,3 @@ La exportación laboral deberá conservar los datos exigibles, identidad del tra
 La Capa 3 ya dispone de una base backend real para preparar un paquete JSON contable/fiscal minimizado, determinista y verificable. No existe evidencia de transporte externo operativo. SharePoint, Power Automate, tenant, biblioteca, permisos, retención, DLP y recepción por asesoría siguen pendientes. El mapeo PGC automático no está aprobado. La remisión AEAT/SIF es un flujo normativo separado y no debe confundirse con el archivo documental. El registro laboral requiere su propio contrato y controles.
 
 **Estado final:** preparación de exportación IMPLEMENTADA; automatización y transporte externo PENDIENTES; registro normativo oficial NO HABILITADO; aceptación E2E NO ACREDITADA.
-
-
-## 16. VERI*FACTU y QR tributario del ticket
-
-La facturación/VERI*FACTU es un flujo normativo separado de la exportación documental Capa 3. Su destino oficial es AEAT; SharePoint solo puede custodiar copias y evidencias. No confundir el QR tributario con QR de pago, ticket de caja, cierre Z o justificante comercial.
-
-Se incorpora el dossier especializado [VERI*FACTU y QR tributario — implementación](VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md), que consolida:
-- normativa BOE y especificaciones AEAT vigentes consultadas a 28-11-2026;
-- modificación de plazos por RDL 43/2026 y cómputo resultante 06-10-2028 para los obligados del artículo 3.1, sujeto a aplicabilidad;
-- distinción factura completa/simplificada frente a justificante no-factura;
-- dos modalidades SIF y recomendación condicionada de VERI*FACTU;
-- formato, dimensiones, nivel de corrección, quiet zone, URL y datos del QR;
-- registro de alta/anulación, huella AEAT, remisión XML, incidencias, respuestas e idempotencia;
-- propuesta de integración Wix/Velo, impresora Epson, criterios de prueba y hitos de implementación.
-
-**Estado:** DOCUMENTADO. No se acredita SIF elegido, declaración responsable, registro AEAT, integración, QR generado ni impresión física conforme. No activar remisión real ni declarar conformidad sin cerrar los hitos VQ-01…VQ-10 del dossier especializado.
