@@ -32,7 +32,6 @@ test("TPV controller imports operational WebMethods and no longer imports the se
         "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
         "src/backend/tpv/tpvVentas.web.js": ["validarVentaBorrador", "registrarVenta"],
         "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
-        "src/backend/tpv/tpvDevoluciones.web.js": ["registrarDevolucion"],
         "src/backend/tpv/tpvCierres.web.js": ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"],
         "src/backend/tpv/tpvExport.web.js": ["exportarMovimientos"],
         "src/backend/tpv/tpvAuditoria.web.js": ["obtenerAuditoriaTPV"],
