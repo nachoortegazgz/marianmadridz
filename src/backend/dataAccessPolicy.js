@@ -158,9 +158,11 @@ export function assertInsertAllowed(collection, item) {
         if (!_isRecord(payload)) {
             throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PAYLOAD_INVALID");
         }
-        if (Object.keys(payload).some((key) =>
-            /customer|name|email|phone|taxid|nif|address|card|iban|contact|member/i.test(key)
-        )) {
+        if (Object.keys(payload).some((key) => {
+            const normalizedKey = String(key).toLowerCase();
+            return normalizedKey === "name" ||
+                /customer|email|phone|taxid|nif|address|card|iban|contact|member/i.test(normalizedKey);
+        })) {
             throw _policyError("CMS_INSERT_INTEGRATION_EVENT_PII_PROHIBITED");
         }
         if (Object.keys(payload).some((key) => !allowedPayloadKeys.has(key))) {
