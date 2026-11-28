@@ -914,7 +914,10 @@ test("TPV close summary uses canonical sale states, normalized line totals and s
     assert.match(repository, /item\.status === "CONFIRMADA" \|\| item\.status === "CONFIRMED"/);
     assert.match(repository, /saleId: item\._id/);
     assert.match(repository, /totalMinor: item\.totalVentaMinor/);
+    assert.match(repository, /taxMinor: Number\.isSafeInteger\(Number\(item\.impuestosTotalMinor\)\)/);
     assert.match(repository, /item\.sessionId === sessionId \|\| item\.payload\?\.sessionId === sessionId/);
+    const sales = await source("tpv/tpvVentas.web.js");
+    assert.match(sales, /impuestosTotalMinor: toMinorUnits\(validated\.impuestosTotal, "SALE_TAX"\)/);
     assert.doesNotMatch(closeCore, /queryTpvRecords\(TPV_COLLECTIONS\.VENTA_LINEAS/);
     assert.match(closeCore, /for \(const line of Array\.isArray\(sale\.lineas\) \? sale\.lineas : \[\]\)/);
     assert.match(closeCore, /TPV_SALE_LINE_AMOUNT_INVALID/);
