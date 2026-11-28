@@ -593,6 +593,11 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                     next.difference = amount - Number(caja.cashAmount || 0);
                     next.differenceReason = String(record.reason || "");
                 }
+                if (type === "APERTURA") {
+                    next.lastOperationType = "TPV_SESSION_OPEN";
+                    next.lastOperationAmount = amount;
+                    next.lastOperationPaymentMethod = "EFECTIVO";
+                }
                 next.expectedCash = Number(next.cashAmount || 0);
             }
             if (collection === TPV_COLLECTIONS.TICKET_Z) {
