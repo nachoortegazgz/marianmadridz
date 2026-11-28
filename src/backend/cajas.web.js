@@ -1564,9 +1564,10 @@ async function _readCashierSessionSummary(cashRegister) {
         for (const movement of (res.items || [])) {
             const method = _safeTrim(movement.paymentMethod).toUpperCase();
             if (!summary[method] || !movement._id) continue;
-            summary[method].amount = _roundMoney(
-                summary[method].amount + (Number(movement.accountingAmount) || 0)
+            const amount = _readRequiredLedgerAmount(
+                movement, "accountingAmount", movement?.accountingAmount, "CAJA_SESSION_SUMMARY_AMOUNT_INVALID"
             );
+            summary[method].amount = _roundMoney(summary[method].amount + amount);
             summary[method].ticketCount += 1;
             if (!lastMovement) lastMovement = movement;
         }
@@ -1628,11 +1629,18 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             operationDate: readOperationDate(lastMovement) || null,
             movementType: lastMovement.movementType || null,
             description: lastMovement.operationDescription || null,
-            amount: Number(lastMovement.accountingAmount ?? lastMovement.totalAmount) || 0,
+            amount: _readRequiredLedgerAmount(
+                lastMovement,
+                "accountingAmount",
+                lastMovement.accountingAmount ?? lastMovement.totalAmount,
+                "CAJA_SESSION_LAST_MOVEMENT_AMOUNT_INVALID"
+            ),
             paymentMethod: lastMovement.paymentMethod || null,
             hash: lastMovement.hash || null,
             previousRecordHash: lastMovement.previousRecordHash || null,
-            sequenceNumber: Number(lastMovement.sequenceNumber) || null,
+            sequenceNumber: _readRequiredLedgerAmount(
+                lastMovement, "sequenceNumber", lastMovement.sequenceNumber, "CAJA_SESSION_SEQUENCE_INVALID"
+            ),
             recordTimestamp: lastMovement.recordTimestamp || null,
             digitalSignature: lastMovement.digitalSignature || null,
             traceId: lastMovement.traceId || null,
