@@ -1,11 +1,19 @@
 # Estado actual — 2026-11-28
 
-**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el último read-back documentado. CI offline de Capa 0 está PASS para PR #670, #675 y el hardening posterior de PR #679 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
+**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el read-back Wix del 28-11-2026. CI offline de Capa 0 está PASS para PR #670, #675 y el hardening posterior de PR #679 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
+
+## Auditoría de persistencia operativa — 28-11-2026
+
+- Informe: [auditoría de persistencia operativa](audits/2026-11-28-operational-persistence-audit.md).
+- Lectura real, solo lectura: 12 colecciones propias NATIVE; Bookings Reader V2 (360 reservas); eCommerce Orders (34 pedidos) y transacciones (8 pagos, 1 reembolso).
+- Resultado: NO CONFORME para persistencia integral. 5/5 movimientos de caja sintéticos incompletos, cierre Z simulado incompleto, 3 recuperaciones pendientes, 7 pedidos pagados/reembolsados sin movimiento correlacionado, 6 proyecciones CitasF2 con estado nativo divergente, cero CONFIG_SISTEMA_FISCAL, TPV comercial sin intención persistida, jornada sin escrituras y 3 eventos externos NOT_SENT.
+- Los datos previos a 2027 son sintéticos por directriz del proyecto; no se infieren pérdidas económicas reales.
+- No se ejecutaron mutaciones ni pruebas de escritura. El sitio figura Draft; código instalado en Wix Editor y Runtime E2E no acreditados.
 
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD de `main` al actualizar este estado: `258c2f981da5a6e19b667fcee1061551b8363192`.
+- HEAD de `main` al actualizar este estado: `03435dea0487aa1eb0c242d2bffb42f31bbf55c5`.
 - PR #662–#667: endurecimiento de serialización, errores CMS, configuración, criptografía, bookingType y transactionId; integradas.
 - PR #668: evidencia documental inicial de Capa 0; integrada.
 - PR #670: validación DAL, GUID de jornada, errores públicos, redacción de logs y paridad de enums; integrada mediante squash `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
