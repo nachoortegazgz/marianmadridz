@@ -113,7 +113,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(html, /call\("SALE_READBACK"/);
     assert.match(html, /TPV_PREVIOUS_SALE_RECONCILIATION_REQUIRED/);
     assert.match(html, /sessionStorage\.setItem\(fingerprintKey, fingerprint\)/);
-    assert.match(html, /catch\(saleError\) => error\(saleError\)/);
+    assert.match(html, /\.catch\(\(saleError\) => error\(saleError\)\)/);
     assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
     assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
     assert.match(html, /Venta cobrada y registrada en Wix\./);
