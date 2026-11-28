@@ -336,11 +336,18 @@ async function resumeExistingSale(record, { buyer, replayed, traceId }) {
     let current = record;
     if (!current.orderId) {
         try {
-            const recovered = await findTpvNativeOrderByExternalId({
+            let recovered = await findTpvNativeOrderByExternalId({
                 externalOrderId: current._id,
                 startedAt: current.createdAt,
                 buyer,
             });
+            if (!recovered && buyer?.contactId) {
+                recovered = await findTpvNativeOrderByExternalId({
+                    externalOrderId: current._id,
+                    startedAt: current.createdAt,
+                    buyer: {},
+                });
+            }
             if (recovered) {
                 if (recovered.status !== "APPROVED" || recovered.paymentStatus !== "NOT_PAID") {
                     throw new Error("TPV_WIX_ORDER_RECOVERED_WITH_UNEXPECTED_STATE");
