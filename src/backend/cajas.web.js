@@ -182,8 +182,7 @@ function readHistoricalPaymentMethod(movement) {
     return value;
 }
 
-function _readRequiredLedgerAmount(movement, field) {
-    const raw = movement?.[field];
+function _readRequiredLedgerAmount(movement, field, raw = movement?.[field]) {
     const validType = typeof raw === "number" ||
         (typeof raw === "string" && raw.trim() !== "");
     const amount = validType ? Number(raw) : Number.NaN;
@@ -199,7 +198,7 @@ function _readRequiredLedgerAmount(movement, field) {
 function _signedFiscalValue(movement, reader) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
     const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
-    return Math.abs(_readRequiredLedgerAmount({ value: reader(movement) }, "value")) * sign;
+    return Math.abs(_readRequiredLedgerAmount(movement, "fiscalAmount", reader(movement))) * sign;
 }
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
@@ -1698,15 +1697,21 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const totalBizum = sumBy(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.BIZUM);
         const totalOnline = sumBy(m => ONLINE_PAYMENT_METHODS.includes(readHistoricalPaymentMethod(m)));
         const totalRefunds = sumBy(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO);
-        const totalTips = sumBy(m => m.movementType === MOVEMENT_TYPE.PROPINA);
-        const totalAdjustments = sumBy(m => m.movementType === MOVEMENT_TYPE.AJUSTE);
-        const grossSalesTotal = sumBy(m => m.movementType && !["REEMBOLSO", "PROPINA", "AJUSTE"].includes(m.movementType));
-        const fiscalMovements = allMovements.filter((movement) => {
-            const movementType = _safeTrim(movement.movementType).toUpperCase();
-            const operationNature = _safeTrim(readMovementField(movement, "operationNature")).toUpperCase();
-            return ![MOVEMENT_TYPE.PROPINA, MOVEMENT_TYPE.AJUSTE, "PROPINA", "AJUSTE"].includes(movementType) &&
-                !["PROPINA", "AJUSTE"].includes(operationNature);
-        });
+        const isTipMovement = (movement) =>
+            _safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.PROPINA ||
+            _safeTrim(readMovementField(movement, "operationNature")).toUpperCase() === "PROPINA";
+        const isAdjustmentMovement = (movement) =>
+            _safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.AJUSTE ||
+            _safeTrim(readMovementField(movement, "operationNature")).toUpperCase() === "AJUSTE";
+        const isRefundMovement = (movement) =>
+            _safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.REEMBOLSO ||
+            _safeTrim(readMovementField(movement, "operationNature")).toUpperCase() === "DEVOLUCION";
+        const totalTips = sumBy(isTipMovement);
+        const totalAdjustments = sumBy(isAdjustmentMovement);
+        const grossSalesTotal = sumBy(m => m.movementType && !isRefundMovement(m) &&
+            !isTipMovement(m) && !isAdjustmentMovement(m));
+        const fiscalMovements = allMovements.filter((movement) =>
+            !isTipMovement(movement) && !isAdjustmentMovement(movement));
         const netTaxableAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxBase), 0);
         const netTaxAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxAmount), 0);
         const consolidatedTotalAmount = _roundMoney(totalCash + totalCard + totalBizum + totalOnline);
