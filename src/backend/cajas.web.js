@@ -1832,7 +1832,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         for (const dateField of ["fechaExpedicionFactura", ...MOVEMENT_HISTORICAL_READ_ALIASES.fechaExpedicionFactura]) {
             const query = dalQuery(MOVIMIENTOS_CAJA_COL)
                 .eq(dateField, cleanDiaKey)
-                .gt("sequenceNumber", 0)
+                // Include malformed sequence values so the integrity check below can reject them.
                 .ne("recordSource", "SMOKE_TEST")
                 .ascending("sequenceNumber")
                 .limit(LEDGER_PAGE_SIZE);
