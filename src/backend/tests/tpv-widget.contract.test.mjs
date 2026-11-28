@@ -90,7 +90,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
-    assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /openSession: true/);
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
