@@ -67,12 +67,23 @@ const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
 // y se consume via readMovementField (data.js). Cero listas paralelas aqui.
 // =============================================================================
 
-const _num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+function _num(value, field) {
+  const validType = typeof value === "number" ||
+    (typeof value === "string" && value.trim() !== "");
+  const parsed = validType ? Number(value) : Number.NaN;
+  if (!Number.isFinite(parsed)) {
+    const error = new Error(`FISCAL_LEDGER_NUMERIC_FIELD_INVALID:${field}`);
+    error.code = "FISCAL_LEDGER_NUMERIC_FIELD_INVALID";
+    error.meta = { field };
+    throw error;
+  }
+  return parsed;
+}
 
-const _readTaxableAmount = (m) => _num(readMovementField(m, "taxBase"));
+const _readTaxableAmount = (m) => _num(readMovementField(m, "taxBase"), "taxBase");
 // Cuota IVA: canon SSOT es taxAmount; cuotaTotal es su alias (contrato unico).
-const _readTaxAmount = (m) => _num(readMovementField(m, "taxAmount"));
-const _readTaxRate = (m) => _num(readMovementField(m, "tipoImpositivo"));
+const _readTaxAmount = (m) => _num(readMovementField(m, "taxAmount"), "taxAmount");
+const _readTaxRate = (m) => _num(readMovementField(m, "tipoImpositivo"), "tipoImpositivo");
 const _readMovementType = (m) => _safeTrim(readMovementField(m, "movementType"));
 const _readOperationNature = (m) => _safeTrim(readMovementField(m, "operationNature")).toUpperCase();
 const _readPaymentMethod = (m) => _safeTrim(readMovementField(m, "paymentMethod")).toLowerCase();
@@ -88,9 +99,9 @@ const _readRecordSource = (m) => _safeTrim(readMovementField(m, "recordSource"))
 const _readPreviousInvoiceId = (m) => _safeTrim(readMovementField(m, "previousInvoiceId")) || null;
 
 function _signedFiscalValue(movement, reader) {
-  const accountingAmount = Number(movement?.accountingAmount);
+  const accountingAmount = _num(movement?.accountingAmount, "accountingAmount");
   const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
-  return Math.abs(Number(reader(movement)) || 0) * sign;
+  return Math.abs(reader(movement)) * sign;
 }
 
 function _paymentMethodBucket(value) {
@@ -158,13 +169,9 @@ function _initTaxAccumulator(months) {
 function _accumulatePage(items, state, options = {}) {
   for (const m of items) {
     state.totalOperations++;
-    const accountingAmount = Number(m.accountingAmount || 0);
-    const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
-    const taxAmount = _signedFiscalValue(m, _readTaxAmount);
+    const accountingAmount = _num(m.accountingAmount, "accountingAmount");
     const mes = _safeTrim(m.fiscalPeriod || m.mesKey);
     const paymentMethod = _paymentMethodBucket(_readPaymentMethod(m));
-    const taxRate = _readTaxRate(m);
-    const taxRateKey = String(taxRate);
     const movementType = _readMovementType(m).toUpperCase();
     const operationNature = _readOperationNature(m) || (
       movementType === MOVEMENT_TYPE.PROPINA ? "PROPINA" :
@@ -187,6 +194,11 @@ function _accumulatePage(items, state, options = {}) {
       state.countAdjustments++;
       continue;
     }
+
+    const taxableAmount = _signedFiscalValue(m, _readTaxableAmount);
+    const taxAmount = _signedFiscalValue(m, _readTaxAmount);
+    const taxRate = _readTaxRate(m);
+    const taxRateKey = String(taxRate);
 
     state.countFiscal++;
     state.totalTaxableAmount += taxableAmount;
