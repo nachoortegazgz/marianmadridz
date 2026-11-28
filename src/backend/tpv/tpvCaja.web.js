@@ -102,7 +102,7 @@ export const obtenerEstadoCaja = webMethod(
             preparedAt: new Date().toISOString(),
         };
         if (!session) {
-            const canOpenSession = operator.rolWebsite === "ADMIN" && cajaActual.canStartSession === true;
+            const canOpenSession = cajaActual.canStartSession === true;
             return {
                 status: "SUCCESS",
                 data: {
@@ -132,8 +132,7 @@ export const obtenerEstadoCaja = webMethod(
         const summary = status === OPERATIONAL_CASH_STATUS.OPEN
             ? await buildTpvSessionSummary(session)
             : null;
-        const canOpenSession = operator.rolWebsite === "ADMIN" &&
-            status === OPERATIONAL_CASH_STATUS.CLOSED &&
+        const canOpenSession = status === OPERATIONAL_CASH_STATUS.CLOSED &&
             session.sessionId !== "TPV-SESSION-" + dayKey;
         return {
             status: "SUCCESS",
