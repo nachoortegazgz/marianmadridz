@@ -18,6 +18,14 @@ Métrica exigida: 100 % de condiciones bloqueantes/early return observables con 
 
 **MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el read-back Wix del 28-11-2026. CI offline de Capa 0 está PASS para PR #670, #675 y el hardening posterior de PR #679 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
 
+## Auditoría profunda TPV/backend/reservas — 28-11-2026
+
+- Checklist consolidado: [TPV-DEEP-AUDIT-CHECKLIST](TPV-DEEP-AUDIT-CHECKLIST.md), basado en la auditoría adjunta de 40 bloqueos TPV, 29 módulos TPV, 33 módulos backend y 8 módulos de páginas/reservas.
+- Correcciones de código en rama `docs/tpv-runtime-success-flows-2026-11-28`: exportación de auditoría TPV (guard ADMIN), capabilities ADMIN Ticket Z/exportación, normalización de errores en `obtenerEstadoCaja`, lectura de `orderId` raíz en idempotencia Bookings, eventType consistente en marcadores de reembolso y regex GMT del offset Madrid.
+- Las seis correcciones están IMPLEMENTADAS en Git; no están aún VALIDATED: no se ejecutaron lint, unit tests, CI ni Wix Runtime en esta intervención.
+- Pendientes P0/P1 destacados: colisión de contratos TPV/fiscal en `MovimientosCaja`/`CajaActual`, circuito de confirmación de pago y cierre Z, paginación de crons, coherencia de estados de venta, stock, y acciones de documentos/cierre de `zonamarian.js`.
+- La rama no se ha fusionado ni desplegado. Sitio sigue Draft/no publicado; NO-GO.
+
 ## Auditoría de persistencia operativa — 28-11-2026
 
 - Informe: [auditoría de persistencia operativa](audits/2026-11-28-operational-persistence-audit.md).
