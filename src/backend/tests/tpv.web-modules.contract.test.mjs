@@ -285,7 +285,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const cash = await source("tpv/tpvCaja.web.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
-    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit|withTpvSaleLock/);
+    assert.match(refunds, /appendTpvAudit/);
+    assert.match(refunds, /TPV_REFUND_BLOCKED/);
+    assert.doesNotMatch(refunds, /insertTpvEvent|withTpvSaleLock/);
     assert.match(movements, /withTpvSessionLock\(session\.sessionId/);
     assert.match(cash, /withTpvSessionLock\(session\.sessionId/);
     assert.match(closures, /withTpvSessionLock\(session\.sessionId/);
