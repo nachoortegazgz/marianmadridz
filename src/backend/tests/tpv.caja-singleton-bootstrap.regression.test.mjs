@@ -26,7 +26,7 @@ test("TPV bootstrap creates the canonical singleton through the backend DAL", as
 
 test("TPV bootstrap receives the trace identifier from its authorized WebMethod", async () => {
     const source = await readFile(pageUrl, "utf8");
-    assert.match(source, /await requireAdmin\(traceId\)[\s\S]*?initializeTpvCaja\(traceId\)/);
+    assert.match(source, /await requireTpvOperator\(traceId\)[\s\S]*?initializeTpvCaja\(traceId\)/);
 });
 
 test("only an ADMIN read initializes a missing CajaActual singleton", async () => {
