@@ -3,7 +3,7 @@
 **Purpose:** punto único de entrada para asistentes IA, agentes de desarrollo y revisores técnicos.  
 **Repository:** `nachoortegazgz/marianmadridz` · **Default branch:** `main`  
 **Platform:** Wix Editor clásico + Velo · **Site ID:** `188bed94-177c-4bc9-a9f0-35080d874f3e`  
-**Last documentary baseline inspected:** 2026-11-28 · **Last confirmed main HEAD at inspection:** `910ad3faa6e543c23e81b2902726d4d8cd43087f`  
+**Last documentary baseline inspected:** 2026-11-28 · **Last confirmed main HEAD at inspection:** `944eb225b63260353cf283c87b0c0b6f07af6caf`  
 **Site state:** Draft / no publicado (último read-back documentado 2026-11-27). **MVP:** NO-GO.  
 **Status of this document:** ACTIVE. It is an index and operating guide, not a substitute for contracts or evidence.
 
@@ -74,8 +74,8 @@ CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A 
 ## 6. Current known baseline (read STATE-NOW before acting)
 
 - Main HEAD observed on 2026-11-28: `910ad3faa6e543c23e81b2902726d4d8cd43087f` (PR #675 integrated).
-- PR #670 hardening is integrated. Its offline CI reported 88 suites / 794 tests with zero failures. PR #675 is also integrated and supersedes that baseline with 89 suites / 804 tests PASS, SDK checks, ESLint, npm audit and Gitleaks PASS on its validated HEAD. See STATE-NOW for exact runs and SHAs.
-- Capa 0 remains **EN EJECUCIÓN**. PR #675 resolved provider-error masking across Bookings Staff, CRM/Members, identity and DAL; `queryReferencedItems()` was removed after a zero-consumer audit. Remaining items: secret-provider error propagation (including fiscal-emitter consumer), confirming all staff resource IDs are service providers, money conversion contracts, currency-key duplication, global writer/idempotency matrix, dead-code audit and Runtime validation.
+- PR #670 hardening is integrated (88 suites / 794 tests PASS on its validated HEAD). PR #675 superseded that baseline (89 suites / 804 tests PASS). PR #679 and its corrective commit are integrated; the final `main` SHA `944eb225b63260353cf283c87b0c0b6f07af6caf` passed 91 suites / 816 tests, SDK checks, ESLint, npm audit and Gitleaks/secret scanning as recorded in STATE-NOW. The initial PR #679 HEAD had a failed quality gate; do not confuse it with the corrected main commit.
+- Capa 0 remains **EN EJECUCIÓN**. PR #675 resolved provider-error masking across Bookings Staff, CRM/Members, identity and DAL; PR #679 hardened Wix sort contracts, log redaction, JSON-safe response metadata and canonical bookingType for new inserts. Remaining items: secret-provider error propagation (including fiscal-emitter consumer), confirming all staff resource IDs are service providers, money conversion contracts, currency-key duplication, global writer/idempotency matrix, dead-code audit and Runtime validation.
 - Wix Local Editor/Preview E2E, Wix Runtime acceptance and production are not accredited by the cited offline CI.
 - Last documented Wix read-back (2026-11-27): Draft, page TPV ID `yl5th` and route then observed as `/tpv` in STATE-NOW; CMS counts are historical, not live. Do not mutate CMS based on this snapshot.
 - Never publish or activate real payments/external effects without the owner's explicit authorization.
