@@ -1,23 +1,30 @@
-# TPV — contrato único, bloqueos y errores
+# TPV — contrato único, persistencia y errores
 
-**Vigencia:** 2026-11-28. Estado en [STATE-NOW](STATE-NOW.md); gates en [RELEASE-READINESS](RELEASE-READINESS.md). La guía consultiva está en [AI-ENTRYPOINT](AI-ENTRYPOINT.md).
+**Vigencia:** 2026-11-28. Flujos de aceptación: [TPV-RUNTIME-AND-TEST-FLOWS](TPV-RUNTIME-AND-TEST-FLOWS.md). Estado: [STATE-NOW](STATE-NOW.md). Gates: [RELEASE-READINESS](RELEASE-READINESS.md).
 
 ## 1. Runtime único
 
-Desarrollo, pruebas y producción ejecutan el mismo código y reglas de dominio. Fixtures y adaptadores simulados sustituyen dependencias externas, no la lógica de negocio.
+Desarrollo, pruebas y producción ejecutan el mismo código y las mismas reglas de dominio. No hay ramas funcionales por entorno, ni lógica que trate una venta/movimiento de forma distinta por ser una prueba.
 
-Frontend presenta/orquesta. Backend resuelve identidad, autorización, catálogo, importes, impuestos, validación, idempotencia, persistencia y recuperación.
+El caso de prueba se identifica funcionalmente por el cliente de prueba acordado y el periodo de prueba. Los registros anteriores a 2027 son de prueba y se eliminarán en el reinicio previo a la puesta en marcha. Esta limpieza es una tarea de preparación de datos; no crea un runtime alternativo.
 
-## 2. Bloqueos
+Frontend presenta e interactúa. Backend resuelve identidad, autorización, catálogo, importes, impuestos, validación, idempotencia, persistencia y recuperación.
 
-No hay interruptores globales de escritura por entorno ni gates fiscales genéricos que impidan probar el dominio.
+## 2. Bloqueos y errores
 
-- **No bloquea unitarias/contratos/integración simulada:** ausencia de serie/configuración fiscal productiva, credenciales reales, terminal, CMS live, AEAT, SharePoint o notificaciones; se inyectan fixtures y dobles.
-- **Sí bloquea la operación concreta:** identidad/autorización inválida; configuración requerida para esa operación; campos/tipos/importes/secuencia/hash inválidos; catálogo/precio no verificable; falta de lock, idempotencia o concurrencia segura; destino de escritura no aislado.
-- **Preview/Runtime:** mismo dominio con fixture aislado y efectos externos interceptados. Persistencia solo mediante writer canónico en ámbito de prueba inequívoco.
-- **Producción:** configuración legal, permisos, pago verificado y controles de integridad obligatorios.
+No hay interruptores globales de escritura por entorno ni bloqueos fiscales genéricos que impidan probar el dominio.
 
-Un fallo detiene la operación afectada antes de persistir cuando corresponda; no deshabilita módulos ajenos.
+Bloquean únicamente la operación afectada:
+- identidad o autorización inválida para el WebMethod;
+- sesión no abierta, cerrada o no coincidente;
+- catálogo, precio, variante, importe o esquema no verificable;
+- clave idempotente ausente, inválida o en conflicto;
+- lock, concurrencia o persistencia no seguros;
+- configuración imprescindible para la operación concreta.
+
+La ausencia de proveedor externo, terminal bancaria, AEAT, SharePoint o notificaciones reales no debe impedir pruebas del dominio cuando esas dependencias no se invocan. No simular una confirmación de pago: una intención comercial permanece pendiente hasta que exista confirmación válida.
+
+Todo rechazo debe devolver código estable, causa y remediation; no convertir errores en éxito, vacío o cero. Un fallo secundario debe declarar persistencia parcial y recuperación pendiente.
 
 ## 3. Datos y persistencia
 
@@ -27,50 +34,46 @@ Un fallo detiene la operación afectada antes de persistir cuando corresponda; n
 | `MovimientosCaja` | Ledger físico canónico. |
 | `ControlOperativo` | Locks, idempotencia técnica y auditoría. |
 | `CajaActual` | Proyección de sesión. |
-| `HistoricoCierresZ` | Evidencia de cierre inmutable. |
+| `HistoricoCierresZ` | Evidencia de cierre. |
 
-No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo.
+No duplicar ledgers ni saltarse DAL, hooks o writers mediante REST/CMS directo. Los WebMethods y repositorios canónicos gobiernan las operaciones.
 
 Identidad transaccional:
 - PR #650 exige `transactionId` en el writer fiscal manual.
-- PR #667 exige `transactionId` (1–128 caracteres) en `registrarEventoEconomico()`, y lo usa para deduplicación y recuperación de insert incierto. Se eliminaron fallbacks por secuencia y recuperación por `traceId`.
-- El resto de writers se clasificará en una matriz por dominio: transactionId, clave de idempotencia propia o no aplicabilidad justificada. No imponer una regla ciega a eventos no económicos.
+- PR #667 exige `transactionId` (1–128 caracteres) en `registrarEventoEconomico()`, para deduplicación y recuperación de insert incierto.
+- El resto de writers mantiene la identidad idempotente definida por su dominio; no imponer una regla ciega a eventos no económicos.
 
-## 4. Integridad y no-borrado
+## 4. Integridad y preparación de datos
 
-- `bulkRemove` y `assertBulkRemoveAllowed` deniegan borrado físico.
-- `removeById` solo permite retirada lógica CAS para cachés, tokens, locks y rate limits autorizados; no elimina filas.
-- Crons retiran lógicamente esos controles efímeros. Idempotencia, flags y evidencia de auditoría se conservan; no se purgan físicamente.
-- Intenciones comerciales/proyecciones operativas admiten actualización validada y autorizada.
-- Movimientos físicos, ledgers fiscales/contables contabilizados, jornada y cierres son append-only. Rectificar mediante nuevos eventos/registros trazables.
-- No modificar ni reclasificar históricos durante QA. No reutilizar la caja singleton ABIERTA.
+- Los ledgers y registros fiscales/contables/laborales/cierres no se alteran para hacer pasar una prueba; las rectificaciones operativas se registran mediante nuevos eventos.
+- No reutilizar ni sobrescribir la caja singleton ABIERTA ni los históricos existentes.
+- El reinicio previo a la puesta en marcha eliminará los registros de prueba anteriores a 2027 según la instrucción del propietario. Debe ejecutarse como tarea de preparación explícita, con inventario, backup/evidencia y verificación posterior; no se ejecuta desde el runtime ni durante una batería.
+- No introducir marcadores de negocio, flags, prefijos, colecciones paralelas o filtros que diferencien registros reales y de prueba.
 
 ## 5. Errores explícitos
 
-El normalizador común integrado en `main` es `src/backend/tpv/tpvError.js`. Su contrato se mantiene independiente de la validación Runtime.
+El normalizador común es `src/backend/tpv/tpvError.js`.
 
 Contrato público:
 - `status`, `data`, `error` y `traceId`.
 - Error estable: `code`, mensaje público seguro y remediation accionable.
 - Metadatos cuando apliquen: `retryable`, `persisted`, `recoverable`, `auditPersisted` y código de fallo de auditoría.
-- `technicalDetail` expuesto al navegador se limita al código seguro. Nunca enviar mensajes brutos de proveedor, secretos, tokens ni stack traces.
-- Mantener códigos legacy reconocibles; excepción desconocida: mensaje seguro y no reintentable por defecto.
-- No ocultar persistencia parcial: informar si la operación quedó persistida, requiere recuperación o falló la auditoría posterior.
+- No enviar mensajes brutos de proveedor, secretos, tokens ni stack traces al navegador.
+- No ocultar persistencia parcial. No reintentar automáticamente si `retryable=false` o la persistencia es incierta.
 - Guards de configuración, identidad y autorización dentro de la frontera try/catch del WebMethod.
 
-El frontend muestra mensaje y remediation, conserva código/`traceId` para soporte y no convierte un error en éxito. No reintentar automáticamente si `retryable=false` o la persistencia es incierta.
+## 6. Fiscalidad y medios de pago
 
-## 6. Fiscalidad y fixtures
+El backend vuelve a resolver catálogo, precio e impuestos; el navegador no es autoridad. Intención comercial, pago verificado, movimiento físico y registro fiscal son etapas separadas. Un medio seleccionado no equivale a pago confirmado. Los medios no soportados por el contrato vigente se rechazan explícitamente.
 
-- `recordTimestamp` UTC lo genera backend; no usar etiquetas genéricas de entorno para clasificar negocio.
-- Solo marcadores explícitos de smoke/fixture (p. ej. `SMOKE_TEST`, movement types de simulación, `SIMULATED_ONLY` o la triple marca legacy QA) se excluyen de lecturas fiscales/recibos cuando el contrato lo requiere. Un campo genérico `synthetic` o `sourceType` por sí solo no clasifica un registro.
-- No confundir hash interno con hash AEAT. El mapping de alta/anulación, serie/número, fecha, importes, hash previo y campos CMS debe contrastarse con especificación oficial.
-- No recalcular ni alterar históricos.
+No confundir hash interno con hash AEAT. El mapping fiscal y los campos CMS deben contrastarse con especificación oficial. No recalcular ni alterar históricos para completar datos ausentes.
 
-## 7. Venta y medios
+## 7. Divergencia de implementación pendiente
 
-El backend vuelve a resolver catálogo, precio e impuestos; el navegador no es autoridad. Intención comercial, pago verificado, movimiento físico y registro fiscal son etapas separadas. Medios no soportados por el contrato V1 se rechazan explícitamente.
+La inspección de `registrarVenta` en la rama `main` consultada el 28-11-2026 encontró que el registro incluye `sourceType` desde `TPV_RUNTIME_POLICY`. La instrucción vigente del propietario prohíbe clasificar operaciones/datos por origen real/prueba. Antes de retirar el campo, inventariar esquema CMS, writers, readers, validadores y compatibilidad histórica; no cambiar solo un lado del contrato. Esta divergencia no se considera resuelta por esta actualización documental.
 
 ## 8. Evidencia
 
-CI offline PASS no acredita Preview, Runtime ni producción. Cada aceptación identifica SHA, entorno, flujo y resultado. No declarar E2E sin ejecución real en Wix Runtime.
+CI offline PASS no acredita Preview, Runtime ni producción. Cada aceptación identifica SHA, nivel, flujo, identidad/rol, respuesta y read-back. Un CMS REST insert/read-back no acredita WebMethods Velo. No declarar E2E sin ejecución real en Wix Runtime.
+
+La matriz reproducible y los flujos de éxito están en [TPV-RUNTIME-AND-TEST-FLOWS](TPV-RUNTIME-AND-TEST-FLOWS.md).
