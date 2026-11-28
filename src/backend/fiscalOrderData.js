@@ -3,6 +3,10 @@
  * Pure normalization only: no persistence, network calls or event side effects.
  */
 /**
+ * Shared Wix Orders amount and VAT resolver.
+ * Pure normalization only: no persistence, network calls or event side effects.
+ */
+/**
  * Resolve the authoritative Wix order amount for the fiscal ledger.
  * An explicit zero is valid and must not fall back to undiscounted prices.
  */
@@ -195,45 +199,3 @@ export function resolveOrderFiscalTaxData(order) {
         breakdown,
     };
 }
-
-const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
-const getOrderElevated = auth.elevate(orders.getOrder);
-const listTransactionsForSingleOrderElevated = auth.elevate(orderTransactions.listTransactionsForSingleOrder);
-const READER_V2_PAGE_LIMIT = 100;
-const READER_V2_MAX_PAGES = 5;
-
-// ============================================================================
-// CONSTANTES (ALN-01, ALN-05, ALN-06)
-// ============================================================================
-
-const CITAS_COL = BUSINESS_COLLECTIONS.CITAS_F2;
-const MOVIMIENTOS_CAJA_COL = BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA;
-const CONTROL_OPERATIVO_COL = OPERATIONAL_COLLECTIONS.CONTROL_OPERATIVO;
-const MAPA_STAFF_COL = BUSINESS_COLLECTIONS.MAPA_STAFF;
-
-// ALN-05: VAT_ACCRUAL_STATUS no existe en internalConfig v12.0.
-const VAT_ACCRUAL_DEVENGADO = "DEVENGADO";
-
-// ALN-06: PAYMENT_METHOD.ONLINE no existe. WIX_PAYMENTS es el canonico
-// para el ledger fiscal. El canal "ONLINE" se conserva en channelType.
-const LEDGER_PAYMENT_METHOD_ONLINE = PAYMENT_METHOD.WIX_PAYMENTS;
-
-const WEBHOOK_RETRIES = SDK_CONFIG.EVENTS.RETRY_ATTEMPTS;
-const WEBHOOK_RETRY_DELAY_MS =
-    SDK_CONFIG.EVENTS.RETRY_BASE_BACKOFF_MS;
-const API_TIMEOUT_MS = SDK_CONFIG.TIMEOUTS.WEBHOOK_MS;
-
-const EMISOR_FALLBACK_NAME = "MARIAN MADRID";
-const EVENT_TTL_HOURS = 72;
-
-const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
-
-// ============================================================================
-// WIX-MANAGED BACKEND EVENTS
-// ============================================================================
-
-/*
- * Wix Editor Classic Velo event handlers receive the platform-delivered event object.
- * Wix verifies and decodes the signed delivery before invoking this handler.
- * This module does not expose an HTTP webhook endpoint and accepts no raw JWT.
- */
