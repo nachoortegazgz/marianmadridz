@@ -23,9 +23,8 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     const html = await read("%23htmlTPV.txt");
     const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1] || "";
     const controller = await read("src/public/tpvPageController.js");
-    // The widget keeps tender entry local; SALE_REGISTER persists a pending sale with no payment confirmation.
-    assert.match(script, /payments: \[\]/);
-    assert.doesNotMatch(script, /medioPago:\s*state\.paymentMethod/);
+    assert.match(script, /medioPago: state\.paymentMethod/);
+    assert.match(script, /payments: state\.payments\.map\(\(payment\) =>/);
     assert.match(script, /differenceReason(?:\s*:|\s*,)/);
     assert.match(script, /call\("SALE_VALIDATE"/);
     assert.match(script, /saleReady !== true/);
@@ -62,7 +61,7 @@ test("TPV fiscal quotes expose readiness blockers and keep payments disabled wit
     assert.match(html, /data-method="OTROS" disabled/);
     assert.match(html, /const PAYMENT_METHODS = \["EFECTIVO", "TARJETA"\]/);
     assert.match(html, /state\.saleQuote\.totalVenta/);
-    assert.match(html, /paymentReady = state\.saleQuote\?\.catalogVerified === true && state\.saleQuote\?\.taxVerified === true && state\.saleQuote\?\.saleReady === true && state\.operationalWritesAvailable === true/);
+    assert.match(html, /paymentReady = state\.saleQuote\?\.catalogVerified === true && state\.saleQuote\?\.taxVerified === true && state\.saleQuote\?\.commercialRecordReady === true && state\.operationalWritesAvailable === true/);
     assert.match(html, /state\.operationalWritesAvailable !== true/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|TPV_TEST_/);
 

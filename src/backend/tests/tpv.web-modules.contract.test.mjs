@@ -364,8 +364,8 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     assert.match(controller, /MESSAGE_TYPES\.READY/);
     for (const method of [
         "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial",
-        "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja",
-        "registrarDevolucion", "generarTicketX", "generarCierreZ", "cerrarSesionCaja", "exportarMovimientos",
+        "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion",
+        "generarTicketX", "generarCierreZ", "cerrarSesionCaja", "exportarMovimientos",
         "obtenerResumenCaja", "obtenerAuditoriaTPVLista", "obtenerConfiguracionTPV",
         "obtenerServicios", "obtenerProductos", "obtenerVariantesProducto",
         "obtenerStaff", "buscarClientesTPV", "obtenerPermisosTPV",
@@ -390,9 +390,6 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     assert.match(html, /keyedAction\("CASH_" \+ type,\s*"CASH_MOVEMENT"/);
     assert.match(html, /openCashMovement\("ENTRADA"\)/);
     assert.match(html, /openCashMovement\("SALIDA"\)/);
-    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
-    assert.match(html, /id="refund"[^>]*disabled/);
-    assert.doesNotMatch(html, /keyedAction\("REFUND",\s*"REFUND"/);
     assert.match(html, /call\("TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
     assert.match(html, /keyedAction\("TICKET_Z",\s*"TICKET_Z"/);
 });

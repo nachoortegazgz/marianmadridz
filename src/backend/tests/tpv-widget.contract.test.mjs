@@ -71,9 +71,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /case "SALE_VALIDATE":[\s\S]*?return validarVentaBorrador\(\{ lineas, pagos \}\)/);
     assert.match(controller, /case "SALE_REGISTER":[\s\S]*?return registrarVenta\(\{/);
     assert.match(controller, /case "AUDIT_LIST":[\s\S]*?return obtenerAuditoriaTPVLista\(/);
-    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
-    assert.match(html, /id="refund"[^>]*disabled/);
-    assert.doesNotMatch(html, /keyedAction\("REFUND",\s*"REFUND"/);
+    assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{/);
     assert.match(controller, /reply\(message\.type \+ "_RES", result, message\)/);
     assert.match(controller, /idempotencyKey\(message, payload\)/);
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
@@ -91,7 +89,8 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerCashMovement: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
-    for (const capability of ["requestRefund", "issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
+    assert.match(permissions, /requestRefund: staff\.rolWebsite === "ADMIN"/);
+    for (const capability of ["issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);

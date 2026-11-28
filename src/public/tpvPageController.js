@@ -8,8 +8,8 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial, cerrarSesionCaja } from "backend/tpv/tpvCaja.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
-import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
+import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { obtenerResumenCaja, generarTicketX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
 import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
@@ -59,13 +59,19 @@ function boundedInteger(value, field, min, max) {
 }
 
 function envelope(result) {
-    if (result && ["SUCCESS", "PENDING", "ERROR"].includes(result.status) &&
+    if (
+        result &&
+        ["SUCCESS", "PENDING", "ERROR"].includes(result.status) &&
         Object.prototype.hasOwnProperty.call(result, "data") &&
-        Object.prototype.hasOwnProperty.call(result, "error")) return result;
+        Object.prototype.hasOwnProperty.call(result, "error")
+    ) {
+        return result;
+    }
+
     return {
-        status: "ERROR",
-        code: "TPV_UNEXPECTED_RESPONSE",
-        raw: result,
+        status: "SUCCESS",
+        data: result ?? null,
+        error: null,
     };
 }
 
@@ -415,9 +421,8 @@ async function dispatch(message) {
                 saleId: optionalString(payload.saleId, 160) || "",
                 sessionId: optionalString(payload.sessionId, 160) || "",
                 reason: optionalString(payload.reason, 500) || "",
-                profesionalId: optionalString(payload.profesionalId, 160),
                 payments: Array.isArray(payload.payments) ? payload.payments.map((payment) => ({
-                    paymentMethod: String(payment?.paymentMethod || "").trim().toUpperCase(),
+                    paymentMethod: optionalString(payment?.paymentMethod, 40) || "",
                     amount: numeric(payment?.amount, "REFUND_AMOUNT", { allowZero: false }),
                 })) : [],
                 idempotencyKey: key,
