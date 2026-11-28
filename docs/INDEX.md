@@ -8,7 +8,8 @@
 - [STATE-NOW](STATE-NOW.md): estado, evidencia fechada y pendientes. Fuente del estado actual.
 - [PROJECT-CANON](PROJECT-CANON.md): arquitectura, autoridad e invariantes.
 - Directriz transversal obligatoria en PROJECT-CANON: cero bloqueos silenciosos; normalización determinista cuando proceda y error/log detallado, correlacionado y accionable para cada rechazo o salida anticipada.
-- [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores.
+- [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, persistencia y errores.
+- [TPV-RUNTIME-AND-TEST-FLOWS](TPV-RUNTIME-AND-TEST-FLOWS.md): flujos de éxito de apertura, venta, movimientos, arqueo, Ticket X/cierre y matriz reproducible TPV-RT-01…20.
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
 - [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix y lectura CMS; snapshot 27-11-2026, no live.
 - [Dossier operativo maestro — Capa Externa](architecture/CAPA-EXTERNA-MASTER-DOSSIER.md): punto de entrada para configurar SharePoint, gestoría, PGC, correspondencia entre capas, informes derivados, herramientas AEAT, seguridad y plan de puesta en marcha.
@@ -20,7 +21,7 @@
 
 - [Backend general](../src/backend/README.md): WebMethods, permisos, Wix Data, hooks, eventos y jobs.
 - [Backend TPV](../src/backend/tpv/README.md): módulos, colecciones y contratos TPV.
-- [Plan Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): pruebas Wix aisladas y criterios de aceptación.
+- [Plan Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md): ruta Wix Preview/Local Editor, niveles de evidencia y criterios E2E.
 
 ## Evidencia y auditorías
 
