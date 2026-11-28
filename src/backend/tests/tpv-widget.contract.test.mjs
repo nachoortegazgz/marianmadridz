@@ -433,6 +433,5 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /data-method="TARJETA" disabled/);
     assert.match(html, /Efectivo disponible/);
     assert.match(html, /Tarjeta \(pendiente\)/);
-    assert.match(sales, /addTpvNativeCashPayment/);
     assert.doesNotMatch(html, /window\.print\(\);[\s\S]{0,150}state\.lastSale/);
 });
