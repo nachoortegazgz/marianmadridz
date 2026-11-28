@@ -67,6 +67,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 
 - [Manifiesto de archivo](ARCHIVE-MANIFEST.md): regla de uso.
 - [Índice de archivo noviembre 2026](archive/2026-11/README.md): navegación por auditorías, ADR, QA, handoffs y dossiers.
+- [Revisión individual del archivo — 28-11-2026](archive/2026-11/ARCHIVE-REVIEW-2026-11-28.md): inventario de los 161 documentos preexistentes, clasificación, supersedencias, datos personales redactados y reglas de reutilización.
 - [Dossier consolidado histórico](archive/2026-11/DOSSIER CONSOLIDADO.txt): contexto histórico; revisar avisos de vigencia y no seguir instrucciones antiguas.
 - [Dossier de flujos Capa 1–3](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md): diseño y snapshots históricos; no acredita implementación.
 - [Base de conocimiento histórica](archive/2026-11/PROJECT-KNOWLEDGE-BASE.md): corte 23-11-2026; no es SSOT actual.
