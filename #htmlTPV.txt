@@ -1271,7 +1271,7 @@ body {
         <p>transactionId: ${esc(receipt.transactionId || "—")}</p>
       </article>
       <button id="printOpeningTicket" type="button" class="btn" style="width:100%;margin-top:12px;">Imprimir ticket y activar cajón</button>
-      <p class="status">La apertura física del cajón depende del pulso de apertura configurado en el controlador de la impresora Epson. El navegador no puede enviar por sí solo un comando ESC/POS al cajón.</p>
+      <p class="status">El ticket se envía a impresión al confirmar la apertura. Para que se abra el cajón físico, el controlador Epson debe tener activada la opción de abrir el cajón al iniciar la impresión.</p>
     `;
   }
 
@@ -1362,6 +1362,9 @@ body {
           $("modalCancel").classList.add("hidden");
           $("modalConfirm").onclick = closeModal;
           $("printOpeningTicket").onclick = () => window.print();
+          if (opened.replayed !== true) {
+            window.setTimeout(() => window.print(), 150);
+          }
           toast("Caja abierta, movimiento registrado y ticket de apertura generado.");
           return { keepOpen: true };
         } catch (operationError) {
