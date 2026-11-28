@@ -89,7 +89,13 @@ function normalizeLine(line, index) {
 
 function normalizePayments(pagos, totalMinor) {
     if (pagos === undefined || pagos === null) {
-        return { pagos: Object.freeze([]), importePagadoMinor: 0 };
+        return {
+            pagos: Object.freeze([]),
+            importePagadoMinor: 0,
+            efectivoRecibidoMinor: 0,
+            cambioEntregadoMinor: 0,
+            paymentBreakdownMinor: Object.freeze(Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]))),
+        };
     }
     if (!Array.isArray(pagos)) {
         throw new Error("TPV_INVALID_PAYMENTS");
