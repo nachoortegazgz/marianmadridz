@@ -76,6 +76,18 @@ describe("accounting ledger writer", () => {
     assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 2);
   });
 
+  it("ACC-LEDGER-13 rejects absent, blank and boolean line amounts before creating an idempotency claim", async () => {
+    for (const [index, invalidAmount] of [null, "", true].entries()) {
+      const payload = entry(`ACC-QA-ENTRY-013-${index}`);
+      payload.lines[0].debitAmount = invalidAmount;
+      const result = await appendAccountingEntry(payload, `trace-acc-013-${index}`);
+      assert.equal(result.status, "ERROR");
+      assert.equal(result.error.code, "ACCOUNTING_LINE_INVALID");
+    }
+    assert.equal(wixDataMock._store.get(ACCOUNTING_COL).length, 0);
+    assert.equal(wixDataMock._store.get(CONTROL_COL).length, 0);
+  });
+
   it("ACC-LEDGER-03 rejects unbalanced entries before any append", async () => {
     const result = await appendAccountingEntry(entry("ACC-QA-ENTRY-003", 121, 120), "trace-acc-003");
 
