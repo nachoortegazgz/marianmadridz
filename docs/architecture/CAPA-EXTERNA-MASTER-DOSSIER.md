@@ -2,7 +2,7 @@
 
 **Proyecto:** Marian Madrid · Wix Classic + Velo  
 **Fecha de revisión:** 2026-11-28  
-**Estado:** OUTBOX C3 IMPLEMENTADO EN CÓDIGO · TRANSPORTE SHAREPOINT NO CONFIGURADO NI VALIDADO
+**Estado:** OUTBOX + TRANSPORTE GRAPH IMPLEMENTADOS EN CÓDIGO · SECRETOS Y RUNTIME PENDIENTES
 
 > Punto de entrada operativo para configurar SharePoint, gestoría, PGC, correspondencia entre capas, informes derivados y herramientas AEAT. No acredita que tenant, biblioteca, gestoría, autorizaciones AEAT o transporte estén conectados.
 
@@ -29,8 +29,8 @@ Decisiones recomendadas: un sitio SharePoint administrativo con bibliotecas sepa
 - Existe src/backend/accountingLedger.js: primitiva append-only de líneas contables equilibradas, idempotencia, hash-chain y lock. No tiene mapeo automático de eventos a cuentas.
 - Existe la colección RegistroIntegracion con campos de evento, origen, correlación, idempotencia, hash, estado, intentos, siguiente intento, entrega y último error.
 - Existen LibroAsientosContablesDetalle, MovimientosCaja, CajaActual, HistoricoCierresZ, RegistrosHorariosStaff, CitasF2, ControlOperativo, ServiciosCatalogo, ComplementosCatalogo, MapaStaff y TransaccionesTPV.
-- El contrato de exportación genera un artefacto determinista en memoria y registra su manifiesto minimizado en RegistroIntegracion mediante un evento C3 append-only e idempotente. Todavía no sube a SharePoint, no llama a Graph, no envía correo, no ejecuta Power Automate ni crea jobs.
-- No hay evidencia de tenant, site, biblioteca, identidad técnica, permisos, retención, DLP, conector SharePoint o aceptación de gestoría.
+- El contrato de exportación genera un artefacto determinista en memoria y registra su manifiesto minimizado en RegistroIntegracion mediante un evento C3 append-only e idempotente. El transporte Graph ya está implementado en código: exige configuración de secretos, usa nombre de archivo versionado sin sobrescritura, verifica el drive asociado al site, descarga el archivo y compara SHA-256 antes de anexar C3_PACKAGE_VERIFIED. No hay evidencia de ejecución real en Runtime.
+- No hay evidencia de ejecución real contra tenant/site/biblioteca, ni de que los secretos MM_GRAPH_* estén configurados. La identidad técnica debe tener permiso de aplicación Sites.Selected y concesión explícita write sobre el sitio; no se debe conceder Sites.ReadWrite.All. La carpeta configurada debe existir. Tampoco hay evidencia de retención, DLP o aceptación de gestoría.
 - El sitio figura Draft/no publicado en la última evidencia del proyecto; Runtime y producción no están acreditados.
 
 ### 2.2 Snapshot Wix y limitaciones
