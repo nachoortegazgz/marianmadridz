@@ -49,7 +49,7 @@ El TPV solo se considera GO cuando:
 La documentación de Wix permite usar `@wix/ecom/orders.createOrder()` para registrar ventas manuales de POS y pedidos de sistemas externos. El canal `channelInfo.type = POS` está soportado. Wix documenta además un ejemplo de un único pedido con líneas de Wix Stores y Wix Bookings.
 
 - Un pedido Wix por venta, con todas las líneas de producto/servicio y el cliente cuando exista.
-- Usar `settings.orderApprovalStrategy = PAYMENT_RECEIVED` como estrategia inicial a validar: el pedido solo se aprueba tras recibir el pago. La documentación indica que el momento de reducción de inventario se configura mediante esta estrategia; no ejecutar un decremento manual adicional.
+- Usar `settings.orderApprovalStrategy = DEFAULT` para reservar/decrementar stock al crear el pedido, evitando que dos cajas cobren la última unidad a la vez. El pedido puede estar `APPROVED` y `NOT_PAID`; eso no es una venta cobrada ni se suma a ingresos. Si el cobro no se completa, cancelar el pedido con `orders.cancelOrder(..., {sendOrderCanceledEmail:false, restockAllItems:true})` para liberar stock. No ejecutar decrementos ni reposiciones manuales paralelos.
 - Guardar el `orderId`, número, revisión, importes, moneda, IDs de líneas y correlación con la intención TPV.
 - Confirmar en Runtime que la venta de productos reduce stock una sola vez, en la ubicación correcta y solo en el momento acordado.
 - Verificar la limitación documentada de `Create Order`: 5 llamadas/hora/sitio para apps aún no publicadas en Wix App Market. Debe comprobarse si aplica al contexto de este sitio Velo antes de declarar capacidad productiva. No crear una cola de reintentos que dispare pedidos duplicados.
@@ -152,14 +152,14 @@ Un reembolso solicitado, programado o pendiente no es un reembolso completado. D
 
 ### P0 — habilitar una venta real coherente en Wix (sin tarjeta real todavía)
 1. Corregir el contrato de venta para persistir la intención una sola vez y eliminar el stub `createSaleDraftOrder()`.
-2. Construir el adaptador Wix Orders usando `@wix/ecom`, `channelInfo.type=POS`, líneas nativas Stores/Bookings y estrategia de aprobación ligada al pago.
+2. Construir el adaptador Wix Orders usando `@wix/ecom`, `channelInfo.type=POS`, `externalOrderId` idempotente, líneas nativas Stores/Bookings y reserva de stock al crear el pedido.
 3. Implementar pago en efectivo con Add Payments + confirmación de estado, ledger de efectivo y read-back.
 4. Corregir el mapping de estados y correlación entre TransaccionesTPV, Order, Payment, MovimientosCaja y Ticket X/Z.
 5. Resolver la recuperación de `Create Order` tras timeout incierto antes de habilitar reintentos.
 6. Hacer que la venta de producto utilice el decremento de inventario nativo de Wix Orders y demostrarlo en Runtime.
 7. Habilitar permisos/capabilities de venta, X, Z y exportación según los permisos reales del backend.
 
-**Criterio P0:** venta de servicio y producto en efectivo, pedido Wix POS, pago aprobado, stock correcto, ledger completo, X/Z correctos y read-back del 100 %.
+**Criterio P0:** venta de servicio y producto en efectivo, pedido Wix POS, pago aprobado, stock reservado al crear el pedido y restituido por cancelación si no se cobra, ledger completo, X/Z correctos y read-back del 100 %.
 
 ### P1 — ciclo de vida profesional
 1. Elegir PSP/terminal físico y documentar sus APIs, idempotencia, callbacks/webhooks, cancelación, timeout y devolución.
