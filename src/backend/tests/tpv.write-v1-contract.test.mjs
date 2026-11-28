@@ -5,7 +5,7 @@ import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
 const validLine = (rate = "0.210000") => ({
     desgloseImpuestos: [{ rate, taxableAmount: "100.00", taxAmount: "21.00" }],
 });
-const validPayment = (medioPago = "TARJETA", importeAplicado = 121) => ({
+const validPayment = (medioPago = "EFECTIVO", importeAplicado = 121) => ({
     medioPago,
     importeAplicado,
 });
@@ -13,7 +13,7 @@ const validPayment = (medioPago = "TARJETA", importeAplicado = 121) => ({
 test("accepts one tender fully covering a single-rate sale", () => {
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine(), validLine("0.21")],
-        pagos: [validPayment("TARJETA", 242)],
+        pagos: [validPayment("EFECTIVO", 242)],
         totalVenta: 242,
     }), []);
 });
@@ -85,7 +85,7 @@ test("requires a supported physical tender and exact applied amount", () => {
 
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine()],
-        pagos: [validPayment("TARJETA", 120)],
+        pagos: [validPayment("EFECTIVO", 120)],
         totalVenta: 121,
     }), ["TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH"]);
 });
