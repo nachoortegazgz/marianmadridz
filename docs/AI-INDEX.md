@@ -12,6 +12,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | ¿Cuál es el estado actual? | [STATE-NOW](STATE-NOW.md) | [RELEASE-READINESS](RELEASE-READINESS.md) |
 | ¿Qué arquitectura y reglas prevalecen? | [PROJECT-CANON](PROJECT-CANON.md) | AI-ENTRYPOINT |
 | ¿Cómo funciona TPV/caja/pago/cierre? | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | [TPV backend README](../src/backend/tpv/README.md) |
+| ¿Cómo funciona Capa 3, registro externo y SharePoint? | [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Auditoría de preparación [PR #641](audits/2026-11-27-capa3-export-preparation.md), esquema CMS y documentos históricos enlazados en el dossier |
 | ¿Qué APIs Wix usar? | Documentación oficial del método concreto | Backend README y tests del consumidor |
 | ¿Cuál es el esquema físico CMS? | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Auditorías CMS fechadas |
 | ¿Qué se necesita para liberar? | [RELEASE-READINESS](RELEASE-READINESS.md) | [RUNTIME-TEST-PLAN](../tests/runtime/RUNTIME-TEST-PLAN.md) |
@@ -29,6 +30,7 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | Contrato funcional/técnico TPV | Cambiar solo con cambio de contrato |
 | [RELEASE-READINESS](RELEASE-READINESS.md) | Gates de release por entorno | No confundir CI con Runtime |
 | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Esquema físico y recuentos Wix | Snapshot 27-11-2026; no es live |
+| [Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Contrato export, transporte SharePoint, automatización, PGC y matrices de correspondencia | Diseño consolidado; transporte y E2E pendientes |
 | [INDEX](INDEX.md) | Catálogo de documentos especializados | Navegación humana |
 | [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md) | Política y localización de históricos | No es fuente de estado |
 
@@ -43,8 +45,9 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 - [Auditoría TPV widget/action — 2026-11-27](audits/2026-11-27-tpv-widget-action-alignment.md): correspondencia de UI, bridge y acciones; verificar que no haya revisión posterior.
 - [Auditoría Capa 0 — 2026-11-28](audits/2026-11-27-capa0-hardening.md): correcciones integradas y deuda pendiente. Nombre de archivo conserva fecha 27, contenido actualizado a 28.
 - [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md): cambios integrados y CI offline PASS (89 suites / 804 tests); queda pendiente verificar cobertura de service providers y resolver secretos.
-- [Hardening Capa 0 posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md): sort Wix estricto, redacción ampliada, metadatos JSON-safe y bookingType canónico; `main` 91 suites / 816 tests PASS en el SHA correctivo.
+- [Hardening posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md): sort Wix estricto, redacción ampliada, metadatos JSON-safe y bookingType canónico; `main` 91 suites / 816 tests PASS en el SHA correctivo.
 - [Conciliación bugs Capa 0 — 2026-11-28](audits/2026-11-28-capa0-bug-reconciliation.md): análisis BUG-001…020; hallazgos y resultados integrados en PR #670; contrastar el estado vigente con STATE-NOW.
+- [Preparación export Capa 3 — PR #641](audits/2026-11-27-capa3-export-preparation.md): contrato JSON y WebMethod de preparación; no demuestra transporte M365.
 
 ### QA, contratos y decisiones
 
