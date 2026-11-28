@@ -114,3 +114,14 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Wix Data Query / Paging: https://dev.wix.com/docs/velo/apis/wix-data/query
 
 **CI PASS ≠ Runtime PASS ≠ Producción verificada.** Mantener NO-GO hasta obtener evidencia del entorno correspondiente.
+
+
+## VERI*FACTU y QR tributario — dossier añadido (28-11-2026)
+
+- Nuevo dossier: [VERI*FACTU y QR tributario — implementación](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md).
+- Enlazado desde [Dossier Capa 3](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md), [INDEX](INDEX.md) y [AI-INDEX](AI-INDEX.md).
+- Revisión normativa: RD 1007/2023, RD 1619/2012, Orden HAC/1177/2024, RD 238/2026, Orden HAC/1028/2026 y RDL 43/2026.
+- El RDL 43/2026, vigente desde 26-11-2026, modifica el plazo RRSIF. Cómputo general resultante para obligados del artículo 3.1: 06-10-2028 (24 meses desde entrada en vigor de Orden HAC/1028/2026 el 06-10-2026), sujeto a ámbito/exclusiones y revisión profesional.
+- El dossier diferencia factura simplificada/ticket-factura de justificante de pago, proforma y recibo no-factura; incorpora formato oficial QR, URL, requisitos físicos, remisión AEAT, incidencias, idempotencia, arquitectura Wix/Velo y plan de pruebas.
+- **Estado: DOCUMENTADO; implementación no acreditada.** No hay evidencia de SIF/modalidad elegidos, declaración responsable, registro AEAT, QR fiscal, impresión Epson conforme ni remisión real.
+- No se ejecutaron pruebas: el cambio es exclusivamente documental. No se realizaron llamadas de escritura a AEAT ni mutaciones Wix.
