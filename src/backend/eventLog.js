@@ -426,11 +426,11 @@ function _buildFiscalPayloadSnapshot({
         baseImponibleOImporteNoSujeto: fiscalAmounts.taxBase,
         cuotaTotal: fiscalAmounts.taxAmount,
         tipoImpositivo: fiscalAmounts.tipoImpositivo,
-        tipoRecargoEquivalencia: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
-        cuotaRecargoEquivalencia: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
-        importeRetencionIRPF: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
-        tipoRetencionIRPF: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
-        baseImponibleRetencion: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
+        tipoRecargoEquivalencia: fiscalAmounts.surchargeRate,
+        cuotaRecargoEquivalencia: fiscalAmounts.surchargeAmount,
+        importeRetencionIRPF: fiscalAmounts.irpfWithholdingAmount,
+        tipoRetencionIRPF: fiscalAmounts.irpfWithholdingRate,
+        baseImponibleRetencion: fiscalAmounts.withholdingBase,
         claveRegimen: _safeTrim(input.claveRegimen || catalog?.aeatRegimeKey) || "01",
         calificacionOperacion: _safeTrim(input.calificacionOperacion || catalog?.aeatOperationClassification) || "S1",
         operacionExenta: _safeTrim(input.operacionExenta || catalog?.aeatExemptOperation) || null,
@@ -533,6 +533,11 @@ export async function registrarEventoEconomico(input) {
                 { min: 0, max: 1 }
             ),
             accountingAmount: normalizeAccountingAmount(input),
+            surchargeRate: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
+            surchargeAmount: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
+            irpfWithholdingAmount: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
+            irpfWithholdingRate: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
+            withholdingBase: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
         };
     } catch (error) {
         return {
@@ -738,11 +743,11 @@ export async function registrarEventoEconomico(input) {
         // interno (_buildFiscalPayloadSnapshot) usa la literal Veri*factu
         // "cuotaTotal" porque es contrato fiscal serializado, no key CMS.
         tipoImpositivo: fiscalAmounts.tipoImpositivo,
-        surchargeRate: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
-        surchargeAmount: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
-        irpfWithholdingAmount: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
-        irpfWithholdingRate: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
-        withholdingBase: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
+        surchargeRate: fiscalAmounts.surchargeRate,
+        surchargeAmount: fiscalAmounts.surchargeAmount,
+        irpfWithholdingAmount: fiscalAmounts.irpfWithholdingAmount,
+        irpfWithholdingRate: fiscalAmounts.irpfWithholdingRate,
+        withholdingBase: fiscalAmounts.withholdingBase,
         fiscalRole: _safeTrim(input.fiscalRole) || FISCAL_ROLE.EMISOR,
 
         operationDescription: _cleanText(input.operationDescription || "", 500),
