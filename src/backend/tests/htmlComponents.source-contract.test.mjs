@@ -164,6 +164,7 @@ test("admin C3 widget uses the versioned bridge and exposes only the outbox work
   assert.doesNotMatch(adminHtml, /DOCUMENT_DOWNLOAD|DOCUMENT_PREPARED|CREATE_SNAPSHOT/);
   assert.match(adminPage, /prepareExternalRegistryPackage/);
   assert.match(adminPage, /getExternalIntegrationEvents/);
+  assert.match(adminPage, /type === MESSAGE_TYPES\.READY \|\| type === MESSAGE_TYPES\.CONTEXT\) return/);
   assert.doesNotMatch(adminPage, /createManagerPackageVersion|getPreparedManagerPackages|downloadManagerPackageVersion/);
 });
 
