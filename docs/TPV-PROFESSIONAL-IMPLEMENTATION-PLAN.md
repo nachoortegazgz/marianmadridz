@@ -16,7 +16,7 @@
 - `CASHIER_STATE` no escribe; `SESSION_OPEN` inicializa explícitamente `CajaActual`.
 - Runner Editor Preview no destructivo: fondo 300 €, entrada 1 €, arqueo parcial, venta/pedido, Ticket X y Ticket Z.
 
-**[CI offline]** El último SHA de esta rama es `5ce4964cecb15dfb5043235a047b391bcf78f998`. La ejecución completa de quality gates aún debe terminar en SUCCESS para registrar PASS.
+**[CI offline — PASS]** SHA `24a5d851a0725db8713cf426cdc41300e450f2ac`: Layer 1 = 32 suites/411 tests; Layer 2 = 16 suites/263 tests; suite completa = 97 suites/864 tests; Wix SDK verifiers, ESLint y auditoría de dependencias SUCCESS.
 
 **[No comprobado — Runtime/Preview]** No se ha ejecutado todavía el flujo contra Wix Preview. La creación real de Orders, Add Payments, la reducción de inventario y los read-backs de CMS/Orders solo se considerarán validados después de ejecutar el workflow y revisar sus evidencias.
 
