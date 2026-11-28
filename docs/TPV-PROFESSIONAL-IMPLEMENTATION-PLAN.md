@@ -146,7 +146,7 @@ Un reembolso solicitado, programado o pendiente no es un reembolso completado. D
 | Exportación | Archivo completo + evento de exportación | Conteo exportado = conteo fuente; no truncado; hash/identificador de archivo |
 | Reserva pagada en TPV | Booking nativo actualizado + pedido/pago Wix + correlación TPV + auditoría | bookingId, orderId, paymentId y estado nativo conciliados |
 
-**Métrica 100 %:** `expectedApplicableRecords = persistedAndReadBack + explicitlyRejected + pendingRecovery`. El denominador incluye los rechazos; no se excluyen para mejorar el porcentaje. Objetivo de cierre: 0 pendientes de recuperación, 0 duplicados y 0 diferencias sin explicación.
+**Métrica 100 %:** en una operación aceptada, `persistedAndReadBack === expectedApplicableRecords` para todos los registros aplicables. Una operación rechazada debe persistir su auditoría/error explícito y no se contabiliza como venta completada. `PENDING_RECOVERY` se mide aparte y bloquea GO. Objetivo de cierre: 100 % de registros aplicables leídos de vuelta, 0 pendientes de recuperación, 0 duplicados y 0 diferencias sin explicación.
 
 ## 8. Plan de ejecución por orden de dependencia
 
