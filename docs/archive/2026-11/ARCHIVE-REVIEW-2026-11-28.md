@@ -235,7 +235,7 @@ El archivo contiene evidencia técnica útil, pero mezcla snapshots de distintos
 - Arquitectura y autoridad: directrices/ADRs históricos → [`docs/PROJECT-CANON.md`](../../PROJECT-CANON.md) y directrices actuales del propietario.
 - Flujo TPV: bridge, sesión, report implementation y aceptación antiguos → [`docs/TPV-UNIFIED-FLOW.md`](../../TPV-UNIFIED-FLOW.md), backend actual y tests.
 - Esquema físico CMS: `DICCIONARIO_DATOS_CMS.md` y `WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md` → [`docs/ESQUEMA_CMS.md`](../../ESQUEMA_CMS.md), snapshot del 27-11-2026.
-- Pruebas Runtime: checklists y especificaciones antiguas → [`tests/runtime/RUNTIME-TEST-PLAN.md`](../../../../tests/runtime/RUNTIME-TEST-PLAN.md).
+- Pruebas Runtime: checklists y especificaciones antiguas → [`tests/runtime/RUNTIME-TEST-PLAN.md`](../../../tests/runtime/RUNTIME-TEST-PLAN.md).
 - Capa 3: auditoría 09-11 → [auditoría de preparación 27-11](../../audits/2026-11-27-capa3-export-preparation.md).
 
 ## Limpieza de seguridad documental
