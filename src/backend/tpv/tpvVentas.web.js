@@ -6,14 +6,20 @@ import { error as tpvError, ok as tpvOk, pending as tpvPending } from "backend/t
 import { prepareTpvSaleCatalog } from "backend/tpv/tpvSalePreparation";
 import { assertTpvPaymentMethodsSupported } from "backend/tpv/tpvSalePreparationCore";
 import { getTpvWriteV1Blockers } from "backend/tpv/tpvWriteV1Contract";
-import { BUSINESS_COLLECTIONS, SDK_CONFIG, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { CONSISTENCY, getItem, insertItem } from "backend/dataAccess";
-import { appendTpvAudit, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { BUSINESS_COLLECTIONS, SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
+import { CONSISTENCY, getItem, insertItem, updateItem } from "backend/dataAccess";
+import { appendTpvAudit, insertTpvEvent, latestOpenTpvSession, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { toMinorUnits } from "backend/tpv/tpvUtils";
 import { createTpvRecordMetadata } from "backend/tpv/tpvRecordNature";
 import { createHash } from "node:crypto";
 import { logger } from "backend/logger";
 import { normalizeTpvError } from "backend/tpv/tpvError";
+import { resolveTpvContact } from "backend/tpv/tpvNativeDirectory";
+import {
+    addTpvNativeCashPayment,
+    createTpvNativeOrder,
+    findTpvNativeOrderByExternalId,
+} from "backend/tpv/tpvNativeCommerce";
 
 function _safeTpvErrorCode(error, fallbackCode) {
     return normalizeTpvError(error, fallbackCode).code;
@@ -159,42 +165,234 @@ export const validarVentaBorrador = webMethod(
     }
 );
 
-async function createSaleDraftOrder() {
-    // This WebMethod records a pending commercial intent. Creating a Wix
-    // Draft Order is a separate external effect and is not required for this
-    // CMS persistence operation.
-    return {
-        orderId: null,
-        requiresReconciliation: true,
-        reason: "TPV_DRAFT_ORDER_NOT_CONFIGURED",
-    };
-}
+async function salePendingEnvelope(record, {
+    replayed,
+    auditPersisted = true,
+    auditErrorCode = null,
+    traceId,
+}) {
+    const payment = Array.isArray(record.paymentSelection) ? record.paymentSelection[0] : null;
+    const reason = !record.orderId
+        ? record.draftOrderReason || "TPV_ORDER_RECONCILIATION_REQUIRED"
+        : record.requiresReconciliation === true
+            ? record.draftOrderReason || "TPV_SALE_RECONCILIATION_REQUIRED"
+            : "TPV_SALE_PENDING_PAYMENT";
+    const paymentStatus = record.status === "CONFIRMADA" ? "PAID" :
+        payment?.confirmed === true ? "PAID" : "NOT_PAID";
 
-function salePendingEnvelope(record, { replayed, auditPersisted = true, auditErrorCode = null, traceId }) {
-    return tpvPending("TPV_PAYMENT_PROVIDER_NOT_CONFIGURED", {
+    return tpvPending(reason, {
         orderId: record.orderId || null,
         idempotencyKey: record._id,
         totalVenta: record.totalVenta,
         medioPago: record.medioPago || null,
+        paymentStatus,
+        paymentId: payment?.paymentId || null,
+        ledgerMovementId: payment?.ledgerMovementId || null,
         requiresReconciliation: record.requiresReconciliation === true || !auditPersisted,
         persisted: true,
         replayed,
         retryable: false,
-        solution: "Contract A",
+        solution: !record.orderId ? "RECONCILE_WIX_ORDER" :
+            record.requiresReconciliation ? "RECONCILE_TPV_SIDE_EFFECTS" : "COLLECT_PAYMENT",
         sourceType: record.sourceType,
         auditPersisted,
         auditErrorCode,
         resolutionAttempts: [
             { step: "operator-authorization", status: "VERIFIED" },
             { step: "catalog-and-tax-recalculation", status: "VERIFIED" },
-            { step: "draft-order", status: "SKIPPED", reason: record.draftOrderReason },
-            { step: "commercial-transaction", status: "PERSISTED" },
-            { step: "payment-provider", status: "BLOCKED", reason: "Contract A" },
+            { step: "native-wix-order", status: record.orderId ? "PERSISTED" : "PENDING", reason: record.draftOrderReason || null },
+            { step: "cash-payment", status: !payment ? "NOT_APPLICABLE" : payment.confirmed ? "PERSISTED" : "PENDING" },
+            { step: "cash-ledger", status: !payment ? "NOT_APPLICABLE" : payment.ledgerMovementId ? "PERSISTED" : "PENDING" },
             { step: "operational-audit", status: auditPersisted ? "PERSISTED" : "PENDING", ...(auditErrorCode ? { errorCode: auditErrorCode } : {}) },
         ],
         traceId,
     });
 }
+
+function saleSuccessEnvelope(record, { replayed, auditPersisted, traceId }) {
+    const payment = record.paymentSelection[0];
+    return tpvOk({
+        orderId: record.orderId,
+        idempotencyKey: record._id,
+        totalVenta: record.totalVenta,
+        totalVentaMinor: record.totalVentaMinor,
+        medioPago: "EFECTIVO",
+        paymentStatus: "PAID",
+        paymentId: payment.paymentId,
+        ledgerMovementId: payment.ledgerMovementId,
+        persisted: true,
+        orderPersisted: true,
+        paymentPersisted: true,
+        ledgerPersisted: true,
+        auditPersisted,
+        requiresReconciliation: false,
+        replayed,
+        sourceType: record.sourceType,
+    }, { traceId });
+}
+
+async function persistSaleCashPayment(record, traceId) {
+    let current = record;
+    const originalPayment = current.paymentSelection?.[0];
+    if (!originalPayment) return { record: current, errorCode: null };
+
+    const writeStatus = originalPayment.writeStatus ||
+        (originalPayment.confirmed === true ? "CONFIRMED" : "NOT_STARTED");
+    try {
+        if (writeStatus === "NOT_STARTED") {
+            current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                ...current,
+                paymentSelection: [{
+                    ...originalPayment,
+                    confirmed: false,
+                    writeStatus: "STARTED",
+                }],
+                requiresReconciliation: true,
+                draftOrderReason: "CASH_PAYMENT_WRITE_STARTED",
+            }, { consistency: CONSISTENCY.STRONG });
+        }
+
+        const amountMinor = toMinorUnits(originalPayment.importeAplicado, "TPV_CASH_PAYMENT_AMOUNT");
+        const payment = await addTpvNativeCashPayment(current.orderId, amountMinor, {
+            allowCreate: writeStatus === "NOT_STARTED",
+        });
+
+        const ledger = await insertTpvEvent(
+            TPV_COLLECTIONS.PAGOS,
+            current._id + ":PAYMENT:EFECTIVO",
+            {
+                sessionId: current.sessionId,
+                saleId: current._id,
+                orderId: current.orderId,
+                paymentId: payment.paymentId,
+                paymentMethod: "EFECTIVO",
+                amountMinor,
+                concept: "Cobro TPV " + current._id,
+                operatorResourceId: current.operatorResourceId || null,
+                operatorId: current.operatorId || null,
+                traceId: current.traceId || traceId,
+            }
+        );
+        const ledgerItem = ledger?.item || ledger?.data || ledger;
+        const ledgerMovementId = String(ledgerItem?._id || ledgerItem?.transactionId || "");
+        if (!GUID.test(ledgerMovementId)) throw new Error("TPV_PAYMENT_LEDGER_ID_INVALID");
+
+        const confirmedPayment = {
+            ...originalPayment,
+            confirmed: true,
+            writeStatus: "CONFIRMED",
+            paymentId: payment.paymentId,
+            ledgerMovementId,
+            amountMinor,
+            paymentStatus: payment.paymentStatus,
+        };
+        current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+            ...current,
+            medioPago: "EFECTIVO",
+            paymentSelection: [confirmedPayment],
+            status: "CONFIRMADA",
+            requiresReconciliation: false,
+            draftOrderReason: null,
+        }, { consistency: CONSISTENCY.STRONG });
+        return { record: current, errorCode: null };
+    } catch (error) {
+        const code = _safeTpvErrorCode(error, "TPV_CASH_PAYMENT_RECONCILIATION_REQUIRED");
+        try {
+            current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                ...current,
+                requiresReconciliation: true,
+                draftOrderReason: code,
+            }, { consistency: CONSISTENCY.STRONG });
+        } catch (updateError) {
+            logger.error("TPV sale reconciliation marker update failed", {
+                traceId,
+                idempotencyKey: current._id,
+                errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+            });
+        }
+        return { record: current, errorCode: code };
+    }
+}
+
+async function resumeExistingSale(record, { buyer, replayed, traceId }) {
+    let current = record;
+    if (!current.orderId) {
+        try {
+            const recovered = await findTpvNativeOrderByExternalId({
+                externalOrderId: current._id,
+                startedAt: current.createdAt,
+                buyer,
+            });
+            if (recovered) {
+                if (recovered.status !== "APPROVED" || recovered.paymentStatus !== "NOT_PAID") {
+                    throw new Error("TPV_WIX_ORDER_RECOVERED_WITH_UNEXPECTED_STATE");
+                }
+                current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                    ...current,
+                    orderId: recovered.orderId,
+                    requiresReconciliation: (current.paymentSelection || []).length > 0,
+                    draftOrderReason: (current.paymentSelection || []).length > 0 ? "CASH_PAYMENT_PENDING" : null,
+                }, { consistency: CONSISTENCY.STRONG });
+            }
+        } catch (error) {
+            const code = _safeTpvErrorCode(error, "TPV_ORDER_RECONCILIATION_REQUIRED");
+            try {
+                current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                    ...current,
+                    requiresReconciliation: true,
+                    draftOrderReason: code,
+                }, { consistency: CONSISTENCY.STRONG });
+            } catch (updateError) {
+                logger.error("TPV order recovery marker update failed", {
+                    traceId,
+                    idempotencyKey: current._id,
+                    errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+                });
+            }
+        }
+    }
+
+    let paymentErrorCode = null;
+    if (current.orderId && Array.isArray(current.paymentSelection) && current.paymentSelection.length === 1) {
+        const result = await persistSaleCashPayment(current, traceId);
+        current = result.record;
+        paymentErrorCode = result.errorCode;
+    }
+
+    let auditPersisted = true;
+    let auditErrorCode = null;
+    try {
+        await appendSaleAudit(current, traceId);
+    } catch (error) {
+        auditPersisted = false;
+        auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
+        try {
+            current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+                ...current,
+                requiresReconciliation: true,
+                draftOrderReason: auditErrorCode,
+            }, { consistency: CONSISTENCY.STRONG });
+        } catch (updateError) {
+            logger.error("TPV sale audit marker update failed", {
+                traceId,
+                idempotencyKey: current._id,
+                errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+            });
+        }
+    }
+
+    if (current.status === "CONFIRMADA" && current.requiresReconciliation !== true &&
+        auditPersisted && current.paymentSelection?.[0]?.ledgerMovementId) {
+        return saleSuccessEnvelope(current, { replayed, auditPersisted, traceId });
+    }
+    return salePendingEnvelope(current, {
+        replayed,
+        auditPersisted,
+        auditErrorCode: auditErrorCode || paymentErrorCode,
+        traceId,
+    });
+}
+
 
 async function appendSaleAudit(record, traceId) {
     return appendTpvAudit({
