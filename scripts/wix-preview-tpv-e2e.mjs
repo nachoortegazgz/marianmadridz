@@ -467,6 +467,57 @@ async function run() {
     assert.equal(summary.reconciliationOk, true,
         "An unpaid commercial intent must remain separate from collected cash");
 
+    phase = "cash-sale-register";
+    const cashSaleIdempotencyKey = randomUUID();
+    const cashSaleEnvelope = await invokeWidget(frame, "SALE_REGISTER", {
+        sessionId,
+        idempotencyKey: cashSaleIdempotencyKey,
+        lineItems: [{ tipoLinea: "SERVICIO", itemId: testService.itemId, cantidad: 1 }],
+        payments: [{
+            method: "EFECTIVO",
+            amount: Number(pendingSale.totalVenta),
+            change: 0,
+        }],
+    });
+    const cashSale = assertSuccess(cashSaleEnvelope, "SALE_REGISTER_CASH");
+    assert.equal(cashSale.orderPersisted, true);
+    assert.ok(cashSale.orderId, "Cash sale Wix orderId missing");
+    assert.equal(cashSale.paymentStatus, "PAID");
+    assert.ok(cashSale.paymentId, "Wix offline cash paymentId missing");
+    assert.ok(cashSale.ledgerMovementId, "TPV cash payment ledgerMovementId missing");
+    report.cashSale = {
+        idempotencyKey: cashSaleIdempotencyKey,
+        orderId: cashSale.orderId,
+        paymentId: cashSale.paymentId,
+        ledgerMovementId: cashSale.ledgerMovementId,
+        paymentStatus: cashSale.paymentStatus,
+        totalVenta: cashSale.totalVenta,
+        auditPersisted: cashSale.auditPersisted === true,
+    };
+
+    phase = "cash-sale-readback";
+    const cashSaleReadbackEnvelope = await invokeWidget(frame, "SALE_READBACK", {
+        sessionId,
+        idempotencyKey: cashSaleIdempotencyKey,
+    });
+    const cashSaleReadback = assertSuccess(cashSaleReadbackEnvelope, "SALE_READBACK_CASH");
+    assert.equal(cashSaleReadback.recordPersisted, true);
+    assert.equal(cashSaleReadback.orderId, cashSale.orderId);
+    assert.equal(cashSaleReadback.status, "CONFIRMADA");
+    assert.equal(cashSaleReadback.requiresReconciliation, false);
+    assert.equal(cashSaleReadback.order.externalOrderId, cashSaleIdempotencyKey);
+    assert.equal(cashSaleReadback.order.status, "APPROVED");
+    assert.equal(cashSaleReadback.order.paymentStatus, "PAID");
+    assert.equal(cashSaleReadback.paymentSelection.length, 1);
+    assert.equal(cashSaleReadback.paymentSelection[0].confirmed, true);
+    assert.ok(/^TPV_[a-f0-9]{64}$/i.test(cashSaleReadback.paymentSelection[0].ledgerMovementId));
+    report.cashSaleReadback = {
+        orderId: cashSaleReadback.orderId,
+        orderPaymentStatus: cashSaleReadback.order.paymentStatus,
+        paymentId: cashSaleReadback.paymentSelection[0].paymentId,
+        ledgerMovementId: cashSaleReadback.paymentSelection[0].ledgerMovementId,
+    };
+
     phase = "ticket-x";
     await clearCapturedResponses(frame);
     await frame.locator("#ticketX").click();
@@ -497,8 +548,9 @@ async function run() {
     assert.equal(openingItem.movementId, openingItem.transactionId);
     assert.equal(cashItem.movementId, cashItem.transactionId);
     const expectedCash = cashTotalFromMovements(beforeItems);
-    assert.equal(Math.round(expectedCash * 100), 30100,
-        "Expected cash differs from the controlled 300€ opening and 1€ cash-in operations");
+    const expectedCashMinor = 30100 + Math.round(Number(cashSale.totalVenta) * 100);
+    assert.equal(Math.round(expectedCash * 100), expectedCashMinor,
+        "Expected cash differs from the 300€ opening, 1€ cash-in and confirmed cash sale");
 
     phase = "ticket-z";
     const ticketZEnvelope = await invokeWidget(frame, "TICKET_Z", {
@@ -509,8 +561,8 @@ async function run() {
     const ticketZData = assertSuccess(ticketZEnvelope, "TICKET_Z");
     assert.equal(ticketZData.sessionId, sessionId);
     assert.equal(ticketZData.closed, true);
-    assert.equal(Math.round(Number(ticketZData.expectedCash) * 100), 30100);
-    assert.equal(Math.round(Number(ticketZData.countedCash) * 100), 30100);
+    assert.equal(Math.round(Number(ticketZData.expectedCash) * 100), expectedCashMinor);
+    assert.equal(Math.round(Number(ticketZData.countedCash) * 100), expectedCashMinor);
     assert.equal(Math.round(Number(ticketZData.difference) * 100), 0);
     report.ticketZInvoked = true;
     report.ticketZ = {
@@ -561,6 +613,12 @@ async function run() {
     const orderAudit = auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === saleIdempotencyKey);
     assert.ok(saleAudit?.id, "Sale audit record not found");
     assert.ok(orderAudit?.id, "Wix order link audit record not found");
+    const cashSaleAudit = auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === cashSaleIdempotencyKey);
+    const cashOrderAudit = auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === cashSaleIdempotencyKey);
+    const cashPaymentAudit = auditItems.find((item) => item.action === "PAGO_TPV_CONFIRMADO" && item.entityId === cashSaleIdempotencyKey);
+    assert.ok(cashSaleAudit?.id, "Cash sale audit record not found");
+    assert.ok(cashOrderAudit?.id, "Cash Wix order link audit record not found");
+    assert.ok(cashPaymentAudit?.id, "Cash payment audit record not found");
 
     report.postChecks = {
         cashRegisterStatus: finalState.operationalStatus,
@@ -582,6 +640,9 @@ async function run() {
         orderAuditId: orderAudit.id,
         ticketZReportId: ticketZData.reportId,
         pendingSalesCount: Number(ticketZData.pendingSalesCount || 0),
+        cashSaleAuditId: auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === cashSaleIdempotencyKey)?.id || null,
+        cashOrderAuditId: auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === cashSaleIdempotencyKey)?.id || null,
+        cashPaymentAuditId: auditItems.find((item) => item.action === "PAGO_TPV_CONFIRMADO" && item.entityId === cashSaleIdempotencyKey)?.id || null,
         auditActions: auditItems.map((item) => item.action),
     };
 
@@ -592,6 +653,9 @@ async function run() {
         cashInMinor: 100,
         partialCountMinor: 30100,
         pendingSalePersisted: true,
+        cashSalePersisted: true,
+        cashPaymentPersisted: true,
+        expectedCashMinor,
         ticketXVerified: true,
         ticketZVerified: true,
         sessionClosed: true,
