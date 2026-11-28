@@ -31,10 +31,18 @@ El workflow no imprime ni publica el storageState. Solo sube el informe de naveg
 
 Actions → **Wix TPV Preview (authenticated browser)** → Run workflow → rama `main`; deja activadas `create_preview` y `authenticated_browser`. Requiere el secreto ya existente `CLI_API_KEY`. Genera Preview; no publica el sitio.
 
-## Alcance y siguiente paso para webMethods
+## Ejecución E2E autenticada
 
-Esta fase prepara la sesión Playwright y verifica la navegación autenticada. **Todavía no invoca webMethods de negocio.** El alias Velo `backend/tpv/tpvCaja.web` no es un módulo ES importable desde la consola del navegador: Velo resuelve ese import al compilar código frontend del sitio. Por tanto, `import('backend/...')` desde `page.evaluate()` no es una vía válida.
+El workflow `Wix TPV Preview (authenticated browser)` crea un Preview sin publicar y ejecuta `scripts/wix-preview-tpv-e2e.mjs` mediante Playwright con la sesión autenticada.
 
-Para ejecutar `abrirSesionCaja`, `registrarMovimientoCaja` y `generarTicketX` sin exponer una API pública, el siguiente cambio debe incorporar un módulo frontend Velo de prueba, cargado por la página TPV y protegido por los permisos existentes de cada webMethod. Playwright interactuará con ese frontend ya compilado. No se crea HTTP Function pública ni se debilitan permisos o gates. Hasta incorporar ese puente y obtener JSON más `_id` persistido, runtime permanece en 0/3.
+El runner utiliza la interfaz TPV y el puente real del HtmlComponent. Invoca los WebMethods del flujo normal y comprueba:
+1. Estado inicial de CajaActual y sesión canónica.
+2. Apertura de sesión cuando no existe una sesión abierta, conservando el contexto heredado.
+3. Entrada de efectivo.
+4. Generación de ticket X.
+5. Consulta del ledger antes del cierre y comprobación de `_id`/ `transactionId`.
+6. Cierre de sesión, saldo, diferencia cero, proyección final de CajaActual y consulta posterior del ledger y auditoría.
 
-La caja abierta es un estado operativo, no un impedimento técnico ni una causa raíz. Su cierre exige invocar el webMethod real desde un contexto frontend autenticado.
+Si ya existe una sesión canónica abierta, la prueba la utiliza y la cierra al finalizar; no cierra una sesión para después intentar reabrirla en el mismo día. La ejecución no cobra, reembolsa ni envía datos a proveedores externos. La única simulación permitida en una prueba de pago es la respuesta de la pasarela.
+
+El informe se publica como artefacto sin cookies ni storageState. Un resultado PASS acredita el flujo de Preview ejecutado y sus consultas post-write; no equivale a producción ni a publicación del sitio.
