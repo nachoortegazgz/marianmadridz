@@ -402,6 +402,7 @@ async function dispatch(message) {
                 idempotencyKey: saleUuidV4Key(payload.idempotencyKey),
                 lineas,
                 pagos,
+                contactId: optionalString(payload.contactId, 64) || null,
                 medioPago: optionalString(payload.medioPago, 40) || null,
             });
         }
