@@ -87,8 +87,14 @@ function buildSaleReadiness(prepared, validated) {
     // Consumer-price presentation is already derived from the verified Wix
     // catalog/tax preparation; do not add a permanent synthetic blocker here.
     const saleReadinessBlockers = [...writeV1Blockers];
-    if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
-    return { containsProducts, writeV1Blockers, saleReadinessBlockers };
+    // Native Wix Orders reserves/decrements Wix Stores stock when the POS order is placed.
+    // The final stock decision is made by Create Order, never by a parallel custom ledger.
+    return {
+        containsProducts,
+        inventoryManagedBy: "WIX_ECOM_ORDER",
+        writeV1Blockers,
+        saleReadinessBlockers,
+    };
 }
 
 /**
@@ -118,7 +124,7 @@ export const validarVentaBorrador = webMethod(
             }));
 
             const saleReadiness = buildSaleReadiness(prepared, validated);
-            const { containsProducts, writeV1Blockers, saleReadinessBlockers } = saleReadiness;
+            const { containsProducts, inventoryManagedBy, writeV1Blockers, saleReadinessBlockers } = saleReadiness;
 
             return tpvOk({
                 ...validated,
@@ -128,6 +134,7 @@ export const validarVentaBorrador = webMethod(
                 commercialRecordReady: lineas.length > 0,
                 paymentVerified: false,
                 inventoryVerified: !containsProducts,
+                inventoryManagedBy,
                 consumerPricePresentationVerified: false,
                 saleReady: saleReadinessBlockers.length === 0,
                 saleReadinessBlockers,
