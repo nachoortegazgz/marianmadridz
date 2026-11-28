@@ -893,6 +893,8 @@ body {
       element.disabled = PERMANENTLY_DISABLED.has(id) || state.busy || !state.operationalWritesAvailable ||
         state.capabilities[capability] !== true || (requiresSession && !isOpen);
     });
+    $("viewCustomerBookings").disabled = state.busy || !state.operationalWritesAvailable ||
+      state.capabilities.searchCustomers !== true || !isOpen || !state.customerIdentityId;
   }
 
   function renderSession(session) {
