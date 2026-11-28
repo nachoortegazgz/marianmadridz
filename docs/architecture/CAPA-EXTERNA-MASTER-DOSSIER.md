@@ -41,7 +41,7 @@ La auditoría operativa del 28-11-2026 detectó divergencias entre algunas proye
 
 ### 2.3 Hallazgos de código que bloquean la fiabilidad del paquete actual
 
-**C3-FINDING-001 — población distinta en resumen y detalle (ALTO).** exportService.web.js llama a getQuarterlyTaxSummaryInternal y getLibroRegistroFacturasExpedidasInternal con requireRealRecords=true. En fiscalAggregator.web.js, el resumen acumula fetchResult.items sin aplicar ese filtro por registro; el detalle sí excluye filas cuando recordNature !== REAL. El total del resumen y las filas pueden representar poblaciones distintas. No considerar el paquete conciliado hasta corregir y probar población, conteos y totales.
+**C3-FINDING-001 — población distinta en resumen y detalle (CORREGIDO EN CÓDIGO; CI PENDIENTE).** Se retiró el filtro `requireRealRecords` del detalle y de las llamadas del exportador: resumen y filas ahora parten de la misma población de `_fetchQuarterMovements`. La clasificación sintético/prueba se deriva del periodo: ejercicios anteriores a 2027 se marcan `SYNTHETIC_TEST`; no se usa `recordNature` como segundo discriminador. El manifest declara `SOURCE_RECONCILIATION_REQUIRED` y `INTERNAL_DRAFT_ONLY`. Pendiente: CI y verificación de conciliación contra Orders/Payments/ledger en Runtime antes de habilitar entrega externa.
 
 **C3-FINDING-002 — tipo de factura exportado no fiable (ALTO).** getLibroRegistroFacturasExpedidasInternal asigna R1 a reembolsos y BORRADOR_INTERNO al resto, en vez de leer el tipo real del documento fiscal. exportContract.js serializa ese valor como invoiceType. Las filas no acreditan un libro registro oficial de facturas expedidas ni deben remitirse como tal a AEAT o gestoría. El tipo debe proceder de una factura emitida validada y su registro SIF.
 
