@@ -4,16 +4,7 @@
  * RESPONSIBILITY: canonical CMS names, business enums and shared configuration.
  * STANDARDS: single source of truth for active backend contracts.
  *
- * CAMBIOS v12.1-SSOT-EMAIL (respecto a v12.0):
- *   ADD-01: SDK_CONFIG.TIMEOUTS.CMS_MS declarado como SSOT. Antes
- *           fiscalDocuments.web.js caia a un fallback hard-coded 15000
- *           cuando la clave no existia. Ahora es fuente unica.
- *   ADD-02: SDK_CONFIG.EMAIL declarado como SSOT del remitente Resend.
- *           fiscalDocuments.web.js lee FROM_NAME/FROM_ADDRESS; sin esta
- *           clave caia a fallbacks hard-coded. Centralizado aqui.
- *   NOTA: FROM_ADDRESS debe coincidir con un dominio verificado en Resend.
- *         Si se cambia el dominio remitente, actualizar esta constante y
- *         re-desplegar; no hay otra copia en el codigo.
+ * CONFIGURATION: only active shared runtime settings are declared here.
  */
 
 export const ROL_WEBSITE = Object.freeze({
@@ -148,6 +139,7 @@ export const BUSINESS_COLLECTIONS = Object.freeze({
   MOVIMIENTOS_CAJA: "MovimientosCaja",
   TRANSACCIONES_TPV: "TransaccionesTPV",
   REGISTROS_HORARIOS_STAFF: "RegistrosHorariosStaff",
+  REGISTRO_INTEGRACION: "RegistroIntegracion",
   SERVICIOS_CATALOGO: "ServiciosCatalogo",
 });
 
@@ -254,18 +246,6 @@ export const SDK_CONFIG = Object.freeze({
     FISCAL_DAILY_MAX_PAGES: 50,
   }),
 
-  EMAIL: Object.freeze({
-    // Remitente canonico de los envios via Resend (fiscalDocuments).
-    // FROM_ADDRESS DEBE coincidir con un dominio verificado en Resend.
-    // Si cambia el dominio, actualizar aqui y re-desplegar.
-    FROM_NAME: "Marian Madrid",
-    FROM_ADDRESS: "noreply@marianmadrid.com",
-    // Fail-closed: activar solo tras persistencia inmutable e idempotencia del despacho.
-    ACCOUNTANT_SEND_ENABLED: false,
-    // Restricted recipient allowlist: exact business domain plus the named internal Gmail mailbox.
-    ALLOWED_RECIPIENT_DOMAINS: Object.freeze(["marianmadrid.es"]),
-    ALLOWED_RECIPIENT_EMAILS: Object.freeze(["nachoortegazgz@gmail.com"]),
-  }),
 });
 
 export const BOOKING_STATUS = Object.freeze({
@@ -670,6 +650,7 @@ export const DATA_ACCESS_WRITE_POLICY = Object.freeze({
     BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
     BUSINESS_COLLECTIONS.HISTORICO_CIERRES_Z,
     BUSINESS_COLLECTIONS.LIBRO_ASIENTOS_CONTABLES_DETALLE,
+    BUSINESS_COLLECTIONS.REGISTRO_INTEGRACION,
     BUSINESS_COLLECTIONS.CAJA_ACTUAL,
   ]),
   updateCollections: Object.freeze([
