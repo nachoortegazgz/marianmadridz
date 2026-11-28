@@ -109,7 +109,7 @@ test("FISCAL-ORDER-08 resolves VAT from current Wix Order.taxInfo and lineItems.
     });
     assert.equal(result.taxBase, 37.6);
     assert.equal(result.taxAmount, 7.9);
-    assert.equal(result.tipoImpositivo, 21);
+    assert.equal(result.tipoImpositivo, 0.21);
     assert.deepEqual(result.breakdown.map((line) => [line.base, line.tipo, line.cuota]), [[37.6, 21, 7.9]]);
 });
 
@@ -120,6 +120,46 @@ test("FISCAL-ORDER-09 rejects missing tax data instead of inventing 21 percent o
             lineItems: [{ totalPriceAfterTax: { amount: "45.50" } }],
         }),
         /FISCAL_TAX_INFO_MISSING_OR_EXEMPT/
+    );
+});
+
+test("FISCAL-ORDER-11 rejects missing unit price or quantity instead of defaulting", () => {
+    assert.throws(
+        () => resolveOrderLedgerAmount({ lineItems: [{ price: { amount: "12.50" } }] }),
+        /FISCAL_ORDER_LINE_AMOUNT_INVALID/
+    );
+    assert.throws(
+        () => resolveOrderLedgerAmount({ lineItems: [{ price: { amount: "invalid" }, quantity: 1 }] }),
+        /FISCAL_ORDER_LINE_AMOUNT_INVALID/
+    );
+    assert.throws(
+        () => resolveOrderLedgerAmount({ lineItems: [] }),
+        /FISCAL_ORDER_TOTAL_MISSING/
+    );
+});
+
+test("FISCAL-ORDER-12 rejects boolean tax amounts and rates", () => {
+    assert.throws(
+        () => resolveOrderFiscalTaxData({
+            taxInfo: { totalTax: { amount: true } },
+            lineItems: [{
+                quantity: 1,
+                totalPriceAfterTax: { amount: 1 },
+                taxInfo: { taxableAmount: 1, taxAmount: 0, taxRate: 0.21 },
+            }],
+        }),
+        /FISCAL_TAX_FIELD_INVALID/
+    );
+    assert.throws(
+        () => resolveOrderFiscalTaxData({
+            taxInfo: { totalTax: { amount: 0 } },
+            lineItems: [{
+                quantity: 1,
+                totalPriceAfterTax: { amount: 1 },
+                taxInfo: { taxableAmount: 1, taxAmount: 0, taxRate: true },
+            }],
+        }),
+        /FISCAL_LINE_TAX_RATE_INVALID/
     );
 });
 
