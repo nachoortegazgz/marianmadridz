@@ -1,3 +1,19 @@
+> **ESTADO DE VIGENCIA — 28-11-2026**  
+> Este dossier es una propuesta de diseño y configuración, no evidencia de que SharePoint, Entra ID, Power Automate o el transporte estén desplegados. Para la arquitectura vigente y los contratos actuales prevalece [docs/architecture/CAPA-EXTERNA-MASTER-DOSSIER.md](docs/architecture/CAPA-EXTERNA-MASTER-DOSSIER.md).  
+>  
+> **Correcciones obligatorias antes de ejecutar los ejemplos de este documento:**  
+> - No crear ni consultar `DatosFiscales` ni `PaquetesGestoria`: no forman parte del CMS físico vigente. El código espera un singleton `MapaStaff` con `recordType=CONFIG_SISTEMA` y `_id=CONFIG_SISTEMA_FISCAL`, pero la consulta live del 28-11-2026 encontró **cero**; los cinco registros actuales son `GESTORIA`, `TERCERO` y `STAFF`. El export real queda bloqueado por `FISCAL_CONFIG_MISSING`; no inventar ni reutilizar el NIF de la gestoría. Para periodos anteriores a 2027 se implementó en código un borrador de prueba sin NIF emisor, etiquetado `SYNTHETIC_TEST`; pendiente CI y Runtime. Desde 2027 el singleton verificado es obligatorio.  
+> - No insertar paquetes en `HistoricoCierresZ`: es un registro de cierres Z, no un almacén documental. En la lectura live hay un único cierre de QA (`TPV_CUSTOM_QA`, `Z_SIMULATED`), sin `packageStatus` ni `sentAt`. La Capa 3 debe usar el contrato de exportación y un registro de entrega separado.  
+> - No usar `wix-secrets-backend.getSecret()`: está deprecado. La implementación nueva debe usar `wix-secrets-backend.v2` y `secrets.getSecretValue` en backend, elevado según la API oficial de Wix.  
+> - No considerar implementados los cinco flujos de Power Automate ni la biblioteca SharePoint por aparecer aquí descritos. Su existencia, permisos y ejecución requieren verificación en el tenant.  
+> - No reutilizar ni modificar los tres elementos legacy actuales de `RegistroIntegracion`: son eventos `TPV_CUSTOM_QA`, con `deliveryStatus=NOT_SENT`, payload que contiene una clave `customer` y sin `payloadHash`. Se ha añadido un writer C3 separado, con inserción append-only, payload minimizado, hash SHA-256 e idempotencia por `_id` determinista. Los eventos legacy no se borran ni se reenvían.  
+> - El límite general de pagos en efectivo es **1.000 € cuando alguna parte actúa como empresario o profesional**; la excepción es 10.000 € para persona física pagadora sin domicilio fiscal en España que no actúe como empresario/profesional. No existe un límite general B2C de 2.500 €. Véase Ley 7/2012, art. 7, modificada por Ley 11/2021.  
+> - No aplicar un plazo único de seis años a toda la información: el Código de Comercio establece seis años para libros/documentación empresarial; el registro de jornada se conserva cuatro años; la prescripción tributaria general de cuatro años no sustituye al deber mercantil de conservación. Definir retención por categoría y finalidad.  
+>  
+> **Estado del código (28-11-2026):** exportador trimestral y outbox C3 implementados en código; esquema live de `RegistroIntegracion` verificado y permisos de colección `ADMIN`. La UI ZONA MARIAN ya permite preparar el manifiesto y consultar eventos C3. El evento queda `PENDING`; el transporte Microsoft Graph/SharePoint, el read-back, la verificación de checksum y la aceptación de gestoría siguen pendientes. El paquete es un borrador interno, no un libro oficial de facturas ni una presentación AEAT.
+>
+> ---
+>
 Perfecto. Eliminamos **`_Buzon_Entrada`**, **`_Inbox_Web`**, **`_Alertas_Error`** y cualquier carpeta técnica intermedia.
 
 El principio de este rediseño es: **Marian solo ve carpetas humanas de negocio** y **el contable abre el mes y en 1 segundo tiene todo listo para importar fuera (A3, Sage, Contasol, Holded) o descargarlo en un único ZIP**.

@@ -110,14 +110,16 @@ function normalizeRecord(row) {
     };
 }
 
-function normalizeSummary(summary) {
+function normalizeSummary(summary, year) {
     const counts = summary?.conteo || {};
     const totals = summary?.totales || {};
     const payment = summary?.desgloseFormaPago || {};
     const vatDraft = summary?.borradorIva || {};
 
     return {
-        issuerTaxId: requiredString(summary?.nifEmisor, "C3_EXPORT_ISSUER_TAX_ID_MISSING", 32),
+        issuerTaxId: summary?.nifEmisor == null && year < 2027
+            ? null
+            : requiredString(summary?.nifEmisor, "C3_EXPORT_ISSUER_TAX_ID_MISSING", 32),
         operationCount: countValue(summary?.totalOperaciones, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
         fiscalOperationCount: countValue(summary?.totalOperacionesFiscales, "C3_EXPORT_SUMMARY_COUNT_INVALID"),
         counts: {
@@ -168,7 +170,7 @@ export function buildQuarterlyRegistryPackage({
         a.transactionReference.localeCompare(b.transactionReference)
     );
     const content = {
-        issuer: normalizeSummary(summary),
+        issuer: normalizeSummary(summary, year),
         records,
     };
     const contentChecksum = sha256(canonicalJson(content));
@@ -187,6 +189,10 @@ export function buildQuarterlyRegistryPackage({
         checksumAlgorithm: "SHA-256",
         contentChecksum,
         deliveryStatus: "PREPARED_NOT_DELIVERED",
+        dataClassification: year < 2027 ? "SYNTHETIC_TEST" : "PRODUCTION_CANDIDATE",
+        artifactPurpose: "ACCOUNTING_REVIEW_DRAFT",
+        legalUseStatus: "INTERNAL_DRAFT_ONLY",
+        reconciliationStatus: "SOURCE_RECONCILIATION_REQUIRED",
     };
 
     return Object.freeze({ manifest, content });
