@@ -1576,7 +1576,8 @@ test('FLOW-CAJA-15 Z closing rejects a missing movement sequence', async () => {
   assert.equal(movement.status, 'SUCCESS', JSON.stringify(movement.error));
 
   wixDataMock._store.get('MovimientosCaja')[0].sequenceNumber = null;
-  const closing = await cajas.registerZClosingInternal(operationDate, {
+  const closingDate = movement.data.invoiceIssueDate || movement.data.fechaExpedicionFactura || operationDate;
+  const closing = await cajas.registerZClosingInternal(closingDate, {
     recordDomain: 'CASH_REGISTER',
     closedBy: GUID_ADMIN_RESOURCE,
     traceId: 'trace-z-missing-sequence-001',
