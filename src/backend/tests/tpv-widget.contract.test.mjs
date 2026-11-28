@@ -300,6 +300,27 @@ test("TPV bridge trusts the Wix HtmlComponent transport boundary while preservin
     bridge.destroy();
 });
 
+test("Wix HtmlComponent requires a nonce before accepting MM_READY", () => {
+    let receive;
+    const errors = [];
+    const widget = {
+        onMessage(handler) { receive = handler; return () => { receive = null; }; },
+        postMessage() {},
+    };
+    const bridge = createWidgetBridge(widget, {
+        allowedTypes: [MESSAGE_TYPES.READY, MESSAGE_TYPES.CONTEXT],
+        transport: "wix-html-component",
+        onError: (error) => errors.push(error.code),
+    });
+    receive({
+        origin: "null",
+        data: { type: MESSAGE_TYPES.READY, version: 1, messageId: "tpv-ready-without-nonce" },
+    });
+    assert.ok(errors.includes("WIDGET_HANDSHAKE_NONCE_REQUIRED"));
+    assert.equal(bridge.handshakeCompleted, false);
+    bridge.destroy();
+});
+
 test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are allowed", async () => {
     const sent = [];
     let receive;
@@ -333,6 +354,7 @@ test("widget bridge publishes MM_CONTEXT after MM_READY when both directions are
     const contextMessage = sent.find((message) => message.type === MESSAGE_TYPES.CONTEXT);
     assert.ok(contextMessage, "bridge must send MM_CONTEXT after READY");
     assert.equal(contextMessage.payload.status, "SUCCESS");
+    assert.equal(contextMessage.payload.nonce, "tpv-handshake-nonce-20261128");
     assert.equal(contextMessage.messageId, "tpv-ready-12345678");
     bridge.destroy();
 });
