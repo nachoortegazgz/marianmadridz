@@ -66,24 +66,26 @@ Los eventos append-only se conservan. Una batería no borra cierres, auditorías
 
 ## 5. Batería E2E TPV
 
-El runner `scripts/wix-preview-tpv-e2e.mjs` recorre el widget real mediante el puente `postMessage`, el controlador Velo, los WebMethods y el repositorio/CMS:
+El runner `scripts/wix-preview-tpv-e2e.mjs` recorre el widget real mediante `postMessage`, el controlador Velo, los WebMethods, Wix Orders, Order Transactions, el ledger y CMS:
 
-1. Handshake `MM_READY → MM_CONTEXT` y autorización.
-2. Lectura inicial `CASHIER_STATE`.
+1. Handshake `MM_READY → MM_CONTEXT`, identidad y autorización.
+2. Lectura inicial `CASHIER_STATE`; debe ser read-only.
 3. Apertura con fondo inicial de 300 €.
 4. Entrada de efectivo de 1 €.
 5. Arqueo parcial con efectivo contado de 301 €.
-6. Registro de una venta comercial pendiente con un servicio real de precio fijo del catálogo.
-7. Verificación de que la venta queda persistida como `PENDING_PAYMENT`, no como cobrada, y separada de la conciliación de efectivo.
-8. Ticket X.
-9. Consulta del ledger y conciliación exacta en céntimos.
-10. Ticket Z con contado de 301 €, diferencia cero y cierre de sesión.
-11. `SALE_READBACK` verifica la fila `TransaccionesTPV` y vuelve a leer el pedido nativo Wix: mismo `orderId`, `externalOrderId`, total en céntimos, estado APPROVED y paymentStatus NOT_PAID.
-12. Read-back posterior de `CASHIER_STATE`, ledger y auditoría; verificación de IDs, secuencias, hashes, venta, vínculo de pedido y eventos X/Z.
+6. Venta A sin cobro: pedido Wix APPROVED/NOT_PAID, `TransaccionesTPV` PENDING_PAYMENT, `orderId` y `externalOrderId` correlacionados.
+7. `SALE_READBACK` verifica la fila TPV y vuelve a leer el pedido Wix: mismo `orderId`, total exacto en céntimos, estado APPROVED y paymentStatus NOT_PAID.
+8. Venta B con efectivo: Add Payments offline, pago Wix APPROVED, pedido PAID, ledger `TPV_PAYMENT/COBRO` y auditoría `PAGO_TPV_CONFIRMADO`.
+9. Segundo `SALE_READBACK`: confirma `paymentId`, `ledgerMovementId`, importe entregado, cambio, importe aplicado, pedido PAID y `requiresReconciliation=false`.
+10. `CASHIER_STATE` verifica la proyección `CajaActual.salesCount=1` y `cashAmount=300 € + 1 € + venta B`. La venta A pendiente no incrementa caja ni ventas cobradas.
+11. Ticket X.
+12. Consulta del ledger; todos los movimientos deben estar presentes, con secuencia/hash y suma de efectivo exactas.
+13. Ticket Z con contado igual al efectivo esperado (301 € + venta B), diferencia cero y cierre de sesión.
+14. Read-back final de `CASHIER_STATE`, ledger y auditoría; verificación de IDs, hashes y eventos de venta, pedido, pago, X y Z.
 
 El runner no usa `SESSION_CLOSE` para sustituir Ticket Z y nunca cierra una sesión que ya existía antes de la ejecución.
 
-La batería actual registra una venta pendiente sin cobro. La aceptación adicional del cobro en efectivo debe verificar: pago offline Wix con método CASH y estado APPROVED, read-back de `orderTransactions`, `paymentStatus=PAID`, evento `TPV_PAYMENT` visible como `COBRO`, proyección `CajaActual.cashAmount` y auditoría `PAGO_TPV_CONFIRMADO`. No se considera probado por la batería de venta pendiente.
+**Datos de prueba:** la batería crea dos pedidos Wix en Orders (colección de aplicación Live incluso desde Preview): uno pendiente sin pago y otro con pago offline aprobado. Ambos usan un servicio fijo, sin stock físico, y se correlacionan por `externalOrderId`. El segundo pago es una anotación offline de caja de prueba: Add Payments no recauda efectivo. No ejecutar esta batería como operación comercial; la fecha operativa anterior a 2027 identifica los registros sintéticos, sin cambiar el código ni sus validaciones. No se envían notificaciones al comprador ni al negocio.
 
 La vista de reservas del cliente debe verificar `CUSTOMER_BOOKINGS` con paginación completa, datos de `extendedBookings.queryExtendedBookings`, estados y paymentStatus de Wix Bookings. Esta consulta es de solo lectura; aún no confirma ni modifica reservas.
 
