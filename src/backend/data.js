@@ -479,13 +479,25 @@ export function MovimientosCaja_beforeInsert(item) {
         _schemaError("nifDestinatario no tiene formato valido (espanol o VAT UE)");
     }
 
-    const breakdown = _readBreakdownBaseAndTax(item);
-    const finalBase = breakdown.hasBreakdown ? breakdown.base : readTaxBase(item);
-    const finalTax = breakdown.hasBreakdown ? breakdown.tax : readTaxAmount(item);
-
-    const withholding = _readOptionalMovementNumber(item, "irpfWithholdingAmount");
-    const surcharge = readSurchargeAmount(item);
-    const total = readTotalAmount(item);
+    let breakdown;
+    let finalBase;
+    let finalTax;
+    let withholding;
+    let surcharge;
+    let total;
+    try {
+        breakdown = _readBreakdownBaseAndTax(item);
+        finalBase = breakdown.hasBreakdown ? breakdown.base : readTaxBase(item);
+        finalTax = breakdown.hasBreakdown ? breakdown.tax : readTaxAmount(item);
+        withholding = _readOptionalMovementNumber(item, "irpfWithholdingAmount");
+        surcharge = readSurchargeAmount(item);
+        total = readTotalAmount(item);
+    } catch (error) {
+        if (error?.code === "MOVEMENT_NUMERIC_FIELD_INVALID") {
+            _schemaError(error.message);
+        }
+        throw error;
+    }
 
     if (finalBase !== 0 || finalTax !== 0 || withholding !== 0 || surcharge !== 0) {
         const role = _safeTrim(item.fiscalRole).toUpperCase() || FISCAL_ROLE.EMISOR;
