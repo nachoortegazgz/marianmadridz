@@ -44,8 +44,8 @@ export const prepareExternalRegistryPackage = webMethod(
             }
 
             const [summaryResult, bookResult] = await Promise.all([
-                getQuarterlyTaxSummaryInternal(year, quarter, { traceId, requireRealRecords: true }),
-                getLibroRegistroFacturasExpedidasInternal(year, quarter, { traceId, requireRealRecords: true }),
+                getQuarterlyTaxSummaryInternal(year, quarter, { traceId }),
+                getLibroRegistroFacturasExpedidasInternal(year, quarter, { traceId }),
             ]);
 
             if (summaryResult?.status !== "SUCCESS" || bookResult?.status !== "SUCCESS" ||
