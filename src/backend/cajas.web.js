@@ -1833,8 +1833,19 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
                 error: { code: "Z_MOVEMENT_PAGE_LIMIT", message: "No se puede cerrar un periodo con movimientos sin auditar." },
             };
         }
-        allMovements = allMovements;
-        allMovements.sort((a, b) => (Number(a.sequenceNumber) || 0) - (Number(b.sequenceNumber) || 0));
+        for (const movement of allMovements) {
+            const sequenceNumber = _readRequiredLedgerAmount(
+                movement, "sequenceNumber", movement?.sequenceNumber, "Z_LEDGER_SEQUENCE_INVALID"
+            );
+            if (!Number.isSafeInteger(sequenceNumber) || sequenceNumber <= 0) {
+                const error = new Error("Z_LEDGER_SEQUENCE_INVALID:sequenceNumber");
+                error.code = "Z_LEDGER_SEQUENCE_INVALID";
+                error.meta = { field: "sequenceNumber", movementId: movement?._id || null };
+                throw error;
+            }
+            movement.sequenceNumber = sequenceNumber;
+        }
+        allMovements.sort((a, b) => a.sequenceNumber - b.sequenceNumber);
 
         if (allMovements.length === 0) {
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
@@ -2098,6 +2109,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             PERIOD_CLOSED: "El periodo fiscal esta cerrado.",
             Z_CLOSING_RESULT_UNKNOWN: "El resultado del cierre es incierto y requiere reconciliacion.",
             Z_LEDGER_NUMERIC_FIELD_INVALID: "El cierre no puede continuar: un movimiento contiene un importe fiscal ausente o invalido.",
+            Z_LEDGER_SEQUENCE_INVALID: "El cierre no puede continuar: la secuencia de movimientos contiene un valor ausente o invalido.",
         };
         const publicCodes = new Set(Object.keys(publicMessages));
         const publicCode = publicCodes.has(normalized.code) ? normalized.code : "Z_CLOSING_FAIL";
