@@ -177,6 +177,8 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}, externalOrderId
             },
         } : {}),
         lineItems,
+        status: "APPROVED",
+        paymentStatus: "NOT_PAID",
         priceSummary: {
             subtotal: price(fromMinorUnits(subtotalMinor), "ORDER_SUBTOTAL"),
             shipping: price(0, "ORDER_SHIPPING"),
