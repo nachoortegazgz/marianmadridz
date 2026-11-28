@@ -83,7 +83,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /state\.capabilities\.acceptPayment === true/);
     assert.match(html, /paymentMethod: null/);
-    assert.match(html, /Cobros deshabilitados: el TPV registra ventas pendientes/);
+    assert.match(html, /Efectivo disponible: se registra en Wix al confirmar la entrega/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
@@ -93,7 +93,7 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
-    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /acceptPayment: true/);
     assert.match(permissions, /openSession: true/);
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
@@ -426,9 +426,11 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(repository, /BUSINESS_COLLECTIONS\.TRANSACCIONES_TPV/);
     assert.match(repository, /OPERATIONAL_COLLECTIONS\.CONTROL_OPERATIVO/);
 
-    // No apparent payment controls can be mistaken for real or persisted payments.
-    assert.match(html, /Efectivo \(no habilitado\)/);
-    assert.match(html, /Tarjeta \(no habilitada\)/);
-    assert.match(html, /Cobros deshabilitados/);
+    // Cash is enabled through native Wix Orders; card remains explicitly pending terminal integration.
+    assert.match(html, /data-method="EFECTIVO"/);
+    assert.match(html, /data-method="TARJETA" disabled/);
+    assert.match(html, /Efectivo disponible/);
+    assert.match(html, /Tarjeta \(pendiente\)/);
+    assert.match(sales, /addTpvNativeCashPayment/);
     assert.doesNotMatch(html, /window\.print\(\);[\s\S]{0,150}state\.lastSale/);
 });
