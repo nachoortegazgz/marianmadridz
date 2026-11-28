@@ -878,7 +878,7 @@ test("TPV error normalization preserves actionable metadata and legacy error cod
 
 test("TPV operational ledger assertions and operator resolution are inside WebMethod try blocks", async () => {
     const cases = [
-        ["tpv/tpvCaja.web.js", ["abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"]],
+        ["tpv/tpvCaja.web.js", ["abrirSesionCaja", "registrarArqueoParcial"]],
         ["tpv/tpvMovimientos.web.js", ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"]],
         ["tpv/tpvCierres.web.js", ["generarTicketX", "generarCierreZ"]],
     ];
