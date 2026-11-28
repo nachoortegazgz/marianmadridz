@@ -104,7 +104,13 @@ function _sequenceUnknown(writeError, readError) {
 export async function allocateFiscalSequence(lock, lastMovement) {
     await assertFiscalLedgerLock(lock);
     const yearKey = _localYear();
-    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(String(lastMovement?.numSerieFactura || ""));
+    const lastInvoiceNumber = String(lastMovement?.numSerieFactura || "").trim();
+    const invoiceMatch = /^FAC-(\d{4})-(\d{5})$/.exec(lastInvoiceNumber);
+    if (lastInvoiceNumber && !invoiceMatch) {
+        const error = new Error("FISCAL_SEQUENCE_LAST_INVOICE_INVALID");
+        error.code = "FISCAL_SEQUENCE_LAST_INVOICE_INVALID";
+        throw error;
+    }
     const lastYearSequence = invoiceMatch?.[1] === yearKey ? _counter(invoiceMatch[2]) : 0;
 
     for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
