@@ -45,6 +45,9 @@ test("WIX-PREVIEW-05 runner is non-destructive and verifies the native Wix order
     assert.doesNotMatch(runner, /invokeWidget\(frame,\s*"SESSION_CLOSE"/);
     assert.match(runner, /PARTIAL_CASH_COUNT/);
     assert.match(runner, /SALE_READBACK/);
+    assert.match(runner, /cashSaleIdempotencyKey/);
+    assert.match(runner, /PAGO_TPV_CONFIRMADO/);
+    assert.match(runner, /cashierProjection/);
     assert.match(runner, /orderPersisted/);
     assert.match(runner, /TICKET_X/);
     assert.match(runner, /TICKET_Z/);
