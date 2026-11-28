@@ -35,6 +35,7 @@
 ## Archivo histórico
 
 - [Índice histórico de noviembre 2026](archive/2026-11/README.md).
+- [Revisión documento a documento del archivo — 28-11-2026](archive/2026-11/ARCHIVE-REVIEW-2026-11-28.md): inventario de 161 documentos, clasificación y supersedencias.
 - [Dossier consolidado histórico](archive/2026-11/DOSSIER CONSOLIDADO.txt).
 - [Dossier de flujos Capa 1–3](archive/2026-11/reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md).
 - [Base de conocimiento histórica](archive/2026-11/PROJECT-KNOWLEDGE-BASE.md).
