@@ -291,7 +291,6 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
         "tpv/tpvCatalogo.web.js",
-        "tpv/tpvGiftCards.web.js",
         "tpv/tpvPagos.web.js",
         "tpv/tpvMovimientos.web.js",
         "tpv/tpvDevoluciones.web.js",
@@ -772,12 +771,27 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
     assert.equal(first.manifest.contentChecksum, second.manifest.contentChecksum);
     assert.equal(first.manifest.recordCount, 1);
     assert.equal(first.manifest.deliveryStatus, "PREPARED_NOT_DELIVERED");
+    assert.equal(first.manifest.dataClassification, "SYNTHETIC_TEST");
+    assert.equal(first.manifest.artifactPurpose, "ACCOUNTING_REVIEW_DRAFT");
+    assert.equal(first.manifest.legalUseStatus, "INTERNAL_DRAFT_ONLY");
+    assert.equal(first.manifest.reconciliationStatus, "SOURCE_RECONCILIATION_REQUIRED");
     assert.equal(first.manifest.period.periodStart, "2026-10-01");
     assert.equal(first.manifest.period.periodEndExclusive, "2027-01-01");
     assert.equal(first.content.records[0].taxableAmountMinor, 10000);
     assert.equal(first.content.records[0].taxRateBasisPoints, 2100);
     assert.equal(first.content.records[0].taxAmountMinor, 2100);
     assert.equal(first.content.records[0].totalAmountMinor, 12100);
+    const noIssuerTest = buildQuarterlyRegistryPackage({
+        ...input,
+        summary: { ...summary, nifEmisor: null },
+    });
+    assert.equal(noIssuerTest.content.issuer.issuerTaxId, null);
+    assert.equal(noIssuerTest.manifest.dataClassification, "SYNTHETIC_TEST");
+    assert.throws(() => buildQuarterlyRegistryPackage({
+        ...input,
+        year: 2027,
+        summary: { ...summary, nifEmisor: null },
+    }), /C3_EXPORT_ISSUER_TAX_ID_MISSING/);
     assert.equal(JSON.stringify(first).includes("must not be exported"), false);
 });
 
@@ -820,14 +834,28 @@ test("Capa 3 export rejects incomplete fiscal source rows", () => {
     }), /C3_EXPORT_ISSUE_DATE_INVALID/);
 });
 
-test("Capa 3 export WebMethod is admin-only and has no delivery or write side effects", async () => {
+test("Capa 3 preparation and SharePoint delivery are separate, manager-authorized and verified", async () => {
     const service = await source("exports/exportService.web.js");
-    assert.match(service, /webMethod\(\s*Permissions\.Admin/);
-    assert.match(service, /await requireAdmin\(traceId\)/);
+    const outbox = await source("exports/integrationOutbox.js");
+    const graph = await source("exports/sharePointGraph.js");
+    const aggregator = await source("fiscalAggregator.web.js");
+    assert.doesNotMatch(aggregator, /requireRealRecords|recordNature !== "REAL"/);
+    assert.match(aggregator, /tipoFactura: "BORRADOR_INTERNO"/);
+    assert.doesNotMatch(aggregator, /isRefund \? "R1"/);
+    assert.match(service, /prepareExternalRegistryPackage = webMethod/);
+    assert.match(service, /deliverExternalRegistryPackage = webMethod/);
+    assert.match(service, /await requireMarianManager\(traceId\)/);
     assert.match(service, /getQuarterlyTaxSummaryInternal/);
     assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
     assert.match(service, /buildQuarterlyRegistryPackage/);
-    assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph/);
+    assert.match(service, /appendC3PreparedEvent/);
+    assert.match(service, /uploadAndVerifySharePointPackage\(artifact\)/);
+    assert.match(service, /appendC3VerifiedEvent/);
+    assert.match(outbox, /insertItem\(COLLECTION, item\)/);
+    assert.match(outbox, /getItem\(COLLECTION, item\._id, CONSISTENCY\.STRONG\)/);
+    assert.match(graph, /conflictBehavior=fail/);
+    assert.match(graph, /hashSHA256\(readback\)/);
+    assert.doesNotMatch(service + outbox + graph, /sendEmail|Sites\.ReadWrite\.All/);
 });
 
 

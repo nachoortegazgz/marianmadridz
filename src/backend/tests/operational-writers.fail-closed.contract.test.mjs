@@ -71,12 +71,13 @@ test("P1-CLOCK-01 timeclock writes and adjustments remain disabled before signin
   assert.ok(adjustment.indexOf("insert(REGISTROS_COL") > adjustmentGuard);
 });
 test("P0-CMS-02 fiscal identity consumers follow the live MapaStaff schema", async () => {
-  const [config, hooks, events, eventLog, fiscalDocuments] = await Promise.all([
+  const [config, hooks, events, eventLog, fiscalAggregator, exportService] = await Promise.all([
     read("internalConfig.js"),
     read("data.js"),
     read("events.js"),
     read("eventLog.js"),
-    read("fiscalDocuments.web.js"),
+    read("fiscalAggregator.web.js"),
+    read("exports/exportService.web.js"),
   ]);
 
   assert.match(config, /MAPA_STAFF:\s*"MapaStaff"/);
@@ -90,10 +91,12 @@ test("P0-CMS-02 fiscal identity consumers follow the live MapaStaff schema", asy
   assert.match(eventLog, /dalQuery\(MAPA_STAFF_COL\)/);
   assert.match(eventLog, /schemaVersion:\s*1/);
   assert.match(eventLog, /traceId:\s*_safeTrim\(traceId\)/);
-  assert.match(fiscalDocuments, /\.eq\("recordType", "GESTORIA"\)/);
-  assert.match(fiscalDocuments, /record\.emailFiscal/);
-  assert.match(fiscalDocuments, /record\.phoneFiscal/);
-  assert.doesNotMatch(fiscalDocuments, /gestorEmail|#gestor/);
+  assert.match(fiscalAggregator, /\.eq\("recordType", RECORD_TYPE\.CONFIG_SISTEMA\)/);
+  assert.match(fiscalAggregator, /CONFIG_SISTEMA_FISCAL/);
+  assert.match(fiscalAggregator, /_getBusinessTaxId/);
+  assert.match(exportService, /prepareExternalRegistryPackage/);
+  assert.match(exportService, /requireMarianManager/);
+  assert.doesNotMatch(exportService, /gestorEmail|#gestor|record\.emailFiscal|record\.phoneFiscal/);
 });
 
 

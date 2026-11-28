@@ -313,7 +313,7 @@ export async function getQuarterlyTaxSummaryInternal(year, quarter, options = {}
 
   // Sin fallback BXXXXXXXX (prohibido inventar NIF). Si falta el singleton
   // fiscal, el error se propaga al wrapper webMethod (TAX_SUMMARY_FAIL).
-  const nifEmisor = await _getBusinessTaxId();
+  const nifEmisor = await _getBusinessTaxId({ allowMissing: y < 2027 });
 
   return {
     status: "SUCCESS",
@@ -400,7 +400,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
-    if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     const accountingAmount = _num(m.accountingAmount, "accountingAmount");
     const movementType = _readMovementType(m).toUpperCase();
     const operationNature = _readOperationNature(m);
@@ -412,7 +411,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
       orden: orderIndex++,
       invoiceNumber: _readInvoiceNumber(m),
       fechaExpedicion: _readOperationDate(m),
-      tipoFactura: isRefund ? "R1" : "BORRADOR_INTERNO",
+      tipoFactura: "BORRADOR_INTERNO",
       movementType: _readMovementType(m),
       operationNature: operationNature || "VENTA",
       taxTreatment: (isTip || isAdjustment) ? "PENDIENTE_VALIDACION" : "DEVENGADO",
@@ -453,7 +452,11 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 // SINGLETON FISCAL (ALN-03)
 // =============================================================================
 
-async function _getBusinessTaxId() {
+/* The only synthetic/production discriminator is the fiscal period year: pre-2027
+ * test exports may omit issuer identity; production periods must resolve the
+ * canonical CONFIG_SISTEMA_FISCAL record and never borrow the gestoría identity.
+ */
+async function _getBusinessTaxId({ allowMissing = false } = {}) {
   const config = await withTimeout(
     dalQuery(MAPA_STAFF_COL)
       .eq("recordType", RECORD_TYPE.CONFIG_SISTEMA)
@@ -464,6 +467,7 @@ async function _getBusinessTaxId() {
   );
   const items = Array.isArray(config?.items) ? config.items : [];
   if (items.length === 0) {
+    if (allowMissing) return null;
     throw createActionableError({ code: "FISCAL_CONFIG_MISSING", userMessage: "Configuración fiscal no disponible. Contacta al responsable legal para completarla.", technicalDetail: "No existe MapaStaff recordType=CONFIG_SISTEMA.", remediation: ["Acceder a Wix CMS → MapaStaff.", "Crear CONFIG_SISTEMA_FISCAL según el contrato fiscal aprobado.", "Validar los datos con AEAT antes de guardar.", "Mantener los writers fiscales deshabilitados hasta certificación.", "Reintentar tras la verificación."], contextSnapshot: { collection: MAPA_STAFF_COL, observedCount: 0 }, retryable: false });
   }
   if (items.length !== 1) {

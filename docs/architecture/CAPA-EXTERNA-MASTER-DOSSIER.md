@@ -2,7 +2,7 @@
 
 **Proyecto:** Marian Madrid · Wix Classic + Velo  
 **Fecha de revisión:** 2026-11-28  
-**Estado:** DISEÑO DOCUMENTAL CONSOLIDADO · CONFIGURACIÓN EXTERNA NO VERIFICADA
+**Estado:** OUTBOX + TRANSPORTE GRAPH IMPLEMENTADOS EN CÓDIGO · SECRETOS Y RUNTIME PENDIENTES
 
 > Punto de entrada operativo para configurar SharePoint, gestoría, PGC, correspondencia entre capas, informes derivados y herramientas AEAT. No acredita que tenant, biblioteca, gestoría, autorizaciones AEAT o transporte estén conectados.
 
@@ -24,13 +24,13 @@ Decisiones recomendadas: un sitio SharePoint administrativo con bibliotecas sepa
 
 ### 2.1 Verificado en repositorio/código
 - Existe src/backend/exports/exportContract.js: contrato JSON 1.0.0, serialización determinista, SHA-256, IDs deterministas y minimización.
-- Existe src/backend/exports/exportService.web.js: WebMethod Admin, requireAdmin, rate limit y preparación trimestral en memoria.
+- Existe src/backend/exports/exportService.web.js: WebMethod SiteMember con requireMarianManager, rate limit, preparación trimestral y alta idempotente de metadatos en RegistroIntegracion.
 - Existe src/backend/fiscalAggregator.web.js: agregación trimestral y generación de filas de un libro interno.
 - Existe src/backend/accountingLedger.js: primitiva append-only de líneas contables equilibradas, idempotencia, hash-chain y lock. No tiene mapeo automático de eventos a cuentas.
 - Existe la colección RegistroIntegracion con campos de evento, origen, correlación, idempotencia, hash, estado, intentos, siguiente intento, entrega y último error.
 - Existen LibroAsientosContablesDetalle, MovimientosCaja, CajaActual, HistoricoCierresZ, RegistrosHorariosStaff, CitasF2, ControlOperativo, ServiciosCatalogo, ComplementosCatalogo, MapaStaff y TransaccionesTPV.
-- El contrato de exportación prepara un objeto en memoria. No sube a SharePoint, no llama a Graph, no envía correo, no ejecuta Power Automate ni crea jobs.
-- No hay evidencia de tenant, site, biblioteca, identidad técnica, permisos, retención, DLP, conector SharePoint o aceptación de gestoría.
+- El contrato de exportación genera un artefacto determinista en memoria y registra su manifiesto minimizado en RegistroIntegracion mediante un evento C3 append-only e idempotente. El transporte Graph ya está implementado en código: exige configuración de secretos, usa nombre de archivo versionado sin sobrescritura, verifica el drive asociado al site, descarga el archivo y compara SHA-256 antes de anexar C3_PACKAGE_VERIFIED. No hay evidencia de ejecución real en Runtime.
+- No hay evidencia de ejecución real contra tenant/site/biblioteca, ni de que los secretos MM_GRAPH_* estén configurados. La identidad técnica debe tener permiso de aplicación Sites.Selected y concesión explícita write sobre el sitio; no se debe conceder Sites.ReadWrite.All. La carpeta configurada debe existir. Tampoco hay evidencia de retención, DLP o aceptación de gestoría.
 - El sitio figura Draft/no publicado en la última evidencia del proyecto; Runtime y producción no están acreditados.
 
 ### 2.2 Snapshot Wix y limitaciones
@@ -41,13 +41,19 @@ La auditoría operativa del 28-11-2026 detectó divergencias entre algunas proye
 
 ### 2.3 Hallazgos de código que bloquean la fiabilidad del paquete actual
 
-**C3-FINDING-001 — población distinta en resumen y detalle (ALTO).** exportService.web.js llama a getQuarterlyTaxSummaryInternal y getLibroRegistroFacturasExpedidasInternal con requireRealRecords=true. En fiscalAggregator.web.js, el resumen acumula fetchResult.items sin aplicar ese filtro por registro; el detalle sí excluye filas cuando recordNature !== REAL. El total del resumen y las filas pueden representar poblaciones distintas. No considerar el paquete conciliado hasta corregir y probar población, conteos y totales.
+**C3-FINDING-001 — población distinta en resumen y detalle (CORREGIDO EN CÓDIGO; CI PENDIENTE).** Se retiró el filtro `requireRealRecords` del detalle y de las llamadas del exportador: resumen y filas ahora parten de la misma población de `_fetchQuarterMovements`. La clasificación sintético/prueba se deriva del periodo: ejercicios anteriores a 2027 se marcan `SYNTHETIC_TEST`; no se usa `recordNature` como segundo discriminador. El manifest declara `SOURCE_RECONCILIATION_REQUIRED` y `INTERNAL_DRAFT_ONLY`. Pendiente: CI y verificación de conciliación contra Orders/Payments/ledger en Runtime antes de habilitar entrega externa.
 
-**C3-FINDING-002 — tipo de factura exportado no fiable (ALTO).** getLibroRegistroFacturasExpedidasInternal asigna R1 a reembolsos y BORRADOR_INTERNO al resto, en vez de leer el tipo real del documento fiscal. exportContract.js serializa ese valor como invoiceType. Las filas no acreditan un libro registro oficial de facturas expedidas ni deben remitirse como tal a AEAT o gestoría. El tipo debe proceder de una factura emitida validada y su registro SIF.
+**C3-FINDING-002 — tipo de factura exportado no fiable (MITIGADO EN CÓDIGO; CI PENDIENTE).** El agregador ya no infiere `R1` a partir de un movimiento de reembolso: todas las filas de este informe derivado se etiquetan explícitamente `BORRADOR_INTERNO`. El manifest mantiene `INTERNAL_DRAFT_ONLY`. El tipo legal F1/F2/R1… solo podrá incorporarse cuando proceda de una factura emitida/rectificativa validada y de su registro SIF; hasta entonces no se presenta como libro oficial ni se entrega como registro fiscal.
 
 **C3-FINDING-003 — paquete fiscal no equivale a diario PGC (ALTO).** El contrato ACCOUNTING_QUARTERLY contiene líneas fiscales agregadas, importes, medio de pago, tipo de documento, hash y correlación; no contiene un diario completo con líneas Debe/Haber y cuenta contable aprobada por asiento. Son artefactos distintos.
 
 **C3-FINDING-004 — seis dígitos es restricción local, no requisito PGC (MEDIO).** accountingLedger.js valida accountCode con patrón de seis dígitos. El PGC español no impone con carácter general seis dígitos a la numeración/denominación de cuentas. Puede ser convención de subcuenta de proyecto/gestoría, pero debe justificarse y contrastarse con el plan real antes de aprobar mapeos.
+
+**C3-FINDING-005 — singleton fiscal emisor ausente en CMS live (BLOQUEO PARA EXPORT REAL).** La consulta live del 28-11-2026 encontró cinco elementos en `MapaStaff`: `GESTORIA`, `TERCERO` y tres `STAFF`; cero con `recordType=CONFIG_SISTEMA`. `_getBusinessTaxId()` exige además `_id=CONFIG_SISTEMA_FISCAL`, por lo que el export de cualquier ejercicio productivo falla con `FISCAL_CONFIG_MISSING`. Se habilita únicamente para ejercicios anteriores a 2027 un paquete de prueba con `issuerTaxId=null`, sin NIF inventado; desde 2027 se exige el singleton validado. No copiar el NIF de `GESTORIA` al emisor.
+
+**C3-FINDING-006 — RegistroIntegracion contenía tres eventos legacy de QA y carecía de writer C3 (CORREGIDO EN CÓDIGO; RUNTIME PENDIENTE).** La consulta live encontró tres elementos `TPV_CUSTOM_QA`, todos `NOT_SENT`, con payload que contiene una clave `customer` y sin `payloadHash`. Permanecen intactos: no se borran ni reenvían. Se incorporó `REGISTRO_INTEGRACION` a `BUSINESS_COLLECTIONS`, inserción exclusiva en `DATA_ACCESS_WRITE_POLICY` y validación específica de payload metadata-only. `integrationOutbox.js` calcula SHA-256, usa `_id` UUIDv8 determinista, lee con consistencia fuerte ante duplicados y rechaza conflictos de idempotencia. La colección queda append-only: update/delete denegados por política. El adaptador Graph genera `C3_PACKAGE_VERIFIED` solo tras read-back y checksum coincidente. Pendiente: ejecutar el flujo en Wix Preview/Runtime y SharePoint real. Antes de conectar Graph, implementar ese contrato append-only y segregar los eventos legacy.
+
+**C3-FINDING-007 — cierre Z de QA aislado.** `HistoricoCierresZ` contiene un único elemento `TPV_CUSTOM_QA` / `Z_SIMULATED`; no tiene `packageStatus` ni `sentAt`. Sus campos históricos `summaryData`/`invoiceData` no convierten la colección en un repositorio documental. No reutilizarla para paquetes de gestoría.
 
 Los hallazgos son revisión estática del código consultado en main; no son prueba de fallo runtime ni de pérdida de datos reales.
 
@@ -314,3 +320,14 @@ BOE/AEAT prevalecen para fiscalidad; ICAC/PGC para contabilidad; Microsoft Learn
 Orden óptimo: (1) corregir y probar FINDING-001/002; (2) obtener software, plan de cuentas, formato y canal de gestoría; (3) confirmar PGC/PGC PYMES, régimen tributario, SII/VERI*FACTU y poderes AEAT; (4) configurar SharePoint; (5) aprobar ADR de transporte y gestoría; (6) implementar Graph, ledger de entrega y read-back; (7) construir informes derivados trazables; (8) E2E sintético Wix→SharePoint→gestoría y pruebas AEAT externas si aplican; (9) GO solo con Runtime validado, revisión profesional y autorización del propietario.
 
 **Estado global:** DISEÑO DOCUMENTAL CONSOLIDADO · CONFIGURACIÓN EXTERNA PENDIENTE · EXPORT FISCAL NO APTO PARA USO LEGAL HASTA CORREGIR HALLAZGOS · PGC AUTOMÁTICO NO APROBADO · E2E EXTERNO NO VERIFICADO.
+
+### 2.4 Implementación C3 outbox (28-11-2026)
+
+- `RegistroIntegracion` ha sido verificada en Wix CMS: colección NATIVE; `schemaVersion` es TEXT, `payload` OBJECT, `occurredAt` DATETIME y `deliveryAttempts` NUMBER.
+- El DAL permite insertar eventos C3 y mantiene la colección append-only: no autoriza update, save ni delete.
+- `integrationOutbox.js` construye un `eventId` SHA-256 determinista y un `_id` UUIDv8 derivado de ese hash. En una colisión/reintento lee el item con consistencia fuerte y compara `eventId`, `idempotencyKey` y `payloadHash`; un contenido distinto genera conflicto explícito.
+- El payload solo contiene metadatos de exportación permitidos; las claves de PII se rechazan. No se copian clientes, NIF, direcciones ni datos de contacto al outbox.
+- El panel ZONA MARIAN ya no llama a los métodos retirados de almacenamiento de paquetes. Prepara el manifiesto y lista eventos C3 desde RegistroIntegracion.
+- Estado de entrega devuelto por la aplicación: `PENDING_CONFIGURATION`. Esto significa evento en cola, no archivo subido. El adaptador Microsoft Graph, la consulta de configuración de secretos y la lectura de vuelta SHA-256 están implementados en código; su ejecución real sigue pendiente de credenciales y permisos de SharePoint.
+- La lectura de la colección se mantiene protegida por `requireMarianManager`; el acceso Wix SiteMember no sustituye la autorización de rol.
+- La validación en Wix Preview y la escritura real de un evento aún deben ejecutarse antes de considerar el flujo E2E validado.

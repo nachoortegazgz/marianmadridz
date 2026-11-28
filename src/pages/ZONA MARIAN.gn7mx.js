@@ -20,10 +20,10 @@ import {
     getLibroRegistroFacturasExpedidas,
 } from "backend/fiscalAggregator.web.js";
 import {
-    createManagerPackageVersion,
-    getPreparedManagerPackages,
-    downloadManagerPackageVersion,
-} from "backend/fiscalDocuments.web.js";
+    prepareExternalRegistryPackage,
+    getExternalIntegrationEvents,
+    deliverExternalRegistryPackage,
+} from "backend/exports/exportService.web.js";
 
 import { makeTraceId, URLS, MESSAGE_TYPES } from "public/mmUtils";
 import { createWidgetBridge } from "public/widgetBridge";
@@ -46,9 +46,9 @@ const ACTIONS = {
     FISCAL_BOOK: ({ payload, traceId }) =>
         getLibroRegistroFacturasExpedidas(payload?.year, payload?.quarter, { traceId }),
 
-    CREATE_SNAPSHOT: ({ payload }) => createManagerPackageVersion(payload || {}),
-    DOCUMENT_PREPARED: () => getPreparedManagerPackages(),
-    DOCUMENT_DOWNLOAD: ({ payload }) => downloadManagerPackageVersion(payload || {}),
+    EXTERNAL_PREPARE: ({ payload }) => prepareExternalRegistryPackage(payload || {}),
+    EXTERNAL_EVENTS: ({ payload }) => getExternalIntegrationEvents({ limit: payload?.limit ?? 25 }),
+    EXTERNAL_DELIVER: ({ payload }) => deliverExternalRegistryPackage({ artifactId: payload?.artifactId }),
 
 };
 
@@ -81,6 +81,8 @@ $w.onReady(async () => {
     }
 
     createWidgetBridge(widget, {
+        allowOpaqueOrigin: true,
+        requireBridgeId: true,
         allowedTypes: [
             MESSAGE_TYPES.READY,
             MESSAGE_TYPES.CONTEXT,
@@ -88,9 +90,9 @@ $w.onReady(async () => {
             "Z_CLOSING",
             "FISCAL_SUMMARY",
             "FISCAL_BOOK",
-            "CREATE_SNAPSHOT",
-            "DOCUMENT_PREPARED",
-            "DOCUMENT_DOWNLOAD",
+            "EXTERNAL_PREPARE",
+            "EXTERNAL_EVENTS",
+            "EXTERNAL_DELIVER",
         ],
         slug: "administracion",
         traceId,
@@ -122,6 +124,7 @@ $w.onReady(async () => {
 
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
+            if (type === MESSAGE_TYPES.READY || type === MESSAGE_TYPES.CONTEXT) return;
             const payload = message?.payload || {};
             const handler = ACTIONS[type];
 
