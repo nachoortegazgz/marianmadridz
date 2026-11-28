@@ -452,6 +452,10 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 // SINGLETON FISCAL (ALN-03)
 // =============================================================================
 
+/* The only synthetic/production discriminator is the fiscal period year: pre-2027
+ * test exports may omit issuer identity; production periods must resolve the
+ * canonical CONFIG_SISTEMA_FISCAL record and never borrow the gestoría identity.
+ */
 async function _getBusinessTaxId({ allowMissing = false } = {}) {
   const config = await withTimeout(
     dalQuery(MAPA_STAFF_COL)
