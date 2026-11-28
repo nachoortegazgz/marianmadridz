@@ -385,6 +385,13 @@ No implementar VQ-05 antes de cerrar VQ-01 a VQ-04. No habilitar producción has
 
 ### Referencia profesional y criterio de uso
 
+Fuentes profesionales complementarias (no sustituyen BOE ni especificaciones AEAT):
+
+- **REAF — Registro de Economistas Asesores Fiscales, Consejo General de Economistas:** ficha normativa del RDL 43/2026, publicada el 25-11-2026. Útil como seguimiento profesional de la modificación; para el efecto jurídico prevalece el texto BOE: https://reaf.economistas.es/normativaestatal/real-decreto-ley-43-2026-de-24-de-noviembre/
+- **AECE — Asociación Profesional de Expertos Contables y Tributarios de España:** programa formativo sobre VERI*FACTU que estructura el trabajo profesional en análisis del sistema actual, planificación/diseño, implementación, pruebas/corrección y puesta en marcha/seguimiento. Se usa como checklist metodológico, no como especificación normativa: https://www.aece.es/agenda-aece_202.html
+- **AECE — previsión de calendario de 05-10-2026:** se conserva solo como ejemplo de información profesional provisional. Fue publicada antes del RDL 43/2026 y sus fechas no deben utilizarse como calendario vigente: https://www.aece.es/noticias/prevision-nuevo-calendario-para-implantar-verifactu_3649
+
+Criterio profesional de aplicación:
 - La asesoría/gestoría de Marian Madrid debe validar régimen, obligación de facturar, series, impuestos, rectificaciones, titularidad del SIF y declaración responsable antes de producción.
 - La implementación debe revisarse por un profesional de fiscalidad y por un ingeniero de software con experiencia en sistemas de facturación: los contratos oficiales son normativos, el código demuestra implementación y las pruebas demuestran comportamiento; ninguno sustituye a los otros.
 - No se ha usado una guía comercial de proveedor como autoridad normativa. Si se selecciona un proveedor SIF, exigir contrato, declaración responsable, documentación API, SLA, política de incidencias, portabilidad/exportación de registros y evidencias de pruebas.
