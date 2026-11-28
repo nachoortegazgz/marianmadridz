@@ -27,7 +27,7 @@ test("TPV E2E covers opening float, cash movement, partial count, pending sale, 
 test("Preview workflow executes the TPV E2E runner against an Editor Preview URL", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /preview_url:/);
-    assert.match(workflow, /node scripts\\/wix-preview-tpv-e2e\\.mjs/);
+    assert.ok(workflow.includes("node scripts/wix-preview-tpv-e2e.mjs"));
     assert.doesNotMatch(workflow, /npm run wix preview/);
     assert.match(workflow, /cancel-in-progress: false/);
     assert.match(workflow, /WIX_STORAGE_STATE_B64/);
