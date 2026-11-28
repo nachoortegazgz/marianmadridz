@@ -535,8 +535,10 @@ async function run() {
     const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
     const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
     assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
-    const ticketZLedgerItem = finalItems.find((item) => item.movementType === "CIERRE_Z");
+    const ticketZLedgerItem = finalItems.find((item) => item.movementType === "CIERRE_Z" && item.reference === ticketZData.reportId);
     assert.ok(ticketZLedgerItem, "Ticket Z record was not found in the post-close ledger query");
+    assert.equal(ticketZLedgerItem.sessionId, sessionId);
+    assert.ok(ticketZLedgerItem.transactionId, "Ticket Z transactionId missing from ledger query");
     assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
     assert.equal(closingItem.movementId, closingItem.transactionId);
     for (const item of finalItems) {
