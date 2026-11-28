@@ -1046,7 +1046,6 @@ export async function reconciliarProyecciones() {
         const pending = await dalQuery(MOVIMIENTOS_CAJA_COL)
             .ne("projectionStatus", PROJECTION_STATUS.OK)
             .gt("sequenceNumber", 0)
-            .ne("recordSource", "SMOKE_TEST")
             .descending("sequenceNumber")
             .limit(PROYECCION_BATCH_LIMIT)
             .find();
