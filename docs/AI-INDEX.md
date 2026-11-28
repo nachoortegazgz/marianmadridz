@@ -27,6 +27,9 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 |---|---|---|
 | [STATE-NOW](STATE-NOW.md) | Estado, commits, CI, pendientes y última evidencia Wix | Actualizar con cada cambio de estado |
 | [PROJECT-CANON](PROJECT-CANON.md) | Arquitectura, autoridad, invariantes | Cambiar solo con decisión aprobada |
+
+
+**Regla de lectura obligatoria para cualquier intervención:** PROJECT-CANON incluye la directriz «cero bloqueos silenciosos». Cada rechazo/early return debe normalizar de forma segura o devolver error accionable y log estructurado correlacionado; no defaults que oculten fallos.
 | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | Contrato funcional/técnico TPV | Cambiar solo con cambio de contrato |
 | [RELEASE-READINESS](RELEASE-READINESS.md) | Gates de release por entorno | No confundir CI con Runtime |
 | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Esquema físico y recuentos Wix | Snapshot 27-11-2026; no es live |
