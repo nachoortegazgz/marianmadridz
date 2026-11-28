@@ -163,6 +163,7 @@ export function createWidgetBridge(widgetElement, options = {}) {
     );
     const handshakeTimeoutMs = Number(settings.handshakeTimeoutMs) > 0 ? Number(settings.handshakeTimeoutMs) : PROTOCOL_UI.HANDSHAKE_TIMEOUT_MS;
     const contextTimeoutMs = Number(settings.contextTimeoutMs) > 0 ? Number(settings.contextTimeoutMs) : PROTOCOL_UI.CONTEXT_TIMEOUT_MS;
+    const requireBridgeId = settings.requireBridgeId === true;
     const contextAttemptTimeoutMs = Number(settings.contextAttemptTimeoutMs) > 0 ? Number(settings.contextAttemptTimeoutMs) : PROTOCOL_UI.CONTEXT_ATTEMPT_TIMEOUT_MS;
     const onWidgetMessage = typeof settings.onWidgetMessage === "function" ? settings.onWidgetMessage : null;
     const onContextReady = typeof settings.onContextReady === "function" ? settings.onContextReady : null;
@@ -208,6 +209,9 @@ export function createWidgetBridge(widgetElement, options = {}) {
         if (!isAllowedType(type)) return { message: null, code: WIDGET_ERROR_CODE.TYPE_NOT_ALLOWED };
         const version = toProtocolVersion(source.version);
         if (version !== PROTOCOL_VERSION) return { message: null, code: WIDGET_ERROR_CODE.VERSION_UNSUPPORTED };
+        if (requireBridgeId && type !== MESSAGE_TYPES.READY && safeMessageId(source.bridgeId) !== bridgeId) {
+            return { message: null, code: "WIDGET_BRIDGE_ID_INVALID" };
+        }
         const messageId = safeMessageId(source.messageId);
         const requiresMessageId = type === MESSAGE_TYPES.AVAIL || type === MESSAGE_TYPES.BOOK || type === MESSAGE_TYPES.NAV;
         if (requiresMessageId && !messageId) return { message: null, code: WIDGET_ERROR_CODE.MESSAGE_ID_INVALID };
