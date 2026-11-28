@@ -22,6 +22,10 @@ function canonicalJson(value) {
     return JSON.stringify(canonicalize(value));
 }
 
+export function serializeQuarterlyRegistryContent(content) {
+    return canonicalJson(content);
+}
+
 function requiredString(value, code, maxLength = 256) {
     const normalized = String(value ?? "").trim();
     if (!normalized || normalized.length > maxLength) throw new Error(code);
