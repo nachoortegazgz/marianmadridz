@@ -119,6 +119,17 @@ export async function findTpvNativeOrderByExternalId(input = {}) {
     return order ? normalizeOrder(order) : null;
 }
 
+async function verifyCreatedTpvOrder(orderId, externalOrderId, expectedTotalMinor) {
+    const order = await readTpvNativeOrder(orderId);
+    if (order.externalOrderId !== externalOrderId ||
+        order.status !== "APPROVED" ||
+        order.paymentStatus !== "NOT_PAID" ||
+        order.totalMinor !== expectedTotalMinor) {
+        fail("TPV_WIX_ORDER_READBACK_MISMATCH");
+    }
+    return order;
+}
+
 export async function createTpvNativeOrder(prepared, buyer, externalOrderId, startedAt) {
     const payload = buildTpvNativeOrderPayload(prepared, buyer || {}, externalOrderId);
     let response;
@@ -131,10 +142,11 @@ export async function createTpvNativeOrder(prepared, buyer, externalOrderId, sta
             buyer,
         });
         if (recovered) {
-            if (recovered.status !== "APPROVED" || recovered.paymentStatus !== "NOT_PAID") {
-                fail("TPV_WIX_ORDER_RECOVERED_WITH_UNEXPECTED_STATE");
-            }
-            return recovered;
+            return verifyCreatedTpvOrder(
+                recovered.orderId,
+                externalOrderId,
+                toMinorUnits(prepared.totalVenta, "TPV_ORDER_EXPECTED_TOTAL")
+            );
         }
         fail("TPV_WIX_ORDER_CREATE_UNKNOWN", error);
     }
@@ -159,7 +171,11 @@ export async function createTpvNativeOrder(prepared, buyer, externalOrderId, sta
     if (normalized.status !== "APPROVED" || normalized.paymentStatus !== "NOT_PAID") {
         fail("TPV_WIX_ORDER_CREATED_WITH_UNEXPECTED_STATE");
     }
-    return normalized;
+    return verifyCreatedTpvOrder(
+        normalized.orderId,
+        externalOrderId,
+        toMinorUnits(prepared.totalVenta, "TPV_ORDER_EXPECTED_TOTAL")
+    );
 }
 
 export async function readTpvNativeOrder(orderId) {
