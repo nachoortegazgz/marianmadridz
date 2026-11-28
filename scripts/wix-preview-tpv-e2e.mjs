@@ -518,6 +518,21 @@ async function run() {
         ledgerMovementId: cashSaleReadback.paymentSelection[0].ledgerMovementId,
     };
 
+    phase = "cashier-projection-readback";
+    const cashierStateAfterCashSaleEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
+    const cashierStateAfterCashSale = assertSuccess(cashierStateAfterCashSaleEnvelope, "CASHIER_STATE_AFTER_CASH_SALE");
+    const cajaAfterCashSale = cashierStateAfterCashSale.cajaActual;
+    assert.equal(Number(cajaAfterCashSale.salesCount), 1);
+    assert.equal(
+        Math.round(Number(cajaAfterCashSale.cashAmount) * 100),
+        30100 + Math.round(Number(cashSale.totalVenta) * 100)
+    );
+    report.cashierProjection = {
+        salesCount: Number(cajaAfterCashSale.salesCount),
+        cashAmount: cajaAfterCashSale.cashAmount,
+        expectedCash: cajaAfterCashSale.expectedCash,
+    };
+
     phase = "ticket-x";
     await clearCapturedResponses(frame);
     await frame.locator("#ticketX").click();
