@@ -389,26 +389,35 @@ async function run() {
         // This path deliberately stops before SESSION_OPEN, movements, sales,
         // payments, refunds, Ticket X/Z or any other business mutation.
         if (state.sessionId) {
-            phase = "read-only-ledger-query";
-            const ledgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", {
-                sessionId: state.sessionId,
-                limit: 200,
-            });
-            const ledgerData = assertSuccess(ledgerEnvelope, "CASH_MOVEMENTS_EXPORT_READ_ONLY");
-            report.readOnlyLedger = {
-                itemCount: Array.isArray(ledgerData.items) ? ledgerData.items.length : 0,
-                sessionId: state.sessionId,
-            };
-            phase = "read-only-audit-query";
-            const auditEnvelope = await invokeWidget(frame, "AUDIT_LIST", {
-                sessionId: state.sessionId,
-                limit: 100,
-            });
-            const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST_READ_ONLY");
-            report.readOnlyAudit = {
-                itemCount: Array.isArray(auditData.items) ? auditData.items.length : 0,
-                sessionId: state.sessionId,
-            };
+            const capabilities = report.runtimeContext.capabilities || {};
+            if (capabilities.exportMovements === true) {
+                phase = "read-only-ledger-query";
+                const ledgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", {
+                    sessionId: state.sessionId,
+                    limit: 200,
+                });
+                const ledgerData = assertSuccess(ledgerEnvelope, "CASH_MOVEMENTS_EXPORT_READ_ONLY");
+                report.readOnlyLedger = {
+                    itemCount: Array.isArray(ledgerData.items) ? ledgerData.items.length : 0,
+                    sessionId: state.sessionId,
+                };
+            } else {
+                report.readOnlyLedger = { skipped: true, reason: "CAPABILITY_NOT_GRANTED" };
+            }
+            if (capabilities.readAudit === true) {
+                phase = "read-only-audit-query";
+                const auditEnvelope = await invokeWidget(frame, "AUDIT_LIST", {
+                    sessionId: state.sessionId,
+                    limit: 100,
+                });
+                const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST_READ_ONLY");
+                report.readOnlyAudit = {
+                    itemCount: Array.isArray(auditData.items) ? auditData.items.length : 0,
+                    sessionId: state.sessionId,
+                };
+            } else {
+                report.readOnlyAudit = { skipped: true, reason: "CAPABILITY_NOT_GRANTED" };
+            }
         }
         report.result = "PASS_READ_ONLY";
         report.completedPhase = phase;
