@@ -99,11 +99,11 @@ export const prepareExternalRegistryPackage = webMethod(
 
 /** Admin-only read of the C3 append-only outbox. */
 export const getExternalIntegrationEvents = webMethod(
-    Permissions.Admin,
+    Permissions.SiteMember,
     async (options = {}) => {
         const traceId = makeTraceId("c3-outbox-list");
         try {
-            await requireAdmin(traceId);
+            await requireMarianManager(traceId);
             const rate = await rateLimiter({ surface: "capa3.getExternalIntegrationEvents", key: "admin" });
             if (!rate?.allowed) {
                 return errorResult("C3_OUTBOX_RATE_LIMITED", traceId, "No se pudo consultar la cola en este momento.");
