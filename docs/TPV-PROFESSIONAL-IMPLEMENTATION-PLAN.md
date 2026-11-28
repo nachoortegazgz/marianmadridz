@@ -91,7 +91,7 @@ Wix documenta un ejemplo específico de pago con lector POS dentro de su Payment
 ### 3.4 Reservas y servicios Bookings
 
 - La línea de servicio en un pedido Wix no demuestra por sí sola que una reserva existente haya quedado pagada o confirmada.
-- Para una cita existente, consultar Bookings Reader V2 por contacto/bookingId y vincular explícitamente `bookingId` al pedido y a la transacción TPV.
+- Para una cita existente, consultar Bookings Reader V2 por contacto/bookingId y vincular explícitamente `bookingId` al pedido y a la transacción TPV. El SDK fijado actualmente (`@wix/bookings@1.0.1704`) no exporta `bookings.queryBookings`; no se debe importar un método inexistente. La lectura se implementará usando el endpoint Reader V2 documentado y autenticación/elevación oficial, o tras actualizar el SDK y verificar el export en CI.
 - El widget TPV es un checkout propio. Para ese flujo, Wix documenta `bookings.confirmOrDeclineBooking(bookingId, { paymentStatus })`; tras el pago confirmado usar `PAID`, para un pago parcial `PARTIALLY_PAID` y para una intención no cobrada `NOT_PAID`. El método determina `CONFIRMED`, `PENDING` o `DECLINED` según la política del servicio y conflictos de agenda.
 - No invocar `confirmOrDeclineBooking` para una reserva procesada por Wix eCommerce Checkout: en ese flujo Wix sincroniza automáticamente Bookings con el `paymentStatus` del pedido.
 - Para una venta de servicio sin cita, crear la línea de servicio en el pedido Wix sin fabricar una reserva.
