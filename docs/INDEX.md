@@ -11,6 +11,7 @@
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
 - [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix y lectura CMS; snapshot 27-11-2026, no live.
 - [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md): consolidación de obligaciones, arquitectura de exportación, SharePoint, automatización, PGC, matrices y flujos; transporte aún pendiente.
+- [VERI*FACTU y QR tributario — dossier de implementación](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md): normativa BOE/AEAT vigente, plazo actualizado, facturas/tickets, modalidades SIF, QR, remisión XML, incidencias, arquitectura Wix/Velo y plan de pruebas.
 - [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md): política y localización de documentos históricos.
 
 ## Código y ejecución
