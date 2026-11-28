@@ -209,15 +209,50 @@ export const abrirSesionCaja = webMethod(
                     }
                 );
                 persisted = true;
+                const openedAt = item.openedAt instanceof Date ? item.openedAt : new Date(item.openedAt);
+                if (Number.isNaN(openedAt.getTime())) throw new Error("TPV_SESSION_OPENED_AT_INVALID");
+                const openingMovement = await insertTpvEvent(
+                    TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+                    idempotencyKey + ":MOVEMENT",
+                    {
+                        sessionId,
+                        movementType: "APERTURA",
+                        amountMinor: openingCashMinor,
+                        paymentMethod: "EFECTIVO",
+                        reason: String(input.reason || "Apertura de caja").slice(0, 200),
+                        status: "CONFIRMADO",
+                        createdAt: openedAt,
+                        operatorId: operator.operatorId,
+                        actorId: operator.actorId,
+                        operatorDisplayName: operator.operatorDisplayName,
+                        operatorResourceId: operator.operatorResourceId,
+                        traceId,
+                        payload: makeTpvPayload({
+                            dayKey,
+                            openingCashMinor,
+                            openingSessionId: sessionId,
+                            operatorId: operator.operatorId,
+                            operatorResourceId: operator.operatorResourceId,
+                            traceId,
+                        }),
+                    }
+                );
                 await insertTpvEvent(TPV_COLLECTIONS.AUDITORIA, idempotencyKey + ":AUDIT", {
                     action: "APERTURA_CAJA",
                     actorId: operator.operatorId,
                     entityType: "SESION_CAJA",
                     entityId: sessionId,
-                    occurredAt: new Date(),
+                    occurredAt: openedAt,
                     source: "TPV_WEB_METHOD",
-                    payload: makeTpvPayload({ traceId, replayed, sessionId }),
+                    payload: makeTpvPayload({
+                        traceId,
+                        replayed,
+                        sessionId,
+                        movementId: openingMovement.item._id,
+                        transactionId: openingMovement.item._id,
+                    }),
                 });
+                const openingAmount = fromMinorUnits(openingCashMinor);
                 return {
                     status: "SUCCESS",
                     data: {
@@ -229,8 +264,31 @@ export const abrirSesionCaja = webMethod(
                         actorId: operator.actorId,
                         operatorDisplayName: operator.operatorDisplayName,
                         operatorResourceId: operator.operatorResourceId,
-                        openingCash: fromMinorUnits(openingCashMinor),
-                        openedAt: item.openedAt,
+                        openingCash: openingAmount,
+                        openedAt,
+                        openingMovementId: openingMovement.item._id,
+                        openingTransactionId: openingMovement.item._id,
+                        openingReceipt: {
+                            ticketType: "APERTURA_CAJA",
+                            sessionId,
+                            operationDate: dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8),
+                            openedAt: openedAt.toISOString(),
+                            timeZone: SDK_CONFIG.TZ,
+                            professional: operator.operatorDisplayName || operator.operatorId,
+                            professionalId: operator.operatorResourceId || null,
+                            operatorId: operator.operatorId,
+                            total: openingAmount,
+                            breakdown: {
+                                EFECTIVO: openingAmount,
+                                TARJETA: 0,
+                                BIZUM: 0,
+                                BONO: 0,
+                                TARJETA_REGALO: 0,
+                                OTROS: 0,
+                            },
+                            movementId: openingMovement.item._id,
+                            transactionId: openingMovement.item._id,
+                        },
                         integrationStatus: "NO_ENVIADO",
                         paymentStatus: "NOT_APPLICABLE",
                         ...responseClock(),

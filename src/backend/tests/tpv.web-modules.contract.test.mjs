@@ -259,6 +259,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /taxVerified: true/);
     assert.match(sales, /paymentVerified: false/);
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
+    assert.doesNotMatch(sales, /"PAYMENT_NOT_VERIFIED"|"CONSUMER_PRICE_PRESENTATION_UNVERIFIED"/);
     assert.match(sales, /const containsProducts = prepared\.lineas\.some/);
     assert.match(sales, /if \(containsProducts\)/);
     assert.match(sales, /inventoryVerified: !containsProducts/);

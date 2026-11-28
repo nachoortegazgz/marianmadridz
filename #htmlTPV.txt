@@ -230,7 +230,7 @@ body {
       width:80mm; max-width:80mm; max-height:none; margin:0 auto; padding:5mm;
       border:0; border-radius:0; box-shadow:none; overflow:visible;
     }
-    #modalBackdrop .head, #modalBackdrop .actions, #modalBackdrop #printTicketX { display:none !important; }
+    #modalBackdrop .head, #modalBackdrop .actions, #modalBackdrop #printTicketX, #modalBackdrop #printOpeningTicket { display:none !important; }
     .ticket-receipt { border:0; max-width:none; padding:0; }
   }
 </style>
@@ -1239,7 +1239,42 @@ body {
     renderTicket();
   });
 
-  /* ---------- Apertura de caja: preflight autoritativo desde CajaActual ---------- */
+  /* ---------- Apertura de caja: sesión, movimiento, recibo y continuidad ---------- */
+  function openingReceiptHtml(receipt) {
+    const timeZone = receipt.timeZone || "Europe/Madrid";
+    const openedAt = new Date(receipt.openedAt);
+    if (Number.isNaN(openedAt.getTime())) throw new Error("TPV_OPENING_RECEIPT_DATE_INVALID");
+    const dateLabel = receipt.operationDate || new Intl.DateTimeFormat("en-CA", {
+      timeZone, year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(openedAt);
+    const timeLabel = new Intl.DateTimeFormat("es-ES", {
+      timeZone, hour: "2-digit", minute: "2-digit", second: "2-digit"
+    }).format(openedAt);
+    const breakdown = receipt.breakdown || {};
+    const rows = ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"];
+    return `
+      <article class="ticket-receipt" id="openingTicketReceipt">
+        <h3>Marian Madrid</h3>
+        <p>APERTURA DE CAJA</p>
+        <p>SESIÓN ABIERTA</p>
+        <div class="ticket-divider"></div>
+        <p>Profesional: <strong>${esc(receipt.professional || "—")}</strong></p>
+        <p>Fecha: ${esc(dateLabel)}</p>
+        <p>Hora: ${esc(timeLabel)}</p>
+        <p>Sesión: ${esc(receipt.sessionId || "—")}</p>
+        <div class="ticket-divider"></div>
+        <div class="ticket-row"><span>TOTAL INICIAL</span><strong>${esc(money(receipt.total))}</strong></div>
+        <div class="ticket-divider"></div>
+        ${rows.map((method) => `<div class="ticket-row"><span>${esc(method.replace("_", " "))}</span><strong>${esc(money(breakdown[method] ?? 0))}</strong></div>`).join("")}
+        <div class="ticket-divider"></div>
+        <p>Movimiento: ${esc(receipt.movementId || "—")}</p>
+        <p>transactionId: ${esc(receipt.transactionId || "—")}</p>
+      </article>
+      <button id="printOpeningTicket" type="button" class="btn" style="width:100%;margin-top:12px;">Imprimir ticket y activar cajón</button>
+      <p class="status">El ticket se envía a impresión al confirmar la apertura. Para que se abra el cajón físico, el controlador Epson debe tener activada la opción de abrir el cajón al iniciar la impresión.</p>
+    `;
+  }
+
   $("openCash").onclick = async () => {
     if (state.busy) return;
     setBusy(true);
@@ -1252,31 +1287,39 @@ body {
       }
       const authenticatedOperatorId = current.authenticatedOperatorId;
       const authenticatedName = current.authenticatedDisplayName || authenticatedOperatorId || "Usuario autenticado";
+      const preparedAt = preview.preparedAt || current.now;
+      const preparedDate = preparedAt ? new Date(preparedAt) : null;
+      const preparedTime = preparedDate && !Number.isNaN(preparedDate.getTime())
+        ? new Intl.DateTimeFormat("es-ES", {
+            timeZone: preview.timeZone || current.timeZone || "Europe/Madrid",
+            hour: "2-digit", minute: "2-digit", second: "2-digit"
+          }).format(preparedDate)
+        : "—";
       const projectionLabel = current.cajaActual?.projectionStatus !== "LEGACY_UNVERIFIED"
-        ? "Proyección CajaActual verificada"
-        : "Proyección anterior no verificada; no se reutiliza como sesión activa ni se reutilizan sus importes";
+        ? "La proyección actual se actualizará con la apertura."
+        : "La proyección anterior se sustituirá; sus importes no se reutilizarán.";
       openModal("Abrir caja", `
-        <label class="status">Fecha de operación
-          <input id="openingOperationDate" class="field" value="${esc(preview.operationDate)}" readonly>
-        </label>
-        <label class="status">Sesión asignada por backend
-          <input id="openingSessionId" class="field" value="${esc(preview.sessionId)}" readonly>
-        </label>
-        <p>Usuario autenticado: <strong>${esc(authenticatedName)}</strong></p>
+        <p>Profesional / usuario de sesión: <strong>${esc(authenticatedName)}</strong></p>
+        <p>Fecha de operación: <strong>${esc(preview.operationDate)}</strong></p>
+        <p>Hora del sistema: <strong>${esc(preparedTime)}</strong></p>
+        <p>Sesión: <strong>${esc(preview.sessionId)}</strong></p>
         <p>${esc(projectionLabel)}</p>
-        <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Fondo inicial (ej. 150,00)">
-        <input id="openingReason" class="field" maxlength="200" placeholder="Motivo (opcional)">
+        <label class="status">Fondo inicial en efectivo
+          <input id="openingCash" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 150,00)">
+        </label>
+        <label class="status">Motivo (opcional)
+          <input id="openingReason" class="field" maxlength="200" placeholder="Apertura de caja">
+        </label>
       `, async () => {
         const openingCashInput = $("openingCash").value;
         const openingCash = num(openingCashInput);
         if (!String(openingCashInput || "").trim() || !Number.isFinite(openingCash) || openingCash < 0) {
           throw new Error("TPV_INVALID_AMOUNT");
         }
-        const expectedSessionId = $("openingSessionId").value.trim();
-        if (!expectedSessionId) throw new Error("TPV_SESSION_PREVIEW_REQUIRED");
+        const expectedSessionId = preview.sessionId;
         if (state.busy) return { keepOpen: true };
-
         setBusy(true);
+
         let openedSessionId = null;
         let confirmed = null;
         try {
@@ -1300,49 +1343,42 @@ body {
           confirmed = await refreshCashState();
           if (confirmed?.operationalStatus !== "ABIERTA" ||
               confirmed?.sessionId !== openedSessionId ||
-              confirmed?.authenticatedOperatorId !== authenticatedOperatorId) {
+              confirmed?.authenticatedOperatorId !== authenticatedOperatorId ||
+              Math.round(Number(confirmed?.expectedCash || 0) * 100) !== Math.round(openingCash * 100)) {
             throw new Error("TPV_SESSION_OPEN_NOT_CONFIRMED");
           }
 
-          const ticketResult = await call("TICKET_X", {
-            sessionId: confirmed.sessionId,
-          }, "TICKET_X_RES");
-          const ticket = ticketResult?.ticketX;
-          if (!ticket ||
-              ticket.ticketType !== "CONTROL_PARCIAL_X" ||
-              ticket.sessionId !== confirmed.sessionId ||
-              ticket.readOnly !== true ||
-              ticket.closesSession !== false) {
-            throw new Error("TPV_TICKET_X_RESULT_INCOMPLETE");
+          const receipt = opened.openingReceipt;
+          if (!receipt || receipt.ticketType !== "APERTURA_CAJA" ||
+              receipt.sessionId !== openedSessionId ||
+              !receipt.movementId || !receipt.transactionId ||
+              Math.round(Number(receipt.total) * 100) !== Math.round(openingCash * 100)) {
+            throw new Error("TPV_OPENING_RECEIPT_INCOMPLETE");
           }
 
-          $("modalTitle").textContent = "Apertura confirmada · Ticket X";
-          $("modalBody").innerHTML = ticketXReceiptHtml(ticket);
-          $("modalConfirm").textContent = "Cerrar";
+          $("modalTitle").textContent = "Apertura confirmada · Ticket de apertura";
+          $("modalBody").innerHTML = openingReceiptHtml(receipt);
+          $("modalConfirm").textContent = "Cerrar y continuar";
           $("modalCancel").classList.add("hidden");
           $("modalConfirm").onclick = closeModal;
-          $("printTicketX").onclick = () => window.print();
-          toast("Caja abierta y Ticket X de control parcial generado.");
+          $("printOpeningTicket").onclick = () => window.print();
+          if (opened.replayed !== true) {
+            window.setTimeout(() => window.print(), 150);
+          }
+          toast("Caja abierta, movimiento registrado y ticket de apertura generado.");
           return { keepOpen: true };
         } catch (operationError) {
           if (openedSessionId) {
-            const openingVerified = confirmed?.operationalStatus === "ABIERTA" &&
-              confirmed?.sessionId === openedSessionId;
-            $("modalTitle").textContent = openingVerified
-              ? "Apertura confirmada · Ticket X pendiente"
-              : "Apertura enviada · verificación pendiente";
+            $("modalTitle").textContent = "Apertura realizada · Verificación pendiente";
             $("modalBody").innerHTML = `
-              <p>${openingVerified
-                ? "La sesión está abierta y verificada."
-                : "La petición de apertura fue aceptada, pero falta verificar el estado de CajaActual."}</p>
-              <p>Sesión: <strong>${esc(openedSessionId)}</strong></p>
-              <p>No se pudo completar el Ticket X: ${esc(publicErrorMessage(operationError))}</p>
-              <p>No repitas la apertura. Consulta el estado y solicita Control X cuando corresponda.</p>
+              <p>La apertura fue aceptada para la sesión <strong>${esc(openedSessionId)}</strong>.</p>
+              <p>No se ha podido confirmar toda la proyección o el ticket: ${esc(publicErrorMessage(operationError))}</p>
+              <p>No repitas la apertura con una clave nueva. Comprueba MovimientosCaja y CajaActual antes de continuar.</p>
             `;
             $("modalConfirm").textContent = "Cerrar";
             $("modalCancel").classList.add("hidden");
             $("modalConfirm").onclick = closeModal;
-            toast("Apertura enviada; revisión del Ticket X pendiente.");
+            toast("Apertura realizada; conciliación de la anotación pendiente.");
             return { keepOpen: true };
           }
           throw operationError;

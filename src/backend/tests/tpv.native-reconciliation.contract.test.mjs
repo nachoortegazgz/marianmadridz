@@ -45,7 +45,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.match(caja, /export const abrirSesionCaja = webMethod/);
     assert.match(controller, /openingCash: numeric\(payload\.openingCash/);
     assert.match(caja, /toMinorUnits\(input\.openingCash, "OPENING_CASH"\)/);
-    assert.match(caja, /payload: makeTpvPayload\(\{ traceId, replayed, sessionId \}\)/);
+    assert.match(caja, /payload: makeTpvPayload\(\{[\s\S]*?traceId,[\s\S]*?replayed,[\s\S]*?sessionId,[\s\S]*?movementId: openingMovement\.item\._id,[\s\S]*?transactionId: openingMovement\.item\._id/);
     assert.match(caja, /payload: \{ sessionId: session\.sessionId, expectedMinor, countedMinor, differenceMinor, reason \}/);
     assert.match(controller, /const lineas = payload\.lineItems\.map/);
     assert.match(controller, /const pagos = \(Array\.isArray\(payload\.payments\) \? payload\.payments : \[\]\)\.map/);

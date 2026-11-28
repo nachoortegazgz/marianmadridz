@@ -4,3 +4,6 @@ node_modules/
 .idea/
 .wix/
 jsconfig.json
+
+# Local Wix browser authentication state (session credentials)
+.local/
