@@ -165,9 +165,9 @@
       </div>
       <div class="scroll">
         <table class="table">
-          <thead><tr><th>Evento</th><th>Periodo</th><th>Estado</th><th>Intentos</th></tr></thead>
+          <thead><tr><th>Evento</th><th>Periodo</th><th>Estado</th><th>Intentos</th><th>Acción</th></tr></thead>
           <tbody id="documentsBody">
-            <tr><td colspan="4" style="text-align:center;color:var(--muted);">Pulsa "Actualizar cola"</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);">Pulsa "Actualizar cola"</td></tr>
           </tbody>
         </table>
       </div>
@@ -188,6 +188,7 @@
         FISCAL_BOOK:'FISCAL_BOOK', FISCAL_BOOK_RES:'FISCAL_BOOK_RES',
         EXTERNAL_EVENTS:'EXTERNAL_EVENTS', EXTERNAL_EVENTS_RES:'EXTERNAL_EVENTS_RES',
         EXTERNAL_PREPARE:'EXTERNAL_PREPARE', EXTERNAL_PREPARE_RES:'EXTERNAL_PREPARE_RES',
+        EXTERNAL_DELIVER:'EXTERNAL_DELIVER', EXTERNAL_DELIVER_RES:'EXTERNAL_DELIVER_RES',
       };
 
       const VALID_TYPES = new Set(Object.values(MESSAGE_TYPES));
@@ -237,6 +238,7 @@
             setLoading(btnCreateSnapshot, false);
           }
           if (type === MESSAGE_TYPES.EXTERNAL_EVENTS) setLoading(btnLoadPrepared, false);
+          if (type === MESSAGE_TYPES.EXTERNAL_DELIVER) activeExternalRequest = false;
           err('No se pudo comunicar con el controlador de administración. Recarga la página y conserva el traceId.');
         }
       }
@@ -406,7 +408,7 @@
         if (rows.length === 0) {
           const tr = document.createElement('tr');
           const td = document.createElement('td');
-          td.colSpan = 4;
+          td.colSpan = 5;
           td.style.textAlign = 'center';
           td.style.color = 'var(--muted)';
           td.textContent = 'No hay eventos C3 en la cola.';
@@ -428,6 +430,25 @@
             td.textContent = value;
             tr.appendChild(td);
           });
+          const actionCell = document.createElement('td');
+          if (event.eventType === 'C3_PACKAGE_PREPARED' &&
+              event.deliveryStatus === 'PENDING' &&
+              /^[a-f0-9]{64}$/.test(String(payload.artifactId || ''))) {
+            const deliverButton = document.createElement('button');
+            deliverButton.type = 'button';
+            deliverButton.className = 'btn btn-outline';
+            deliverButton.textContent = 'Enviar y verificar';
+            deliverButton.addEventListener('click', () => {
+              if (activeExternalRequest) return;
+              activeExternalRequest = true;
+              setLoading(deliverButton, true);
+              send(MESSAGE_TYPES.EXTERNAL_DELIVER, { artifactId: payload.artifactId });
+            });
+            actionCell.appendChild(deliverButton);
+          } else {
+            actionCell.textContent = '—';
+          }
+          tr.appendChild(actionCell);
           documentsBody.appendChild(tr);
         });
       }
@@ -512,9 +533,12 @@
             setLoading(btnLoadPrepared, false);
             if (ok) {
               renderDocuments(data?.items || []);
+              const items = data?.items || [];
+              const verified = items.filter((item) => item.eventType === 'C3_PACKAGE_VERIFIED').length;
+              const pending = items.filter((item) => item.eventType === 'C3_PACKAGE_PREPARED' && item.deliveryStatus === 'PENDING').length;
               if (externalDeliveryStatus) externalDeliveryStatus.textContent =
-                'Eventos C3 cargados: ' + String(data?.totalCount ?? (data?.items || []).length) +
-                '. Transporte SharePoint: pendiente de configuración; no se ha enviado ningún archivo.';
+                'Eventos C3: ' + String(data?.totalCount ?? items.length) +
+                ' · Verificados: ' + verified + ' · Pendientes: ' + pending;
             } else err(error?.message || 'No se pudo consultar RegistroIntegracion.');
             break;
           case 'EXTERNAL_PREPARE_RES':
@@ -524,14 +548,27 @@
               const manifest = data?.manifest || {};
               const duplicate = data?.outbox?.duplicate === true;
               info((duplicate ? 'El evento ya existía (reintento idempotente). ' : 'Paquete preparado y evento añadido a RegistroIntegracion. ') +
-                'ID: ' + String(manifest.exportId || '—') + '. SharePoint sigue pendiente; no se ha enviado.');
+                'ID: ' + String(manifest.exportId || '—') + '. Usa “Enviar y verificar” en la fila pendiente.');
               if (externalDeliveryStatus) externalDeliveryStatus.textContent =
-                'PENDIENTE DE CONFIGURACIÓN · Outbox persistido · ' +
-                String(data?.delivery?.message || 'Sin envío externo.');
+                'PREPARADO · Outbox persistido · Pendiente de envío y verificación SharePoint.';
               setLoading(btnLoadPrepared, true);
               send(MESSAGE_TYPES.EXTERNAL_EVENTS, { limit: 25 });
             } else {
               err(error?.message || 'No se pudo preparar el paquete ni registrar el evento.');
+            }
+            break;
+          case 'EXTERNAL_DELIVER_RES':
+            activeExternalRequest = false;
+            if (ok) {
+              info('Archivo entregado y checksum verificado mediante lectura desde SharePoint.');
+              if (externalDeliveryStatus) externalDeliveryStatus.textContent =
+                'VERIFICADO · ' + String(data?.fileName || 'Paquete C3') + ' · SHA-256 confirmado.';
+              setLoading(btnLoadPrepared, true);
+              send(MESSAGE_TYPES.EXTERNAL_EVENTS, { limit: 25 });
+            } else {
+              err(error?.message || 'No se pudo completar la entrega en SharePoint.');
+              if (externalDeliveryStatus) externalDeliveryStatus.textContent =
+                'ENTREGA NO CONFIRMADA · ' + String(error?.code || 'ERROR');
             }
             break;
         }
