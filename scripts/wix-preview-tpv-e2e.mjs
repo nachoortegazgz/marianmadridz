@@ -147,6 +147,10 @@ async function installResponseCapture(targetFrame) {
         window.addEventListener("message", (event) => {
             if (event.source !== window.parent) return;
             const data = event.data || {};
+            if (data.type === "MM_CONTEXT") {
+                window.__tpvE2eContext = data.payload || {};
+                return;
+            }
             if (typeof data.type !== "string" || !data.type.endsWith("_RES")) return;
             window.__tpvE2eResponses.push({
                 type: data.type,
@@ -318,11 +322,33 @@ async function run() {
     phase = "widget-handshake";
     await page.locator("body").waitFor({ state: "visible", timeout: 30000 });
     frame = await waitForTpvFrame(page);
+    await installResponseCapture(frame);
     await frame.waitForFunction(
         () => /Conectado/.test(document.querySelector("#connLabel")?.textContent || ""),
         null,
         { timeout: 90000 }
     );
+    await frame.waitForFunction(
+        () => window.__tpvE2eContext && typeof window.__tpvE2eContext === "object",
+        null,
+        { timeout: 15000 }
+    );
+    report.runtimeContext = await frame.evaluate(() => {
+        const context = window.__tpvE2eContext || {};
+        const data = context.data || {};
+        return {
+            status: context.status || null,
+            protocolVersion: data.protocolVersion ?? null,
+            currency: data.currency ?? null,
+            timeZone: data.timeZone ?? null,
+            permissionsStatus: data.permissionsStatus ?? null,
+            operationalWritesAvailable: data.operationalWritesAvailable === true,
+            operationalWritesUnavailableReason: data.operationalWritesUnavailableReason || null,
+            capabilities: data.capabilities && typeof data.capabilities === "object"
+                ? data.capabilities
+                : {},
+        };
+    });
     const connectionLabel = (await frame.locator("#connLabel").innerText()).trim();
     report.authenticatedBrowser = true;
     report.operationalWritesAuthorized = connectionLabel.includes("Operaciones autorizadas");
@@ -331,8 +357,6 @@ async function run() {
         assert.ok(report.operationalWritesAuthorized,
             "TPV is not authorized for operational writes: " + connectionLabel);
     }
-
-    await installResponseCapture(frame);
 
     phase = "initial-cash-state";
     let stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
