@@ -8,7 +8,7 @@ const { stdin, stdout } = require("node:process");
 
 const root = process.env.PLAYWRIGHT_MODULE_ROOT;
 if (!root) throw new Error("Set PLAYWRIGHT_MODULE_ROOT to the global npm modules directory.");
-const requireGlobal = createRequire(path.join(root, "playwright", "package.json"));
+const requireGlobal = createRequire(path.join(root, "_global-loader.cjs"));
 const { chromium } = requireGlobal("playwright");
 const DEFAULT_URL = "https://nachoortegazgz-marianmadrid.editor.wix.com/html/editor/web/renderer/external_preview/document/7007f035-995e-442f-8608-6a917b2b7e53?metaSiteId=188bed94-177c-4bc9-a9f0-35080d874f3e&dsOrigin=externalPreview&configName=externalPreview";
 const OUTPUT = path.resolve(".local/wix-preview-storage-state.json");
