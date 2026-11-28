@@ -1,4 +1,4 @@
-## Actualización de implementación TPV — 28-11-2026, 19:xx
+## Actualización de implementación TPV — 28-11-2026, 19:35 Europe/Madrid
 
 **Estado de `main`:** `6f958323d784247f863abdac3a8173f3fed33f75` (sin cambios en esta rama).
 
