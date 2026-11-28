@@ -243,6 +243,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.doesNotMatch(payments, /simularPasarelaPago|simularReembolsoPasarela|simulateGatewayPayment|simulateGatewayRefund/);
     assert.doesNotMatch(payments, /SIMULATED|SANDBOX/);
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
+    assert.match(payments, /paymentVerified: false/);
 
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /procesarDevolucion/);
