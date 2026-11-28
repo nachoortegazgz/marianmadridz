@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvLedgerTypeSupported, closeTpvCajaSessionProjection, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvLedgerTypeSupported, closeTpvCajaSessionProjection, getPendingTpvRefunds, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -320,8 +320,8 @@ export const generarCierreZ = webMethod(
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            const pendingSales = await getPendingTpvSales(session.sessionId);
-            if (pendingSales.length > 0) throw new Error("TPV_PENDING_SALES_PREVENT_CLOSE");
+            // Unpaid commercial intents remain pending and are reported separately in the Z summary.
+            // They do not represent collected money and therefore do not block physical cash-session closure.
             const pendingRefunds = await getPendingTpvRefunds(session.sessionId);
             if (pendingRefunds.length > 0) throw new Error("TPV_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
