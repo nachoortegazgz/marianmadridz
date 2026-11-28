@@ -22,6 +22,7 @@ import {
 import {
     prepareExternalRegistryPackage,
     getExternalIntegrationEvents,
+    deliverExternalRegistryPackage,
 } from "backend/exports/exportService.web.js";
 
 import { makeTraceId, URLS, MESSAGE_TYPES } from "public/mmUtils";
@@ -47,6 +48,7 @@ const ACTIONS = {
 
     EXTERNAL_PREPARE: ({ payload }) => prepareExternalRegistryPackage(payload || {}),
     EXTERNAL_EVENTS: ({ payload }) => getExternalIntegrationEvents({ limit: payload?.limit ?? 25 }),
+    EXTERNAL_DELIVER: ({ payload }) => deliverExternalRegistryPackage({ artifactId: payload?.artifactId }),
 
 };
 
@@ -90,6 +92,7 @@ $w.onReady(async () => {
             "FISCAL_BOOK",
             "EXTERNAL_PREPARE",
             "EXTERNAL_EVENTS",
+            "EXTERNAL_DELIVER",
         ],
         slug: "administracion",
         traceId,
