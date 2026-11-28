@@ -168,7 +168,7 @@ export const obtenerReservasClienteTPV = webMethod(
             const result = await queryExtendedBookingsElevated(
                 {
                     filter: {
-                        "booking.contactDetails.contactId": contactId,
+                        "booking.contactDetails.contactId": customer.contactId,
                         "booking.status": {
                             $in: ["CONFIRMED", "PENDING", "CREATED"],
                         },
@@ -184,10 +184,6 @@ export const obtenerReservasClienteTPV = webMethod(
                 },
                 {
                     withBookingAllowedActions: false,
-                    withBookingAttendanceInfo: false,
-                    withBookingConferencingDetails: false,
-                    withBookingPolicySettings: false,
-                    withBookingFeeDetails: false,
                 }
             );
 
