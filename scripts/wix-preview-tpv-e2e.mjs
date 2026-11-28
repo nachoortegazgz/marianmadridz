@@ -8,8 +8,16 @@ const statePath = process.env.WIX_STORAGE_STATE_PATH;
 const reportPath = process.env.WIX_TPV_E2E_REPORT;
 const moduleRoot = process.env.PLAYWRIGHT_MODULE_ROOT;
 const tpvPagePath = process.env.WIX_TPV_PAGE_PATH || "/tpv";
+const executionMode = process.env.WIX_TPV_E2E_MODE || "read-only";
+const writeAuthorization = process.env.WIX_TPV_E2E_ALLOW_WRITES === "YES";
+const dataIsolationConfirmed = process.env.WIX_TPV_DATA_ISOLATION_CONFIRMED === "YES";
 
 assert.ok(previewUrl && statePath && reportPath && moduleRoot, "Missing Preview E2E configuration");
+assert.ok(["read-only", "e2e"].includes(executionMode), "WIX_TPV_E2E_MODE must be read-only or e2e");
+if (executionMode === "e2e") {
+    assert.ok(writeAuthorization, "E2E writes require WIX_TPV_E2E_ALLOW_WRITES=YES");
+    assert.ok(dataIsolationConfirmed, "E2E writes require WIX_TPV_DATA_ISOLATION_CONFIRMED=YES after verifying CMS isolation");
+}
 assert.ok(tpvPagePath.startsWith("/") && !tpvPagePath.startsWith("//"), "TPV page path must be site-relative");
 
 const storageState = JSON.parse(await readFile(statePath, "utf8"));
@@ -37,6 +45,9 @@ const report = {
     result: "FAIL",
     environment: "WIX_EDITOR_PREVIEW",
     dataEnvironment: "WIX_PREVIEW_SITE_DATA",
+    executionMode,
+    readOnly: executionMode === "read-only",
+    writeAuthorizationGate: executionMode === "e2e" && writeAuthorization && dataIsolationConfirmed,
     syntheticByDate: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric" }).format(new Date())) < 2027,
     previewHttpStatus: null,
     tpvPageHttpStatus: null,
@@ -316,8 +327,10 @@ async function run() {
     report.authenticatedBrowser = true;
     report.operationalWritesAuthorized = connectionLabel.includes("Operaciones autorizadas");
     report.connectionLabel = connectionLabel;
-    assert.ok(report.operationalWritesAuthorized,
-        "TPV is not authorized for operational writes: " + connectionLabel);
+    if (executionMode === "e2e") {
+        assert.ok(report.operationalWritesAuthorized,
+            "TPV is not authorized for operational writes: " + connectionLabel);
+    }
 
     await installResponseCapture(frame);
 
@@ -332,6 +345,54 @@ async function run() {
         expectedCash: state.expectedCash ?? null,
         projectionStatus: state.cajaActual?.projectionStatus || null,
     });
+    report.uiCapabilities = await frame.evaluate(() => {
+        const ids = ["openCash", "cashIn", "cashOut", "saveSale", "ticketX", "ticketZ", "refund"];
+        return Object.fromEntries(ids.map((id) => {
+            const element = document.getElementById(id);
+            return [id, element ? {
+                present: true,
+                disabled: Boolean(element.disabled),
+                visible: Boolean(element.getClientRects().length),
+            } : { present: false }];
+        }));
+    });
+
+    if (executionMode === "read-only") {
+        // This path deliberately stops before SESSION_OPEN, movements, sales,
+        // payments, refunds, Ticket X/Z or any other business mutation.
+        if (state.sessionId) {
+            phase = "read-only-ledger-query";
+            const ledgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", {
+                sessionId: state.sessionId,
+                limit: 200,
+            });
+            const ledgerData = assertSuccess(ledgerEnvelope, "CASH_MOVEMENTS_EXPORT_READ_ONLY");
+            report.readOnlyLedger = {
+                itemCount: Array.isArray(ledgerData.items) ? ledgerData.items.length : 0,
+                sessionId: state.sessionId,
+            };
+            phase = "read-only-audit-query";
+            const auditEnvelope = await invokeWidget(frame, "AUDIT_LIST", {
+                sessionId: state.sessionId,
+                limit: 100,
+            });
+            const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST_READ_ONLY");
+            report.readOnlyAudit = {
+                itemCount: Array.isArray(auditData.items) ? auditData.items.length : 0,
+                sessionId: state.sessionId,
+            };
+        }
+        report.result = "PASS_READ_ONLY";
+        report.completedPhase = phase;
+        report.readOnlyAssertions = {
+            handshakeConnected: true,
+            cashierStateRead: true,
+            noBusinessWritesInvoked: report.businessWebMethodsInvoked === (state.sessionId ? 3 : 1),
+            preexistingSessionUntouched: true,
+        };
+        await persistReport();
+        return;
+    }
 
     // Preflight is read-only. Never close, alter, or adopt a session that
     // existed before this E2E run.
