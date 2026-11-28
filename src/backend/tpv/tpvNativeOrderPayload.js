@@ -142,7 +142,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}, externalOrderId
             price: price(fromMinorUnits(unitPriceMinor), "ORDER_UNIT_PRICE"),
             totalPriceBeforeTax: price(fromMinorUnits(lineSubtotalMinor), "ORDER_LINE_SUBTOTAL"),
             totalPriceAfterTax: price(fromMinorUnits(lineTotalMinor), "ORDER_LINE_TOTAL"),
-            ...(line.tipoLinea === "SERVICIO" ? { paymentOption: "FULL_PAYMENT_OFFLINE" } : {}),
+            paymentOption: "FULL_PAYMENT_OFFLINE",
             taxInfo: {
                 taxableAmount: price(fromMinorUnits(lineSubtotalMinor), "ORDER_TAXABLE_AMOUNT"),
                 taxAmount: price(fromMinorUnits(lineTaxMinor), "ORDER_TAX_AMOUNT"),
@@ -194,6 +194,10 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}, externalOrderId
         options: Object.freeze({
             settings: Object.freeze({
                 orderApprovalStrategy: "DEFAULT",
+                notifications: Object.freeze({
+                    sendNotificationToBuyer: false,
+                    sendNotificationsToBusiness: false,
+                }),
             }),
         }),
     });
