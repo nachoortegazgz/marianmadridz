@@ -51,6 +51,19 @@ test("BOOK-MEMBER-04 frontend opens native Wix Members login before booking and 
   assert.match(pageSource, /resultError\("AUTH_REQUIRED"\)/);
 });
 
+test("BOOK-MEMBER-06 cancelling native login releases the local message lock for a safe retry", () => {
+  const authGate = pageSource.indexOf("if (!memberSessionReady)");
+  const releaseLock = pageSource.indexOf('activeBookingMessageId = "";', authGate);
+  const authError = pageSource.indexOf('resultError("AUTH_REQUIRED")', authGate);
+  const authReturn = pageSource.indexOf("return;", authError);
+  const backendCall = pageSource.indexOf("processDualBooking(requestPayload)", authGate);
+  assert.ok(authGate >= 0);
+  assert.ok(releaseLock > authGate && releaseLock < authError);
+  assert.ok(authReturn > authError);
+  assert.ok(backendCall < 0 || backendCall > authReturn,
+    "a cancelled login must exit before the backend booking request");
+});
+
 test("BOOK-MEMBER-05 booking creation accepts channelType only", () => {
   const start = backendSource.indexOf("function _validateProcessBookingPayload(");
   const end = backendSource.indexOf("\n}\n", start);
