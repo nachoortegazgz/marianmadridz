@@ -1708,6 +1708,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
 
             if (originalMovement) {
                 let rectificationPayload = null;
+                let amountOriginal = null;
                 try {
                     const emisor = await _getEmisorFiscal();
                     const rawOriginalAmount = originalMovement.totalAmount ?? originalMovement.accountingAmount;
@@ -1719,7 +1720,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                     if (!Number.isFinite(amountOriginalValue) || amountOriginalValue <= 0) {
                         throw new Error("FISCAL_ORIGINAL_AMOUNT_INVALID");
                     }
-                    const amountOriginal = Math.abs(amountOriginalValue);
+                    amountOriginal = Math.abs(amountOriginalValue);
                     const rawOriginalTaxRate = readMovementField(originalMovement, "tipoImpositivo");
                     const validOriginalTaxRateType = typeof rawOriginalTaxRate === "number" ||
                         (typeof rawOriginalTaxRate === "string" && rawOriginalTaxRate.trim() !== "");
