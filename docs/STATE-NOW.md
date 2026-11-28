@@ -124,3 +124,14 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - CI de PR #681: 91 suites / 816 tests PASS; quality gates run `46085729210`, secret scan `46085729219`. Es evidencia del HEAD de esa PR, no del runtime instalado.
 - Sigue pendiente resolver la configuración real `CONFIG_SISTEMA_FISCAL` y secretos del emisor con datos verificados. Es un requisito de validez/configuración, no una prohibición legal a escribir.
 - Detalle: [corrección SSOT fiscal append-only](qa/2026-11-28-fiscal-writer-append-only-ssot.md).
+
+
+## VERI*FACTU y QR tributario — dossier añadido (28-11-2026)
+
+- Nuevo dossier: [VERI*FACTU y QR tributario — implementación](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md).
+- Enlazado desde [Dossier Capa 3](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md), [INDEX](INDEX.md) y [AI-INDEX](AI-INDEX.md).
+- Revisión normativa: RD 1007/2023, RD 1619/2012, Orden HAC/1177/2024, RD 238/2026, Orden HAC/1028/2026 y RDL 43/2026.
+- El RDL 43/2026, vigente desde 26-11-2026, modifica el plazo RRSIF. Cómputo general resultante para obligados del artículo 3.1: 06-10-2028 (24 meses desde entrada en vigor de Orden HAC/1028/2026 el 06-10-2026), sujeto a ámbito/exclusiones y revisión profesional.
+- El dossier diferencia factura simplificada/ticket-factura de justificante de pago, proforma y recibo no-factura; incorpora formato oficial QR, URL, requisitos físicos, remisión AEAT, incidencias, idempotencia, arquitectura Wix/Velo y plan de pruebas.
+- **Estado: DOCUMENTADO; implementación no acreditada.** No hay evidencia de SIF/modalidad elegidos, declaración responsable, registro AEAT, QR fiscal, impresión Epson conforme ni remisión real.
+- No se ejecutaron pruebas: el cambio es exclusivamente documental. No se realizaron llamadas de escritura a AEAT ni mutaciones Wix.
