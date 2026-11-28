@@ -16,6 +16,7 @@ const getCatalogVersionElevated = auth.elevate(
     catalogVersioning.getCatalogVersion
 );
 const queryServicesElevated = auth.elevate(services.queryServices);
+const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const queryProductsElevated = auth.elevate(productsV3.queryProducts);
 const getProductElevated = auth.elevate(productsV3.getProduct);
 
@@ -157,11 +158,69 @@ export const obtenerReservasClienteTPV = webMethod(
                 };
             }
 
+            const limit = Number(input.limit ?? 50);
+            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+                throw new Error("TPV_INVALID_BOOKINGS_PAGING");
+            }
+            const cursor = String(input.cursor || "").trim();
+            if (cursor.length > 16000) throw new Error("TPV_INVALID_BOOKINGS_CURSOR");
+
+            const result = await queryExtendedBookingsElevated(
+                {
+                    filter: {
+                        "booking.contactDetails.contactId": contactId,
+                        "booking.status": {
+                            $in: ["CONFIRMED", "PENDING", "CREATED"],
+                        },
+                    },
+                    sort: [{
+                        fieldName: "booking.startDate",
+                        order: "DESC",
+                    }],
+                    cursorPaging: {
+                        limit,
+                        ...(cursor ? { cursor } : {}),
+                    },
+                },
+                {
+                    withBookingAllowedActions: false,
+                    withBookingAttendanceInfo: false,
+                    withBookingConferencingDetails: false,
+                    withBookingPolicySettings: false,
+                    withBookingFeeDetails: false,
+                }
+            );
+
+            const items = (result?.extendedBookings || []).map((entry) => {
+                const booking = entry?.booking || {};
+                const bookedEntity = booking.bookedEntity || {};
+                const slot = bookedEntity.slot || bookedEntity.schedule || {};
+                const resource = slot.resource || {};
+                const location = slot.location || {};
+                return {
+                    bookingId: booking._id || booking.id || null,
+                    serviceId: slot.serviceId || null,
+                    scheduleId: slot.scheduleId || null,
+                    serviceName: bookedEntity.title || null,
+                    startDate: booking.startDate || slot.startDate || null,
+                    endDate: booking.endDate || slot.endDate || null,
+                    status: booking.status || "UNKNOWN",
+                    paymentStatus: booking.paymentStatus || "UNKNOWN",
+                    selectedPaymentOption: booking.selectedPaymentOption || null,
+                    totalParticipants: Number(booking.totalParticipants || 1),
+                    staffName: resource.name || null,
+                    locationName: location.name || location.formattedAddress || null,
+                    revision: booking.revision || null,
+                    doubleBooked: booking.doubleBooked === true,
+                    allowedActions: entry.allowedActions || null,
+                };
+            });
+
             return {
                 status: "SUCCESS",
                 data: {
-                    items: [],
-                    pagingMetadata: null,
+                    items,
+                    pagingMetadata: result?.pagingMetadata || null,
                 },
                 error: null,
                 traceId,
