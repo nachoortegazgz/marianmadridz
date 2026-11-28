@@ -65,8 +65,8 @@ test("DATA-QUERY-06 sort builders emit the official Wix order property", async (
 
 test("DATA-QUERY-07 rejects invalid sort entries instead of silently defaulting to ASC", async () => {
     const invalidSorts = [
-        { sort: "createdAt UP", code: "QUERY_SORT_ORDER_INVALID" },
-        { sort: "createdAt DESC extra", code: "QUERY_SORT_INVALID" },
+        { sort: ["createdAt UP"], code: "QUERY_SORT_ORDER_INVALID" },
+        { sort: ["createdAt DESC extra"], code: "QUERY_SORT_INVALID" },
         { sort: [{ fieldName: "createdAt", order: "UP" }], code: "QUERY_SORT_ORDER_INVALID" },
         { sort: [{ fieldName: "createdAt", direction: "DESC" }], code: "QUERY_SORT_DIRECTION_UNSUPPORTED" },
         { sort: [{ fieldName: "", order: "ASC" }], code: "QUERY_SORT_FIELD_INVALID" },
