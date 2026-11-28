@@ -835,18 +835,23 @@ test("Capa 3 export rejects incomplete fiscal source rows", () => {
     }), /C3_EXPORT_ISSUE_DATE_INVALID/);
 });
 
-test("Capa 3 export WebMethod is admin-only and has no delivery or write side effects", async () => {
+test("Capa 3 export is manager-authorized, appends an outbox event and does not claim delivery", async () => {
     const service = await source("exports/exportService.web.js");
+    const outbox = await source("exports/integrationOutbox.js");
     const aggregator = await source("fiscalAggregator.web.js");
     assert.doesNotMatch(aggregator, /requireRealRecords|recordNature !== "REAL"/);
     assert.match(aggregator, /tipoFactura: "BORRADOR_INTERNO"/);
     assert.doesNotMatch(aggregator, /isRefund \? "R1"/);
-    assert.match(service, /webMethod\(\s*Permissions\.Admin/);
-    assert.match(service, /await requireAdmin\(traceId\)/);
+    assert.match(service, /webMethod\(\s*Permissions\.SiteMember/);
+    assert.match(service, /await requireMarianManager\(traceId\)/);
     assert.match(service, /getQuarterlyTaxSummaryInternal/);
     assert.match(service, /getLibroRegistroFacturasExpedidasInternal/);
     assert.match(service, /buildQuarterlyRegistryPackage/);
-    assert.doesNotMatch(service, /insertItem|updateItem|removeItem|fetch\(|sendEmail|SharePoint|Graph|requireRealRecords/);
+    assert.match(service, /appendC3PreparedEvent/);
+    assert.match(service, /PENDING_CONFIGURATION/);
+    assert.match(outbox, /insertItem\(COLLECTION, item\)/);
+    assert.match(outbox, /getItem\(COLLECTION, item\._id, CONSISTENCY\.STRONG\)/);
+    assert.doesNotMatch(service + outbox, /fetch\(|sendEmail|Sites\.ReadWrite\.All/);
 });
 
 
