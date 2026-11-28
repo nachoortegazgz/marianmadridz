@@ -130,7 +130,7 @@ export const previewManagerPackage = webMethod(
       await _rateLimitManagerPackageRead("fiscal.previewManagerPackage", traceId);
       const year = Number(period.year);
       const quarter = Number(period.quarter);
-      if (!year || !quarter || quarter < 1 || quarter > 4) {
+      if (!Number.isInteger(year) || year < 1 || !Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
         return {
           status: "ERROR",
           data: null,
