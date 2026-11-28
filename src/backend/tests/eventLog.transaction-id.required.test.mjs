@@ -19,6 +19,24 @@ test("fiscal event writer rejects missing transactionId before any ledger access
   assert.equal((wixDataMock._store.get("MapaStaff") || []).length, 0);
 });
 
+test("fiscal event writer rejects missing fiscal amounts and VAT rate before master-data writes", async () => {
+  wixDataMock._reset();
+
+  const result = await registrarEventoEconomico({
+    eventType: "VENTA",
+    movementType: "VENTA",
+    paymentMethod: "EFECTIVO",
+    channelType: "PRESENCIAL",
+    transactionId: "fiscal-numeric-fields-required-001",
+  });
+
+  assert.equal(result.status, "ERROR");
+  assert.equal(result.error.code, "FISCAL_NUMERIC_FIELD_INVALID");
+  assert.equal(result.error.field, "amount");
+  assert.equal((wixDataMock._store.get("MovimientosCaja") || []).length, 0);
+  assert.equal((wixDataMock._store.get("MapaStaff") || []).length, 0);
+});
+
 test("fiscal event writer rejects transactionId longer than the canonical limit", async () => {
   wixDataMock._reset();
 
