@@ -98,9 +98,8 @@ export async function uploadAndVerifySharePointPackage(artifact) {
     );
     if (site.body?.id !== driveId) throw fail("C3_GRAPH_DRIVE_SITE_MISMATCH");
 
-    const period = artifact.manifest.period;
     const fileName = artifact.manifest.exportId + "-" + artifact.manifest.artifactId.slice(0, 12) + ".json";
-    const relativePath = [normalizedFolderPath, String(period.year), "Q" + String(period.quarter), fileName].join("/");
+    const relativePath = [normalizedFolderPath, fileName].join("/");
     const encodedPath = encodePath(relativePath);
     const itemUrl = GRAPH_ROOT + "/drives/" + encodeURIComponent(driveId) + "/root:/" + encodedPath;
     const uploadUrl = itemUrl + ":/content?%40microsoft.graph.conflictBehavior=fail";
