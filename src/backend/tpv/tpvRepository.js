@@ -28,6 +28,7 @@ import {
     makeTpvRefundLockId,
     makeTpvSessionLockId,
     makeTpvTransactionId,
+    toMinorUnits,
 } from "backend/tpv/tpvUtils";
 import {
     acquireFiscalLedgerLock,
@@ -1350,7 +1351,12 @@ function normalizeCommercialSale(item) {
         saleId: item._id,
         totalMinor: item.totalVentaMinor,
         amountMinor: item.totalVentaMinor,
-        taxMinor: item.impuestosTotalMinor,
+        taxMinor: Number.isSafeInteger(Number(item.impuestosTotalMinor))
+            ? Number(item.impuestosTotalMinor)
+            : (Array.isArray(item.lineas) ? item.lineas.reduce(
+                (sum, line) => sum + toMinorUnits(line.impuestosImporte || 0, "SALE_TAX"),
+                0
+            ) : 0),
         discountMinor: 0,
         paymentMethod: item.medioPago || null,
         cmsMovementType: "TPV_SALE",
