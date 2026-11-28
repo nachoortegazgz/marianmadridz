@@ -370,7 +370,7 @@ body {
         </div>
 
         <button id="saveSale" class="btn primary" style="width:100%;margin-top:14px;min-height:52px;font-size:16px;">
-          Registrar venta pendiente
+          Registrar pedido pendiente
         </button>
       </section>
 
@@ -1255,6 +1255,18 @@ body {
         refreshSaleQuote();
       };
     });
+    const saleButton = $("saveSale");
+    if (saleButton) {
+      const cashConfirmed = state.payments.some((payment) =>
+        payment.method === "EFECTIVO" && payment.amountMinor - payment.changeMinor > 0
+      );
+      saleButton.textContent = cashConfirmed
+        ? "Confirmar cobro y registrar venta"
+        : "Registrar pedido pendiente";
+      saleButton.title = cashConfirmed
+        ? "Al continuar confirmas que has recibido físicamente el efectivo."
+        : "El pedido se registrará en Wix sin marcarlo como cobrado.";
+    }
   }
 
   $("paymentMethods").querySelectorAll("button[data-method]").forEach((btn) => {
@@ -1326,7 +1338,7 @@ body {
     if (changeMinor > 0) toast("Importe añadido. Cambio calculado: " + money(changeMinor / 100));
   };
 
-  /* ---------- Registrar venta; el pago permanece pendiente hasta su confirmación ---------- */
+  /* ---------- Registrar pedido y, si se ha confirmado efectivo, registrar el cobro nativo ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
     if (!state.items.length) {
       toast("El ticket está vacío.");
