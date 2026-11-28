@@ -828,6 +828,8 @@ test("Capa 3 export WebMethod is admin-only and has no delivery or write side ef
     const service = await source("exports/exportService.web.js");
     const aggregator = await source("fiscalAggregator.web.js");
     assert.doesNotMatch(aggregator, /requireRealRecords|recordNature !== "REAL"/);
+    assert.match(aggregator, /tipoFactura: "BORRADOR_INTERNO"/);
+    assert.doesNotMatch(aggregator, /isRefund \? "R1"/);
     assert.match(service, /webMethod\(\s*Permissions\.Admin/);
     assert.match(service, /await requireAdmin\(traceId\)/);
     assert.match(service, /getQuarterlyTaxSummaryInternal/);
