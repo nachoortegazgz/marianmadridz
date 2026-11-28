@@ -14,6 +14,7 @@ import { normalizeTpvError } from "backend/tpv/tpvError";
 
 const TPV_LEDGER_DISPLAY_TYPES = Object.freeze({
     TPV_SALE: "VENTA",
+    TPV_PAYMENT: "COBRO",
     TPV_CASH_MOVEMENT: null,
     TPV_REFUND: "DEVOLUCION",
     TPV_TICKET_X: "CONTROL_X",
