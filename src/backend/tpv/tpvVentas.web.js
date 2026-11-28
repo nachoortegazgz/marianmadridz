@@ -645,15 +645,14 @@ export const registrarVenta = webMethod(
                     });
                 }
 
-                const buyer = customerContactId
-                    ? await resolveTpvContact(customerContactId)
-                    : {};
-                if (customerContactId && buyer.contactId !== customerContactId) {
-                    throw new Error("TPV_CUSTOMER_CONTACT_MISMATCH");
-                }
-
                 let orderErrorCode = null;
                 try {
+                    const buyer = customerContactId
+                        ? await resolveTpvContact(customerContactId)
+                        : {};
+                    if (customerContactId && buyer.contactId !== customerContactId) {
+                        throw new Error("TPV_CUSTOMER_CONTACT_MISMATCH");
+                    }
                     const nativeOrder = await createTpvNativeOrder(
                         prepared,
                         buyer,
