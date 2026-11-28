@@ -121,6 +121,7 @@ $w.onReady(async () => {
 
         onWidgetMessage: async (message, reply) => {
             const type = String(message?.type || "").trim().toUpperCase();
+            if (type === MESSAGE_TYPES.READY || type === MESSAGE_TYPES.CONTEXT) return;
             const payload = message?.payload || {};
             const handler = ACTIONS[type];
 
