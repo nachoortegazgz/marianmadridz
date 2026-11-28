@@ -29,7 +29,6 @@ import {
     MOVEMENT_TYPE,
     PAYMENT_METHOD,
     CHANNEL_TYPE,
-    IVA_RATES,
     CASH_REGISTER_STATUS,
     TIPO_FACTURA,
     FISCAL_ROLE,
@@ -182,13 +181,13 @@ function readHistoricalPaymentMethod(movement) {
     return value;
 }
 
-function _readRequiredLedgerAmount(movement, field, raw = movement?.[field]) {
+function _readRequiredLedgerAmount(movement, field, raw = movement?.[field], errorCode = "Z_LEDGER_NUMERIC_FIELD_INVALID") {
     const validType = typeof raw === "number" ||
         (typeof raw === "string" && raw.trim() !== "");
     const amount = validType ? Number(raw) : Number.NaN;
     if (!Number.isFinite(amount)) {
-        const error = new Error(`Z_LEDGER_NUMERIC_FIELD_INVALID:${field}`);
-        error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+        const error = new Error(`${errorCode}:${field}`);
+        error.code = errorCode;
         error.meta = { field, movementId: movement?._id || null };
         throw error;
     }
@@ -277,6 +276,9 @@ async function _queueCompensation(params) {
             : [];
     const bookingIds = [...new Set(rawBookingIds.map((id) => _safeTrim(id)).filter(Boolean))].sort();
     const hasStableEntity = Boolean(p.transactionId || p.orderId || p.refundId || bookingIds.length > 0);
+    const totalAmount = p.totalAmount === undefined || p.totalAmount === null
+        ? null
+        : _readRequiredLedgerAmount(p, "totalAmount", p.totalAmount, "COMPENSATION_AMOUNT_INVALID");
     const identity = {
         kind,
         transactionId: p.transactionId || null,
@@ -285,7 +287,7 @@ async function _queueCompensation(params) {
         bookingIds,
         phase,
         origin,
-        totalAmount: Number(p.totalAmount) || 0,
+        totalAmount,
         paymentMethod: p.paymentMethod || null,
         movementType: p.movementType || null,
         recoveryProcessor: p.recoveryProcessor || null,
@@ -301,7 +303,7 @@ async function _queueCompensation(params) {
         transactionId: p.transactionId || null,
         orderId: p.orderId || null,
         refundId: p.refundId || null,
-        totalAmount: Number(p.totalAmount) || 0,
+        totalAmount,
         operationDescription: p.operationDescription || null,
         status: "PENDING_RECOVERY",
         attempts: Number(p.attempts) || 0,
@@ -415,6 +417,15 @@ async function _matchesManualTransactionReplay(existingMovement, transactionId, 
 }
 
 function validateFiscalMovementContract(movement) {
+    const numericFields = ["amount", "totalAmount", "accountingAmount", "taxBase", "taxAmount", "tipoImpositivo"];
+    for (const field of numericFields) {
+        if (typeof movement?.[field] !== "number" || !Number.isFinite(movement[field])) {
+            return { ok: false, code: "FISCAL_MOVEMENT_NUMERIC_FIELD_INVALID", field };
+        }
+    }
+    if (movement.tipoImpositivo < 0 || movement.tipoImpositivo > 1) {
+        return { ok: false, code: "FISCAL_MOVEMENT_TAX_RATE_INVALID", field: "tipoImpositivo" };
+    }
     const required = [
         "transactionId", "hash", "previousRecordHash", "sequenceNumber",
         "tipoFactura", "fiscalPeriod", "staffResourceId",
@@ -438,9 +449,9 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
         ["NumSerieFactura", movement.numSerieFactura || ""],
         ["FechaExpedicionFactura", _formatAEATDate(movement.fechaExpedicionFactura)],
         ["TipoFactura", movement.tipoFactura || TIPO_FACTURA.F1],
-        ["BaseImponibleOImporteNoSujeto", String(Number(movement.taxBase || 0).toFixed(2))],
-        ["CuotaRepercutida", String(Number(movement.taxAmount || 0).toFixed(2))],
-        ["ImporteTotal", String(Number(movement.totalAmount || 0).toFixed(2))],
+        ["BaseImponibleOImporteNoSujeto", String(_readRequiredLedgerAmount(movement, "taxBase", movement.taxBase, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
+        ["CuotaRepercutida", String(_readRequiredLedgerAmount(movement, "taxAmount", movement.taxAmount, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
+        ["ImporteTotal", String(_readRequiredLedgerAmount(movement, "totalAmount", movement.totalAmount, "FISCAL_NUMERIC_FIELD_INVALID").toFixed(2))],
         ["Huella", movement.previousRecordHash || ""],
         ["FechaHoraHusoGenRegistro", _formatAEATDateTimeMadrid(generatedAt)],
     ];
@@ -1330,29 +1341,42 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
                 return { status: "SUCCESS", idempotent: true, movementId: movementKey };
             }
 
-            const amount = _roundMoney(Number(movement.accountingAmount) || 0);
+            const amount = _roundMoney(_readRequiredLedgerAmount(
+                movement, "accountingAmount", movement?.accountingAmount, "CAJA_PROJECTION_AMOUNT_INVALID"
+            ));
             const amountField = method === PAYMENT_METHOD.EFECTIVO
                 ? CAJA_KEYS.CASH
                 : method === PAYMENT_METHOD.TARJETA
                     ? CAJA_KEYS.CARD
                     : CAJA_KEYS.OTHER;
 
-            cashRegister[amountField] = _roundMoney((Number(cashRegister[amountField]) || 0) + amount);
+            const currentBalance = _readRequiredLedgerAmount(
+                cashRegister, amountField, cashRegister?.[amountField], "CAJA_PROJECTION_BALANCE_INVALID"
+            );
+            cashRegister[amountField] = _roundMoney(currentBalance + amount);
             // Only cash changes the expected physical drawer balance. Card
             // and Bizum never change physical cash. This cashier projection
             // deliberately aggregates Bizum into otherAmount; the physical CMS
             // schema also declares bizumAmount, but this writer does not use it.
             // Method detail remains in MovimientosCaja.
             if (method === PAYMENT_METHOD.EFECTIVO) {
-                cashRegister.expectedCash = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+                cashRegister.expectedCash = _roundMoney(_readRequiredLedgerAmount(
+                    cashRegister, CAJA_KEYS.CASH, cashRegister?.[CAJA_KEYS.CASH], "CAJA_PROJECTION_BALANCE_INVALID"
+                ));
             }
             // netAmount is the physical cash balance, never the sum of all
             // payment methods.
-            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(Number(cashRegister[CAJA_KEYS.CASH]) || 0);
+            cashRegister[CAJA_KEYS.TOTAL] = _roundMoney(_readRequiredLedgerAmount(
+                cashRegister, CAJA_KEYS.CASH, cashRegister?.[CAJA_KEYS.CASH], "CAJA_PROJECTION_BALANCE_INVALID"
+            ));
             sequenceCounters.appliedMovementIds = [...appliedMovementIds, movementKey];
             cashRegister.sequenceCounters = sequenceCounters;
             if (_safeTrim(movement.movementType).toUpperCase() === MOVEMENT_TYPE.VENTA) {
-                cashRegister[CAJA_KEYS.OPERATIONS] = Number(cashRegister[CAJA_KEYS.OPERATIONS] || 0) + 1;
+                const operations = Number(cashRegister[CAJA_KEYS.OPERATIONS]);
+                if (!Number.isSafeInteger(operations) || operations < 0) {
+                    throw new Error("CAJA_PROJECTION_OPERATIONS_INVALID");
+                }
+                cashRegister[CAJA_KEYS.OPERATIONS] = operations + 1;
             }
             cashRegister[CAJA_KEYS.LAST_MOVEMENT_AT] = sourceTimestamp;
             cashRegister.traceId = _safeTrim(movement.traceId) || traceId;
@@ -1375,7 +1399,7 @@ async function _updateCajaActual(movement, traceId, sharedLock = null) {
             await _queueCompensation({
                 kind: "RESYNC_CAJA_BALANCE",
                 transactionId: movement?.transactionId || null,
-                totalAmount: Number(movement?.accountingAmount) || 0,
+                totalAmount: movement?.accountingAmount ?? null,
                 paymentMethod: movement?.paymentMethod || null,
                 operationDescription: "Sincronizacion de sesion tras fallo en proyeccion CajaActual",
                 phase: "WAIT_FOR_CAJA_RESYNC",
@@ -1479,7 +1503,9 @@ export async function queueFiscalRecovery(recoveryData = {}) {
             bookingIds: recoveryData.bookingIds,
             orderId: recoveryData.orderId,
             refundId: recoveryData.refundId,
-            totalAmount: Number(recoveryData.totalAmount) || 0,
+            totalAmount: recoveryData.totalAmount === undefined || recoveryData.totalAmount === null
+                ? null
+                : _readRequiredLedgerAmount(recoveryData, "totalAmount", recoveryData.totalAmount, "FISCAL_RECOVERY_AMOUNT_INVALID"),
             paymentMethod: recoveryData.paymentMethod,
             operationDescription: recoveryData.operationDescription || "Fiscal recovery",
             movementType: recoveryData.movementType || recoveryData.tipoMovimiento,
