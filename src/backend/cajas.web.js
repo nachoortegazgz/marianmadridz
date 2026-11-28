@@ -196,7 +196,19 @@ function _readRequiredLedgerAmount(movement, field, raw = movement?.[field], err
 
 function _signedFiscalValue(movement, reader, field) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
-    const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
+    const rawSign = movement?.accountingSign;
+    let sign = accountingAmount < 0 ? -1 : 1;
+    if (rawSign !== undefined && rawSign !== null && rawSign !== "") {
+        const explicitSign = Number(rawSign);
+        if (!Number.isFinite(explicitSign) || ![-1, 1].includes(explicitSign) ||
+            (accountingAmount !== 0 && explicitSign !== sign)) {
+            const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:accountingSign");
+            error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+            error.meta = { field: "accountingSign", movementId: movement?._id || null };
+            throw error;
+        }
+        sign = explicitSign;
+    }
     return Math.abs(_readRequiredLedgerAmount(movement, field, reader(movement))) * sign;
 }
 
@@ -1842,6 +1854,12 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         for (const m of fiscalMovements) {
             const rawRate = readMovementField(m, "tipoImpositivo");
             const rateValue = _readRequiredLedgerAmount(m, "tipoImpositivo", rawRate);
+            if (rateValue < 0 || rateValue > 1) {
+                const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:tipoImpositivo");
+                error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+                error.meta = { field: "tipoImpositivo", movementId: m?._id || null };
+                throw error;
+            }
             const rate = String(rateValue);
             if (!taxTypeBreakdown[rate]) {
                 taxTypeBreakdown[rate] = { taxableBaseOrNonSubjectAmount: 0, taxAmount: 0, total: 0, operations: 0 };
