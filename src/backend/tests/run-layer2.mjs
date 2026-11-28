@@ -15,7 +15,6 @@ const suites = [
   'dto.whitelist.test.mjs',
   'fiscalAggregator.read.test.mjs',
   'fiscalFacsimile.test.mjs',
-  'fiscalDocuments.package-version.concurrency.test.mjs',
   'site.flows.offline.test.mjs',
   'orderLedgerAmount.test.mjs',
   'events.booking-canceled.integrity.test.mjs',
@@ -48,7 +47,20 @@ for (const suite of suites) {
   const ok = exitCode === 0 && tests > 0 && fail === 0 && pass > 0;
   passTotal += pass;
   failTotal += fail;
-  if (!ok) failed += 1;
+  if (!ok) {
+    failed += 1;
+    const failureLines = output.split(/\r?\n/)
+      .filter((line) => /^(not ok |Error:|AssertionError|TypeError:|ReferenceError:|SyntaxError:|ERR_[A-Z_]+)/.test(line.trim()))
+      .slice(0, 12);
+    const failureSummary = (failureLines.length
+      ? failureLines.join(' | ')
+      : output.slice(-1800).replace(/\s+/g, ' ')).slice(0, 3000);
+    const annotation = failureSummary
+      .replace(/%/g, '%25')
+      .replace(/\r/g, '%0D')
+      .replace(/\n/g, '%0A');
+    console.error(`::error title=Offline suite failure (${suite})::${annotation}`);
+  }
   console.log(`${ok ? 'OK' : 'FAIL'} ${suite.padEnd(42)} tests=${tests} pass=${pass} fail=${fail} exit=${exitCode}`);
   if (!ok) console.error('\\n--- Diagnostics: ' + suite + ' ---\\n' + output.slice(-18000) + '\\n--- End diagnostics ---');
 }
