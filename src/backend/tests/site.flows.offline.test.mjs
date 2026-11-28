@@ -466,6 +466,7 @@ test('FLOW-CAJA-01 flujo continuo: venta EFECTIVO -> caja incrementada -> cierre
   const txAfterZ = await cajas.registerManualTransaction({
     totalAmount: 10, tipoFactura: 'F2', operationDescription: 'Venta posterior a cierre (SIMULACION PREVIA A DESPLIEGUE REAL)', paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
+    tipoImpositivo: 0.21,
     transactionId: 'offline-tx-postz-' + Date.now(),
   });
   assert.strictEqual(txAfterZ.status, 'ERROR', 'periodo cerrado debe bloquear: ' + JSON.stringify(txAfterZ));
@@ -986,6 +987,7 @@ test('FLOW-CAJA-04 transactionId concurrente no crea movimientos duplicados', as
     operationDescription: 'Prueba idempotencia concurrente',
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
+    tipoImpositivo: 0.21,
     transactionId,
   };
 
@@ -1106,7 +1108,8 @@ test('FLOW-CAJA-10B manual presencial writer requires an explicitly open session
       totalAmount: 20,
       paymentMethod: 'EFECTIVO',
       channelType: 'PRESENCIAL',
-      transactionId: 'cash-no-session-001',
+      tipoImpositivo: 0.21,
+       transactionId: 'cash-no-session-001',
     });
     assert.equal(noSession.status, 'ERROR');
     assert.equal(noSession.error.code, 'CAJA_SESSION_NOT_OPEN');
@@ -1194,7 +1197,8 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
-    transactionId: 'blocked-simulation-cash-001',
+    tipoImpositivo: 0.21,
+     transactionId: 'blocked-simulation-cash-001',
   });
   assert.equal(tx.status, 'ERROR');
   assert.equal(tx.error.code, 'CAJA_SESSION_NOT_OPEN');
@@ -1549,7 +1553,7 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
 
 test('FLOW-CAJA-15 Z closing rejects a missing movement sequence', async () => {
   wixDataMock._reset();
-  seedCajaPrincipal();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
   setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
   const { cajas } = await freshImports();
