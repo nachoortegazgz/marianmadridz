@@ -1710,9 +1710,25 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                 let rectificationPayload = null;
                 try {
                     const emisor = await _getEmisorFiscal();
-                    const amountOriginal = Math.abs(
-                        Number(originalMovement.totalAmount ?? 0)
-                    );
+                    const rawOriginalAmount = originalMovement.totalAmount ?? originalMovement.accountingAmount;
+                    const validOriginalAmountType = typeof rawOriginalAmount === "number" ||
+                        (typeof rawOriginalAmount === "string" && rawOriginalAmount.trim() !== "");
+                    const amountOriginalValue = validOriginalAmountType
+                        ? Number(rawOriginalAmount)
+                        : Number.NaN;
+                    if (!Number.isFinite(amountOriginalValue) || amountOriginalValue <= 0) {
+                        throw new Error("FISCAL_ORIGINAL_AMOUNT_INVALID");
+                    }
+                    const amountOriginal = Math.abs(amountOriginalValue);
+                    const rawOriginalTaxRate = readMovementField(originalMovement, "tipoImpositivo");
+                    const validOriginalTaxRateType = typeof rawOriginalTaxRate === "number" ||
+                        (typeof rawOriginalTaxRate === "string" && rawOriginalTaxRate.trim() !== "");
+                    const originalTaxRate = validOriginalTaxRateType
+                        ? Number(rawOriginalTaxRate)
+                        : Number.NaN;
+                    if (!Number.isFinite(originalTaxRate) || originalTaxRate < 0 || originalTaxRate > 1) {
+                        throw new Error("FISCAL_ORIGINAL_TAX_RATE_INVALID");
+                    }
 
                     rectificationPayload = {
                         eventType: EVENT_TYPE.RECTIFICATIVA,
@@ -1723,9 +1739,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                         totalAmount: -amountOriginal,
                         taxBase: -Math.abs(readTaxBase(originalMovement)),
                         taxAmount: -Math.abs(readTaxAmount(originalMovement)),
-                        tipoImpositivo: Number(
-                            readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                        ),
+                        tipoImpositivo: originalTaxRate,
                         operationDescription: pairToken
                             ? `Rectificacion cancelacion reserva dual ${pairToken}`
                             : `Rectificacion cancelacion booking ${bookingId}`,
@@ -1787,9 +1801,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                     const recovery = await queueFiscalRecovery({
                         kind: "FISCAL_LEDGER",
                         bookingIds: rectificationBookingIds,
-                        totalAmount: -Math.abs(
-                            Number(originalMovement.totalAmount || 0)
-                        ),
+                        totalAmount: -amountOriginal,
                         paymentMethod:
                             originalMovement.paymentMethod ||
                             LEDGER_PAYMENT_METHOD_ONLINE,
@@ -2433,11 +2445,15 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
             return { status: "OK" };
         }
 
-        const originalAmount = Math.abs(Number(originalMovement.totalAmount ?? originalMovement.accountingAmount ?? 0));
+        const rawOriginalAmount = originalMovement.totalAmount ?? originalMovement.accountingAmount;
+        const validOriginalAmountType = typeof rawOriginalAmount === "number" ||
+            (typeof rawOriginalAmount === "string" && rawOriginalAmount.trim() !== "");
+        const originalAmountValue = validOriginalAmountType ? Number(rawOriginalAmount) : Number.NaN;
+        const originalAmount = Math.abs(originalAmountValue);
         const linkedBookingIds = _normalizeBookingIds(
             originalMovement.linkedBookingIds
         );
-        if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+        if (!Number.isFinite(originalAmountValue) || originalAmount <= 0) {
             throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
         }
 
@@ -2490,17 +2506,27 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
         const priorRefundMovements = refundMovements.filter(
             movement => _safeTrim(movement?.transactionId) !== transactionId
         );
-        const refundedBeforeCents = priorRefundMovements.reduce(
-            (sum, movement) => sum + Math.round(Math.abs(Number(
-                movement?.accountingAmount ?? movement?.totalAmount ?? 0
-            )) * 100),
-            0
-        );
+        const refundedBeforeCents = priorRefundMovements.reduce((sum, movement) => {
+            const rawAmount = movement?.accountingAmount ?? movement?.totalAmount;
+            const validType = typeof rawAmount === "number" ||
+                (typeof rawAmount === "string" && rawAmount.trim() !== "");
+            const amount = validType ? Number(rawAmount) : Number.NaN;
+            const cents = Math.round(Math.abs(amount) * 100);
+            if (!Number.isFinite(amount) || !Number.isSafeInteger(cents)) {
+                throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+            }
+            return sum + cents;
+        }, 0);
         const remainingCents = Math.max(0, originalAmountCents - refundedBeforeCents);
         if (existingRefundMovement) {
-            const existingAmountCents = Math.round(Math.abs(Number(
-                existingRefundMovement?.accountingAmount ?? existingRefundMovement?.totalAmount ?? 0
-            )) * 100);
+            const rawExistingAmount = existingRefundMovement?.accountingAmount ?? existingRefundMovement?.totalAmount;
+            const validExistingAmountType = typeof rawExistingAmount === "number" ||
+                (typeof rawExistingAmount === "string" && rawExistingAmount.trim() !== "");
+            const existingAmount = validExistingAmountType ? Number(rawExistingAmount) : Number.NaN;
+            const existingAmountCents = Math.round(Math.abs(existingAmount) * 100);
+            if (!Number.isFinite(existingAmount) || !Number.isSafeInteger(existingAmountCents)) {
+                throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+            }
             if (existingAmountCents !== refundAmountCents) {
                 throw new Error("REFUND_IDEMPOTENCY_AMOUNT_MISMATCH");
             }
