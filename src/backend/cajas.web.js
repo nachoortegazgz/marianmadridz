@@ -2383,9 +2383,21 @@ export const getMovimientoByBooking = webMethod(
                 };
             }
 
+            const readMovementTimestamp = (movement) => {
+                const rawTimestamp = movement?.recordTimestamp ?? movement?._createdDate;
+                if (rawTimestamp === undefined || rawTimestamp === null || rawTimestamp === "") {
+                    throw new Error("MOVEMENT_TIMESTAMP_MISSING");
+                }
+                const timestamp = rawTimestamp instanceof Date
+                    ? rawTimestamp
+                    : new Date(rawTimestamp);
+                if (Number.isNaN(timestamp.getTime())) {
+                    throw new Error("MOVEMENT_TIMESTAMP_INVALID");
+                }
+                return timestamp.getTime();
+            };
             const mov = items.sort(
-                (a, b) => new Date(b.recordTimestamp || b._createdDate || 0) -
-                          new Date(a.recordTimestamp || a._createdDate || 0)
+                (a, b) => readMovementTimestamp(b) - readMovementTimestamp(a)
             )[0];
 
             return {
