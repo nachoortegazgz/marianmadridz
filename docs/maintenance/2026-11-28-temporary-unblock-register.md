@@ -42,7 +42,7 @@ Los controles generales se contrastaron con `main`; la matriz de permisos reflej
 | `STAFF_CLOCKING_CONFIG.WRITES_ENABLED` | `false` | `registrarFichaje` devuelve `CLOCKING_WRITES_DISABLED` antes de insertar |
 | `STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED` | `false` | `registrarAjusteHorario` devuelve `CLOCKING_ADJUSTMENTS_DISABLED` |
 | TPV `acceptPayment` | `false` | No se confirma ni captura un pago mediante esta capacidad |
-| TPV `registerCashMovement` | `true` en esta rama para ADMIN, GESTION y ESTILISTA autenticados | El guard backend `requireCajero` resuelve identidad y rol; no está aún en `main` ni desplegado |
+| TPV `registerCashMovement` | `true` en esta rama para ADMIN, GESTION y ESTILISTA autenticados | El guard backend `requireTpvOperator` resuelve identidad y rol; no está aún en `main` ni desplegado |
 | TPV `printReceipt` | `false` | Impresión física deshabilitada |
 | TPV `requestRefund` | `false` | Reembolso TPV deshabilitado |
 | TPV `issueTicketZ` | `false` | Cierre Z TPV deshabilitado |
@@ -51,7 +51,7 @@ Los controles generales se contrastaron con `main`; la matriz de permisos reflej
 | `TPV_RUNTIME_POLICY.HARDWARE_ENABLED` | `false` | Hardware físico deshabilitado |
 | `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED` | `false` | Envío externo a gestoría deshabilitado |
 
-En la rama propuesta, `tpvPermisos.web.js` expone las capacidades de lectura, venta y anotación ordinaria de movimientos a los tres roles TPV autenticados (ADMIN, GESTION y ESTILISTA). Las operaciones de apertura/cierre de sesión, arqueo parcial, Ticket X, exportación de movimientos y otras operaciones administrativas conservan autorización ADMIN. La confirmación de pago, reembolso, Ticket Z, impresión física, hardware y notificaciones permanecen deshabilitados.
+En la rama propuesta, `tpvPermisos.web.js` expone las capacidades de lectura del catálogo, venta, resumen de caja y anotación ordinaria de movimientos a los tres roles TPV autenticados (ADMIN, GESTION y ESTILISTA). La lectura de auditoría permanece restringida para ESTILISTA. El guard genérico `requireCajero` no se amplía; los WebMethods TPV de este flujo usan `requireTpvOperator`. Las operaciones de apertura/cierre de sesión, arqueo parcial, Ticket X, exportación de movimientos y otras operaciones administrativas conservan autorización ADMIN. La confirmación de pago, reembolso, Ticket Z, impresión física, hardware y notificaciones permanecen deshabilitados.
 
 No se ha encontrado ni aplicado un interruptor global de escritura CMS. Las escrituras se gobiernan por writer, permisos, validación, hooks físicos, contrato de colección, locks e idempotencia.
 
@@ -136,9 +136,9 @@ La consulta de estado combinado de GitHub para `796e8eaf8317d35d02744f40d0504e9a
 ## 9. Registro de cambios de esta intervención
 
 - Se actualiza este documento en la rama `maintenance/temporary-unblock-register-2026-11-28`.
-- `src/backend/security.js`: incorpora ESTILISTA a los roles de operador TPV mediante una lista canónica compartida por `isCajero` y `getMyCajeroContext`. La identidad sigue resolviéndose contra el miembro Wix actual y Bookings Staff.
+- `src/backend/security.js`: incorpora ESTILISTA exclusivamente a `getMyCajeroContext` y al nuevo guard `requireTpvOperator`. `isCajero`/`requireCajero` conservan ADMIN y GESTION, por lo que no se amplían los permisos genéricos de caja ni de otros módulos.
 - `src/backend/tpv/tpvPermisos.web.js`: habilita `registerCashMovement` para operadores TPV ya autorizados; no amplía apertura, arqueo, cierre, Ticket X/Z ni exportaciones.
-- `src/backend/tpv/tpvMovimientos.web.js`: cambia exclusivamente el guard de `registrarMovimientoCaja` a `requireCajero`. Los métodos de exportación mantienen `requireAdmin`.
+- `src/backend/tpv/tpvMovimientos.web.js`: `registrarMovimientoCaja` y la lectura ordinaria de movimientos usan `requireTpvOperator`; las exportaciones mantienen sus guards administrativos.
 - Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs` y `tpv.web-modules.contract.test.mjs` para reflejar el nuevo perímetro de autorización.
 - No se realizan escrituras CMS, pagos, reembolsos, fichajes, cierres, comunicaciones ni operaciones físicas.
 - No se despliega a Wix.
