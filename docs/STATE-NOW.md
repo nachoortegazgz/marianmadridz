@@ -22,8 +22,8 @@ Métrica exigida: 100 % de condiciones bloqueantes/early return observables con 
 
 - Informe: [auditoría de persistencia operativa](audits/2026-11-28-operational-persistence-audit.md).
 - Lectura real, solo lectura: 12 colecciones propias NATIVE; Bookings Reader V2 (360 reservas); eCommerce Orders (34 pedidos) y transacciones (8 pagos, 1 reembolso).
-- Resultado: NO CONFORME para persistencia integral. 5/5 movimientos de caja sintéticos incompletos, cierre Z simulado incompleto, 3 recuperaciones pendientes, 7 pedidos pagados/reembolsados sin movimiento correlacionado, 6 proyecciones CitasF2 con estado nativo divergente, cero CONFIG_SISTEMA_FISCAL, TPV comercial sin intención persistida, jornada sin escrituras y 3 eventos externos NOT_SENT.
-- Los datos previos a 2027 son sintéticos por directriz del proyecto; no se infieren pérdidas económicas reales.
+- Read-back 28-11-2026: CajaActual mantiene una proyección heredada ABIERTA sin sesión TPV canónica; MovimientosCaja contiene 5 filas históricas no conformes al contrato canónico de ledger. El flujo de apertura debe reemplazar la proyección mediante el writer y conservar la historia. Persistencia integral aún NO CONFORME.
+- Las pruebas usan el mismo flujo de negocio. La fecha y el cliente de prueba seleccionado son el único contexto diferenciador; no se usan etiquetas ni ramas de entorno.
 - No se ejecutaron mutaciones ni pruebas de escritura. El sitio figura Draft; código instalado en Wix Editor y Runtime E2E no acreditados.
 
 ## Git y CI
@@ -105,18 +105,18 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 2. **Dinero — P1:** `_readPositiveAmount` y normalizadores numéricos locales de caja/fiscalidad aún convierten ciertos datos inválidos en cero. Clasificar consumidores por dominio (presentación, duración, importe, IVA, saldo) y añadir pruebas antes de cambiar contratos compartidos.
 3. **Idempotencia — P1:** completar matriz de writers económicos/operativos: identidad primaria, `transactionId`, clave propia, append-only, timeout/insert incierto y call sites. No imponer regla ciega a eventos no económicos.
 4. **Dead code/dependencias — P2:** continuar auditoría por consumidores/imports/exports/tests. PR #675 retiró `queryReferencedItems()` al demostrar cero consumidores; aplicar el mismo estándar al resto. No eliminar por tamaño o sospecha.
-5. **Contrato TPV `sourceType` — P1:** existe una divergencia entre la directriz de no persistir un campo genérico `sourceType` y el contrato CMS/documentación vigente de `TransaccionesTPV`, que lo declara requerido. La implementación actual también lo consume. No retirarlo parcialmente: reconciliar primero esquema CMS, writers, readers, validadores y compatibilidad histórica, con rollback documentado.
+5. **Handshake TPV — P1:** el puente debe preservar y devolver el nonce de `MM_READY` en `MM_CONTEXT`; sin ello el HTML no acepta el contexto y el widget no habilita su inicialización.
 6. **Remitente de correo — P1/P2:** `FROM_ADDRESS` usa `marianmadrid.com` mientras el dominio operativo es `.es`; la verificación de Resend no está acreditada. El envío de gestoría continúa deshabilitado. No cambiar el remitente sin evidencia de dominio verificado.
 7. **Runtime — P1:** ejecutar Local Editor/Preview E2E aislado, sin reutilizar `CajaActual` ABIERTA y sin cobros reales. Confirmar sincronización Wix-Git mediante evidencia del sitio.
 
-**Estado Capa 0: EN EJECUCIÓN.** PR #675–#681 integran propagación de errores, hardening de sort/logging/serialización, validación de secretos, rechazo de importes inválidos en `_roundMoney` y consolidación de moneda/zona horaria. Permanecen la revisión del emisor fiscal, cobertura de roles Staff, normalizadores numéricos locales, matriz global de writers, auditoría de deuda, contradicción `sourceType`, remitente de correo y validación Runtime. No declarar Capa 0 COMPLETADA.
+**Estado Capa 0: EN EJECUCIÓN.** PR #675–#681 integran propagación de errores, hardening de sort/logging/serialización, validación de secretos, rechazo de importes inválidos en `_roundMoney` y consolidación de moneda/zona horaria. Permanecen la revisión del emisor fiscal, cobertura de roles Staff, normalizadores numéricos locales, matriz global de writers, auditoría de deuda, remitente de correo y validación Runtime. No declarar Capa 0 COMPLETADA.
 
 ## Wix/CMS — último read-back documentado
 
 - Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e`; Wix Editor clásico, Velo habilitado, Draft.
 - Página TPV ID `yl5th`, ruta `/tpv`, `published=false` (read-back 27-11-2026).
 - Recuentos de la auditoría integral posterior del 27-11-2026: `CajaActual=1` (ABIERTA), `MovimientosCaja=5`, `HistoricoCierresZ=1`, `TransaccionesTPV=0`, `ControlOperativo=81`, `MapaStaff=5`, `CitasF2=12`, `LibroAsientosContablesDetalle=3`, `RegistrosHorariosStaff=0`. La lectura read-only anterior de aceptación había observado `ControlOperativo=78` y `CitasF2=11`; se conserva como evidencia de ese instante, no como baseline posterior.
-- Es una lectura histórica, no consulta live actual. No modificar esos registros ni utilizarlos como fixtures.
+- Es una lectura histórica, no consulta live actual. No modificar esas filas históricas. Las nuevas operaciones se registran por los writers canónicos.
 
 ## Fuentes y auditorías
 
@@ -136,7 +136,7 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 
 - Decisión vigente: la inmutabilidad prohíbe editar/borrar registros existentes; **no impide insertar nuevos registros válidos**.
 - Código activo en el HEAD base `51c42cdf5b514e79079de0c7e6cb78be8e2fe3fa`: no contiene un bloqueo global `FISCAL_LEDGER_WRITES_DISABLED` / `LEDGER_WRITES_ENABLED=false`. La prueba `operational-writers.fail-closed.contract.test.mjs` comprueba que los writers no dependan de interruptores globales.
-- Prueba positiva disponible: `events.native-booking-sync.test.mjs::EVENT-PAYMENT-09` valida insert fiscal sintético en `MovimientosCaja`, campos económicos, hash/secuencia, correlación y replay idempotente. Tests de locking cubren serialización/fencing.
+- Prueba positiva disponible: `events.native-booking-sync.test.mjs::EVENT-PAYMENT-09` valida inserción fiscal en `MovimientosCaja`, campos económicos, hash/secuencia, correlación y replay idempotente. Tests de locking cubren serialización/fencing.
 - CI de PR #681: 91 suites / 816 tests PASS; quality gates run `46085729210`, secret scan `46085729219`. Es evidencia del HEAD de esa PR, no del runtime instalado.
 - Sigue pendiente resolver la configuración real `CONFIG_SISTEMA_FISCAL` y secretos del emisor con datos verificados. Es un requisito de validez/configuración, no una prohibición legal a escribir.
 - Detalle: [corrección SSOT fiscal append-only](qa/2026-11-28-fiscal-writer-append-only-ssot.md).
