@@ -256,6 +256,19 @@ async function persistSaleCashPayment(record, traceId) {
         const payment = await addTpvNativeCashPayment(current.orderId, amountMinor, {
             allowCreate: writeStatus === "NOT_STARTED",
         });
+        current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
+            ...current,
+            paymentSelection: [{
+                ...originalPayment,
+                confirmed: true,
+                writeStatus: "CONFIRMED",
+                paymentId: payment.paymentId,
+                amountMinor,
+                paymentStatus: payment.paymentStatus,
+            }],
+            requiresReconciliation: true,
+            draftOrderReason: "TPV_PAYMENT_LEDGER_PENDING",
+        }, { consistency: CONSISTENCY.STRONG });
 
         const ledger = await insertTpvEvent(
             TPV_COLLECTIONS.PAGOS,
