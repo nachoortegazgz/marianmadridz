@@ -42,6 +42,14 @@ test("allows an unpaid commercial intent without confirming a payment", () => {
     }), []);
 });
 
+test("rejects card tender until a terminal provider is connected", () => {
+    assert.deepEqual(getTpvWriteV1Blockers({
+        lineas: [validLine()],
+        pagos: [validPayment("TARJETA")],
+        totalVenta: 121,
+    }), ["TPV_WRITE_V1_PAYMENT_METHOD_UNSUPPORTED"]);
+});
+
 test("rejects split tender until a multi-payment writer exists", () => {
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine()],
