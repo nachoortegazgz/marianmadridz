@@ -79,6 +79,7 @@ export const obtenerEstadoCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-session-read");
+        try {
         await requireTpvOperator(traceId);
 
         const operator = await resolveTpvContext(traceId);
@@ -159,6 +160,14 @@ export const obtenerEstadoCaja = webMethod(
             error: null,
             traceId,
         };
+        } catch (error) {
+            return {
+                status: "ERROR",
+                data: null,
+                error: normalizeTpvError(error, "TPV_SESSION_READ_FAILED"),
+                traceId,
+            };
+        }
     }
 );
 
