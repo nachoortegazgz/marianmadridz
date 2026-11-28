@@ -323,6 +323,7 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
 async function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .gt("sequenceNumber", 0)
+        .ne("recordSource", TPV_LEDGER_SOURCE)
         .descending("sequenceNumber")
         .limit(20)
         .find({ consistencyMode: "strong" });
