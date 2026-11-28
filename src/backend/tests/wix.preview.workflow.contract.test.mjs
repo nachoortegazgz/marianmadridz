@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const workflowUrl = new URL("../../../.github/workflows/wix-tpv-preview.yml", import.meta.url);
 const runnerUrl = new URL("../../../scripts/wix-preview-tpv-e2e.mjs", import.meta.url);
+const controllerUrl = new URL("../../public/tpvPageController.js", import.meta.url);
 
 test("WIX-PREVIEW-01 TPV Editor Preview E2E is manually dispatchable with an explicit Preview URL", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
@@ -74,4 +75,7 @@ test("WIX-PREVIEW-06 read-only smoke is the default and exits before all operati
     assert.ok(runner.includes("data.capabilities"));
     assert.ok(runner.includes("permissionsStatus"));
     assert.ok(runner.includes("window.__tpvE2eContext"));
+    assert.match(runner, /report\.runtimeContext\.role/);
+    const controller = await readFile(controllerUrl, "utf8");
+    assert.match(controller, /role: permissionsReady \? \(permissions\.data\?\.role \|\| "UNKNOWN"\) : "UNKNOWN"/);
 });
