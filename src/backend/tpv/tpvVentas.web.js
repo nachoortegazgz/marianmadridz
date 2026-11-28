@@ -424,233 +424,221 @@ export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sale-register");
-        let operator;
         try {
-            operator = await getMyCajeroContext(traceId);
-        } catch (error) {
-            return tpvError(
-                _safeTpvErrorCode(error, "TPV_CASHIER_NOT_AUTHORIZED"),
-                "El usuario actual no está autorizado como operador TPV.",
-                ["Accede con un miembro vinculado a un operador TPV autorizado."],
-                { persisted: false, retryable: false, traceId }
-            );
-        }
+            const operator = await getMyCajeroContext(traceId);
+            const idempotencyKey = String(input.idempotencyKey || "").trim();
+            const sessionId = String(input.sessionId || "").trim();
+            if (!UUID_V4.test(idempotencyKey)) throw new Error("TPV_IDEMPOTENCY_KEY_INVALID");
+            if (!GUID.test(sessionId)) throw new Error("TPV_SESSION_ID_INVALID");
 
-        const sessionId = String(input?.sessionId || "").trim();
-        const idempotencyKey = String(input?.idempotencyKey || "").trim().toLowerCase();
-        const rawLineas = Array.isArray(input?.lineas) ? input.lineas : [];
-        const lineas = rawLineas.map((line) => ({
-            ...line,
-            tipoLinea: String(line?.tipoLinea || (line?.productId ? "PRODUCTO" : "")).trim().toUpperCase(),
-            itemId: String(line?.itemId || line?.productId || "").trim(),
-            ...(line?.varianteId || line?.variantId ? { varianteId: String(line.varianteId || line.variantId).trim() } : {}),
-        }));
-        const rawPagos = Array.isArray(input?.pagos) ? input.pagos : null;
-        if (!input || typeof input !== "object" || Array.isArray(input) ||
-            !sessionId || !UUID_V4.test(idempotencyKey) ||
-            lineas.length === 0 || lineas.length > 100 || (rawPagos && rawPagos.length > 100) ||
-            lineas.some((line) =>
-                !line || typeof line !== "object" ||
-                !["PRODUCTO", "SERVICIO"].includes(String(line.tipoLinea || "").trim().toUpperCase()) ||
-                !GUID.test(String(line.itemId || "").trim()) ||
-                !Number.isSafeInteger(Number(line.cantidad)) ||
-                Number(line.cantidad) <= 0
-            )) {
-            return tpvError(
-                "TPV_INVALID_INPUT",
-                "La solicitud de venta no contiene una sesión, clave idempotente o líneas de catálogo válidas.",
-                ["Envía sessionId, una clave UUID v4 y líneas de producto o servicio con identificadores Wix y cantidades enteras positivas."],
-                { persisted: false, retryable: false, traceId }
-            );
-        }
+            const session = await latestOpenTpvSession();
+            if (!session || session.sessionId !== sessionId) {
+                throw new Error("TPV_SESSION_NOT_OPEN");
+            }
 
-        let prepared;
-        let validated;
-        try {
-            prepared = await prepareTpvSaleCatalog(lineas);
-            const pagos = (rawPagos && rawPagos.length > 0) ? rawPagos : (input?.medioPago
-                ? [{ medioPago: String(input.medioPago).trim().toUpperCase(), importe: prepared.totalVenta, importeCambio: 0 }]
-                : []);
-            assertTpvPaymentMethodsSupported(pagos);
-            validated = validateSaleDraft({
+            const pagosInput = Array.isArray(input.pagos) ? input.pagos : [];
+            assertTpvPaymentMethodsSupported(pagosInput);
+            const prepared = await prepareTpvSaleCatalog(input.lineas);
+            const validated = validateSaleDraft({
                 lineas: prepared.lineas,
-                pagos,
+                pagos: pagosInput,
                 subtotalNeto: prepared.subtotalNeto,
                 impuestosTotal: prepared.impuestosTotal,
                 totalVenta: prepared.totalVenta,
             });
-        } catch (error) {
-            return preparationFailure(error, traceId);
-        }
-
-        const activeSession = await latestOpenTpvSession();
-        if (!activeSession || activeSession.sessionId !== sessionId) {
-            return tpvError(
-                "TPV_SESSION_NOT_OPEN",
-                "La sesión de caja indicada no está abierta.",
-                ["Abre o selecciona la sesión de caja activa antes de registrar la venta."],
-                { persisted: false, retryable: false, traceId }
-            );
-        }
-
-        const lineasBackend = validated.lineas.map((line, index) => ({
-            ...line,
-            appId: prepared.lineas[index].appId,
-            taxGroupId: prepared.lineas[index].taxGroupId || null,
-            desgloseImpuestos: prepared.lineas[index].desgloseImpuestos,
-            currency: prepared.lineas[index].currency,
-        }));
-        const subtotalNetoMinor = toMinorUnits(validated.subtotalNeto, "SALE_SUBTOTAL");
-        const impuestosTotalMinor = toMinorUnits(validated.impuestosTotal, "SALE_TAX");
-        const totalVentaMinor = toMinorUnits(validated.totalVenta, "SALE_TOTAL");
-        const medioPago = validated.pagos.length === 1
-            ? validated.pagos[0].medioPago
-            : validated.pagos.length > 1 ? "MULTIPLE" : null;
-        const requestFingerprint = createHash("sha256").update(JSON.stringify({
-            sessionId,
-            lineas: lineasBackend,
-            pagos: validated.pagos,
-            operatorResourceId: operator.operatorResourceId,
-        })).digest("hex");
-
-        const readExisting = async () => getItem(
-            BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
-            idempotencyKey,
-            CONSISTENCY.STRONG
-        );
-        const existing = await readExisting();
-        if (existing) {
-            if (existing.requestFingerprint !== requestFingerprint) {
-                return tpvError("TPV_IDEMPOTENCY_CONFLICT", "La clave idempotente ya pertenece a otra venta.", ["No reutilices la clave con líneas, sesión u operador diferentes."], { persisted: true, retryable: false, traceId });
+            const lineas = validated.lineas.map((line, index) => ({
+                ...line,
+                taxGroupId: prepared.lineas[index].taxGroupId,
+                desgloseImpuestos: prepared.lineas[index].desgloseImpuestos,
+            }));
+            const readiness = buildSaleReadiness(prepared, validated);
+            if (readiness.saleReadinessBlockers.length > 0) {
+                throw new Error("TPV_SALE_NOT_READY:" + readiness.saleReadinessBlockers.join(","));
             }
-            let auditPersisted = true;
-            let auditErrorCode = null;
-            try { await appendSaleAudit(existing, traceId); } catch (error) {
-                auditPersisted = false;
-                auditErrorCode = _safeTpvErrorCode(error, "TPV_AUDIT_APPEND_FAILED");
-                logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: existing._id, errorCode: auditErrorCode });
-            }
-            return salePendingEnvelope(existing, { replayed: true, auditPersisted, auditErrorCode, traceId });
-        }
 
-        const saleReadiness = buildSaleReadiness(prepared, validated);
-        if (saleReadiness.saleReadinessBlockers.length > 0) {
-            return tpvError(
-                "TPV_SALE_NOT_READY",
-                "La venta no supera los mismos requisitos de preparación que muestra el TPV. No se ha creado ninguna intención comercial.",
-                saleReadiness.saleReadinessBlockers,
-                { persisted: false, retryable: false, traceId, saleReady: false }
-            );
-        }
+            const buyer = input.contactId
+                ? await resolveTpvContact(String(input.contactId))
+                : {};
+            const operatorResourceId = operator?.operatorResourceId || null;
+            const requestFingerprint = createHash("sha256").update(JSON.stringify({
+                sessionId,
+                lineas,
+                pagos: validated.pagos,
+                operatorResourceId,
+                customerContactId: buyer?.contactId || null,
+                sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+            })).digest("hex");
 
-        try {
             return await withTpvSessionLock(sessionId, traceId, async () => {
-                const winner = await readExisting();
-                if (winner) {
-                    if (winner.requestFingerprint !== requestFingerprint) {
+                const existing = await readExisting(idempotencyKey);
+                if (existing) {
+                    if (existing.requestFingerprint !== requestFingerprint) {
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
-                    let auditPersisted = true;
-                    let auditErrorCode = null;
-                    try { await appendSaleAudit(winner, traceId); } catch (error) {
-                        auditPersisted = false;
-                        auditErrorCode = String(error?.code || error?.message || "TPV_AUDIT_APPEND_FAILED");
-                        logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: winner._id, errorCode: auditErrorCode });
-                    }
-                    return salePendingEnvelope(winner, { replayed: true, auditPersisted, auditErrorCode, traceId });
+                    return resumeExistingSale(existing, {
+                        buyer,
+                        replayed: true,
+                        traceId,
+                    });
                 }
 
-                const currentSession = await latestOpenTpvSession();
-                if (!currentSession || currentSession.sessionId !== sessionId) {
-                    throw new Error("TPV_SESSION_NOT_OPEN");
-                }
-
-                if (saleReadiness.saleReadinessBlockers.length > 0) {
-                    throw new Error("TPV_SALE_NOT_READY");
-                }
-                const recordMetadata = await createTpvRecordMetadata();
-                const draft = await createSaleDraftOrder(prepared);
+                const recordMetadata = createTpvRecordMetadata({
+                    sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                    createdAt: new Date(),
+                    traceId,
+                });
+                const paymentSelection = validated.pagos.map((payment) => ({
+                    ...payment,
+                    confirmed: false,
+                    writeStatus: "NOT_STARTED",
+                }));
                 const record = {
                     ...recordMetadata,
                     _id: idempotencyKey,
                     sessionId,
-                    orderId: draft.orderId,
-                    lineas: lineasBackend,
+                    orderId: null,
+                    lineas,
                     subtotalNeto: validated.subtotalNeto,
-                    subtotalNetoMinor,
                     impuestosTotal: validated.impuestosTotal,
-                    impuestosTotalMinor,
                     totalVenta: validated.totalVenta,
-                    totalVentaMinor,
-                    medioPago,
-                    paymentSelection: validated.pagos.map((payment) => ({
-                        medioPago: payment.medioPago,
-                        importe: payment.importe,
-                        importeCambio: payment.importeCambio,
-                        importeAplicado: payment.importeAplicado,
-                        confirmed: false,
-                    })),
-                    operatorResourceId: operator.operatorResourceId,
-                    operatorId: operator.operatorId,
-                    createdAt: new Date(recordMetadata.recordTimestamp),
+                    totalVentaMinor: toMinorUnits(validated.totalVenta, "SALE_TOTAL"),
+                    medioPago: paymentSelection.length === 1 ? paymentSelection[0].medioPago : null,
+                    paymentSelection,
+                    operatorId: operator?.operatorId || null,
+                    actorId: operator?.actorId || operator?.operatorId || null,
+                    operatorResourceId,
                     status: "PENDING_PAYMENT",
                     sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
-                    requiresReconciliation: draft.requiresReconciliation,
-                    draftOrderReason: draft.reason,
+                    requiresReconciliation: true,
+                    draftOrderReason: "TPV_ORDER_CREATE_PENDING",
                     requestFingerprint,
                     currency: SDK_CONFIG.CURRENCY_CODE,
                     traceId,
                 };
+
                 let saved;
                 try {
-                    saved = await insertItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, record);
-                } catch (error) {
-                    const concurrentWinner = await readExisting();
-                    if (!concurrentWinner) {
-                        if (draft.orderId) {
-                            try {
-                                await appendTpvAudit({
-                                    idempotencyKey: idempotencyKey + ":DRAFT_ORPHAN",
-                                    action: "DRAFT_ORDER_WITHOUT_TPV_TRANSACTION",
-                                    actorId: operator.operatorResourceId,
-                                    entityType: "DRAFT_ORDER",
-                                    entityId: draft.orderId,
-                                    traceId,
-                                    payload: { sessionId, idempotencyKey, errorCode: _safeTpvErrorCode(error, "INSERT_FAILED") },
-                                });
-                            } catch (auditError) {
-                                logger.error("TPV_DRAFT_ORPHAN_AUDIT_FAILED", {
-                                    traceId,
-                                    transactionId: idempotencyKey,
-                                    errorCode: _safeTpvErrorCode(auditError, "TPV_DRAFT_ORPHAN_AUDIT_FAILED"),
-                                });
-                            }
-                        }
-                        throw error;
-                    }
+                    saved = await insertItem(
+                        BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+                        record,
+                        { consistency: CONSISTENCY.STRONG }
+                    );
+                    if (saved?.item) saved = saved.item;
+                } catch (insertError) {
+                    const concurrentWinner = await readExisting(idempotencyKey);
+                    if (!concurrentWinner) throw insertError;
                     if (concurrentWinner.requestFingerprint !== requestFingerprint) {
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
-                    let auditPersisted = true;
-                    try { await appendSaleAudit(concurrentWinner, traceId); } catch { auditPersisted = false; }
-                    return salePendingEnvelope(concurrentWinner, { replayed: true, auditPersisted, traceId });
+                    return resumeExistingSale(concurrentWinner, {
+                        buyer,
+                        replayed: true,
+                        traceId,
+                    });
+                }
+
+                let orderErrorCode = null;
+                try {
+                    const nativeOrder = await createTpvNativeOrder(
+                        prepared,
+                        buyer,
+                        idempotencyKey,
+                        saved.createdAt
+                    );
+                    saved = await updateItem(
+                        BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+                        {
+                            ...saved,
+                            orderId: nativeOrder.orderId,
+                            requiresReconciliation: paymentSelection.length > 0,
+                            draftOrderReason: paymentSelection.length > 0 ? "CASH_PAYMENT_PENDING" : null,
+                        },
+                        { consistency: CONSISTENCY.STRONG }
+                    );
+                } catch (error) {
+                    orderErrorCode = _safeTpvErrorCode(error, "TPV_ORDER_CREATE_UNKNOWN");
+                    try {
+                        saved = await updateItem(
+                            BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+                            {
+                                ...saved,
+                                requiresReconciliation: true,
+                                draftOrderReason: orderErrorCode,
+                            },
+                            { consistency: CONSISTENCY.STRONG }
+                        );
+                    } catch (updateError) {
+                        logger.error("TPV order recovery marker update failed", {
+                            traceId,
+                            idempotencyKey,
+                            errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+                        });
+                    }
+                }
+
+                let paymentErrorCode = null;
+                if (saved.orderId && saved.paymentSelection?.length === 1) {
+                    const paymentResult = await persistSaleCashPayment(saved, traceId);
+                    saved = paymentResult.record;
+                    paymentErrorCode = paymentResult.errorCode;
                 }
 
                 let auditPersisted = true;
                 let auditErrorCode = null;
-                try { await appendSaleAudit(saved, traceId); } catch (error) {
+                try {
+                    await appendSaleAudit(saved, traceId);
+                } catch (error) {
                     auditPersisted = false;
-                    auditErrorCode = String(error?.code || error?.message || "TPV_AUDIT_APPEND_FAILED");
-                    logger.error("TPV_SALE_AUDIT_APPEND_FAILED", { traceId, transactionId: saved._id, errorCode: auditErrorCode });
+                    auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
+                    try {
+                        saved = await updateItem(
+                            BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+                            {
+                                ...saved,
+                                requiresReconciliation: true,
+                                draftOrderReason: auditErrorCode,
+                            },
+                            { consistency: CONSISTENCY.STRONG }
+                        );
+                    } catch (updateError) {
+                        logger.error("TPV sale audit recovery marker update failed", {
+                            traceId,
+                            idempotencyKey,
+                            errorCode: _safeTpvErrorCode(updateError, "TPV_SALE_UPDATE_FAILED"),
+                        });
+                    }
                 }
-                return salePendingEnvelope(saved, { replayed: false, auditPersisted, auditErrorCode, traceId });
+
+                if (saved.status === "CONFIRMADA" && saved.requiresReconciliation !== true &&
+                    auditPersisted && saved.paymentSelection?.[0]?.ledgerMovementId) {
+                    return saleSuccessEnvelope(saved, {
+                        replayed: false,
+                        auditPersisted,
+                        traceId,
+                    });
+                }
+
+                return salePendingEnvelope(saved, {
+                    replayed: false,
+                    auditPersisted,
+                    auditErrorCode: auditErrorCode || paymentErrorCode || orderErrorCode,
+                    traceId,
+                });
             });
         } catch (error) {
             return tpvError(
                 _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED"),
-                "No se ha podido completar el registro comercial de la venta.",
-                ["Conserva la clave idempotente y el traceId; consulta TransaccionesTPV antes de repetir la operación."],
-                { persisted: false, retryable: false, traceId }
+                "No se ha podido completar la venta. Consulta la clave de operación antes de repetirla.",
+                [
+                    "No generes una segunda venta con una clave nueva hasta comprobar TransaccionesTPV y el pedido Wix.",
+                    "Si existe un pedido o pago pendiente de conciliación, recupera la operación con la misma clave idempotente.",
+                ],
+                {
+                    persisted: false,
+                    retryable: false,
+                    traceId,
+                    technicalDetail: _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED"),
+                }
             );
         }
     }
