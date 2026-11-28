@@ -1685,6 +1685,14 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             _resolveStaffDisplayName(cashRegister?.closedBy),
             actorVerified ? _resolveStaffDisplayName(lastActorId) : Promise.resolve(null),
         ]);
+        const lastOperationSequence = lastMovement
+            ? _readRequiredLedgerAmount(
+                lastMovement, "sequenceNumber", lastMovement.sequenceNumber, "CAJA_SESSION_SEQUENCE_INVALID"
+            )
+            : null;
+        if (lastMovement && (!Number.isSafeInteger(lastOperationSequence) || lastOperationSequence <= 0)) {
+            throw new Error("CAJA_SESSION_SEQUENCE_INVALID");
+        }
         const lastOperation = lastMovement ? {
             movementId: lastMovement._id,
             sourceMovementIds: [lastMovement._id],
@@ -1706,9 +1714,7 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             paymentMethod: lastMovement.paymentMethod || null,
             hash: lastMovement.hash || null,
             previousRecordHash: lastMovement.previousRecordHash || null,
-            sequenceNumber: _readRequiredLedgerAmount(
-                lastMovement, "sequenceNumber", lastMovement.sequenceNumber, "CAJA_SESSION_SEQUENCE_INVALID"
-            ),
+            sequenceNumber: lastOperationSequence,
             recordTimestamp: lastMovement.recordTimestamp || null,
             digitalSignature: lastMovement.digitalSignature || null,
             traceId: lastMovement.traceId || null,
