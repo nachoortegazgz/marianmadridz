@@ -112,6 +112,14 @@ export async function allocateFiscalSequence(lock, lastMovement) {
         throw error;
     }
     const lastYearSequence = invoiceMatch?.[1] === yearKey ? _counter(invoiceMatch[2]) : 0;
+    const lastMovementSequence = lastMovement
+        ? _counter(lastMovement.sequenceNumber)
+        : 0;
+    if (lastMovement && lastMovementSequence <= 0) {
+        const error = new Error("FISCAL_SEQUENCE_LAST_MOVEMENT_INVALID");
+        error.code = "FISCAL_SEQUENCE_LAST_MOVEMENT_INVALID";
+        throw error;
+    }
 
     for (let attempt = 0; attempt < SEQUENCE_RETRIES; attempt += 1) {
         const cashRegister = await getCashRegisterSingleton();
@@ -122,7 +130,7 @@ export async function allocateFiscalSequence(lock, lastMovement) {
         }
 
         const counters = { ...(cashRegister.sequenceCounters || {}) };
-        const previousGlobal = Math.max(_counter(counters.seqGlobal), _counter(lastMovement?.sequenceNumber));
+        const previousGlobal = Math.max(_counter(counters.seqGlobal), lastMovementSequence);
         const previousYear = Math.max(_counter(counters[yearKey]), lastYearSequence);
         const sequenceNumber = previousGlobal + 1;
         const yearSequence = previousYear + 1;
