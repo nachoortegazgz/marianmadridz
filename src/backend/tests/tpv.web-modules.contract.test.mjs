@@ -18,7 +18,10 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            itemId: "service-1",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Servicio de catálogo",
             cantidad: 1,
             precioUnitario: 100,
@@ -65,7 +68,9 @@ test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT t
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "PRODUCTO",
-            itemId: "product-1",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
             concepto: "Producto con IVA incluido",
             cantidad: 1,
             precioUnitario: 22.90,
@@ -100,8 +105,11 @@ test("TPV product variant identity is retained and restricted to product lines",
     const product = validateSaleDraft({
         lineas: [{
             tipoLinea: "PRODUCTO",
-            itemId: "product-123",
-            varianteId: "variant-123",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            varianteId: "1d560c12-fefc-4cdf-b0dc-dd2a96af6919",
             concepto: "Producto · Talla M",
             cantidad: 1,
             precioUnitario: 20,
@@ -127,6 +135,10 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Servicio con cambio",
             cantidad: 1,
             precioUnitario: 40,
@@ -144,6 +156,10 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
         () => validateSaleDraft({
             lineas: [{
                 tipoLinea: "SERVICIO",
+                itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+                appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+                currency: "EUR",
+                taxIncludedInPrice: false,
                 concepto: "Cambio no efectivo",
                 cantidad: 1,
                 precioUnitario: 40,
@@ -159,6 +175,10 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Venta mixta",
             cantidad: 1,
             precioUnitario: 100,
@@ -191,6 +211,10 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     const valid = {
         lineas: [{
             tipoLinea: "PRODUCTO",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Producto de catálogo",
             cantidad: 1,
             precioUnitario: 10,
