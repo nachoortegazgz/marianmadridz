@@ -15,7 +15,7 @@ test("Ticket Z closes the physical cash projection and writes one CIERRE movemen
     assert.match(cierres, /await closeTpvCajaSessionProjection\(/);
     assert.match(cierres, /await persistTpvSessionClose\(\{[\s\S]*?sessionId: session\.sessionId/);
     const summaryCore = await source("src/backend/tpv/tpvCierresCore.js");
-    const html = await source("#htmlTPV.txt");
+    const html = await source("%23htmlTPV.txt");
     assert.match(summaryCore, /getPendingTpvSales\(session\.sessionId\)/);
     assert.match(summaryCore, /pendingSalesCount: pendingSales\.length/);
     assert.match(summaryCore, /pendingSalesGrossMinor/);
