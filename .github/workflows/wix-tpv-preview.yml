@@ -42,7 +42,9 @@ jobs:
           const url = new URL(value);
           const host = url.hostname;
           const wixHost = host === "wix.com" || host.endsWith(".wix.com") ||
-            host === "wixsite.com" || host.endsWith(".wixsite.com");
+            host === "wixsite.com" || host.endsWith(".wixsite.com") ||
+            host === "wix.to" || host.endsWith(".wix.to") ||
+            host === "marianmadrid.es" || host === "www.marianmadrid.es";
           if (url.protocol !== "https:" || !wixHost) {
             throw new Error("WIX_PREVIEW_URL must be an HTTPS Wix Editor Preview URL");
           }
