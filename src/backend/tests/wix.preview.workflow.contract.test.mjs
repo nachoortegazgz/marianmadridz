@@ -8,42 +8,50 @@ const docsUrl = new URL("../../../tests/runtime/RUNTIME-TEST-PLAN.md", import.me
 
 test("WIX-PREVIEW-01 Editor Preview E2E is manually dispatchable with an explicit Preview URL", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /workflow_dispatch:/);
-    assert.match(workflow, /preview_url:[\\s\\S]*?required: true[\\s\\S]*?type: string/);
-    assert.doesNotMatch(workflow, /^\\s{2}push:/m);
-    assert.doesNotMatch(workflow, /^\\s{2}pull_request:/m);
+    const start = workflow.indexOf("preview_url:");
+    const end = workflow.indexOf("\n\npermissions:", start);
+    const input = workflow.slice(start, end);
+    assert.ok(workflow.includes("workflow_dispatch:"));
+    assert.ok(start >= 0 && end > start);
+    assert.ok(input.includes("required: true"));
+    assert.ok(input.includes("type: string"));
+    assert.ok(!workflow.includes("  push:"));
+    assert.ok(!workflow.includes("  pull_request:"));
 });
 
 test("WIX-PREVIEW-02 workflow is bound to the Marian Madrid Editor site", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /188bed94-177c-4bc9-a9f0-35080d874f3e/);
-    assert.match(workflow, /uiVersion/);
-    assert.match(workflow, /marianmadrid\\.es/);
+    assert.ok(workflow.includes("188bed94-177c-4bc9-a9f0-35080d874f3e"));
+    assert.ok(workflow.includes("uiVersion"));
+    assert.ok(workflow.includes("marianmadrid.es"));
 });
 
 test("WIX-PREVIEW-03 workflow uses pinned Node and Playwright without the wrong CLI project type", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /npm ci/);
-    assert.match(workflow, /node-version: ["']24\\.22\\.1["']/);
-    assert.match(workflow, /@playwright\\/test@1\\.65\\.1/);
-    assert.doesNotMatch(workflow, /secrets\\.CLI_API_KEY|@wix\\/cli|npm run wix preview/);
+    assert.ok(workflow.includes("npm ci"));
+    assert.ok(workflow.includes('node-version: "24.22.1"'));
+    assert.ok(workflow.includes("@playwright/test@1.65.1"));
+    assert.ok(!workflow.includes("secrets.CLI_API_KEY"));
+    assert.ok(!workflow.includes("@wix/cli"));
+    assert.ok(!workflow.includes("npm run wix preview"));
 });
 
 test("WIX-PREVIEW-04 workflow runs Editor Preview E2E and never publishes", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /node scripts\\/wix-preview-tpv-e2e\\.mjs/);
-    assert.doesNotMatch(workflow, /npm run wix preview|npm run wix publish|\\bwix publish\\b/i);
-    assert.match(workflow, /cancel-in-progress: false/);
+    assert.ok(workflow.includes("node scripts/wix-preview-tpv-e2e.mjs"));
+    assert.ok(!workflow.includes("npm run wix preview"));
+    assert.ok(!workflow.includes("wix publish"));
+    assert.ok(workflow.includes("cancel-in-progress: false"));
 });
 
 test("WIX-PREVIEW-05 authenticated state is secret-backed, temporary and never uploaded", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /secrets\\.WIX_STORAGE_STATE_B64/);
-    assert.match(workflow, /base64 --decode/);
-    assert.match(workflow, /RUNNER_TEMP/);
-    assert.match(workflow, /chmod 600/);
-    assert.match(workflow, /Upload E2E report only \\(never storageState\\)/);
-    assert.doesNotMatch(workflow, /path:.*storage-state\\.json/);
+    assert.ok(workflow.includes("secrets.WIX_STORAGE_STATE_B64"));
+    assert.ok(workflow.includes("base64 --decode"));
+    assert.ok(workflow.includes("RUNNER_TEMP"));
+    assert.ok(workflow.includes("chmod 600"));
+    assert.ok(workflow.includes("Upload E2E report only (never storageState)"));
+    assert.ok(!workflow.includes("path:") || !workflow.includes("storage-state.json"));
 });
 
 test("WIX-PREVIEW-06 TPV E2E performs business writes through the bridge without touching pre-existing sessions", async () => {
