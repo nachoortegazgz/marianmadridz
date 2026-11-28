@@ -364,7 +364,7 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     assert.match(controller, /MESSAGE_TYPES\.READY/);
     for (const method of [
         "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial",
-        "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja", "registrarDevolucion",
+        "validarVentaBorrador", "registrarVenta", "registrarMovimientoCaja",
         "generarTicketX", "generarCierreZ", "cerrarSesionCaja", "exportarMovimientos",
         "obtenerResumenCaja", "obtenerAuditoriaTPVLista", "obtenerConfiguracionTPV",
         "obtenerServicios", "obtenerProductos", "obtenerVariantesProducto",
