@@ -48,14 +48,14 @@ Wix Apps remain authoritative for their native domains. Wix CMS is the SSOT for 
 - Frontend is presentation and interaction. Business logic, authorization, validation and persistence belong in backend/WebMethods.
 - Authorization is enforced server-side. Never expose secrets or trust client-supplied identity, role, prices, taxes, totals or permissions.
 - Canonical constants belong in `internalConfig.js`; shared validation/normalization belongs in `validation.js`.
-- One domain code path across development, tests and production. Fixtures/adapters replace external effects, not business rules. No environment-specific business runtimes or generic global write blockers.
+- One domain code path across development, tests and operation. No environment-specific business runtimes, data labels or generic global write blockers. Date and selected test customer are the only test context differences.
 - `transactionId` is required for economic transaction writers where the contract requires transaction identity; validate it and protect against duplicate/replayed writes. Do not fabricate a substitute from sequence, trace or session IDs.
 - Async handlers, webhooks, jobs and retries must be idempotent and recoverable. Treat uncertain persistence as uncertain; do not silently retry non-idempotent effects.
 - Fiscal, accounting, labor and finalized cash-close records are append-only. Correct through new, traceable rectification records/events.
 - No silent fallback that turns invalid input/provider failure into success, empty data or zero when that masks a fault.
 - Do not delete records, purge evidence or remove code solely because it is old or large. Prove non-use by consumers, imports/exports, tests and contracts first.
-- All records predating the official production deployment in 2027 are synthetic under the project rule. This does not authorize deletion, destructive reclassification or mutation of historical records.
-- During tests: no real payments, refunds, fiscal submissions, notifications or external economic effects. Never reuse the existing open `CajaActual` singleton or historical ledgers as fixtures.
+- No operation or record is classified by environment or synthetic/live markers. Tests use the same writers, validations and ledgers as ordinary operations; only the external payment-provider response may be simulated.
+- During tests: no real captures, refunds, fiscal submissions, notifications or external economic effects. The normal business flow writes to `MovimientosCaja` and updates the `CajaActual` projection through canonical writers. Close the session used by the test; preserve historical ledger rows.
 
 ## 5. Evidence vocabulary — never overstate
 
@@ -69,7 +69,7 @@ Use these labels explicitly:
 - **INFERRED:** reasoned from evidence but not directly tested.
 - **PENDING / BLOCKED EXTERNALLY:** not yet demonstrated.
 
-CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A Wix Site Context read-back is not proof of Git-to-Wix code synchronization. Always report commit, environment, scope, test and result.
+CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A Wix Site Context read-back is not proof of Git-to-Wix code synchronization. Always report commit, execution surface, scope, test and result.
 
 ## 6. Current known baseline (read STATE-NOW before acting)
 
@@ -77,7 +77,7 @@ CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A 
 - PR #670 hardening is integrated (88 suites / 794 tests PASS on its validated HEAD). PR #675 superseded that baseline (89 suites / 804 tests PASS). PR #679 and its corrective commit are integrated; the final `main` SHA `944eb225b63260353cf283c87b0c0b6f07af6caf` passed 91 suites / 816 tests, SDK checks, ESLint, npm audit and Gitleaks/secret scanning as recorded in STATE-NOW. The initial PR #679 HEAD had a failed quality gate; do not confuse it with the corrected main commit.
 - Capa 0 remains **EN EJECUCIÓN**. PR #675 resolved provider-error masking across Bookings Staff, CRM/Members, identity and DAL; PR #679 hardened Wix sort contracts, log redaction, JSON-safe response metadata and canonical bookingType for new inserts. Remaining items: secret-provider error propagation (including fiscal-emitter consumer), confirming all staff resource IDs are service providers, money conversion contracts, currency-key duplication, global writer/idempotency matrix, dead-code audit and Runtime validation.
 - Wix Local Editor/Preview E2E, Wix Runtime acceptance and production are not accredited by the cited offline CI.
-- Last documented Wix read-back (2026-11-27): Draft, page TPV ID `yl5th` and route then observed as `/tpv` in STATE-NOW; CMS counts are historical, not live. Do not mutate CMS based on this snapshot.
+- Read-back Wix (2026-11-28): CajaActual has a legacy open projection without canonical session; MovimientosCaja has five historical rows without the canonical TPV ledger envelope. New operations must use the backend writer and preserve these historical rows.
 - Never publish or activate real payments/external effects without the owner's explicit authorization.
 
 ## 7. How to work a task
