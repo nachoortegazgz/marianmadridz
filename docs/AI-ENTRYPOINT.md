@@ -73,7 +73,7 @@ CI PASS is not Wix Runtime PASS. Runtime PASS is not production verification. A 
 
 ## 6. Current known baseline (read STATE-NOW before acting)
 
-- Main HEAD observed on 2026-11-28: `910ad3faa6e543c23e81b2902726d4d8cd43087f` (PR #675 integrated).
+- Main HEAD observed on 2026-11-28: `944eb225b63260353cf283c87b0c0b6f07af6caf` (PR #679 corrections integrated).
 - PR #670 hardening is integrated (88 suites / 794 tests PASS on its validated HEAD). PR #675 superseded that baseline (89 suites / 804 tests PASS). PR #679 and its corrective commit are integrated; the final `main` SHA `944eb225b63260353cf283c87b0c0b6f07af6caf` passed 91 suites / 816 tests, SDK checks, ESLint, npm audit and Gitleaks/secret scanning as recorded in STATE-NOW. The initial PR #679 HEAD had a failed quality gate; do not confuse it with the corrected main commit.
 - Capa 0 remains **EN EJECUCIÓN**. PR #675 resolved provider-error masking across Bookings Staff, CRM/Members, identity and DAL; PR #679 hardened Wix sort contracts, log redaction, JSON-safe response metadata and canonical bookingType for new inserts. Remaining items: secret-provider error propagation (including fiscal-emitter consumer), confirming all staff resource IDs are service providers, money conversion contracts, currency-key duplication, global writer/idempotency matrix, dead-code audit and Runtime validation.
 - Wix Local Editor/Preview E2E, Wix Runtime acceptance and production are not accredited by the cited offline CI.
