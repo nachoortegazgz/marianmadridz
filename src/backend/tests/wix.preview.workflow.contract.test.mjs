@@ -3,64 +3,59 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const workflowUrl = new URL("../../../.github/workflows/wix-tpv-preview.yml", import.meta.url);
-const packageUrl = new URL("../../../package.json", import.meta.url);
-const lockUrl = new URL("../../../package-lock.json", import.meta.url);
-const generatorUrl = new URL("../../../scripts/generate-storage-state.js", import.meta.url);
-const runnerUrl = new URL("../../../scripts/wix-preview-authenticated.mjs", import.meta.url);
-const docsUrl = new URL("../../../docs/WIX-PREVIEW-AUTHENTICATED-RUNNER.md", import.meta.url);
+const runnerUrl = new URL("../../../scripts/wix-preview-tpv-e2e.mjs", import.meta.url);
+const docsUrl = new URL("../../../tests/runtime/RUNTIME-TEST-PLAN.md", import.meta.url);
 
-test("WIX-PREVIEW-01 authenticated Preview runner is manually dispatchable", async () => {
+test("WIX-PREVIEW-01 Editor Preview E2E is manually dispatchable with an explicit Preview URL", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
     assert.match(workflow, /workflow_dispatch:/);
-    assert.match(workflow, /create_preview:[\s\S]*?type: boolean[\s\S]*?default: true/);
-    assert.match(workflow, /authenticated_browser:[\s\S]*?type: boolean[\s\S]*?default: true/);
-    assert.doesNotMatch(workflow, /^\s{2}push:/m);
-    assert.doesNotMatch(workflow, /^\s{2}pull_request:/m);
+    assert.match(workflow, /preview_url:[\\s\\S]*?required: true[\\s\\S]*?type: string/);
+    assert.doesNotMatch(workflow, /^\\s{2}push:/m);
+    assert.doesNotMatch(workflow, /^\\s{2}pull_request:/m);
 });
 
-test("WIX-PREVIEW-02 Preview is restricted to main and the configured Marian Madrid site", async () => {
+test("WIX-PREVIEW-02 workflow is bound to the Marian Madrid Editor site", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /github\.ref == 'refs\/heads\/main'/);
     assert.match(workflow, /188bed94-177c-4bc9-a9f0-35080d874f3e/);
     assert.match(workflow, /uiVersion/);
+    assert.match(workflow, /marianmadrid\\.es/);
 });
 
-test("WIX-PREVIEW-03 workflow requires Wix CLI credentials and pinned tooling", async () => {
+test("WIX-PREVIEW-03 workflow uses pinned Node and Playwright without the wrong CLI project type", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /secrets\.CLI_API_KEY/);
     assert.match(workflow, /npm ci/);
-    assert.match(workflow, /@wix\/cli@1\.2\.14/);
-    assert.match(workflow, /node-version: ["']24\.22\.1["']/);
-    assert.match(workflow, /@playwright\/test@1\.65\.1/);
+    assert.match(workflow, /node-version: ["']24\\.22\\.1["']/);
+    assert.match(workflow, /@playwright\\/test@1\\.65\\.1/);
+    assert.doesNotMatch(workflow, /secrets\\.CLI_API_KEY|@wix\\/cli|npm run wix preview/);
 });
 
-test("WIX-PREVIEW-04 workflow creates Preview only and never publishes", async () => {
+test("WIX-PREVIEW-04 workflow runs Editor Preview E2E and never publishes", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /npm run wix preview -- --source remote/);
-    assert.match(workflow, /wix\.to/);
-    assert.doesNotMatch(workflow, /npm run wix publish|\bwix publish\b/i);
+    assert.match(workflow, /node scripts\\/wix-preview-tpv-e2e\\.mjs/);
+    assert.doesNotMatch(workflow, /npm run wix preview|npm run wix publish|\\bwix publish\\b/i);
+    assert.match(workflow, /cancel-in-progress: false/);
 });
 
 test("WIX-PREVIEW-05 authenticated state is secret-backed, temporary and never uploaded", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
-    assert.match(workflow, /secrets\.WIX_STORAGE_STATE_B64/);
+    assert.match(workflow, /secrets\\.WIX_STORAGE_STATE_B64/);
     assert.match(workflow, /base64 --decode/);
     assert.match(workflow, /RUNNER_TEMP/);
     assert.match(workflow, /chmod 600/);
-    assert.match(workflow, /Upload report only \(never storageState\)/);
-    assert.doesNotMatch(workflow, /path:.*storage-state\.json/);
+    assert.match(workflow, /Upload E2E report only \\(never storageState\\)/);
+    assert.doesNotMatch(workflow, /path:.*storage-state\\.json/);
 });
 
-test("WIX-PREVIEW-06 local generator and runner preserve manual authentication and avoid business writes", async () => {
-    const generator = await readFile(generatorUrl, "utf8");
+test("WIX-PREVIEW-06 TPV E2E performs business writes through the bridge without touching pre-existing sessions", async () => {
     const runner = await readFile(runnerUrl, "utf8");
     const docs = await readFile(docsUrl, "utf8");
-    assert.match(generator, /headless: false/);
-    assert.match(generator, /storageState\(\{ path: OUTPUT, indexedDB: true \}\)/);
-    assert.match(generator, /\.local\/wix-preview-storage-state\.json/);
-    assert.match(runner, /businessWebMethodsInvoked: 0/);
-    assert.match(runner, /Authentication bootstrap only/);
-    assert.doesNotMatch(runner, /abrirSesionCaja|registrarMovimientoCaja|generarTicketX|import\(['"]backend\//);
-    assert.match(docs, /WIX_STORAGE_STATE_B64/);
-    assert.match(docs, /no invoca webMethods de negocio/);
+    for (const operation of ["CASHIER_STATE", "SESSION_OPEN", "CASH_MOVEMENT", "PARTIAL_CASH_COUNT",
+        "SALE_REGISTER", "TICKET_X", "TICKET_Z", "CASH_MOVEMENTS_EXPORT", "AUDIT_LIST"]) {
+        assert.ok(runner.includes(operation), "runner must execute " + operation);
+    }
+    assert.ok(runner.includes("PREEXISTING_OPEN_SESSION_NOT_TOUCHED"));
+    assert.ok(!runner.includes('invokeWidget(frame, "SESSION_CLOSE"'));
+    assert.ok(!runner.includes("close-existing-session"));
+    assert.ok(docs.includes("Sandbox está deshabilitado por defecto"));
+    assert.ok(docs.includes("Wix app collections"));
 });
