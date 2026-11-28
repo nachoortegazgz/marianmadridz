@@ -125,7 +125,11 @@ test("TPV product variant identity is retained and restricted to product lines",
     assert.throws(() => validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            varianteId: "variant-123",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            varianteId: "1d560c12-fefc-4cdf-b0dc-dd2a96af6919",
             concepto: "Servicio",
             cantidad: 1,
             precioUnitario: 20,
