@@ -31,7 +31,7 @@ test("TPV identity is resolved from the authenticated Wix member, not client-sup
     assert.doesNotMatch(operatorContext, /input\.operatorId|payload\.operatorId/);
     assert.match(directory, /profesionalId: resourceId/);
     assert.match(catalog, /items: await listAuthorizedProfessionals\(\)/);
-    assert.match(catalog, /filter: \{ hidden: \{ \$eq: false \} \}/);
+    assert.match(directory, /filter: wql\.eq\("recordType", RECORD_TYPE\.STAFF\)/);
     assert.match(operatorContext, /operatorResourceId: String\(staff\?\.resourceId/);
 
     // The UI selects the MapaStaff/Wix Bookings resourceId. The backend actor
@@ -68,11 +68,14 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
         source("tpv/tpvRepository.js"),
     ]);
 
-    assert.match(security, /role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
+    assert.match(security, /TPV_OPERATOR_ROLES/);
+    assert.match(security, /ROL_WEBSITE\.ESTILISTA/);
+    assert.match(security, /return role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
+    assert.match(security, /export async function requireTpvOperator/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
     assert.match(permissions, /createSale: true/);
     assert.ok(permissions.includes('openSession: staff.rolWebsite === "ADMIN"'));
-    assert.ok(permissions.includes('registerCashMovement: staff.rolWebsite === "ADMIN"'));
+    assert.ok(permissions.includes("registerCashMovement: true"));
     assert.match(permissions, /requestRefund: false/);
     assert.ok(permissions.includes('closeSession: staff.rolWebsite === "ADMIN"'));
     assert.ok(permissions.includes('issueTicketX: staff.rolWebsite === "ADMIN"'));
@@ -81,11 +84,18 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /getMyCajeroContext/);
 
-    for (const writer of [cash, movements, closures]) {
+    for (const writer of [cash, closures]) {
         assert.match(writer, /Permissions\.SiteMember/);
         assert.match(writer, /requireAdmin\(traceId\)/);
         assert.match(writer, /resolveTpvContext\(traceId\)/);
     }
+    const movementWriter = movements.slice(
+        movements.indexOf("export const registrarMovimientoCaja"),
+        movements.indexOf("export const obtenerMovimientosCaja")
+    );
+    assert.match(movementWriter, /requireTpvOperator\(traceId\)/);
+    assert.match(movementWriter, /resolveTpvContext\(traceId\)/);
+    assert.match(movements, /export const exportarMovimientosCaja[\s\S]*?requireAdmin\(traceId\)/);
 
     assert.match(cash, /openedAt: new Date\(\)/);
     assert.match(cash, /openingCashMinor/);

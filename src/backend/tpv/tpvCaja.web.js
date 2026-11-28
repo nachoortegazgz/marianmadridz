@@ -1,6 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
-import { requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvLedgerTypeSupported, closeTpvCajaSessionProjection, initializeTpvCaja, readTpvCajaSnapshot, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
@@ -51,7 +51,7 @@ export const inicializarCaja = webMethod(
         const traceId = makeTraceId("tpv-bootstrap");
 
         try {
-            await requireCajero(traceId);
+            await requireTpvOperator(traceId);
             const result = await initializeTpvCaja();
             return {
                 status: "SUCCESS",
@@ -79,7 +79,7 @@ export const obtenerEstadoCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-session-read");
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
 
         const operator = await resolveTpvContext(traceId);
         const cajaActual = await readTpvCajaSnapshot();

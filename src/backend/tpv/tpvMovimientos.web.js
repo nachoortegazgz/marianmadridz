@@ -1,6 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { resolveTpvContext } from "backend/tpv/tpvContext";
-import { requireAdmin, requireCajero } from "backend/security";
+import { requireAdmin, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { appendTpvAudit, assertTpvLedgerTypeSupported, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvOperationalLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
@@ -78,7 +78,7 @@ export const registrarMovimientoCaja = webMethod(
         const traceId = makeTraceId("tpv-cash-movement");
 
         try {
-            await requireAdmin(traceId);
+            await requireTpvOperator(traceId);
             assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const movementType = String(input.movementType || "").trim().toUpperCase();
@@ -164,7 +164,7 @@ export const obtenerMovimientosCaja = webMethod(
         const traceId = makeTraceId("tpv-cash-movements-read");
 
         try {
-            await requireCajero(traceId);
+            await requireTpvOperator(traceId);
             const limit = Number(input.limit ?? 50);
             if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
                 throw new Error("TPV_INVALID_MOVEMENTS_LIMIT");
