@@ -28,3 +28,18 @@ test("Ticket Z retry repairs a missing physical closure without duplicating it",
     assert.match(cierres, /if \(priorMovements\.length > 1\) throw new Error\("TPV_CLOSE_MOVEMENT_DUPLICATE"\)/);
     assert.match(cierres, /TPV_IDEMPOTENCY_CONFLICT/);
 });
+
+test("authorized TPV roles can open a session while singleton bootstrap remains ADMIN-only", async () => {
+    const caja = await source("src/backend/tpv/tpvCaja.web.js");
+    const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
+    const openStart = caja.indexOf("export const abrirSesionCaja = webMethod(");
+    const openEnd = caja.indexOf("export const registrarArqueoParcial = webMethod(", openStart);
+    const openBlock = caja.slice(openStart, openEnd);
+    const initStart = caja.indexOf("export const inicializarCaja = webMethod(");
+    const initEnd = caja.indexOf("export const obtenerEstadoCaja = webMethod(", initStart);
+    const initBlock = caja.slice(initStart, initEnd);
+    assert.match(openBlock, /await requireTpvOperator\(traceId\)/);
+    assert.doesNotMatch(openBlock, /await requireAdmin\(traceId\)/);
+    assert.match(initBlock, /await requireAdmin\(traceId\)/);
+    assert.match(permissions, /openSession: true/);
+});
