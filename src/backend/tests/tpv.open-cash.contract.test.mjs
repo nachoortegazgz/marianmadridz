@@ -39,7 +39,7 @@ test("APERTURA movement is reflected in CajaActual without adding the opening am
 });
 
 test("open-cash dialog displays the backend opening receipt and exposes print and continue actions", async () => {
-    const widget = await repoFile("#htmlTPV.txt");
+    const widget = await repoFile("%23htmlTPV.txt");
     const start = widget.indexOf("function openingReceiptHtml");
     const end = widget.indexOf("/* ---------- Entrada / Salida de efectivo ---------- */", start);
     assert.ok(start >= 0 && end > start, "opening dialog implementation is present");
