@@ -34,7 +34,15 @@ test("rejects tax lines without a verifiable Wix tax rate", () => {
     }), ["TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE"]);
 });
 
-test("requires exactly one payment method in V1", () => {
+test("allows an unpaid commercial intent without confirming a payment", () => {
+    assert.deepEqual(getTpvWriteV1Blockers({
+        lineas: [validLine()],
+        pagos: [],
+        totalVenta: 121,
+    }), []);
+});
+
+test("rejects split tender until a multi-payment writer exists", () => {
     assert.deepEqual(getTpvWriteV1Blockers({
         lineas: [validLine()],
         pagos: [validPayment("EFECTIVO"), validPayment("TARJETA")],
