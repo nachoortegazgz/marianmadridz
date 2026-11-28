@@ -26,7 +26,7 @@ export const obtenerPermisosTPV = webMethod(
                     openSession: staff.rolWebsite === "ADMIN",
                     registerCashMovement: staff.rolWebsite === "ADMIN",
                     registerPartialCount: staff.rolWebsite === "ADMIN",
-                    requestRefund: staff.rolWebsite === "ADMIN",
+                    requestRefund: false,
                     closeSession: staff.rolWebsite === "ADMIN",
                     issueTicketX: staff.rolWebsite === "ADMIN",
                     issueTicketZ: false,
