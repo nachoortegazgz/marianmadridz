@@ -3,7 +3,7 @@
 **Estado:** baseline físico consolidado, solo lectura.  
 **Corte Wix:** 28-11-2026.  
 **Site ID:** 188bed94-177c-4bc9-a9f0-35080d874f3e.  
-**Entorno:** Wix Editor clásico, Velo habilitado, sitio Draft.  
+**Entorno:** Wix Editor clásico, Velo habilitado, sitio Published (read-back 28-11-2026).  
 **Fuente:** Wix Data Collections API y Data Items API con consistentRead=true.  
 **Mutaciones durante la auditoría:** ninguna.
 
@@ -194,7 +194,7 @@ Los recuentos y resúmenes se obtuvieron leyendo items de cada colección NATIVE
 1. MovimientosCaja: los cinco items carecen de varios campos required del esquema físico: hash, numSerieFactura, sequenceNumber, previousRecordHash, recordTimestamp, schemaVersion, operationDescription, staffResourceId, tipoFactura, fechaExpedicionFactura, tipoImpositivo y fiscalPeriod. Dos items carecen además de movementType, totalAmount y channelType; uno carece de transactionId.
 2. MovimientosCaja: existen propiedades adicionales persistidas que no están declaradas en el esquema actual. Wix Data permite persistir propiedades ajenas al esquema; esto no las convierte en campos canónicos.
 3. HistoricoCierresZ: el único item no satisface cuatro campos required; no acredita un cierre operativo válido.
-4. CajaActual: el registro incluye posOrderId, posTransactionId y posPaymentId, que no existen en el esquema físico. La sesión está ABIERTA; no cerrarla ni reutilizarla como fixture.
+4. CajaActual: el registro incluye posOrderId, posTransactionId y posPaymentId, que no existen en el esquema físico. La proyección está ABIERTA sin sesión TPV canónica; la apertura canónica puede sustituirla mediante el writer y conservar la proyección previa para trazabilidad.
 5. MapaStaff: un item contiene la clave no declarada email. No existe CONFIG_SISTEMA en los cinco items leídos, aunque el esquema sí contiene los campos para recordType, taxId, legalName, productionActivationAt y configuración fiscal.
 6. TransaccionesTPV: la colección está vacía y su esquema no declara transactionId. No confundir sessionId/requestFingerprint de la intención TPV con transactionId del movimiento fiscal en MovimientosCaja.
 7. RegistrosHorariosStaff: la colección existe y su esquema está definido, pero no hay items.
