@@ -74,12 +74,12 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(security, /export async function requireTpvOperator/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
     assert.match(permissions, /createSale: true/);
-    assert.ok(permissions.includes('openSession: staff.rolWebsite === "ADMIN"'));
+    assert.ok(permissions.includes("openSession: true"));
     assert.ok(permissions.includes("registerCashMovement: true"));
     assert.match(permissions, /requestRefund: false/);
     assert.ok(permissions.includes('closeSession: staff.rolWebsite === "ADMIN"'));
     assert.ok(permissions.includes('issueTicketX: staff.rolWebsite === "ADMIN"'));
-    assert.match(permissions, /issueTicketZ: false/);
+    assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /getMyCajeroContext/);
@@ -162,7 +162,7 @@ test("TPV X/Z reports, immutable audit records and native/fiscal side-effect bou
     assert.match(closures, /action: "TICKET_X_GENERATED"/);
     assert.match(closures, /readOnly: true, closesSession: false/);
     assert.match(closures, /action: "TICKET_Z_CLOSED"/);
-    assert.match(closures, /getPendingTpvSales\(session\.sessionId\)/);
+    assert.match(summary, /getPendingTpvSales\(session\.sessionId\)/);
     assert.match(closures, /getPendingTpvRefunds\(session\.sessionId\)/);
     assert.match(closures, /totals\.reconciliationOk !== true/);
     assert.match(closures, /closed: true/);
@@ -215,7 +215,7 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(repository, /export async function latestOpenTpvSession/);
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
-    assert.match(cash, /const canOpenSession = operator\.rolWebsite === "ADMIN" && cajaActual\.canStartSession === true/);
+    assert.match(cash, /const canOpenSession = cajaActual\.canStartSession === true/);
     assert.match(cash, /operationalWritesAvailable: false/);
     assert.match(cash, /operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS\.OPEN/);
     assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ dayKey/);

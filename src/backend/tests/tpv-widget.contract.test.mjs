@@ -81,6 +81,9 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
     assert.doesNotMatch(controller, /tpvTestRuntime\.web|registrarVentaPrueba/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
+    assert.match(html, /state\.capabilities\.acceptPayment === true/);
+    assert.match(html, /paymentMethod: null/);
+    assert.match(html, /Cobros deshabilitados: el TPV registra ventas pendientes/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
@@ -90,11 +93,13 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /createSale: true/);
-    assert.match(permissions, /openSession: staff.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /openSession: true/);
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
-    for (const capability of ["issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
+    assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /exportAudit: false/);
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
@@ -103,6 +108,10 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.doesNotMatch(html, /\$\("refund"\)\.onclick|keyedAction\("REFUND"/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /result\?\.persisted !== true/);
+    assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
+    assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
+    assert.match(html, /Venta registrada\. Pago pendiente de confirmación\./);
+    assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado|Total simulado|pago simulado/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
     assert.match(sales, /PENDING_PAYMENT/);

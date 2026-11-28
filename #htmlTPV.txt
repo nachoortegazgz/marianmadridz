@@ -338,7 +338,7 @@ body {
 
         <p id="paymentNotice" class="status">Cobros deshabilitados: el TPV registra ventas pendientes, no ejecuta cobros ni confirma pagos.</p>
         <div class="payment-methods" id="paymentMethods">
-          <button class="btn active" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
+          <button class="btn" data-method="EFECTIVO" disabled>Efectivo (no habilitado)</button>
           <button class="btn" data-method="TARJETA" disabled>Tarjeta (no habilitada)</button>
           <button class="btn" data-method="BIZUM" disabled title="Pendiente de verificar la configuración PAYMENTS">Bizum (no verificado)</button>
           <button class="btn" data-method="BONO" disabled title="Saldo no verificable en esta versión">Bono (no verificado)</button>
@@ -508,7 +508,7 @@ body {
     catalogKind: "SERVICES",
     items: [],
     payments: [],
-    paymentMethod: "EFECTIVO",
+    paymentMethod: null,
     busy: false,
     lastSale: null,
     // Compatibility transport key: this value is a native Wix Contacts _id.
@@ -609,7 +609,6 @@ body {
       TPV_SESSION_CLOSED: "La sesión está cerrada. Abre una nueva sesión para continuar.",
       TPV_SESSION_MISMATCH: "La sesión seleccionada ya no es la sesión activa. Actualiza el estado de caja y vuelve a seleccionar la sesión.",
       TPV_COUNT_DIFFERENCE_REASON_REQUIRED: "Hay una diferencia entre el efectivo esperado y el contado. Explica el motivo con al menos 3 caracteres.",
-      TPV_PENDING_SALES_PREVENT_CLOSE: "No se puede cerrar la caja: hay ventas pendientes de completar o conciliar. Consulta el detalle antes de volver a intentarlo.",
       TPV_PENDING_REFUNDS_PREVENT_CLOSE: "No se puede cerrar la caja: hay devoluciones pendientes de completar o conciliar.",
       TPV_RECONCILIATION_FAILED: "No se puede cerrar la caja porque los movimientos no cuadran. Revisa el resumen y los movimientos pendientes.",
       TPV_IDEMPOTENCY_KEY_INVALID: "No se ha podido validar la clave de operación. No repitas la acción; actualiza la página y consulta el estado antes de reintentar.",
@@ -700,7 +699,9 @@ body {
         if (data.error || response.error || response.status === "ERROR") {
           rejectStructured(response.error || data.error || response, "TPV_OPERATION_FAILED");
         } else if (response.status === "PENDING") {
-          rejectStructured({ code: response.reason || "TPV_OPERATION_PENDING", status: "PENDING", retryable: false, requiresReconciliation: response.requiresReconciliation === true, outcomeUnknown: true, operationMayContinue: true }, "TPV_OPERATION_PENDING");
+          // A persisted pending result is an operation outcome, not a transport failure.
+          // Resolve it so the caller can show the status and release its idempotency key.
+          resolve(response);
         } else {
           resolve(response.data !== undefined ? response.data : response);
         }
@@ -1037,7 +1038,7 @@ body {
       container.innerHTML = `
         <div class="ticket-line"><strong>VENTA</strong></div>
         <div class="ticket-line"><span>Referencia</span><strong>${esc(sale.saleId || "")}</strong></div>
-        <div class="ticket-line"><span>Total simulado</span><strong>${money(sale.totalVenta || 0)}</strong></div>
+        <div class="ticket-line"><span>Total pendiente de cobro</span><strong>${money(sale.totalVenta || 0)}</strong></div>
         <div class="ticket-line"><span>Medio declarado</span><strong>${esc(methods || "—")}</strong></div>
         ${hasProducts ? '<div class="ticket-line"><span>Stock</span><strong>No consultado ni modificado</strong></div>' : ''}
       `;
@@ -1091,7 +1092,6 @@ body {
       if (blockers.includes("PAYMENT_NOT_VERIFIED")) messages.push("Pago no verificado.");
       if (blockers.includes("TPV_WRITE_V1_TAX_RATE_UNVERIFIABLE")) messages.push("La tasa impositiva de alguna línea no puede verificarse.");
       if (blockers.includes("TPV_WRITE_V1_MULTI_VAT_UNSUPPORTED")) messages.push("La venta combina varias tasas de IVA; la escritura V1 solo admite una.");
-      if (blockers.includes("TPV_WRITE_V1_PAYMENT_REQUIRED")) messages.push("Añade un medio de pago.");
       if (blockers.includes("TPV_WRITE_V1_SPLIT_TENDER_UNSUPPORTED")) messages.push("La escritura V1 admite un único medio de pago por venta.");
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_METHOD_UNSUPPORTED")) messages.push("El medio de pago no está habilitado en el contrato V1.");
       if (blockers.includes("TPV_WRITE_V1_PAYMENT_TOTAL_MISMATCH")) messages.push("El importe aplicado del pago no coincide con el total de la venta.");
@@ -1120,7 +1120,7 @@ body {
     renderTicket();
   };
 
-  /* ---------- Pagos (simulación local; NO se envían en SALE_REGISTER) ---------- */
+  /* ---------- Pago: controles condicionados a capability backend ---------- */
   function paymentTotals() {
     const totalsMinor = Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]));
     state.payments.forEach((payment) => {
@@ -1139,7 +1139,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const pendingMinor = totalMinor === null ? null : Math.max(0, totalMinor - appliedMinor);
     const changeMinor = state.payments.reduce((sum, payment) => sum + payment.changeMinor, 0);
-    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.commercialRecordReady === true && state.operationalWritesAvailable === true;
+    const paymentReady = state.saleQuote?.catalogVerified === true && state.saleQuote?.taxVerified === true && state.saleQuote?.commercialRecordReady === true && state.operationalWritesAvailable === true && state.capabilities.acceptPayment === true;
     $("paymentAmount").disabled = !paymentReady;
     $("addPayment").disabled = !paymentReady;
     document.querySelectorAll("[data-cash]").forEach((button) => { button.disabled = !paymentReady; });
@@ -1188,7 +1188,7 @@ body {
     btn.onclick = () => {
       const val = btn.dataset.cash;
       if (val === "exact") {
-        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
+        if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true || state.capabilities.acceptPayment !== true) {
           toast("No hay una cotización fiscal válida para la venta.");
           return;
         }
@@ -1202,7 +1202,7 @@ body {
 
   $("addPayment").onclick = () => {
     if (!state.saleQuote || state.saleQuote.catalogVerified !== true || state.saleQuote.taxVerified !== true || state.saleQuote.commercialRecordReady !== true || state.operationalWritesAvailable !== true) {
-      toast("No se aceptan pagos: el backend no ha autorizado la venta.");
+      toast("No se aceptan pagos: el backend no ha habilitado la capacidad de cobro.");
       return;
     }
     if (state.payments.length >= 1) {
@@ -1224,7 +1224,7 @@ body {
       sum + payment.amountMinor - payment.changeMinor, 0);
     const remainingMinor = totalMinor - appliedMinor;
     if (!state.items.length || remainingMinor <= 0) {
-      toast("No hay importe pendiente para el pago simulado.");
+      toast("No hay importe pendiente para asignar.");
       return;
     }
     if (state.paymentMethod !== "EFECTIVO" && amountMinor > remainingMinor) {
@@ -1242,10 +1242,10 @@ body {
     $("paymentAmount").value = "";
     renderPaymentSummary();
     refreshSaleQuote();
-    if (changeMinor > 0) toast("Importe de prueba añadido. Cambio simulado: " + money(changeMinor / 100));
+    if (changeMinor > 0) toast("Importe añadido. Cambio calculado: " + money(changeMinor / 100));
   };
 
-  /* ---------- Guardar venta (SIN medioPago, SIN payments reales) ---------- */
+  /* ---------- Registrar venta; el pago permanece pendiente hasta su confirmación ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
     if (!state.items.length) {
       toast("El ticket está vacío.");
@@ -1273,7 +1273,7 @@ body {
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast(state.payments.length ? "Venta registrada con el pago declarado." : "Venta registrada como pendiente de cobro.");
+    toast("Venta registrada. Pago pendiente de confirmación.");
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
@@ -1629,14 +1629,18 @@ body {
       const countedCash = num(countedCashInput);
       if (!String(countedCashInput ?? "").trim() || !Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
       const differenceReason = $("differenceReason").value.trim();
-      await keyedAction("TICKET_Z", "TICKET_Z", {
+      const result = await keyedAction("TICKET_Z", "TICKET_Z", {
         sessionId: state.session?.sessionId,
         countedCash,
         differenceReason: differenceReason,
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       await refreshCashState();
-      toast("Cierre Z registrado.");
+      const pendingSalesCount = Number(result?.pendingSalesCount || 0);
+      const pendingSalesGross = Number(result?.pendingSalesGross || 0);
+      toast(pendingSalesCount > 0
+        ? "Cierre Z registrado. " + pendingSalesCount + " ventas pendientes de cobro (" + money(pendingSalesGross) + ")."
+        : "Cierre Z registrado.");
     });
   };
 

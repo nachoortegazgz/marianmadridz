@@ -1,6 +1,7 @@
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import {
     getCommittedTpvSales,
+    getPendingTpvSales,
     getTpvCashMovements,
     getTpvPayments,
     getTpvRefunds,
@@ -9,8 +10,9 @@ import {
 
 export async function buildTpvSessionSummary(session) {
     if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
-    const [sales, payments, refunds, movements, lines] = await Promise.all([
+    const [sales, pendingSales, payments, refunds, movements, lines] = await Promise.all([
         getCommittedTpvSales(session.sessionId),
+        getPendingTpvSales(session.sessionId),
         getTpvPayments(session.sessionId),
         getTpvRefunds(session.sessionId),
         getTpvCashMovements(session.sessionId),
@@ -21,6 +23,14 @@ export async function buildTpvSessionSummary(session) {
         sessionId: session.sessionId,
         currency: SDK_CONFIG.CURRENCY_CODE,
         ticketCount: sales.length,
+        pendingSalesCount: pendingSales.length,
+        pendingSalesGrossMinor: pendingSales.reduce((sum, sale) => {
+            const amountMinor = Number(sale.totalVentaMinor);
+            if (!Number.isSafeInteger(amountMinor) || amountMinor < 0) {
+                throw new Error("TPV_PENDING_SALE_AMOUNT_INVALID");
+            }
+            return sum + amountMinor;
+        }, 0),
         refundCount: refunds.length,
         grossSalesMinor: sales.reduce((sum, sale) => sum + Number(sale.totalMinor || 0), 0),
         discountsMinor: sales.reduce((sum, sale) => sum + Number(sale.discountMinor || 0), 0),

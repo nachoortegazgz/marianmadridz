@@ -3,11 +3,71 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvLedgerTypeSupported, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvLedgerTypeSupported, closeTpvCajaSessionProjection, getPendingTpvRefunds, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
+
 import { normalizeTpvError } from "backend/tpv/tpvError";
+
+async function persistTpvSessionClose({
+    sessionId,
+    countedCashMinor,
+    expectedCashMinor,
+    differenceMinor,
+    reason,
+    operatorId,
+    closedAt,
+    traceId,
+}) {
+    const priorMovements = await queryTpvRecords(
+        TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+        wql.and(wql.eq("sessionId", sessionId), wql.eq("movementType", "CIERRE"))
+    );
+    if (priorMovements.length > 1) throw new Error("TPV_CLOSE_MOVEMENT_DUPLICATE");
+
+    let movement = priorMovements[0] || null;
+    if (movement) {
+        const payload = movement.payload || {};
+        if ((payload.countedCashMinor !== undefined && Number(payload.countedCashMinor) !== countedCashMinor) ||
+            (payload.expectedCashMinor !== undefined && Number(payload.expectedCashMinor) !== expectedCashMinor) ||
+            (payload.differenceMinor !== undefined && Number(payload.differenceMinor) !== differenceMinor)) {
+            throw new Error("TPV_IDEMPOTENCY_CONFLICT");
+        }
+    } else {
+        const result = await insertTpvEvent(
+            TPV_COLLECTIONS.MOVIMIENTOS_CAJA,
+            sessionId + "-CIERRE",
+            {
+                sessionId,
+                movementType: "CIERRE",
+                amountMinor: differenceMinor,
+                paymentMethod: "EFECTIVO",
+                reason,
+                createdAt: closedAt,
+                payload: {
+                    traceId,
+                    countedCashMinor,
+                    expectedCashMinor,
+                    differenceMinor,
+                    observations: reason,
+                    operatorId,
+                },
+            }
+        );
+        movement = result.item;
+    }
+
+    const projection = await closeTpvCajaSessionProjection({
+        sessionId,
+        countedCash: fromMinorUnits(countedCashMinor),
+        expectedCash: fromMinorUnits(expectedCashMinor),
+        difference: fromMinorUnits(differenceMinor),
+        operatorId,
+        closedAt,
+    });
+    return { movement, projection };
+}
 
 export const obtenerResumenCaja = webMethod(
     Permissions.SiteMember,
@@ -204,6 +264,22 @@ export const generarCierreZ = webMethod(
                     ) {
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
+                    const priorExpectedCashMinor = Number(prior.totals?.expectedCashMinor || 0);
+                    const priorDifferenceMinor = Number(prior.totals?.differenceMinor ?? (requestedCount - priorExpectedCashMinor));
+                    const priorClosedAt = prior.generatedAt instanceof Date
+                        ? prior.generatedAt
+                        : new Date(prior.generatedAt || prior._createdDate);
+                    if (Number.isNaN(priorClosedAt.getTime())) throw new Error("TPV_CLOSE_TIMESTAMP_INVALID");
+                    await persistTpvSessionClose({
+                        sessionId: prior.sessionId,
+                        countedCashMinor: requestedCount,
+                        expectedCashMinor: priorExpectedCashMinor,
+                        differenceMinor: priorDifferenceMinor,
+                        reason: requestedReason,
+                        operatorId: String(prior.totals?.operatorId || prior.totals?.closedByMemberId || operator.operatorId),
+                        closedAt: priorClosedAt,
+                        traceId,
+                    });
                     await appendTpvAudit({
                         idempotencyKey: "TICKET_Z:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + prior.sessionId + ":AUDIT",
                         action: "TICKET_Z_CLOSED",
@@ -221,6 +297,8 @@ export const generarCierreZ = webMethod(
                             expectedCash: fromMinorUnits(Number(prior.totals?.expectedCashMinor || 0)),
                             countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
                             difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
+                            pendingSalesCount: Number(prior.totals?.pendingSalesCount || 0),
+                            pendingSalesGross: fromMinorUnits(Number(prior.totals?.pendingSalesGrossMinor || 0)),
                             closed: prior.closed === true,
                             operationalStatus: "CERRADA",
                             operatorId: operator.operatorId,
@@ -244,8 +322,8 @@ export const generarCierreZ = webMethod(
                     throw new Error("TPV_SESSION_CLOSED");
                 }
             if (input.sessionId && input.sessionId !== session.sessionId) throw new Error("TPV_SESSION_MISMATCH");
-            const pendingSales = await getPendingTpvSales(session.sessionId);
-            if (pendingSales.length > 0) throw new Error("TPV_PENDING_SALES_PREVENT_CLOSE");
+            // Unpaid commercial intents remain pending and are reported separately in the Z summary.
+            // They do not represent collected money and therefore do not block physical cash-session closure.
             const pendingRefunds = await getPendingTpvRefunds(session.sessionId);
             if (pendingRefunds.length > 0) throw new Error("TPV_PENDING_REFUNDS_PREVENT_CLOSE");
             const countedMinor = toMinorUnits(input.countedCash, "COUNTED_CASH");
@@ -281,6 +359,8 @@ export const generarCierreZ = webMethod(
                         expectedCash: fromMinorUnits(Number(prior.totals?.expectedCashMinor || 0)),
                         countedCash: fromMinorUnits(Number(prior.totals?.countedCashMinor || 0)),
                         difference: fromMinorUnits(Number(prior.totals?.differenceMinor || 0)),
+                        pendingSalesCount: Number(prior.totals?.pendingSalesCount || 0),
+                        pendingSalesGross: fromMinorUnits(Number(prior.totals?.pendingSalesGrossMinor || 0)),
                         replayed: true,
                         closed: true,
                         fiscalLedgerWritten: false,
@@ -291,10 +371,11 @@ export const generarCierreZ = webMethod(
             }
             const idempotencyKey = "TICKET_Z:" + TPV_RUNTIME_POLICY.SITE_ID + ":" + session.sessionId;
             const reportId = "Z-" + session.sessionId;
+            const closedAt = new Date();
             const { item, replayed } = await insertTpvEvent(TPV_COLLECTIONS.TICKET_Z, idempotencyKey, {
                 sessionId: session.sessionId,
                 reportId,
-                generatedAt: new Date(),
+                generatedAt: closedAt,
                 status: "CERRADO",
                 sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
                 closed: true,
@@ -312,6 +393,16 @@ export const generarCierreZ = webMethod(
                 payload: { traceId, sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE, siteId: operator.siteId, sessionId: session.sessionId, immutableAfterCreation: true },
             });
             persisted = true;
+            await persistTpvSessionClose({
+                sessionId: session.sessionId,
+                countedCashMinor: countedMinor,
+                expectedCashMinor: totals.expectedCashMinor,
+                differenceMinor,
+                reason,
+                operatorId: operator.operatorId,
+                closedAt,
+                traceId,
+            });
             await appendTpvAudit({
                 idempotencyKey: idempotencyKey + ":AUDIT",
                 action: "TICKET_Z_CLOSED",
@@ -329,6 +420,8 @@ export const generarCierreZ = webMethod(
                     expectedCash: fromMinorUnits(totals.expectedCashMinor),
                     countedCash: fromMinorUnits(countedMinor),
                     difference: fromMinorUnits(differenceMinor),
+                    pendingSalesCount: Number(totals.pendingSalesCount || 0),
+                    pendingSalesGross: fromMinorUnits(Number(totals.pendingSalesGrossMinor || 0)),
                     replayed,
                     closed: true,
                     operationalStatus: "CERRADA",
