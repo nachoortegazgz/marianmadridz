@@ -1,6 +1,16 @@
 name: Wix TPV Preview (authenticated browser)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/wix-tpv-preview.yml"
+      - "scripts/wix-preview-tpv-e2e.mjs"
+      - "src/public/widgetBridge.js"
+      - "src/public/tpvPageController.js"
+      - "#htmlTPV.txt"
+      - "src/backend/tpv/**"
+      - "src/backend/tests/tpv*.test.mjs"
   workflow_dispatch:
     inputs:
       create_preview:
@@ -24,7 +34,7 @@ concurrency:
 jobs:
   preview:
     name: Create Wix Preview and verify authenticated browser
-    if: github.event_name == 'workflow_dispatch' && inputs.create_preview == true && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.create_preview == true)
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -44,7 +54,7 @@ jobs:
         run: |
           test -n "$CLI_API_KEY" || { echo "::error::Missing CLI_API_KEY"; exit 1; }
       - name: Decode authenticated browser state
-        if: inputs.authenticated_browser == true
+        if: github.event_name == 'push' || inputs.authenticated_browser == true
         env:
           WIX_STORAGE_STATE_B64: ${{ secrets.WIX_STORAGE_STATE_B64 }}
         run: |
@@ -74,20 +84,21 @@ jobs:
         run: |
           npm install --global @playwright/test@1.65.1
           playwright install --with-deps chromium
-      - name: Verify authenticated Preview browser
-        if: inputs.authenticated_browser == true
+      - name: Execute authenticated TPV Runtime E2E
+        if: github.event_name == 'push' || inputs.authenticated_browser == true
         env:
           WIX_PREVIEW_URL: ${{ steps.wix-preview.outputs.preview_url }}
           WIX_STORAGE_STATE_PATH: ${{ runner.temp }}/wix-auth/storage-state.json
-          WIX_RUNTIME_REPORT: ${{ runner.temp }}/wix-preview-authenticated.json
+          WIX_TPV_E2E_REPORT: ${{ runner.temp }}/wix-tpv-e2e.json
+          WIX_TPV_PAGE_PATH: /tpv
         run: |
           export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
-          node scripts/wix-preview-authenticated.mjs
-      - name: Upload report only (never storageState)
-        if: always() && inputs.authenticated_browser == true
+          node scripts/wix-preview-tpv-e2e.mjs
+      - name: Upload runtime evidence only (never storageState)
+        if: always() && (github.event_name == 'push' || inputs.authenticated_browser == true)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: wix-preview-authenticated-report
-          path: ${{ runner.temp }}/wix-preview-authenticated.json
+          name: wix-tpv-runtime-e2e-report
+          path: ${{ runner.temp }}/wix-tpv-e2e.json
           if-no-files-found: warn
           retention-days: 3
