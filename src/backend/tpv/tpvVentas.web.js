@@ -379,6 +379,16 @@ async function resumeExistingSale(record, { buyer, replayed, traceId }) {
     } catch (error) {
         auditPersisted = false;
         auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
+    }
+    if (current.status === "CONFIRMADA" && current.paymentSelection?.[0]?.ledgerMovementId) {
+        try {
+            await appendSalePaymentAudit(current, traceId);
+        } catch (error) {
+            auditPersisted = false;
+            auditErrorCode = auditErrorCode || _safeTpvErrorCode(error, "TPV_PAYMENT_AUDIT_WRITE_FAILED");
+        }
+    }
+    if (!auditPersisted) {
         try {
             current = await updateItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV, {
                 ...current,
@@ -628,6 +638,16 @@ export const registrarVenta = webMethod(
                 } catch (error) {
                     auditPersisted = false;
                     auditErrorCode = _safeTpvErrorCode(error, "TPV_SALE_AUDIT_WRITE_FAILED");
+                }
+                if (saved.status === "CONFIRMADA" && saved.paymentSelection?.[0]?.ledgerMovementId) {
+                    try {
+                        await appendSalePaymentAudit(saved, traceId);
+                    } catch (error) {
+                        auditPersisted = false;
+                        auditErrorCode = auditErrorCode || _safeTpvErrorCode(error, "TPV_PAYMENT_AUDIT_WRITE_FAILED");
+                    }
+                }
+                if (!auditPersisted) {
                     try {
                         saved = await updateItem(
                             BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
