@@ -79,6 +79,8 @@ $w.onReady(async () => {
     }
 
     createWidgetBridge(widget, {
+        allowOpaqueOrigin: true,
+        requireBridgeId: true,
         allowedTypes: [
             MESSAGE_TYPES.READY,
             MESSAGE_TYPES.CONTEXT,
