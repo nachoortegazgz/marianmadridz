@@ -1,6 +1,6 @@
 # Release readiness — 2026-11-28
 
-**Estado global: NO-GO para MVP operativo/comercial.** El sitio permanece Draft/no publicado según el último read-back documentado. La validación offline de Capa 0 está verde para PR #675 (89 suites / 804 tests PASS en su HEAD validado); no hay aceptación Wix Local Editor/Preview E2E, Wix Runtime ni producción acreditada.
+**Estado global: NO-GO para MVP operativo/comercial.** El sitio permanece Draft/no publicado según el último read-back documentado. La validación offline de Capa 0 está verde para el HEAD correctivo de `main` tras PR #679 (91 suites / 816 tests PASS); no hay aceptación Wix Local Editor/Preview E2E, Wix Runtime ni producción acreditada.
 
 El estado detallado, los SHAs y la evidencia más reciente se mantienen en [STATE-NOW](STATE-NOW.md). Este documento define gates y criterios de aceptación; no duplica el historial de CI.
 
@@ -22,7 +22,8 @@ El estado detallado, los SHAs y la evidencia más reciente se mantienen en [STAT
 Consultar [STATE-NOW](STATE-NOW.md) para el detalle fechado. A 2026-11-28:
 
 - PR #670 está integrada en `main`; su CI offline reportó 88 suites / 794 tests PASS.
-- PR #675 está integrada en `main` mediante squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`; su HEAD validado reportó 89 suites / 804 tests PASS, SDK Cart/Transactions/TPV, ESLint, npm audit y Gitleaks PASS.
+- PR #675 está integrada en `main` mediante squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`; su HEAD validado reportó 89 suites / 804 tests PASS.
+- PR #679 está integrada (merge `d44501c3c224ac417b283f687718ec9eb7538606`) y su commit correctivo final de `main` es `944eb225b63260353cf283c87b0c0b6f07af6caf`; los workflows post-correction reportaron 91 suites / 816 tests PASS (run `46085827875`) y secret scanning PASS (run `46085827842`).
 - La evidencia CI pertenece a los HEAD validados de cada PR; no se debe trasladar automáticamente a commits posteriores.
 - Capa 0 continúa EN EJECUCIÓN: quedan propagación de fallos del almacén de secretos, verificación de cobertura de Staff Members v1 para todos los resourceId, conversiones monetarias, configuración de moneda, matriz de writers/idempotencia, deuda/código muerto y validación Runtime.
 - El último read-back Wix documentado es 27-11-2026 y es histórico: Draft, una `CajaActual` ABIERTA, movimientos e históricos existentes y divergencias Bookings/CitasF2. No usar esos registros como fixtures ni asumir que los recuentos siguen vigentes.
