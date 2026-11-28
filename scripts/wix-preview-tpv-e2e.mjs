@@ -437,8 +437,10 @@ async function run() {
     const finalLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
     const finalLedger = assertSuccess(finalLedgerEnvelope, "CASH_MOVEMENTS_EXPORT_AFTER_CLOSE");
     const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
-    const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
-    assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
+    const closingItem = finalItems.find((item) => item.movementType === "CIERRE_Z" && item.reportId === ticketZData.reportId);
+    assert.ok(closingItem, "Ticket Z was not found in the post-close ledger query");
+    assert.equal(closingItem.sessionId, sessionId);
+    assert.equal(closingItem.status, "CERRADO");
     assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
     assert.equal(closingItem.movementId, closingItem.transactionId);
     for (const item of finalItems) {
@@ -454,9 +456,13 @@ async function run() {
     const auditData = assertSuccess(auditEnvelope, "AUDIT_LIST");
     const auditItems = Array.isArray(auditData.items) ? auditData.items : [];
     const ticketAudit = auditItems.find((item) => item.action === "TICKET_X_GENERATED");
-    const closeAudit = auditItems.find((item) => item.action === "CAJA_SESSION_CLOSED");
+    const closeAudit = auditItems.find((item) => item.action === "TICKET_Z_CLOSED");
     assert.ok(ticketAudit?.id, "Ticket X audit record not found");
-    assert.ok(closeAudit?.id, "Session close audit record not found");
+    assert.ok(closeAudit?.id, "Ticket Z audit record not found");
+    const saleAudit = auditItems.find((item) => item.action === "VENTA_TPV_REGISTRADA" && item.entityId === saleIdempotencyKey);
+    const orderAudit = auditItems.find((item) => item.action === "PEDIDO_WIX_TPV_VINCULADO" && item.entityId === saleIdempotencyKey);
+    assert.ok(saleAudit?.id, "Sale audit record not found");
+    assert.ok(orderAudit?.id, "Wix order link audit record not found");
 
     report.postChecks = {
         cashRegisterStatus: finalState.operationalStatus,
