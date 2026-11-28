@@ -21,3 +21,14 @@ La documentación activa y su jerarquía se encuentran en [AI-ENTRYPOINT](AI-ENT
 - El diccionario CMS extenso y ESQUEMA_CMS histórico se conservan en archive como evidencia; el baseline físico vigente es [ESQUEMA_CMS](ESQUEMA_CMS.md), actualizado mediante lectura Wix read-only del 27-11-2026.
 - El dossier consolidado de la raíz se mantiene como resumen ejecutivo corto; no debe evolucionar como un segundo dossier técnico.
 - No se elimina código ejecutable ni evidencia histórica como parte de esta reorganización documental.
+
+
+## Segunda pasada documento a documento — 2026-11-28
+
+- [Registro de revisión individual](archive/2026-11/ARCHIVE-REVIEW-2026-11-28.md): 161 archivos inventariados, clasificados y asignados a un tratamiento.
+- No se detectaron duplicados binarios exactos por SHA de blob. Sí se identificaron solapamientos semánticos entre estados, dossiers, ADR, auditorías y handoffs.
+- Se mantienen los archivos en sus rutas originales para no romper referencias históricas ni perder evidencia. Los documentos supersedidos se conservan expresamente como antecedentes, no se reactivan.
+- Se actualizó el índice del archivo para retirar la falsa jerarquía operativa de noviembre y dirigir al punto de entrada IA actual.
+- Se redactaron contactos personales y un identificador de credencial encontrados en documentación histórica. No se modificó la configuración activa ni se tocaron secretos.
+- El dossier de flujos Capa 1–3 se conserva como diseño histórico de valor; no acredita la existencia de integraciones M365/SharePoint/Power Automate ni aceptación Runtime.
+- El diccionario CMS de 300 KB y la verificación del 23-11 se conservan, pero no son esquema vigente: prevalece `docs/ESQUEMA_CMS.md`.
