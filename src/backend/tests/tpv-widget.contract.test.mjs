@@ -94,7 +94,8 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /registerCashMovement: true/);
     assert.match(permissions, /registerPartialCount: staff.rolWebsite === "ADMIN"/);
     assert.match(permissions, /requestRefund: false/);
-    for (const capability of ["issueTicketZ", "exportAudit"]) assert.match(permissions, new RegExp(capability + ": false"));
+    assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /exportAudit: false/);
     for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
@@ -103,6 +104,10 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.doesNotMatch(html, /\$\("refund"\)\.onclick|keyedAction\("REFUND"/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
     assert.match(html, /result\?\.persisted !== true/);
+    assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
+    assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
+    assert.match(html, /Venta registrada\. Pago pendiente de confirmación\./);
+    assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
     assert.match(sales, /PENDING_PAYMENT/);
