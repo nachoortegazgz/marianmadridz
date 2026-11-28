@@ -37,7 +37,7 @@ function rateUnitsToString(units) {
 }
 
 function mapTaxBreakdown(items) {
-    if (!Array.isArray(items) || items.length === 0 || items.length > 7) {
+    if (!Array.isArray(items) || items.length === 0) {
         fail("TPV_ORDER_TAX_BREAKDOWN_INVALID");
     }
 
@@ -138,7 +138,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
             price: price(fromMinorUnits(unitPriceMinor), "ORDER_UNIT_PRICE"),
             totalPriceBeforeTax: price(fromMinorUnits(lineSubtotalMinor), "ORDER_LINE_SUBTOTAL"),
             totalPriceAfterTax: price(fromMinorUnits(lineTotalMinor), "ORDER_LINE_TOTAL"),
-            paymentOption: "FULL_PAYMENT_OFFLINE",
+            ...(line.tipoLinea === "SERVICIO" ? { paymentOption: "FULL_PAYMENT_OFFLINE" } : {}),
             taxInfo: {
                 taxableAmount: price(fromMinorUnits(lineSubtotalMinor), "ORDER_TAXABLE_AMOUNT"),
                 taxAmount: price(fromMinorUnits(lineTaxMinor), "ORDER_TAX_AMOUNT"),
