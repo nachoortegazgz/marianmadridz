@@ -1,6 +1,6 @@
 import { webMethod, Permissions } from "wix-web-module";
 
-import { requireAdmin, rateLimiter } from "backend/security";
+import { requireMarianManager, rateLimiter } from "backend/security";
 import {
     getQuarterlyTaxSummaryInternal,
     getLibroRegistroFacturasExpedidasInternal,
@@ -23,11 +23,11 @@ function errorResult(code, traceId, message) {
  * integration outbox; this does not upload to SharePoint or send email.
  */
 export const prepareExternalRegistryPackage = webMethod(
-    Permissions.Admin,
+    Permissions.SiteMember,
     async (period = {}) => {
         const traceId = makeTraceId("c3-export");
         try {
-            await requireAdmin(traceId);
+            await requireMarianManager(traceId);
             const rate = await rateLimiter({
                 surface: "capa3.prepareExternalRegistryPackage",
                 key: "admin",
