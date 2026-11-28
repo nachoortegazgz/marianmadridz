@@ -59,3 +59,25 @@ test("response error messages never stringify plain objects as [object Object]",
     assert.equal(response.error.message, "Error interno");
     assert.notEqual(response.error.message, "[object Object]");
 });
+
+
+test("response metadata preserves useful fields and replaces circular references with a JSON-safe marker", () => {
+    const shared = { value: 7 };
+    const meta = {
+        traceId: "trace-circular",
+        first: shared,
+        second: shared,
+        createdAt: new Date("2026-11-28T00:00:00.000Z"),
+    };
+    meta.self = meta;
+    meta.nested = { parent: meta };
+
+    const response = successResponse({ ok: true }, meta);
+    assert.equal(response.meta.traceId, "trace-circular");
+    assert.equal(response.meta.self, "[Circular]");
+    assert.equal(response.meta.nested.parent, "[Circular]");
+    assert.deepEqual(response.meta.first, { value: 7 });
+    assert.deepEqual(response.meta.second, { value: 7 });
+    assert.equal(response.meta.createdAt, "2026-11-28T00:00:00.000Z");
+    assert.doesNotThrow(() => JSON.stringify(response));
+});
