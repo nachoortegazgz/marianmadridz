@@ -439,8 +439,12 @@ test("TPV bootstrap no longer depends on the deleted identity collection", async
     assert.notEqual(initializeStart, -1);
     assert.notEqual(getCajaStart, -1);
     const initializeBlock = repository.slice(initializeStart, getCajaStart);
-    assert.match(initializeBlock, /if \(!existing\) throw new Error\("TPV_CASH_REGISTER_NOT_PRESEEDED"\)/);
-    assert.doesNotMatch(initializeBlock, /insertItem\(|authorizeCreate/);
+    assert.match(initializeBlock, /_id: SINGLETONS\.CAJA_ACTUAL_ITEM_ID/);
+    assert.match(initializeBlock, /singletonKey: SINGLETONS\.CAJA_PRINCIPAL/);
+    assert.match(initializeBlock, /await insertItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, bootstrap\)/);
+    assert.match(initializeBlock, /const saved = await _getCajaActual\(\)/);
+    assert.match(initializeBlock, /assertTpvCajaIntegrity\(saved, \{ allowBootstrap: true \}\)/);
+    assert.doesNotMatch(initializeBlock, /saveItem\(|authorizeCreate/);
 
     const insertStart = repository.indexOf("export async function insertTpvEvent(");
     const insertEnd = repository.indexOf("export async function queryTpvRecords", insertStart);

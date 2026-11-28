@@ -125,7 +125,7 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.doesNotMatch(html, /setInterval\s*\(/);
     assert.match(html, /id="refreshCatalog"/);
     assert.match(html, /\$\("refreshCatalog"\)\.onclick = \(\) => loadCatalog/);
-    assert.match(repository, /export async function initializeTpvCaja\(\)[\s\S]*?_getCajaActual\(\)/);
+    assert.match(repository, /export async function initializeTpvCaja\(traceId = null\)[\s\S]*?_getCajaActual\(\)/);
     assert.match(repository, /saved = await insertItem\(BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA, ledgerItem\)/);
     assert.match(repository, /await _projectPersistedTpvEvent\([\s\S]*?collection, record, item\._id, item\.hash, key, false/);
     assert.match(repository, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
