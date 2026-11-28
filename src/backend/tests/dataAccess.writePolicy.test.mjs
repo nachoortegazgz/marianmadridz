@@ -225,7 +225,7 @@ test("TransaccionesTPV validates backend-priced records and permits validated ed
     assert.throws(() => assertTransaccionesTPVRecord({
         ...record,
         requiresReconciliation: false,
-    }), /requiresReconciliation/);
+    }), /state or metadata invalid/);
 });
 
 test("MovimientosCaja accepts legacy movement aliases without environment classification", () => {
