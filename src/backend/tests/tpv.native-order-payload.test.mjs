@@ -85,7 +85,7 @@ test("maps mixed Wix Stores and Bookings lines to one POS order", () => {
     assert.equal(result.order.lineItems[1].itemType.preset, "SERVICE");
     assert.equal(result.order.lineItems[0].paymentOption, undefined);
     assert.equal(result.order.lineItems[1].paymentOption, "FULL_PAYMENT_OFFLINE");
-    assert.equal(result.options.settings.orderApprovalStrategy, "PAYMENT_RECEIVED");
+    assert.equal(result.options.settings.orderApprovalStrategy, "DEFAULT");
     assert.equal(result.order.priceSummary.subtotal.amount, "30.00");
     assert.equal(result.order.priceSummary.tax.amount, "6.30");
     assert.equal(result.order.priceSummary.total.amount, "36.30");
