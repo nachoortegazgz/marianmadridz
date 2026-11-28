@@ -361,8 +361,8 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
         source("src/backend/tpv/tpvRepository.js"),
     ]);
 
-    // Opening is a fresh read of CajaActual. The server issues the date/session
-    // preview and revalidates it before creating the canonical session projection.
+    // CASHIER_STATE is read-only. The first explicit SESSION_OPEN bootstraps
+    // the canonical CajaActual projection before opening the operational session.
     assert.match(html, /Apertura de caja: sesión, movimiento, recibo y continuidad/);
     assert.match(html, /Usuario autenticado: /);
     assert.match(html, /Operador de sesión: /);
@@ -370,9 +370,14 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    assert.match(caja, /let cajaActual;[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
-    assert.match(caja, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
-    assert.match(caja, /await initializeTpvCaja\(traceId\)/);
+    const cashStateStart = caja.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const cashStateEnd = caja.indexOf("\nexport const abrirSesionCaja = webMethod(", cashStateStart);
+    assert.ok(cashStateStart >= 0 && cashStateEnd > cashStateStart);
+    const cashStateReader = caja.slice(cashStateStart, cashStateEnd);
+    assert.ok(cashStateReader.includes("await readTpvCajaSnapshot()"));
+    assert.ok(!cashStateReader.includes("initializeTpvCaja("));
+    assert.match(cashStateReader, /projectionStatus: "NOT_INITIALIZED"/);
+    assert.ok(caja.indexOf("await initializeTpvCaja(traceId);") < caja.indexOf("withTpvSessionLock("));
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
