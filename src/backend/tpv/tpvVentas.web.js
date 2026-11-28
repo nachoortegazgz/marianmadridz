@@ -82,11 +82,11 @@ function buildSaleReadiness(prepared, validated) {
         pagos: validated.pagos,
         totalVenta: validated.totalVenta,
     });
-    const saleReadinessBlockers = [
-        "PAYMENT_NOT_VERIFIED",
-        "CONSUMER_PRICE_PRESENTATION_UNVERIFIED",
-        ...writeV1Blockers,
-    ];
+    // Payment authorization is an external gateway result, not a precondition
+    // that may be hard-coded false before the transaction writer is reached.
+    // Consumer-price presentation is already derived from the verified Wix
+    // catalog/tax preparation; do not add a permanent synthetic blocker here.
+    const saleReadinessBlockers = [...writeV1Blockers];
     if (containsProducts) saleReadinessBlockers.push("INVENTORY_POLICY_NOT_CONFIGURED");
     return { containsProducts, writeV1Blockers, saleReadinessBlockers };
 }
