@@ -3,7 +3,7 @@
 **Fecha de revisión:** 2026-11-28  
 **Rama base:** `main`  
 **Alcance:** todos los archivos bajo `docs/archive/2026-11/`  
-**Inventario:** 161 archivos · 8 grupos · 0 duplicados binarios exactos.
+**Inventario revisado:** 161 documentos preexistentes · 8 grupos · 0 duplicados binarios exactos. Este registro es el nuevo artefacto de revisión y queda excluido del universo auditado para evitar autorreferencia.
 
 ## Dictamen
 
