@@ -1,13 +1,18 @@
-name: Wix TPV Preview (non-production)
+name: Wix TPV Preview (authenticated browser)
 
 on:
   workflow_dispatch:
     inputs:
       create_preview:
-        description: 'Create a Wix preview from main (read-only browser smoke only)'
+        description: Create a Wix Preview (never publish)
         required: true
         type: boolean
-        default: false
+        default: true
+      authenticated_browser:
+        description: Use WIX_STORAGE_STATE_B64 for the Preview browser
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -18,92 +23,71 @@ concurrency:
 
 jobs:
   preview:
-    name: Create Wix Preview and run read-only browser smoke
+    name: Create Wix Preview and verify authenticated browser
     if: github.event_name == 'workflow_dispatch' && inputs.create_preview == true && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout approved main branch
-        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
         with:
           ref: main
-
-      - name: Set up Node.js
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24.22.1"
           cache: npm
-
       - name: Verify Wix site binding
         run: |
-          node - <<'NODE'
-          const fs = require("node:fs");
-          const { siteId, uiVersion } = JSON.parse(fs.readFileSync("wix.config.json", "utf8"));
-          if (siteId !== "188bed94-177c-4bc9-a9f0-35080d874f3e") {
-            throw new Error("wix.config.json is not bound to the Marian Madrid site.");
-          }
-          if (!uiVersion) throw new Error("wix.config.json is missing uiVersion.");
-          process.stdout.write("Wix site binding verified; UI version " + uiVersion + ".\n");
-          NODE
-
+          node -e "const c=require('./wix.config.json'); if(c.siteId!=='188bed94-177c-4bc9-a9f0-35080d874f3e'||!c.uiVersion) process.exit(1)"
       - name: Require Wix CLI API key
-        shell: bash
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: |
-          if [[ -z "${CLI_API_KEY:-}" ]]; then
-            echo "::error::Configure repository secret CLI_API_KEY with the Wix CLI for Sites - Git Integration permission and access to the Marian Madrid site."
-            exit 1
-          fi
-
-      - name: Install locked project dependencies
-        run: npm ci
-
-      - name: Install Wix CLI for Sites (pinned)
+          test -n "$CLI_API_KEY" || { echo "::error::Missing CLI_API_KEY"; exit 1; }
+      - name: Decode authenticated browser state
+        if: inputs.authenticated_browser == true
+        env:
+          WIX_STORAGE_STATE_B64: ${{ secrets.WIX_STORAGE_STATE_B64 }}
         run: |
-          npm install --global @wix/cli@1.2.14
-          npm list --global @wix/cli --depth=0
-
+          set -euo pipefail
+          test -n "$WIX_STORAGE_STATE_B64" || { echo "::error::Missing WIX_STORAGE_STATE_B64"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/wix-auth"
+          printf '%s' "$WIX_STORAGE_STATE_B64" | base64 --decode > "$RUNNER_TEMP/wix-auth/storage-state.json"
+          node -e "const s=require(process.argv[1]); if(!Array.isArray(s.cookies)||!Array.isArray(s.origins)) process.exit(1)" "$RUNNER_TEMP/wix-auth/storage-state.json"
+          chmod 600 "$RUNNER_TEMP/wix-auth/storage-state.json"
+      - run: npm ci
+      - name: Install Wix CLI (pinned)
+        run: npm install --global @wix/cli@1.2.14
       - name: Authenticate Wix CLI
         env:
           CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
         run: npm run wix login -- --api-key "$CLI_API_KEY"
-
-      - name: Create Wix preview from latest main commit (never publish)
+      - name: Create Preview (never publish)
         id: wix-preview
         shell: bash
-        timeout-minutes: 10
         run: |
           set -euo pipefail
           npm run wix preview -- --source remote 2>&1 | tee "$RUNNER_TEMP/wix-preview.log"
-          preview_url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
-          if [[ -z "$preview_url" ]]; then
-            echo "::error::Wix CLI completed without exposing a recognized wix.to preview URL."
-            exit 1
-          fi
-          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
-          echo "Created non-publishing Wix Preview: $preview_url"
-
-      - name: Install isolated Playwright runner (pinned)
+          url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
+          test -n "$url" || { echo "::error::Wix CLI did not return a wix.to Preview URL"; exit 1; }
+          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
+      - name: Install Playwright (pinned)
         run: |
           npm install --global @playwright/test@1.65.1
-          playwright --version
           playwright install --with-deps chromium
-
-      - name: Run read-only browser smoke
+      - name: Verify authenticated Preview browser
+        if: inputs.authenticated_browser == true
         env:
           WIX_PREVIEW_URL: ${{ steps.wix-preview.outputs.preview_url }}
-          WIX_SMOKE_REPORT: ${{ runner.temp }}/wix-preview-smoke.json
-        shell: bash
+          WIX_STORAGE_STATE_PATH: ${{ runner.temp }}/wix-auth/storage-state.json
+          WIX_RUNTIME_REPORT: ${{ runner.temp }}/wix-preview-authenticated.json
         run: |
           export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
-          node scripts/wix-preview-smoke.mjs
-
-      - name: Upload read-only smoke report
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          node scripts/wix-preview-authenticated.mjs
+      - name: Upload report only (never storageState)
+        if: always() && inputs.authenticated_browser == true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: wix-preview-readonly-smoke
-          path: ${{ runner.temp }}/wix-preview-smoke.json
+          name: wix-preview-authenticated-report
+          path: ${{ runner.temp }}/wix-preview-authenticated.json
           if-no-files-found: warn
           retention-days: 3
