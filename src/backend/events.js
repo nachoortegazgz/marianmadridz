@@ -2545,6 +2545,14 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
         const previousRefundTaxAmount = priorRefundMovements.reduce(
             (sum, movement) => sum + Math.abs(readTaxAmount(movement)), 0
         );
+        const rawOriginalTaxRate = readMovementField(originalMovement, "tipoImpositivo");
+        const validOriginalTaxRateType = typeof rawOriginalTaxRate === "number" ||
+            (typeof rawOriginalTaxRate === "string" && rawOriginalTaxRate.trim() !== "");
+        const originalTaxRate = validOriginalTaxRateType ? Number(rawOriginalTaxRate) : Number.NaN;
+        if (!Number.isFinite(originalTaxRate) || originalTaxRate < 0 || originalTaxRate > 1) {
+            throw new Error("FISCAL_ORIGINAL_TAX_RATE_INVALID");
+        }
+
         const refundTaxBase = fullyRefunded
             ? Math.max(0, Math.round((originalTaxBase - previousRefundTaxBase) * 100) / 100)
             : Math.round(originalTaxBase * refundAmountCents / originalAmountCents * 100) / 100;
@@ -2570,9 +2578,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
                 totalAmount: -refundAmount,
                 taxBase: -refundTaxBase,
                 taxAmount: -refundTaxAmount,
-                tipoImpositivo: Number(
-                    readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                ),
+                tipoImpositivo: originalTaxRate,
                 operationDescription: `Refund - Order ${orderId}`,
                 numSerieFactura: readInvoiceNumber(originalMovement),
                 fechaExpedicionFactura: todayDate,
@@ -2597,9 +2603,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
                 breakdown: [
                     {
                         base: -refundTaxBase,
-                        tipo: Number(
-                            readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                        ),
+                        tipo: originalTaxRate * 100,
                         cuota: -refundTaxAmount,
                         operationDescription: `Refund - Order ${orderId}`,
                         units: 1,
