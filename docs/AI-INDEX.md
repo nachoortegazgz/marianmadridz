@@ -36,6 +36,8 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 
 ## 3. Evidencias y documentos especializados
 
+- [Auditoría de persistencia operativa — 2026-11-28](audits/2026-11-28-operational-persistence-audit.md): lectura CMS real, Bookings V2, eCommerce Orders/Transactions y revisión estática de writers; identifica brechas y límites Runtime.
+
 ### Auditorías Wix / CMS / runtime
 
 - [Verificación de sitio y capas — 2026-11-27](audits/2026-11-27-current-site-layer-verification.md): Site Context, CMS, revisión estática TPV y límites de prueba.
