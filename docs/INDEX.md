@@ -21,6 +21,8 @@
 
 ## Evidencia y auditorías
 
+- [Auditoría de persistencia operativa — 28-11-2026](audits/2026-11-28-operational-persistence-audit.md): lectura Wix de colecciones propias, conciliación Bookings/eCommerce y brechas de persistencia por dominio.
+
 - [Verificación del sitio y capas — 27-11-2026](audits/2026-11-27-current-site-layer-verification.md).
 - [Auditoría integral de colecciones CMS — 27-11-2026](audits/2026-11-27-full-cms-collections-audit.md).
 - [Aceptación MVP read-only — 27-11-2026](audits/2026-11-27-mvp-runtime-readonly-acceptance.md).
