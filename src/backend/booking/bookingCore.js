@@ -1745,7 +1745,14 @@ export async function _persistBooking(params, traceId) {
             }
         );
     }
-    const bookingType = normalizeBookingType(p.bookingType || p.tipo);
+    const bookingType = normalizeBookingType(p.bookingType ?? p.tipo);
+    if (!bookingType) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "bookingType is required and must be a canonical booking type",
+            { traceId: traceIdClean, bookingId, field: "bookingType" }
+        );
+    }
     const pairToken = _safeTrim(p.pairToken || (p.meta && p.meta.pairToken));
     if (isDualBookingType(bookingType) && !pairToken) {
         throw createBookingError(
@@ -1779,10 +1786,32 @@ export async function _persistBooking(params, traceId) {
     const catalogId = _safeTrim(p.catalogId) || serviceId;
     const rawTotalAmount = p.totalAmount !== undefined
         ? p.totalAmount
-        : metaObj.totalAmount !== undefined
-            ? metaObj.totalAmount
-            : 0;
-    const totalAmount = _roundMoney(rawTotalAmount);
+        : metaObj.totalAmount;
+    const validTotalAmountType = typeof rawTotalAmount === "number" ||
+        (typeof rawTotalAmount === "string" && rawTotalAmount.trim() !== "");
+    const parsedTotalAmount = validTotalAmountType ? Number(rawTotalAmount) : Number.NaN;
+    if (!Number.isFinite(parsedTotalAmount) || parsedTotalAmount < 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "totalAmount is required and must be a finite non-negative amount",
+            { traceId: traceIdClean, bookingId, field: "totalAmount" }
+        );
+    }
+    const totalAmount = _roundMoney(parsedTotalAmount);
+    const rawRevision = p.revision;
+    const validRevisionType = rawRevision === undefined || rawRevision === null ||
+        typeof rawRevision === "number" ||
+        (typeof rawRevision === "string" && rawRevision.trim() !== "");
+    const revision = rawRevision === undefined || rawRevision === null
+        ? 1
+        : validRevisionType ? Number(rawRevision) : Number.NaN;
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+        throw createBookingError(
+            ERROR_CODES.INVALID_PAYLOAD,
+            "revision must be a positive safe integer",
+            { traceId: traceIdClean, bookingId, field: "revision" }
+        );
+    }
     const doc = {
         [BOOKING_FIELDS.BOOKING_ID]: bookingId,
         [BOOKING_FIELDS.PAIR_TOKEN]: pairToken,
@@ -1794,8 +1823,8 @@ export async function _persistBooking(params, traceId) {
         [BOOKING_FIELDS.DATE_YMD]: dateYmd,
         [BOOKING_FIELDS.SLOT_START]: startDateObj,
         [BOOKING_FIELDS.SLOT_END]: endDateObj,
-        [BOOKING_FIELDS.BOOKING_TYPE]: normalizeBookingType(bookingType),
-        [BOOKING_FIELDS.REVISION]: Number(p.revision) || 1,
+        [BOOKING_FIELDS.BOOKING_TYPE]: bookingType,
+        [BOOKING_FIELDS.REVISION]: revision,
         [BOOKING_FIELDS.STATUS]: bookingStatus,
         [BOOKING_FIELDS.PAYMENT_STATUS]: paymentStatus,
         [BOOKING_FIELDS.TOTAL_AMOUNT]: totalAmount,
