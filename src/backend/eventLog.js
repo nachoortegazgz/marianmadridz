@@ -111,6 +111,11 @@ function _readRequiredFiscalNumber(value, field, { min = null, max = null } = {}
     return amount;
 }
 
+function _readOptionalFiscalNumber(value, field, { min = null, max = null } = {}) {
+    if (value === undefined || value === null) return 0;
+    return _readRequiredFiscalNumber(value, field, { min, max });
+}
+
 function normalizeAccountingAmount(input = {}) {
     const movementType = _safeTrim(input.movementType).toUpperCase();
     const raw = input.accountingAmount ?? input.totalAmount;
@@ -421,11 +426,11 @@ function _buildFiscalPayloadSnapshot({
         baseImponibleOImporteNoSujeto: fiscalAmounts.taxBase,
         cuotaTotal: fiscalAmounts.taxAmount,
         tipoImpositivo: fiscalAmounts.tipoImpositivo,
-        tipoRecargoEquivalencia: Number(input.surchargeRate ?? 0),
-        cuotaRecargoEquivalencia: Number(input.surchargeAmount ?? 0),
-        importeRetencionIRPF: Number(input.irpfWithholdingAmount ?? 0),
-        tipoRetencionIRPF: Number(input.irpfWithholdingRate ?? 0),
-        baseImponibleRetencion: Number(input.withholdingBase ?? 0),
+        tipoRecargoEquivalencia: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
+        cuotaRecargoEquivalencia: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
+        importeRetencionIRPF: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
+        tipoRetencionIRPF: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
+        baseImponibleRetencion: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
         claveRegimen: _safeTrim(input.claveRegimen || catalog?.aeatRegimeKey) || "01",
         calificacionOperacion: _safeTrim(input.calificacionOperacion || catalog?.aeatOperationClassification) || "S1",
         operacionExenta: _safeTrim(input.operacionExenta || catalog?.aeatExemptOperation) || null,
@@ -733,11 +738,11 @@ export async function registrarEventoEconomico(input) {
         // interno (_buildFiscalPayloadSnapshot) usa la literal Veri*factu
         // "cuotaTotal" porque es contrato fiscal serializado, no key CMS.
         tipoImpositivo: fiscalAmounts.tipoImpositivo,
-        surchargeRate: Number(input.surchargeRate ?? 0),
-        surchargeAmount: Number(input.surchargeAmount ?? 0),
-        irpfWithholdingAmount: Number(input.irpfWithholdingAmount ?? 0),
-        irpfWithholdingRate: Number(input.irpfWithholdingRate ?? 0),
-        withholdingBase: Number(input.withholdingBase ?? 0),
+        surchargeRate: _readOptionalFiscalNumber(input.surchargeRate, "surchargeRate", { min: 0, max: 1 }),
+        surchargeAmount: _readOptionalFiscalNumber(input.surchargeAmount, "surchargeAmount"),
+        irpfWithholdingAmount: _readOptionalFiscalNumber(input.irpfWithholdingAmount, "irpfWithholdingAmount"),
+        irpfWithholdingRate: _readOptionalFiscalNumber(input.irpfWithholdingRate, "irpfWithholdingRate", { min: 0, max: 1 }),
+        withholdingBase: _readOptionalFiscalNumber(input.withholdingBase, "withholdingBase"),
         fiscalRole: _safeTrim(input.fiscalRole) || FISCAL_ROLE.EMISOR,
 
         operationDescription: _cleanText(input.operationDescription || "", 500),
