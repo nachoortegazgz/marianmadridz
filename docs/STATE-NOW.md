@@ -1,3 +1,26 @@
+## Actualización de implementación TPV — 28-11-2026, 19:xx
+
+**Estado de `main`:** `6f958323d784247f863abdac3a8173f3fed33f75` (sin cambios en esta rama).
+
+**Trabajo en curso:** PR [#714](https://github.com/nachoortegazgz/marianmadridz/pull/714), rama `feat/tpv-native-wix-commerce-2026-11-28`, SHA `a6ac7b2b64e90223d662ee3a6167cd67c53204a6`. PR #713 cerrado como supersedido por #714.
+
+**[Verificado en código en la rama #714]**
+- Orders nativo Wix: creación POS, correlación externa, búsqueda de recuperación y read-back de pedido/total.
+- Cobro efectivo offline con Add Payments, lectura de transacción, ledger de cobro y auditoría independiente.
+- Read-back `SALE_READBACK` de `TransaccionesTPV` y pedido Wix.
+- Proyección de caja actualizada con pagos confirmados; contador de ventas se incrementa una vez por evento idempotente.
+- CRM/Bookings reader integrado; caja read-only en `CASHIER_STATE` y bootstrap explícito en `SESSION_OPEN`.
+- Runner Editor Preview no destructivo con venta pendiente, venta con efectivo, arqueo parcial, Ticket X y Ticket Z.
+- Workflow manual para Wix Editor clásico; no usa `wix preview` de Headless/Apps como sustituto.
+
+**[CI offline]** Layer 1 y Layer 2 han terminado SUCCESS en la ejecución más reciente observada. La suite offline completa, verificadores SDK y ESLint están en curso para el SHA actual. No registrar PASS global hasta que el workflow termine SUCCESS.
+
+**[No comprobado — Runtime/Preview]** No se ha ejecutado aún la batería contra Wix Runtime. PR #714 no está fusionada. El workflow requiere URL de Preview y secreto `WIX_STORAGE_STATE_B64`. Orders/Bookings de Wix Apps pueden escribir en Live desde Preview; la batería crea pedidos de servicio y un pago offline sintético, sin stock físico ni notificaciones.
+
+**GO:** sigue siendo **NO-GO** hasta CI completo PASS + Runtime Preview PASS + lectura de todos los registros esperados + validación de roles reales. Tarjeta, reembolsos, cobro posterior desde lista de pendientes y facturación/SIF productivo permanecen pendientes técnicos; no bloquean la prueba de caja en Draft.
+
+---
+
 # Estado actual — 2026-11-28
 
 ## Directriz transversal aprobada por el propietario — 28-11-2026
