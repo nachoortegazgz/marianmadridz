@@ -1547,6 +1547,39 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
   assert.strictEqual(maximumLength.data.transactionId.length, 128);
 });
 
+test('FLOW-CAJA-15 Z closing rejects a missing movement sequence', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal();
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+  const operationDate = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' });
+
+  const movement = await cajas.registerManualTransaction({
+    totalAmount: 25,
+    tipoFactura: 'F2',
+    operationDescription: 'Prueba de secuencia ausente',
+    paymentMethod: 'EFECTIVO',
+    channelType: 'PRESENCIAL',
+    movementType: 'VENTA',
+    tipoImpositivo: 0.21,
+    transactionId: 'z-closing-missing-sequence-001',
+  });
+  assert.equal(movement.status, 'SUCCESS', JSON.stringify(movement.error));
+
+  wixDataMock._store.get('MovimientosCaja')[0].sequenceNumber = null;
+  const closing = await cajas.registerZClosingInternal(operationDate, {
+    recordDomain: 'CASH_REGISTER',
+    closedBy: GUID_ADMIN_RESOURCE,
+    traceId: 'trace-z-missing-sequence-001',
+  });
+
+  assert.equal(closing.status, 'ERROR');
+  assert.equal(closing.error.code, 'Z_LEDGER_SEQUENCE_INVALID');
+  assert.equal((wixDataMock._store.get('HistoricoCierresZ') || []).length, 0);
+});
+
 test('FLOW-CAJA-14 cashier state rejects missing persisted balances instead of showing zero', async () => {
   wixDataMock._reset();
   seedCajaPrincipal();
