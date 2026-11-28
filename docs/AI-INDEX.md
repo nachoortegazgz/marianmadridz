@@ -12,7 +12,8 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | ¿Cuál es el estado actual? | [STATE-NOW](STATE-NOW.md) | [RELEASE-READINESS](RELEASE-READINESS.md) |
 | ¿Qué arquitectura y reglas prevalecen? | [PROJECT-CANON](PROJECT-CANON.md) | AI-ENTRYPOINT |
 | ¿Cómo funciona TPV/caja/pago/cierre? | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | [TPV backend README](../src/backend/tpv/README.md) |
-| ¿Cómo funciona Capa 3, registro externo y SharePoint? | [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Auditoría de preparación [PR #641](audits/2026-11-27-capa3-export-preparation.md), esquema CMS y documentos históricos enlazados en el dossier |
+| ¿Cómo configurar toda la Capa Externa? | [Dossier operativo maestro — Capa Externa](architecture/CAPA-EXTERNA-MASTER-DOSSIER.md) | SharePoint, gestoría, PGC, correspondencia por capas, informes derivados, AEAT y puesta en marcha |
+| ¿Cómo funciona la implementación técnica de exportación Capa 3? | [Dossier técnico Capa 3](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Auditoría de preparación [PR #641](audits/2026-11-27-capa3-export-preparation.md), código export y esquema CMS |
 | ¿Cómo implementar VERI*FACTU, facturas simplificadas y QR tributario? | [Dossier VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | BOE, especificaciones técnicas/FAQ AEAT, contrato SIF y pruebas Epson/Wix Runtime |
 | ¿Qué APIs Wix usar? | Documentación oficial del método concreto | Backend README y tests del consumidor |
 | ¿Cuál es el esquema físico CMS? | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Auditorías CMS fechadas |
@@ -36,7 +37,8 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | Contrato funcional/técnico TPV | Cambiar solo con cambio de contrato |
 | [RELEASE-READINESS](RELEASE-READINESS.md) | Gates de release por entorno | No confundir CI con Runtime |
 | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Esquema físico y recuentos Wix | Snapshot 27-11-2026; no es live |
-| [Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Contrato export, transporte SharePoint, automatización, PGC y matrices de correspondencia | Diseño consolidado; transporte y E2E pendientes |
+| [Capa Externa — maestro](architecture/CAPA-EXTERNA-MASTER-DOSSIER.md) | Configuración SharePoint, gestoría, PGC, mapeo de capas, informes, AEAT y plan de ejecución | Diseño consolidado; conexiones externas pendientes |
+| [Capa 3 — detalle técnico](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Contrato export, backend, transporte SharePoint y flujos | Preparación parcial; transporte y E2E pendientes |
 | [VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | Requisitos SIF, modalidad VERI*FACTU, QR tributario, remisión AEAT, impresión térmica y pruebas | Diseño normativo/técnico documentado; implementación no acreditada |
 | [INDEX](INDEX.md) | Catálogo de documentos especializados | Navegación humana |
 | [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md) | Política y localización de históricos | No es fuente de estado |

@@ -11,7 +11,8 @@
 - [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md): contrato TPV, bloqueos y errores.
 - [RELEASE-READINESS](RELEASE-READINESS.md): gates por contexto y condiciones GO.
 - [ESQUEMA_CMS](ESQUEMA_CMS.md): esquema físico Wix y lectura CMS; snapshot 27-11-2026, no live.
-- [Dossier Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md): consolidación de obligaciones, arquitectura de exportación, SharePoint, automatización, PGC, matrices y flujos; transporte aún pendiente.
+- [Dossier operativo maestro — Capa Externa](architecture/CAPA-EXTERNA-MASTER-DOSSIER.md): punto de entrada para configurar SharePoint, gestoría, PGC, correspondencia entre capas, informes derivados, herramientas AEAT, seguridad y plan de puesta en marcha.
+- [Dossier técnico Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md): detalle de contrato de exportación, arquitectura backend, transporte e historial de decisiones.
 - [VERI*FACTU y QR tributario — dossier de implementación](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md): normativa BOE/AEAT vigente, plazo actualizado, facturas/tickets, modalidades SIF, QR, remisión XML, incidencias, arquitectura Wix/Velo y plan de pruebas.
 - [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md): política y localización de documentos históricos.
 
