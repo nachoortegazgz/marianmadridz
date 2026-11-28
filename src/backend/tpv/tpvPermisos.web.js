@@ -31,7 +31,7 @@ export const obtenerPermisosTPV = webMethod(
                     issueTicketX: staff.rolWebsite === "ADMIN",
                     issueTicketZ: staff.rolWebsite === "ADMIN",
                     exportMovements: staff.rolWebsite === "ADMIN",
-                    exportAudit: false,
+                    exportAudit: staff.rolWebsite === "ADMIN",
                     customerNotifications: TPV_RUNTIME_POLICY.CUSTOMER_NOTIFICATIONS_ENABLED,
                     physicalHardware: TPV_RUNTIME_POLICY.HARDWARE_ENABLED,
                 },
