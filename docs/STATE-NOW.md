@@ -1,17 +1,18 @@
 # Estado actual — 2026-11-28
 
-**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el último read-back documentado. CI offline de Capa 0 está PASS para PR #670 y PR #675 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
+**MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el último read-back documentado. CI offline de Capa 0 está PASS para PR #670, #675 y el hardening posterior de PR #679 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
 
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD de `main` al actualizar este estado: `910ad3faa6e543c23e81b2902726d4d8cd43087f`.
+- HEAD de `main` al actualizar este estado: `944eb225b63260353cf283c87b0c0b6f07af6caf`.
 - PR #662–#667: endurecimiento de serialización, errores CMS, configuración, criptografía, bookingType y transactionId; integradas.
 - PR #668: evidencia documental inicial de Capa 0; integrada.
 - PR #670: validación DAL, GUID de jornada, errores públicos, redacción de logs y paridad de enums; integrada mediante squash `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
 - PR #671: actualización documental tras PR #670; integrada.
 - PR #661: estrategia de pruebas Wix Classic; actualiza `tests/runtime/RUNTIME-TEST-PLAN.md`.
 - PR #675: propagación de fallos de proveedores, identidad Staff/Members y endurecimiento DAL; integrada mediante squash `910ad3faa6e543c23e81b2902726d4d8cd43087f`.
+- PR #679: contratos de sort Wix, redacción ampliada de secretos, serialización segura de metadatos y bookingType canónico en nuevas inserciones; integrada (merge `d44501c3c224ac417b283f687718ec9eb7538606`) y corregidas las regresiones en `944eb225b63260353cf283c87b0c0b6f07af6caf`.
 
 ### CI verificado para PR #670
 
@@ -32,6 +33,14 @@
 - ESLint, npm audit y Gitleaks: PASS.
 - Backend quality gates run `46083433335`; secret scanning run `46083433301`.
 
+### CI verificado para PR #679 y corrección posterior en main
+
+- HEAD inicial PR #679: `7b53e4bf784ea7744a140995c083ce4e120ccca2`; quality gates fallaron en run `46085515643`, secret scanning PASS en `46085515618`.
+- El commit correctivo final de `main` es `944eb225b63260353cf283c87b0c0b6f07af6caf`.
+- Backend offline quality gates PASS: run `46085827875`; 91 suites / 816 tests PASS.
+- Secret scanning PASS: run `46085827842`.
+- No trasladar el fallo del HEAD inicial al commit correctivo; tampoco trasladar este PASS a futuros SHAs sin nueva evidencia.
+
 Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix Preview, Wix Runtime ni producción.
 
 ## Capa 0 — corregido e integrado
@@ -49,8 +58,11 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Identidad: `security.js` centraliza el contexto Staff; `horario.web.js` delega en él; `citasManager.web.js` preserva errores y valida primero propiedad por `memberId`.
 - Jornada laboral: `resourceId` y `memberId` validados como GUID.
 - Errores públicos: objetos arbitrarios no se convierten en `[object Object]`.
-- Logging: redacción recursiva de secretos, tokens, credenciales URL, emails, PII y stacks.
+- Logging: redacción recursiva de secretos, tokens, credenciales URL, emails, PII, claves privadas, cookies, cabeceras de autorización y segmentos sensibles de rutas URL (PR #679).
 - Contrato frontend/backend: retirado `PAYMENT_METHOD.OTRO` del espejo público por no formar parte del enum backend ni tener consumidores activos localizados.
+- Wix Data sort: builders emiten la propiedad oficial `order`; entradas inválidas se rechazan, sin fallback silencioso a ASC.
+- Respuestas públicas: metadatos se clonan a un formato JSON-safe, con manejo explícito de ciclos, fechas, BigInt y valores no finitos.
+- CitasF2: alias históricos explícitos siguen siendo legibles; nuevas inserciones exigen el enum canónico.
 
 ## Pendiente — Capa 0 sigue EN EJECUCIÓN
 
@@ -62,7 +74,7 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 6. **Dead code/dependencias — P2:** continuar auditoría por consumidores/imports/exports/tests. PR #675 retiró `queryReferencedItems()` al demostrar cero consumidores; aplicar el mismo estándar al resto. No eliminar por tamaño o sospecha.
 7. **Runtime — P1:** ejecutar Local Editor/Preview E2E aislado, sin reutilizar `CajaActual` ABIERTA y sin cobros reales. Confirmar sincronización Wix-Git mediante evidencia del sitio.
 
-**Estado Capa 0: EN EJECUCIÓN.** PR #675 cierra defectos de propagación de errores en Staff/Members/DAL, pero permanecen secretos, cobertura de roles Staff, conversiones monetarias, configuración, matriz global de writers, deuda y validación Runtime. No declarar Capa 0 COMPLETADA.
+**Estado Capa 0: EN EJECUCIÓN.** PR #675 cierra defectos de propagación de errores en Staff/Members/DAL y PR #679 endurece sort, logging, serialización de metadatos y bookingType. Permanecen secretos, cobertura de roles Staff, conversiones monetarias, configuración, matriz global de writers, deuda y validación Runtime. No declarar Capa 0 COMPLETADA.
 
 ## Wix/CMS — último read-back documentado
 
@@ -76,6 +88,7 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - [Auditoría Capa 0 PR #670](audits/2026-11-27-capa0-hardening.md).
 - [Conciliación BUG-001…020](audits/2026-11-28-capa0-bug-reconciliation.md).
 - [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md).
+- [Hardening posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md).
 - [Estrategia Wix Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md).
 - Velo Secrets API v2: https://dev.wix.com/docs/velo/apis/wix-secrets-backend-v2/secrets/get-secret-value
 - Bookings Query Staff Members v1: https://dev.wix.com/docs/api-reference/business-solutions/bookings/staff-members/staff-members/query-staff-members
