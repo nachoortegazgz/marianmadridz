@@ -81,6 +81,18 @@ export const TPV_PAYMENT_METHOD = Object.freeze({
 export const TPV_LEDGER_SOURCE = "TPV_LEDGER";
 export const TPV_MIN_LEDGER_VERSION = 1;
 
+export const TPV_EVENT_MOVEMENT_TYPES = Object.freeze({
+  [TPV_COLLECTIONS.VENTAS]: "TPV_SALE",
+  [TPV_COLLECTIONS.VENTA_LINEAS]: "TPV_SALE_LINE",
+  [TPV_COLLECTIONS.PAGOS]: "TPV_PAYMENT",
+  [TPV_COLLECTIONS.REEMBOLSOS]: "TPV_REFUND",
+  [TPV_COLLECTIONS.MOVIMIENTOS_CAJA]: "TPV_CASH_MOVEMENT",
+  [TPV_COLLECTIONS.TICKET_X]: "TPV_TICKET_X",
+  [TPV_COLLECTIONS.TICKET_Z]: "TPV_TICKET_Z",
+  [TPV_COLLECTIONS.AUDITORIA]: "TPV_AUDIT",
+});
+
+
 /**
  * Runtime contract for the single TPV business flow.
  * Legacy movement aliases remain read-compatibility values only.
