@@ -296,7 +296,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución no habilitada</button>
+          <button id="refund" class="btn danger" disabled title="Devoluciones deshabilitadas en modo consulta">Devolución no habilitada</button>
           <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
@@ -406,30 +406,58 @@ body {
 /* ============================================================
    TPV Marian Madrid — Interfaz mejorada
    Interfaz TPV: contrato de comunicación con el controlador Wix.
+
+   SEGURIDAD DEL HANDSHAKE
+   ----------------------
+   - PARENT_ORIGIN_ALLOWLIST: lista blanca de orígenes autorizados
+     para el controlador Wix. Está VACÍA por defecto → el widget
+     falla cerrado hasta que se configure con el dominio real.
+     Ejemplos:
+       "https://usuario.wixsite.com"
+       "https://www.midominio.com"
+   - HANDSHAKE_NONCE: nonce criptográfico por carga que se envía en
+     MM_READY. El controlador DEBE devolverlo en su MM_CONTEXT
+     (bien como data.nonce, bien como payload.nonce). Si no coincide,
+     el contexto se rechaza.
    ============================================================ */
 (function () {
   "use strict";
 
+  const PARENT_ORIGIN_ALLOWLIST = Object.freeze([
+    // >>> CONFIGURAR AQUÍ el/los orígenes reales del controlador Wix <<<
+    // "https://usuario.wixsite.com",
+    // "https://www.dominio-real.com",
+  ]);
+
   function resolveParentOrigin() {
+    if (!PARENT_ORIGIN_ALLOWLIST.length) return null;
     const candidates = [document.referrer, window.location?.ancestorOrigins?.[0]];
     for (const candidate of candidates) {
       if (!candidate) continue;
       try {
         const origin = new URL(candidate).origin;
-        if (origin && origin !== "null") return origin;
+        if (origin && origin !== "null" && PARENT_ORIGIN_ALLOWLIST.includes(origin)) {
+          return origin;
+        }
       } catch (_) {}
     }
     return null;
   }
   const PARENT_ORIGIN = resolveParentOrigin();
+
   function postToParent(message) {
     if (!PARENT_ORIGIN) {
       const error = new Error("TPV_PARENT_ORIGIN_UNAVAILABLE");
       error.code = "TPV_PARENT_ORIGIN_UNAVAILABLE";
+      error.userMessage = "El widget no está autorizado para hablar con el controlador. Configura PARENT_ORIGIN_ALLOWLIST con el origen real del TPV.";
       throw error;
     }
     window.parent.postMessage(message, PARENT_ORIGIN);
   }
+
+  const HANDSHAKE_NONCE = (crypto.randomUUID
+    ? crypto.randomUUID().replace(/-/g, "")
+    : Math.random().toString(36).slice(2) + Date.now().toString(36));
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -498,7 +526,7 @@ body {
     saveSale: "createSale",
     cashIn: "registerCashMovement",
     cashOut: "registerCashMovement",
-    refund: "requestRefund",
+    refund: "requestRefund", // presente solo como dato; el botón está bloqueado abajo
     partialCount: "registerPartialCount",
     ticketX: "issueTicketX",
     ticketZ: "issueTicketZ",
@@ -517,6 +545,8 @@ body {
     "issueTicketX", "issueTicketZ", "readCashSummary", "readAudit",
     "exportMovements", "exportAudit", "printReceipt",
   ]);
+  // Botones que NO deben reactivarse nunca desde updateControlAvailability.
+  const PERMANENTLY_DISABLED = new Set(["refund"]);
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -565,6 +595,7 @@ body {
       TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: "El ledger fiscal aún no está configurado. La operación fiscal no se ha registrado.",
       TPV_WRITE_V1_CONTRACT_UNSUPPORTED: "La venta no cumple el contrato de escritura V1. Revisa los bloqueos fiscales y de pago.",
       TPV_REFUND_INPUT_INVALID: "La devolución requiere una venta original, sesión, motivo e importe válidos.",
+      TPV_REFUND_DISABLED: "Las devoluciones están deshabilitadas en este modo de operación.",
       TPV_REFUND_PROVIDER_NOT_CONFIGURED: "La solicitud está validada, pero el proveedor de pagos no está configurado. No se ha ejecutado ni registrado el reembolso.",
       TPV_PREVIOUS_SESSION_NOT_CLOSED: "Existe una sesión anterior sin cierre. Consulta el estado antes de abrir otra.",
       TPV_SESSION_ALREADY_CLOSED_TODAY: "La sesión de hoy ya está cerrada y no puede volver a abrirse.",
@@ -585,6 +616,8 @@ body {
       TPV_CASH_REGISTER_INTEGRITY_FAILED: "La integridad de la sesión de caja no se puede verificar. La operación se ha bloqueado para proteger los datos; facilita este código a soporte.",
       TPV_CONTEXT_REQUIRED: "No se ha podido identificar de forma segura al operador o al sitio. Cierra sesión y vuelve a entrar; si continúa, contacta con soporte.",
       TPV_TIMEOUT: "La operación ha tardado demasiado y su resultado podría estar pendiente. No la repitas hasta actualizar el estado de caja.",
+      TPV_PARENT_ORIGIN_UNAVAILABLE: "El widget no está autorizado para hablar con el controlador. Configura PARENT_ORIGIN_ALLOWLIST con el origen real del TPV.",
+      TPV_HANDSHAKE_NONCE_INVALID: "El handshake del controlador no presentó el nonce esperado. Actualiza la página; si persiste, revisa la integración del TPV.",
       ACCESS_DENIED: "Tu usuario no tiene permisos para esta operación. Solicita el rol correspondiente al administrador.",
       RATE_LIMITED: "Se han realizado demasiadas solicitudes seguidas. Espera unos segundos y vuelve a intentarlo."
     };
@@ -655,6 +688,7 @@ body {
         reject(operationError);
       };
       const handler = (event) => {
+        if (!PARENT_ORIGIN) return;
         if (event.source !== window.parent || event.origin !== PARENT_ORIGIN) return;
         const data = event.data || {};
         if (data.type !== responseType || (data.messageId !== id && data.requestId !== id)) return;
@@ -773,7 +807,7 @@ body {
       const element = $(id);
       if (!element) return;
       const requiresSession = SESSION_REQUIRED_CAPABILITIES.has(capability);
-      element.disabled = state.busy || !state.operationalWritesAvailable ||
+      element.disabled = PERMANENTLY_DISABLED.has(id) || state.busy || !state.operationalWritesAvailable ||
         state.capabilities[capability] !== true || (requiresSession && !isOpen);
     });
   }
@@ -1083,7 +1117,7 @@ body {
     renderTicket();
   };
 
-  /* ---------- Pagos ---------- */
+  /* ---------- Pagos (simulación local; NO se envían en SALE_REGISTER) ---------- */
   function paymentTotals() {
     const totalsMinor = Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]));
     state.payments.forEach((payment) => {
@@ -1208,7 +1242,7 @@ body {
     if (changeMinor > 0) toast("Importe de prueba añadido. Cambio simulado: " + money(changeMinor / 100));
   };
 
-  /* ---------- Guardar venta ---------- */
+  /* ---------- Guardar venta (SIN medioPago, SIN payments reales) ---------- */
   $("saveSale").onclick = () => runOperation(async () => {
     if (!state.items.length) {
       toast("El ticket está vacío.");
@@ -1227,7 +1261,6 @@ body {
         cantidad: item.qty,
         profesionalId: state.profesionalId,
       })),
-      medioPago: state.paymentMethod || null,
       payments: [],
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
@@ -1395,7 +1428,6 @@ body {
 
   /* ---------- Entrada / Salida de efectivo ---------- */
   function openCashMovement(type) {
-    
     openModal(
       type === "ENTRADA" ? "Entrada de efectivo" : "Salida de efectivo",
       `
@@ -1424,38 +1456,10 @@ body {
   $("cashIn").onclick = () => openCashMovement("ENTRADA");
   $("cashOut").onclick = () => openCashMovement("SALIDA");
 
-  /* ---------- Devolución ---------- */
+  /* ---------- Devolución: PERMANENTEMENTE DESHABILITADA ---------- */
+  $("refund").disabled = true;
   $("refund").onclick = () => {
-    
-    openModal("Devolución interna", `
-      <p>Registro interno sintético. No ejecuta un reembolso de Wix Payments ni confirma una devolución nativa.</p>
-      <input id="refundSaleId" class="field" placeholder="ID de venta">
-      <input id="refundAmount" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 25,50)">
-      <select id="refundMethod" class="field">
-        <option value="EFECTIVO">Efectivo</option>
-        <option value="TARJETA">Tarjeta</option>
-        <option value="BIZUM" disabled>Bizum (no verificado)</option>
-        <option value="OTROS" disabled>Otros (no disponible en V1)</option>
-      </select>
-      <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
-    `, async () => {
-      const saleId = $("refundSaleId").value.trim();
-      const amount = num($("refundAmount").value);
-      const paymentMethod = $("refundMethod").value;
-      const reason = $("refundReason").value.trim();
-      if (!saleId || !Number.isFinite(amount) || amount <= 0 || reason.length < 3) {
-        throw new Error("Completa venta, importe y motivo.");
-      }
-      await keyedAction("REFUND", "REFUND", {
-        saleId,
-        sessionId: state.session?.sessionId,
-        reason,
-        profesionalId: state.profesionalId,
-        payments: [{ paymentMethod, amount }],
-      }, "REFUND_RES");
-      await refreshCashState();
-      toast("Devolución sintética registrada; no se ha ejecutado ningún reembolso real.");
-    });
+    toast("Las devoluciones están deshabilitadas en modo consulta. No se ha registrado ni ejecutado ningún reembolso.");
   };
 
   /* ---------- Arqueo parcial de caja ---------- */
@@ -1614,7 +1618,6 @@ body {
 
   /* ---------- Cierre Z ---------- */
   $("ticketZ").onclick = () => {
-    
     openModal("Cierre Z diario", `
       <p>El cierre bloqueará la sesión actual.</p>
       <input id="countedCash" class="field" type="text" inputmode="decimal" placeholder="Efectivo contado (ej. 150,00)">
@@ -1680,12 +1683,13 @@ body {
       postToParent({
         type: "MM_READY",
         version: BRIDGE_PROTOCOL_VERSION,
+        nonce: HANDSHAKE_NONCE,
         messageId: "tpv-ready-" + crypto.randomUUID().replace(/-/g, ""),
       });
     } catch (originError) {
       handshakeTimer = null;
       $("connStatus").className = "dot error";
-      $("connLabel").textContent = "Origen de página no disponible";
+      $("connLabel").textContent = "Origen no autorizado";
       error(originError);
       return;
     }
@@ -1696,7 +1700,8 @@ body {
   }
 
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent) return;
+    if (!PARENT_ORIGIN) return;
+    if (event.source !== window.parent || event.origin !== PARENT_ORIGIN) return;
     const data = event.data || {};
     if (data.type !== "MM_CONTEXT") return;
 
@@ -1706,6 +1711,16 @@ body {
     }
 
     const context = data.payload || {};
+    // Nonce obligatorio: el controlador DEBE ecohar el nonce enviado en MM_READY
+    // (aceptamos data.nonce o payload.nonce por compatibilidad).
+    const receivedNonce = data.nonce || context.nonce;
+    if (!receivedNonce || receivedNonce !== HANDSHAKE_NONCE) {
+      $("connStatus").className = "dot error";
+      $("connLabel").textContent = "Nonce de handshake inválido";
+      error({ code: "TPV_HANDSHAKE_NONCE_INVALID" });
+      return;
+    }
+
     const connected = context.status === "SUCCESS" &&
       context.data?.component === "htmlTPV" &&
       context.data?.protocolVersion === BRIDGE_PROTOCOL_VERSION;
@@ -1728,6 +1743,9 @@ body {
   function init() {
     $("connStatus").className = "dot";
     $("connLabel").textContent = "Conectando…";
+    // El botón de devolución queda bloqueado desde el arranque, antes de
+    // cualquier handshake, por si el DOM se manipula externamente.
+    $("refund").disabled = true;
     sendHandshake();
   }
 
