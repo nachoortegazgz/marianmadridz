@@ -138,6 +138,8 @@ La consulta de estado combinado de GitHub para `796e8eaf8317d35d02744f40d0504e9a
 - Se actualiza este documento en la rama `maintenance/temporary-unblock-register-2026-11-28`.
 - `src/backend/security.js`: incorpora ESTILISTA exclusivamente a `getMyCajeroContext` y al nuevo guard `requireTpvOperator`. `isCajero`/`requireCajero` conservan ADMIN y GESTION, por lo que no se amplían los permisos genéricos de caja ni de otros módulos.
 - `src/backend/tpv/tpvPermisos.web.js`: habilita `registerCashMovement` para operadores TPV ya autorizados; no amplía apertura, arqueo, cierre, Ticket X/Z ni exportaciones.
+- `src/backend/tpv/tpvCaja.web.js`, `tpvCatalogo.web.js`, `tpvCierres.web.js`, `tpvPagos.web.js`, `tpvUtils.web.js` y `tpvVentas.web.js`: cambian las lecturas/preparaciones requeridas por el flujo de venta y caja al guard específico `requireTpvOperator`.
+- `src/backend/tpv/tpvAuditoria.web.js` y `tpvGiftCards.web.js` mantienen `requireCajero`; la lectura de auditoría se desactiva en capacidades para ESTILISTA.
 - `src/backend/tpv/tpvMovimientos.web.js`: `registrarMovimientoCaja` y la lectura ordinaria de movimientos usan `requireTpvOperator`; las exportaciones mantienen sus guards administrativos.
 - Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs` y `tpv.web-modules.contract.test.mjs` para reflejar el nuevo perímetro de autorización.
 - No se realizan escrituras CMS, pagos, reembolsos, fichajes, cierres, comunicaciones ni operaciones físicas.
