@@ -194,6 +194,13 @@ function _readRequiredLedgerAmount(movement, field, raw = movement?.[field], err
     return amount;
 }
 
+function _readOptionalLedgerAmount(movement, field, errorCode = "FISCAL_NUMERIC_FIELD_INVALID") {
+    const raw = movement?.[field];
+    return raw === undefined || raw === null
+        ? 0
+        : _readRequiredLedgerAmount(movement, field, raw, errorCode);
+}
+
 function _signedFiscalValue(movement, reader, field) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
     const rawSign = movement?.accountingSign;
@@ -291,6 +298,14 @@ async function _queueCompensation(params) {
     const totalAmount = p.totalAmount === undefined || p.totalAmount === null
         ? null
         : _readRequiredLedgerAmount(p, "totalAmount", p.totalAmount, "COMPENSATION_AMOUNT_INVALID");
+    const attempts = p.attempts === undefined || p.attempts === null
+        ? 0
+        : _readRequiredLedgerAmount(p, "attempts", p.attempts, "COMPENSATION_ATTEMPTS_INVALID");
+    if (!Number.isSafeInteger(attempts) || attempts < 0) {
+        const error = new Error("COMPENSATION_ATTEMPTS_INVALID");
+        error.code = "COMPENSATION_ATTEMPTS_INVALID";
+        throw error;
+    }
     const identity = {
         kind,
         transactionId: p.transactionId || null,
@@ -318,7 +333,7 @@ async function _queueCompensation(params) {
         ...(totalAmount === null ? {} : { totalAmount }),
         operationDescription: p.operationDescription || null,
         status: "PENDING_RECOVERY",
-        attempts: Number(p.attempts) || 0,
+        attempts,
         lastError: p.lastError || null,
         traceId,
         payload: {
@@ -479,18 +494,21 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
         }
     }
 
-    if (Number(movement.irpfWithholdingAmount || 0) > 0) {
-        fields.push(["ImporteRetencionIRPF", String(Number(movement.irpfWithholdingAmount).toFixed(2))]);
-        if (movement.withholdingBase > 0) {
-            fields.push(["BaseImponibleRetencion", String(Number(movement.withholdingBase).toFixed(2))]);
+    const irpfWithholdingAmount = _readOptionalLedgerAmount(movement, "irpfWithholdingAmount");
+    const withholdingBase = _readOptionalLedgerAmount(movement, "withholdingBase");
+    if (irpfWithholdingAmount > 0) {
+        fields.push(["ImporteRetencionIRPF", String(irpfWithholdingAmount.toFixed(2))]);
+        if (withholdingBase > 0) {
+            fields.push(["BaseImponibleRetencion", String(withholdingBase.toFixed(2))]);
         }
         if (movement.fiscalRole) {
             fields.push(["RolFiscal", String(movement.fiscalRole).slice(0, 10)]);
         }
     }
 
-    if (Number(movement.surchargeAmount || 0) > 0) {
-        fields.push(["ImporteRecargoEquivalencia", String(Number(movement.surchargeAmount).toFixed(2))]);
+    const surchargeAmount = _readOptionalLedgerAmount(movement, "surchargeAmount");
+    if (surchargeAmount > 0) {
+        fields.push(["ImporteRecargoEquivalencia", String(surchargeAmount.toFixed(2))]);
     }
 
     if (movement.correctionReason) fields.push(["MotivoRectificacion", String(movement.correctionReason).slice(0, 4)]);
@@ -1489,12 +1507,12 @@ export async function registerBookingPayment(bookingIds, totalAmount, method, me
         recipientLegalName: m.recipientLegalName || null,
         isB2B: m.isB2B === true,
 
-        irpfWithholdingRate: m.irpfWithholdingRate || 0,
-        withholdingBase: m.withholdingBase || 0,
-        irpfWithholdingAmount: m.irpfWithholdingAmount || 0,
+        irpfWithholdingRate: m.irpfWithholdingRate ?? 0,
+        withholdingBase: m.withholdingBase ?? 0,
+        irpfWithholdingAmount: m.irpfWithholdingAmount ?? 0,
         fiscalRole: m.fiscalRole || FISCAL_ROLE.EMISOR,
 
-        surchargeRate: m.surchargeRate || 0,
+        surchargeRate: m.surchargeRate ?? 0,
         taxBase: m.taxBase,
         taxAmount: m.taxAmount,
         tipoImpositivo: m.tipoImpositivo,
@@ -2000,8 +2018,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             netTaxableAmount: _roundMoney(netTaxableAmount),
             netTaxAmount: _roundMoney(netTaxAmount),
             totalOperations: allMovements.length,
-            startSequence: Number(firstMovement?.sequenceNumber) || 0,
-            endSequence: Number(lastMovement?.sequenceNumber) || 0,
+            startSequence: firstMovement.sequenceNumber,
+            endSequence: lastMovement.sequenceNumber,
         });
         const closingHash = await hashSHA256(closingPayload);
 
@@ -2047,8 +2065,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             totalTips: _roundMoney(totalTips),
             totalAdjustments: _roundMoney(totalAdjustments),
             totalOperations: allMovements.length,
-            startSequence: Number(firstMovement?.sequenceNumber) || 0,
-            endSequence: Number(lastMovement?.sequenceNumber) || 0,
+            startSequence: firstMovement.sequenceNumber,
+            endSequence: lastMovement.sequenceNumber,
             startTicketNumber: readInvoiceNumber(firstMovement) || "",
             endTicketNumber: readInvoiceNumber(lastMovement) || "",
             startRecordHash: firstMovement?.previousRecordHash || GENESIS_HASH,
