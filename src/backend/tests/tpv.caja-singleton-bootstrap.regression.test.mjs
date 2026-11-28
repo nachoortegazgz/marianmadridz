@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const repositoryUrl = new URL("../tpvRepository.js", import.meta.url);
-const pageUrl = new URL("../tpvCaja.web.js", import.meta.url);
+const repositoryUrl = new URL("../tpv/tpvRepository.js", import.meta.url);
+const pageUrl = new URL("../tpv/tpvCaja.web.js", import.meta.url);
 
 test("TPV bootstrap creates the canonical singleton through the backend DAL", async () => {
     const source = await readFile(repositoryUrl, "utf8");
