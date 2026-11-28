@@ -14,7 +14,7 @@ Se consolida la evidencia disponible en GitHub y la auditoría de lectura Wix CM
 
 Estado global: **IMPLEMENTACIÓN PARCIAL · LECTURA CMS EJECUTADA · E2E/RUNTIME NO ACREDITADO · PRODUCCIÓN NO VERIFICADA**.
 
-No se declara desbloqueo temporal aplicado. No se desconectó ningún control porque no se ejecutó una modificación funcional ni existe evidencia suficiente para distinguir con seguridad qué writers pueden habilitarse sin afectar datos, operaciones o integridad.
+No se declara un desbloqueo global ni se eliminan salvaguardas. Sí se incorpora un cambio funcional acotado y autorizado: los tres roles TPV pueden registrar ventas y movimientos ordinarios de caja; las operaciones administrativas y los efectos externos mantienen sus guards específicos.
 
 ## 2. Avances de código incorporados en main
 
@@ -33,16 +33,16 @@ Los siguientes cambios constan en el historial de GitHub anterior o igual al HEA
 | `8a08a1b627d961f0f6a6ab1dc1db45341eb68dfa` | Ajustes del módulo de catálogo TPV y normalización de consultas/errores | No se atribuye prueba Runtime |
 | `796e8eaf8317d35d02744f40d0504e9a00d29c20` | Merge de PR #706, runner E2E autenticado de Preview | HEAD actual verificado en la consulta del 2026-11-28 |
 
-## 3. Controles que permanecen activos en el HEAD revisado
+## 3. Controles y permisos en la rama propuesta
 
-Los valores siguientes se verificaron en los archivos de `main` consultados:
+Los controles generales se contrastaron con `main`; la matriz de permisos refleja además los cambios incluidos en esta rama del PR #708. No debe confundirse con el estado desplegado en Wix ni con el `main` todavía sin fusionar:
 
 | Control | Valor observado | Consecuencia |
 |---|---:|---|
 | `STAFF_CLOCKING_CONFIG.WRITES_ENABLED` | `false` | `registrarFichaje` devuelve `CLOCKING_WRITES_DISABLED` antes de insertar |
 | `STAFF_CLOCKING_CONFIG.ADJUSTMENTS_ENABLED` | `false` | `registrarAjusteHorario` devuelve `CLOCKING_ADJUSTMENTS_DISABLED` |
 | TPV `acceptPayment` | `false` | No se confirma ni captura un pago mediante esta capacidad |
-| TPV `registerCashMovement` | `true` para ADMIN, GESTION y ESTILISTA autenticados | La capacidad se entrega tras resolver y validar el rol en backend |
+| TPV `registerCashMovement` | `true` en esta rama para ADMIN, GESTION y ESTILISTA autenticados | El guard backend `requireCajero` resuelve identidad y rol; no está aún en `main` ni desplegado |
 | TPV `printReceipt` | `false` | Impresión física deshabilitada |
 | TPV `requestRefund` | `false` | Reembolso TPV deshabilitado |
 | TPV `issueTicketZ` | `false` | Cierre Z TPV deshabilitado |
@@ -51,7 +51,7 @@ Los valores siguientes se verificaron en los archivos de `main` consultados:
 | `TPV_RUNTIME_POLICY.HARDWARE_ENABLED` | `false` | Hardware físico deshabilitado |
 | `SDK_CONFIG.EMAIL.ACCOUNTANT_SEND_ENABLED` | `false` | Envío externo a gestoría deshabilitado |
 
-El módulo `tpvPermisos.web.js` expone las capacidades de lectura, venta y anotación ordinaria de movimientos a los tres roles TPV autenticados (ADMIN, GESTION y ESTILISTA). Las operaciones de apertura/cierre de sesión, arqueo parcial, Ticket X, exportación de movimientos y otras operaciones administrativas conservan autorización ADMIN. La confirmación de pago, reembolso, Ticket Z, impresión física, hardware y notificaciones permanecen deshabilitados.
+En la rama propuesta, `tpvPermisos.web.js` expone las capacidades de lectura, venta y anotación ordinaria de movimientos a los tres roles TPV autenticados (ADMIN, GESTION y ESTILISTA). Las operaciones de apertura/cierre de sesión, arqueo parcial, Ticket X, exportación de movimientos y otras operaciones administrativas conservan autorización ADMIN. La confirmación de pago, reembolso, Ticket Z, impresión física, hardware y notificaciones permanecen deshabilitados.
 
 No se ha encontrado ni aplicado un interruptor global de escritura CMS. Las escrituras se gobiernan por writer, permisos, validación, hooks físicos, contrato de colección, locks e idempotencia.
 
