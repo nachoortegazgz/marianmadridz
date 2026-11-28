@@ -2,7 +2,7 @@
 
 **Estado de `main`:** `6f958323d784247f863abdac3a8173f3fed33f75` (sin cambios en esta rama).
 
-**Trabajo en curso:** PR [#714](https://github.com/nachoortegazgz/marianmadridz/pull/714), rama `feat/tpv-native-wix-commerce-2026-11-28`, SHA `24a5d851a0725db8713cf426cdc41300e450f2ac`. PR #713 cerrado como supersedido por #714.
+**Trabajo en curso:** PR [#714](https://github.com/nachoortegazgz/marianmadridz/pull/714), rama `feat/tpv-native-wix-commerce-2026-11-28`, SHA `4caf8fdb200b77d0cfae8f78185f8a053ff23f87`. PR #713 cerrado como supersedido por #714.
 
 **[Verificado en código en la rama #714]**
 - Orders nativo Wix: creación POS, correlación externa, búsqueda de recuperación y read-back de pedido/total.
