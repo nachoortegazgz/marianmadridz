@@ -488,7 +488,7 @@ export async function isCajero(traceId = null) {
     const staff = await _resolveStaffByIdentity(memberInfo, traceId);
 
     const role = _readStaffRole(staff);
-    return TPV_OPERATOR_ROLES.includes(role);
+    return role === ROL_WEBSITE.ADMIN || role === ROL_WEBSITE.GESTION;
 }
 
 export async function isEstilista(traceId = null) {
@@ -557,6 +557,11 @@ export async function getMyCajeroContext(traceId = null) {
         operatorDisplayName: String(staff?.displayName || "").trim() || null,
         contactId: String(staff?.contactId || memberInfo.contactId || "").trim() || null,
     });
+}
+
+export async function requireTpvOperator(traceId = null) {
+    await getMyCajeroContext(traceId);
+    return true;
 }
 
 export async function requireCajero(traceId = null) {
