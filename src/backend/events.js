@@ -2224,7 +2224,9 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
     try {
         orderId = _safeTrim(orderId);
         refundId = _safeTrim(refundId);
-        refundAmount = Number(refundAmount);
+        const validRefundAmountType = typeof refundAmount === "number" ||
+            (typeof refundAmount === "string" && refundAmount.trim() !== "");
+        refundAmount = validRefundAmountType ? Number(refundAmount) : Number.NaN;
         if (!orderId || !refundId) throw new Error("REFUND_IDENTITY_INVALID");
         if (!Number.isFinite(refundAmount) || refundAmount <= 0) {
             throw new Error("REFUND_AMOUNT_INVALID");
@@ -2331,6 +2333,10 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
 
         const refundAmountCents = Math.round(refundAmount * 100);
         const originalAmountCents = Math.round(originalAmount * 100);
+        if (!Number.isSafeInteger(refundAmountCents) || refundAmountCents <= 0 ||
+            !Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) {
+            throw new Error("REFUND_AMOUNT_PRECISION_INVALID");
+        }
         const priorRefundMovements = refundMovements.filter(
             movement => _safeTrim(movement?.transactionId) !== transactionId
         );
@@ -2364,6 +2370,9 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
         }
 
         const refundedAfterCents = refundedBeforeCents + refundAmountCents;
+        if (!Number.isSafeInteger(refundedAfterCents)) {
+            throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+        }
         const fullyRefunded = refundedAfterCents >= originalAmountCents;
         const originalTaxBase = Math.abs(readTaxBase(originalMovement));
         const originalTaxAmount = Math.abs(readTaxAmount(originalMovement));
