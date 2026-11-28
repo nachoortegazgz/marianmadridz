@@ -1244,14 +1244,21 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
             throw new Error("RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
         }
 
-        const incomingRevision = Number(booking?.revision);
-        const currentRevision = Number(currentCita?.revision);
-        if (
-            Number.isFinite(incomingRevision) &&
-            incomingRevision > 0 &&
-            Number.isFinite(currentRevision) &&
-            currentRevision > incomingRevision
-        ) {
+        const readBookingRevision = (value, field) => {
+            const validType = typeof value === "number" ||
+                (typeof value === "string" && value.trim() !== "");
+            const revision = validType ? Number(value) : Number.NaN;
+            if (!Number.isSafeInteger(revision) || revision <= 0) {
+                const error = new Error("BOOKING_REVISION_INVALID:" + field);
+                error.code = "BOOKING_REVISION_INVALID";
+                error.meta = { field, bookingId };
+                throw error;
+            }
+            return revision;
+        };
+        const incomingRevision = readBookingRevision(booking?.revision, "incomingRevision");
+        const currentRevision = readBookingRevision(currentCita.revision, "currentRevision");
+        if (currentRevision > incomingRevision) {
             const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_RESCHEDULED");
             if (!alreadyProcessed) {
                 await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
@@ -1298,10 +1305,8 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
                     _safeTrim(cita.resourceId) === resourceId &&
                     _safeTrim(cita.scheduleId) === scheduleId &&
                     _safeTrim(cita.serviceId) === serviceId;
-                if (
-                    sameSlot &&
-                    (!Number.isFinite(incomingRevision) || incomingRevision <= Number(cita.revision || 0))
-                ) {
+                const persistedRevision = readBookingRevision(cita.revision, "persistedRevision");
+                if (sameSlot && incomingRevision <= persistedRevision) {
                     return null;
                 }
                 return {
@@ -1312,9 +1317,7 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
                     slotStart: startDate,
                     slotEnd: endDate,
                     dateYmd,
-                    revision: Number.isFinite(incomingRevision) && incomingRevision > 0
-                        ? incomingRevision
-                        : cita.revision,
+                    revision: incomingRevision,
                 };
             },
             traceId,
