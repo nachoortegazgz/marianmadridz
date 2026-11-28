@@ -79,17 +79,17 @@ Según el encabezado de actualización de `bugstpv.md`, los siguientes elementos
 
 ## 2. Bugs críticos de ciclo de venta y caja
 
-- [ ] **B1 — B1. `registrarVenta` devuelve `PENDING`, lo que rompe `#htmlTPV.txt` y atasca la clave idempotente**. Definir resultado explícito de venta pendiente vs cobrada; la UI debe reconciliar PENDING sin perder carrito ni clave.
-- [ ] **B2 — B2. Toda venta registrada bloquea permanentemente el Cierre Z**. Permitir Cierre Z solo cuando todas las ventas estén en estado terminal y conciliado; habilitar transición de pago real/offline con evidencia.
-- [ ] **B3 — B3. `ReferenceError` en `exportarAuditoriaTPV` (crash garantizado en runtime)**. Importar/usar la función de autorización correcta y ejecutar exportAudit en Runtime.
-- [ ] **B4 — B4. Inconsistencia de estados `"CONFIRMED"` vs `"CONFIRMADA"` en ventas**. Unificar enum de estados de venta en repositorio, proyección, exportación y auditoría.
-- [ ] **B5 — B5. `registrarVenta` bloquea cualquier venta que incluya productos**. Permitir productos si variante, stock/política y pedido Wix están confirmados; no bloquear por bandera fija.
-- [ ] **B6 — B6. El cliente seleccionado en el TPV se descarta al guardar la venta**. Propagar customerIdentityId por widget, controller y registrarVenta; revalidar contacto en servidor.
-- [ ] **B7 — B7. `obtenerPermisosTPV` deshabilita funciones que el backend ya implementa**. Derivar capabilities de rol/permisos reales y habilitar solo endpoints operativos existentes.
-- [ ] **B8 — B8. Dos flujos incompatibles para cerrar la caja (`SESSION_CLOSE` vs `TICKET_Z`)**. Consolidar SESSION_CLOSE y TICKET_Z en una única transacción de cierre idempotente.
-- [ ] **B9 — B9. `buildTpvSessionSummary` consulta `VENTA_LINEAS` de forma insegura**. Filtrar líneas por sesión/venta y verificar totales de cierre.
-- [ ] **B10 — B10. `obtenerEstadoCaja` carece de `try/catch`**. Normalizar errores de lectura de caja y devolver error accionable.
-- [ ] **B11 — B11. Doble clic posible en el modal de Cierre Z**. Bloquear doble envío en UI y backend con idempotencia.
+- [x] **B1 — B1. `registrarVenta` devuelve `PENDING`, lo que rompe `#htmlTPV.txt` y atasca la clave idempotente**. Definir resultado explícito de venta pendiente vs cobrada; la UI debe reconciliar PENDING sin perder carrito ni clave. PENDING sin error de transporte; la UI conserva el resultado y vacía el ticket solo tras persistencia. Timeout con carrito modificado obliga a SALE_READBACK antes de generar otra clave. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B2 — B2. Toda venta registrada bloquea permanentemente el Cierre Z**. Permitir Cierre Z solo cuando todas las ventas estén en estado terminal y conciliado; habilitar transición de pago real/offline con evidencia. El Cierre Z separa ventas pendientes no cobradas y cierra la caja física solo tras conciliar los cobros; el resumen conserva el pendiente. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B3 — B3. `ReferenceError` en `exportarAuditoriaTPV` (crash garantizado en runtime)**. Importar/usar la función de autorización correcta y ejecutar exportAudit en Runtime. `exportarAuditoriaTPV` usa `requireAdmin`; `exportAudit` se habilita solo para ADMIN. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B4 — B4. Inconsistencia de estados `"CONFIRMED"` vs `"CONFIRMADA"` en ventas**. Unificar enum de estados de venta en repositorio, proyección, exportación y auditoría. Lectores y exportación aceptan el estado canónico `CONFIRMADA` y el legado `CONFIRMED`; el writer persiste importes fiscales en céntimos. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B5 — B5. `registrarVenta` bloquea cualquier venta que incluya productos**. Permitir productos si variante, stock/política y pedido Wix están confirmados; no bloquear por bandera fija. Catálogo Stores valida variante/precio y Wix Orders gestiona la línea/stock; no existe bloqueo global de PRODUCTO. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B6 — B6. El cliente seleccionado en el TPV se descarta al guardar la venta**. Propagar customerIdentityId por widget, controller y registrarVenta; revalidar contacto en servidor. `contactId` llega al WebMethod, se valida con `resolveTpvContact`, entra en el fingerprint y se asocia al pedido Wix; no se duplica PII en el ledger TPV. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B7 — B7. `obtenerPermisosTPV` deshabilita funciones que el backend ya implementa**. Derivar capabilities de rol/permisos reales y habilitar solo endpoints operativos existentes. `issueTicketZ` y `exportAudit` están habilitados para ADMIN. Devolución e impresión siguen deshabilitadas porque proveedor/hardware no están integrados. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B8 — B8. Dos flujos incompatibles para cerrar la caja (`SESSION_CLOSE` vs `TICKET_Z`)**. Consolidar SESSION_CLOSE y TICKET_Z en una única transacción de cierre idempotente. Retirado el endpoint duplicado `cerrarSesionCaja`, el mensaje `SESSION_CLOSE` y la capability `closeSession`; Ticket Z es el único cierre físico y crea movimiento CIERRE + proyección CajaActual. Código en esta rama; CI pendiente.
+- [x] **B9 — B9. `buildTpvSessionSummary` consulta `VENTA_LINEAS` de forma insegura**. Filtrar líneas por sesión/venta y verificar totales de cierre. El resumen toma `lineas` del snapshot `TransaccionesTPV`, valida `totalMinor` y filtra pagos por `sessionId` raíz/payload; no escanea una colección histórica de líneas. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B10 — B10. `obtenerEstadoCaja` carece de `try/catch`**. Normalizar errores de lectura de caja y devolver error accionable. `obtenerEstadoCaja` ya encapsula lectura de proyección y resumen en try/catch y devuelve error estructurado con traceId. Código + CI offline PASS (PR #718); Runtime pendiente.
+- [x] **B11 — B11. Doble clic posible en el modal de Cierre Z**. Bloquear doble envío en UI y backend con idempotencia. El modal usa `modalSubmitting`; el backend sigue protegido por clave idempotente y read-back. Código + CI offline PASS (PR #718); Runtime pendiente.
 
 ## 3. Backend transversal y procesos
 
@@ -151,7 +151,7 @@ Según el encabezado de actualización de `bugstpv.md`, los siguientes elementos
 
 | Fecha | SHA | Capa | Evidencia | Resultado |
 |---|---|---|---|---|
-| 2026-11-28 | `24a5d851a0725db8713cf426cdc41300e450f2ac` | CI offline | 97 suites / 864 tests según `bugstpv.md` | PASS histórico; no acredita el HEAD actual |
+| 2026-11-28 | `266a6f54fc298658fb1748add064422c0e62d9fb` | CI offline TPV | 97 suites / 865 tests; Layer 1: 32 suites / 412; Layer 2: 16 suites / 263; ESLint PASS | PASS en PR #718; Runtime pendiente |
 | 2026-11-28 | — | Wix Preview | No ejecutado según estado conocido | PENDIENTE |
 | 2026-11-28 | — | SharePoint read-back | No ejecutado; configuración M365 pendiente | PENDIENTE |
 
