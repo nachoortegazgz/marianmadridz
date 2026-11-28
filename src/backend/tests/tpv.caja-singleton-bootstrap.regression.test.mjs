@@ -37,7 +37,7 @@ test("CASHIER_STATE is read-only and never bootstraps CajaActual", async () => {
     const reader = source.slice(start, end);
     assert.ok(reader.includes("await readTpvCajaSnapshot()"));
     assert.match(reader, /projectionStatus: "NOT_INITIALIZED"/);
-    assert.doesNotMatch(reader, /initializeTpvCaja\\(/);
+    assert.ok(!reader.includes("initializeTpvCaja("));
 });
 
 test("SESSION_OPEN explicitly bootstraps CajaActual before acquiring the session lock", async () => {
