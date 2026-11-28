@@ -1,22 +1,20 @@
-import { SDK_CONFIG, TPV_COLLECTIONS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { SDK_CONFIG, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import {
     getCommittedTpvSales,
     getPendingTpvSales,
     getTpvCashMovements,
     getTpvPayments,
     getTpvRefunds,
-    queryTpvRecords,
 } from "backend/tpv/tpvRepository";
 
 export async function buildTpvSessionSummary(session) {
     if (!session?.sessionId) throw new Error("TPV_SESSION_REQUIRED");
-    const [sales, pendingSales, payments, refunds, movements, lines] = await Promise.all([
+    const [sales, pendingSales, payments, refunds, movements] = await Promise.all([
         getCommittedTpvSales(session.sessionId),
         getPendingTpvSales(session.sessionId),
         getTpvPayments(session.sessionId),
         getTpvRefunds(session.sessionId),
         getTpvCashMovements(session.sessionId),
-        queryTpvRecords(TPV_COLLECTIONS.VENTA_LINEAS, undefined),
     ]);
 
     const totals = {
@@ -63,11 +61,16 @@ export async function buildTpvSessionSummary(session) {
         }
     }
 
-    const saleIds = new Set(sales.map((sale) => sale.saleId));
-    for (const line of lines) {
-        if (!saleIds.has(line.saleId)) continue;
-        if (line.lineType === "SERVICIO") totals.serviceSalesMinor += Number(line.totalMinor || 0);
-        if (line.lineType === "PRODUCTO") totals.productSalesMinor += Number(line.totalMinor || 0);
+    for (const sale of sales) {
+        for (const line of Array.isArray(sale.lineas) ? sale.lineas : []) {
+            const amountMinor = Number(line.totalMinor);
+            if (!Number.isSafeInteger(amountMinor) || amountMinor < 0) {
+                throw new Error("TPV_SALE_LINE_AMOUNT_INVALID");
+            }
+            if (line.tipoLinea === "SERVICIO") totals.serviceSalesMinor += amountMinor;
+            else if (line.tipoLinea === "PRODUCTO") totals.productSalesMinor += amountMinor;
+            else throw new Error("TPV_SALE_LINE_TYPE_INVALID");
+        }
     }
 
     for (const movement of movements) {
