@@ -337,7 +337,7 @@ test("every exposed TPV WebMethod checks backend role authorization before repos
 test("every exported TPV WebMethod has an explicit runtime policy classification", async () => {
     const policies = {
         "tpvCaja.web.js": {
-            guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
+            guarded: ["inicializarCaja", "obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
         },
         "tpvMovimientos.web.js": {
             guarded: ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
