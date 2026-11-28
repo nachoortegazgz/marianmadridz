@@ -28,9 +28,11 @@ export const validarDesglosePagos = webMethod(
             });
             const appliedMinor = Object.values(breakdown).reduce((sum, value) => sum + value, 0);
             if (appliedMinor !== totalMinor) throw new Error("TPV_PAYMENT_TOTAL_MISMATCH");
+            // This confirms arithmetic only; it does not authorize or capture a payment.
             return {
                 status: "SUCCESS",
                 data: {
+                    paymentVerified: false,
                     payments,
                     breakdown: Object.fromEntries(Object.entries(breakdown).map(([key, value]) => [key, value / 100])),
                     totalApplied: appliedMinor / 100,
