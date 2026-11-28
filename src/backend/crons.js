@@ -1491,32 +1491,9 @@ traceId,
 return result;
 }
 
-// 2) Cierre por la entrada interna del backend. El cron no tiene sesion
-//    interactiva: no debe invocar el webMethod protegido para cajeros.
-//    La entrada interna comparte la misma logica fiscal y no se expone al frontend.
-try {
-const { registerZClosingInternal } = await import("backend/cajas.web");
-const closing = await withTimeout(
-() => registerZClosingInternal(ymd, { traceId }),
-API_TIMEOUT_MS,
-"cron:registerZClosing"
-);
-if (closing?.status === "SUCCESS") {
-result.closed = true;
-log.info("verifyNightlyZClosing: automated Z created", { checkedDate: ymd, traceId });
-return result;
-}
-// Z_ALREADY_CLOSED => verificacion por carrera: otro proceso cerro el dia.
-if (closing?.error?.code === "Z_ALREADY_CLOSED") {
-result.closed = true;
-return result;
-}
-result.errors.push({ stage: "autoClose", code: closing?.error?.code || "NON_SUCCESS" });
-} catch (closeErr) {
-// ACCESS_DENIED / NO_MOVEMENTS esperables en cron; NO lanzar: accion humana.
-result.errors.push({ stage: "autoClose", error: closeErr?.message || "UNKNOWN" });
-}
-
+// 2) El cron es observacional: no fabrica una identidad de cierre ni un
+//    recordDomain. El cierre Z requiere responsable autenticado y dominio
+//    aprobado; si no existe el registro, se deriva a revisión manual.
 // 3) Dia sin cerrar y sin posibilidad de cierre automatico => ALERT
 //    deduplicada (una por fecha) en ControlOperativo.
 const alert = await notifyOperationalAlert({
