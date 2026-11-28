@@ -5,7 +5,7 @@
 ## Git y CI
 
 - Repositorio: `nachoortegazgz/marianmadridz`, rama `main`.
-- HEAD de `main` al actualizar este estado: `944eb225b63260353cf283c87b0c0b6f07af6caf`.
+- HEAD de `main` al actualizar este estado: `258c2f981da5a6e19b667fcee1061551b8363192`.
 - PR #662–#667: endurecimiento de serialización, errores CMS, configuración, criptografía, bookingType y transactionId; integradas.
 - PR #668: evidencia documental inicial de Capa 0; integrada.
 - PR #670: validación DAL, GUID de jornada, errores públicos, redacción de logs y paridad de enums; integrada mediante squash `5a1c84e34c2112de1a3f4874ca0eb070bbf4845b`.
@@ -13,6 +13,8 @@
 - PR #661: estrategia de pruebas Wix Classic; actualiza `tests/runtime/RUNTIME-TEST-PLAN.md`.
 - PR #675: propagación de fallos de proveedores, identidad Staff/Members y endurecimiento DAL; integrada mediante squash `910ad3faa6e543c23e81b2902726d4d8cd43087f`.
 - PR #679: contratos de sort Wix, redacción ampliada de secretos, serialización segura de metadatos y bookingType canónico en nuevas inserciones; integrada (merge `d44501c3c224ac417b283f687718ec9eb7538606`) y corregidas las regresiones en `944eb225b63260353cf283c87b0c0b6f07af6caf`.
+- PR #680: corregidos `secretAccess.js`, `_roundMoney` y la duplicidad de moneda/zona horaria en `TPV_RUNTIME_POLICY`; integrada.
+- PR #681: corregidas regresiones de CI de PR #680 y #679; integrada.
 
 ### CI verificado para PR #670
 
@@ -21,11 +23,10 @@
 - Suite offline completa: 88 suites / 794 tests; 0 fallos.
 - Wix eCommerce Cart, Transactions y TPV SDK: PASS.
 - ESLint, Gitleaks y npm audit: PASS.
-- Workflow backend quality gates run `46081642075`, job `140781735934`; secret scanning run `46081642097`.
+- Backend quality gates run `46081642075`, job `140781735934`; secret scanning run `46081642097`.
 
 ### CI verificado para PR #675
 
-- HEAD validado indicado en la PR: `7073d3de`; merge squash en main: `910ad3faa6e543c23e81b2902726d4d8cd43087f`.
 - Layer 1: 29 suites / 390 tests PASS.
 - Layer 2: 16 suites / 250 tests PASS.
 - Suite offline completa: 89 suites / 804 tests PASS.
@@ -41,6 +42,13 @@
 - Secret scanning PASS: run `46085827842`.
 - No trasladar el fallo del HEAD inicial al commit correctivo; tampoco trasladar este PASS a futuros SHAs sin nueva evidencia.
 
+### CI verificado para PR #681 (correcciones de PR #680)
+
+- Backend offline quality gates PASS: run `46085729210`, job `140794719898`.
+- Secret scanning PASS: run `46085729219`.
+- Suite offline completa: 91 suites / 816 tests PASS; 0 fallos.
+- La ejecución inicial de PR #680 tuvo quality gates FAILURE (run `46085681740`); PR #681 corrigió las regresiones y el HEAD validado pasó.
+
 Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix Preview, Wix Runtime ni producción.
 
 ## Capa 0 — corregido e integrado
@@ -50,12 +58,14 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Configuración: timeouts, cachés, TTL y límites compartidos centralizados en `SDK_CONFIG`.
 - Criptografía: SHA-256/HMAC rechazan entradas vacías.
 - Bookings dual: ausencia de `bookingType` preservada; nuevas inserciones CitasF2 lo exigen.
-- `registrarEventoEconomico()` exige `transactionId` (1–128 caracteres) para dedupe y recuperación; sin fallbacks por secuencia ni recuperación por `traceId`.
-- DAL: paging/offsets inválidos rechazados, operadores explícitos `hasSome`/`hasAll`; `getItem()` exige colección e ID string no vacíos y solo interpreta WDE0073 como ausencia.
+- `registrarEventoEconomico()` exige `transactionId` para dedupe y recuperación; sin fallbacks por secuencia ni recuperación por `traceId`.
+- DAL: offsets inválidos rechazados, operadores explícitos `hasSome`/`hasAll`; `getItem()` exige colección e ID string no vacíos y solo interpreta WDE0073 como ausencia.
 - Eliminada `queryReferencedItems()` tras comprobar que no tenía consumidores activos.
 - Bookings Staff, CRM y Members: fallos de proveedor y respuestas inválidas se propagan con códigos técnicos estables; no se convierten en NOT_FOUND, NOT_STAFF, false, null o listas vacías.
 - Staff paging: no devuelve resultados parciales si se alcanza el límite defensivo con cursor pendiente.
 - Identidad: `security.js` centraliza el contexto Staff; `horario.web.js` delega en él; `citasManager.web.js` preserva errores y valida primero propiedad por `memberId`.
+- Secretos: `secretAccess.js` valida el nombre y la respuesta, distingue valor vacío de respuesta inválida y preserva errores del proveedor; no inventa códigos de error no documentados.
+- Dinero/configuración: `_roundMoney` rechaza valores inválidos; `TPV_RUNTIME_POLICY` ya no duplica moneda/zona horaria, que se consumen desde `SDK_CONFIG`.
 - Jornada laboral: `resourceId` y `memberId` validados como GUID.
 - Errores públicos: objetos arbitrarios no se convierten en `[object Object]`.
 - Logging: redacción recursiva de secretos, tokens, credenciales URL, emails, PII, claves privadas, cookies, cabeceras de autorización y segmentos sensibles de rutas URL (PR #679).
@@ -66,15 +76,16 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 
 ## Pendiente — Capa 0 sigue EN EJECUCIÓN
 
-1. **Secretos — P1:** `secretAccess.js` aún convierte fallos/ausencia de secreto en cadena vacía. La documentación oficial Velo no define errores personalizados suficientes para distinguir de forma contractual NOT_FOUND de indisponibilidad. Preservar el fallo de proveedor con código técnico seguro; revisar consumidores y `events.js::_getEmisorFiscal`, que aún puede convertir error de secreto en NIF vacío. No inventar códigos ni exponer mensajes brutos.
+1. **Emisor fiscal — P1:** `events.js::_getEmisorFiscal` aún debe revisarse para evitar que un error de secreto termine convertido en NIF vacío. Mantener el error técnico y no fabricar datos fiscales.
 2. **Cobertura de Staff — P1:** Query Staff Members v1 solo devuelve service providers. Verificar que todos los `resourceId` usados por los roles del sitio corresponden a service providers. No asumir cobertura universal; evaluar v2 solo con contrato oficial y decisión explícita.
-3. **Dinero — P1:** `toFiniteNumber`, `_roundMoney` y helpers relacionados convierten ciertas entradas inválidas en fallback/0. Clasificar consumidores por dominio (presentación, duración, importe, IVA, saldo) y añadir pruebas antes de cambiar contratos compartidos.
-4. **Configuración — P2:** `TPV_RUNTIME_POLICY.CURRENCY` y `CURRENCY_CODE` duplican semánticamente EUR. Inventariar consumidores antes de consolidar.
-5. **Idempotencia — P1:** completar matriz de writers económicos/operativos: identidad primaria, `transactionId`, clave propia, append-only, timeout/insert incierto y call sites. No imponer regla ciega a eventos no económicos.
-6. **Dead code/dependencias — P2:** continuar auditoría por consumidores/imports/exports/tests. PR #675 retiró `queryReferencedItems()` al demostrar cero consumidores; aplicar el mismo estándar al resto. No eliminar por tamaño o sospecha.
+2. **Dinero — P1:** `_readPositiveAmount` y normalizadores numéricos locales de caja/fiscalidad aún convierten ciertos datos inválidos en cero. Clasificar consumidores por dominio (presentación, duración, importe, IVA, saldo) y añadir pruebas antes de cambiar contratos compartidos.
+3. **Idempotencia — P1:** completar matriz de writers económicos/operativos: identidad primaria, `transactionId`, clave propia, append-only, timeout/insert incierto y call sites. No imponer regla ciega a eventos no económicos.
+4. **Dead code/dependencias — P2:** continuar auditoría por consumidores/imports/exports/tests. PR #675 retiró `queryReferencedItems()` al demostrar cero consumidores; aplicar el mismo estándar al resto. No eliminar por tamaño o sospecha.
+5. **Contrato TPV `sourceType` — P1:** existe una divergencia entre la directriz de no persistir un campo genérico `sourceType` y el contrato CMS/documentación vigente de `TransaccionesTPV`, que lo declara requerido. La implementación actual también lo consume. No retirarlo parcialmente: reconciliar primero esquema CMS, writers, readers, validadores y compatibilidad histórica, con rollback documentado.
+6. **Remitente de correo — P1/P2:** `FROM_ADDRESS` usa `marianmadrid.com` mientras el dominio operativo es `.es`; la verificación de Resend no está acreditada. El envío de gestoría continúa deshabilitado. No cambiar el remitente sin evidencia de dominio verificado.
 7. **Runtime — P1:** ejecutar Local Editor/Preview E2E aislado, sin reutilizar `CajaActual` ABIERTA y sin cobros reales. Confirmar sincronización Wix-Git mediante evidencia del sitio.
 
-**Estado Capa 0: EN EJECUCIÓN.** PR #675 cierra defectos de propagación de errores en Staff/Members/DAL y PR #679 endurece sort, logging, serialización de metadatos y bookingType. Permanecen secretos, cobertura de roles Staff, conversiones monetarias, configuración, matriz global de writers, deuda y validación Runtime. No declarar Capa 0 COMPLETADA.
+**Estado Capa 0: EN EJECUCIÓN.** PR #675–#681 integran propagación de errores, hardening de sort/logging/serialización, validación de secretos, rechazo de importes inválidos en `_roundMoney` y consolidación de moneda/zona horaria. Permanecen la revisión del emisor fiscal, cobertura de roles Staff, normalizadores numéricos locales, matriz global de writers, auditoría de deuda, contradicción `sourceType`, remitente de correo y validación Runtime. No declarar Capa 0 COMPLETADA.
 
 ## Wix/CMS — último read-back documentado
 
@@ -90,8 +101,8 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - [Propagación de errores Staff/Members/DAL — PR #675](audits/2026-11-28-capa0-provider-error-propagation.md).
 - [Hardening posterior a PR #675 — PR #679](audits/2026-11-28-capa0-post-675-hardening.md).
 - [Estrategia Wix Runtime](../tests/runtime/RUNTIME-TEST-PLAN.md).
-- Velo Secrets API v2: https://dev.wix.com/docs/velo/apis/wix-secrets-backend-v2/secrets/get-secret-value
-- Bookings Query Staff Members v1: https://dev.wix.com/docs/api-reference/business-solutions/bookings/staff-members/staff-members/query-staff-members
+- Get Secret Value: https://dev.wix.com/docs/api-reference/business-management/secrets/get-secret-value
+- Query Staff Members v1: https://dev.wix.com/docs/api-reference/business-solutions/bookings/staff-members/staff-members/query-staff-members
 - Wix Data Query / Paging: https://dev.wix.com/docs/velo/apis/wix-data/query
 
 **CI PASS ≠ Runtime PASS ≠ Producción verificada.** Mantener NO-GO hasta obtener evidencia del entorno correspondiente.
