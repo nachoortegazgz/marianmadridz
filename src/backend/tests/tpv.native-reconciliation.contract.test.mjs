@@ -70,6 +70,8 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
 
     assert.match(security, /TPV_OPERATOR_ROLES/);
     assert.match(security, /ROL_WEBSITE\.ESTILISTA/);
+    assert.match(security, /return role === ROL_WEBSITE\.ADMIN \|\| role === ROL_WEBSITE\.GESTION/);
+    assert.match(security, /export async function requireTpvOperator/);
     assert.match(security, /return _readStaffRole\(staff\) === ROL_WEBSITE\.ADMIN/);
     assert.match(permissions, /createSale: true/);
     assert.ok(permissions.includes('openSession: staff.rolWebsite === "ADMIN"'));
@@ -91,7 +93,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
         movements.indexOf("export const registrarMovimientoCaja"),
         movements.indexOf("export const obtenerMovimientosCaja")
     );
-    assert.match(movementWriter, /requireCajero\(traceId\)/);
+    assert.match(movementWriter, /requireTpvOperator\(traceId\)/);
     assert.match(movementWriter, /resolveTpvContext\(traceId\)/);
     assert.match(movements, /export const exportarMovimientosCaja[\s\S]*?requireAdmin\(traceId\)/);
 
