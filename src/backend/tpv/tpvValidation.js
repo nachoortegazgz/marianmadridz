@@ -1,11 +1,12 @@
-import { TPV_PAYMENT_METHOD } from "backend/internalConfig";
+import { TPV_CATALOG_APP_IDS, TPV_PAYMENT_METHOD } from "backend/internalConfig";
 import { toMinorUnits } from "backend/tpv/tpvUtils";
 
 const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
+const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function normalizeQuantity(value) {
     const quantity = Number(value);
-    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) {
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 100000) {
         throw new Error("TPV_INVALID_QUANTITY");
     }
     return quantity;
@@ -16,16 +17,31 @@ function normalizeLine(line, index) {
         throw new Error("TPV_INVALID_LINE");
     }
 
+    const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
+    if (!["SERVICIO", "PRODUCTO"].includes(tipoLinea)) {
+        throw new Error("TPV_INVALID_LINE_TYPE");
+    }
+
     const quantity = normalizeQuantity(line.cantidad);
+    const itemId = String(line.itemId || "").trim();
+    if (!GUID_RE.test(itemId)) throw new Error("TPV_CATALOG_ITEM_ID_INVALID");
+    const expectedAppId = tipoLinea === "PRODUCTO"
+        ? TPV_CATALOG_APP_IDS.WIX_STORES
+        : TPV_CATALOG_APP_IDS.WIX_BOOKINGS;
+    const appId = String(line.appId || "").trim();
+    if (appId !== expectedAppId) throw new Error("TPV_TAX_CATALOG_APP_NOT_ALLOWED");
+    const currency = String(line.currency || "").trim().toUpperCase();
+    if (currency !== "EUR") throw new Error("TPV_CATALOG_CURRENCY_MISMATCH");
+    if (typeof line.taxIncludedInPrice !== "boolean") throw new Error("TPV_TAX_SETTINGS_UNAVAILABLE");
     const unitMinor = toMinorUnits(line.precioUnitario, "UNIT_PRICE");
     const discountMinor = toMinorUnits(line.descuentoImporte || 0, "DISCOUNT");
     const catalogFullPriceMinor = quantity * unitMinor;
-    const taxIncludedInPrice = line.taxIncludedInPrice === true;
+    const taxIncludedInPrice = line.taxIncludedInPrice;
 
-    if (!Number.isSafeInteger(catalogFullPriceMinor) ||
-        catalogFullPriceMinor <= 0 || discountMinor > catalogFullPriceMinor) {
+    if (!Number.isSafeInteger(catalogFullPriceMinor) || catalogFullPriceMinor <= 0) {
         throw new Error("TPV_INVALID_LINE_AMOUNT");
     }
+    if (discountMinor !== 0) throw new Error("TPV_DISCOUNT_NOT_CONFIGURED");
 
     const taxMinor = toMinorUnits(line.impuestosImporte || 0, "TAX");
     let subtotalMinor;
@@ -54,14 +70,9 @@ function normalizeLine(line, index) {
         throw new Error("TPV_LINE_TOTAL_MISMATCH");
     }
 
-    const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
-    if (!["SERVICIO", "PRODUCTO", "PERSONALIZADA"].includes(tipoLinea)) {
-        throw new Error("TPV_INVALID_LINE_TYPE");
-    }
-
     const varianteId = line.varianteId ? String(line.varianteId).trim() : null;
     if (varianteId && tipoLinea !== "PRODUCTO") throw new Error("TPV_VARIANT_ONLY_FOR_PRODUCTS");
-    if (varianteId && !/^[A-Za-z0-9-]{1,64}$/.test(varianteId)) throw new Error("TPV_INVALID_VARIANT_ID");
+    if (varianteId && !GUID_RE.test(varianteId)) throw new Error("TPV_INVALID_VARIANT_ID");
 
     const concepto = String(line.concepto || "").trim();
     if (!concepto || concepto.length > 400) {
@@ -71,7 +82,9 @@ function normalizeLine(line, index) {
     return Object.freeze({
         lineaNumero: index + 1,
         tipoLinea,
-        itemId: line.itemId ? String(line.itemId) : null,
+        itemId,
+        appId,
+        currency,
         ...(varianteId ? { varianteId } : {}),
         concepto,
         cantidad: quantity,
@@ -89,7 +102,13 @@ function normalizeLine(line, index) {
 
 function normalizePayments(pagos, totalMinor) {
     if (pagos === undefined || pagos === null) {
-        return { pagos: Object.freeze([]), importePagadoMinor: 0 };
+        return {
+            pagos: Object.freeze([]),
+            importePagadoMinor: 0,
+            efectivoRecibidoMinor: 0,
+            cambioEntregadoMinor: 0,
+            paymentBreakdownMinor: Object.freeze(Object.fromEntries(PAYMENT_METHODS.map((method) => [method, 0]))),
+        };
     }
     if (!Array.isArray(pagos)) {
         throw new Error("TPV_INVALID_PAYMENTS");
@@ -188,18 +207,18 @@ export function validateSaleDraft(input = {}) {
         currency: "EUR",
         lineas,
         pagos: paymentResult.pagos,
-        desgloseMedios: paymentBreakdown,
-        efectivoRecibido: paymentResult.efectivoRecibidoMinor / 100,
-        cambioEntregado: paymentResult.cambioEntregadoMinor / 100,
-        efectivoAplicado: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
-        totalCobrado: paymentResult.importePagadoMinor / 100,
         subtotalNeto: subtotalMinor / 100,
         impuestosTotal: taxMinor / 100,
         totalVenta: totalMinor / 100,
-        importePagado: paymentResult.importePagadoMinor / 100,
-        importePendiente: importePendienteMinor / 100,
-        estadoVenta: importePendienteMinor === 0 ? "COBRADA" :
-            paymentResult.importePagadoMinor > 0 ? "PARCIAL" : "BORRADOR",
+        importeAsignado: paymentResult.importePagadoMinor / 100,
+        importePendienteAsignacion: importePendienteMinor / 100,
+        desgloseMediosSeleccionados: paymentBreakdown,
+        efectivoDeclarado: paymentResult.efectivoRecibidoMinor / 100,
+        cambioDeclarado: paymentResult.cambioEntregadoMinor / 100,
+        efectivoAsignado: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
+        estadoVenta: "PENDIENTE_CONFIRMACION",
+        estadoPago: "NO_VERIFICADO",
+        paymentVerified: false,
         persisted: false,
     });
 }

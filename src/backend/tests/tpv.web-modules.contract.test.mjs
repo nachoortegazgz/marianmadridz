@@ -18,34 +18,63 @@ test("TPV sale draft validates report fields and minor-unit arithmetic", () => {
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            itemId: "service-1",
-            concepto: "Servicio SANDBOX",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            concepto: "Servicio de catálogo",
             cantidad: 1,
             precioUnitario: 100,
-            descuentoImporte: 10,
-            subtotalNeto: 90,
+            descuentoImporte: 0,
+            subtotalNeto: 100,
             impuestosImporte: 18.9,
-            totalLinea: 108.9,
+            totalLinea: 118.9,
         }],
         pagos: [
             { medioPago: "EFECTIVO", importe: 40 },
-            { medioPago: "TARJETA", importe: 68.9 },
+            { medioPago: "TARJETA", importe: 78.9 },
         ],
     });
 
-    assert.equal(result.totalVenta, 108.9);
-    assert.equal(result.importePagado, 108.9);
-    assert.equal(result.importePendiente, 0);
-    assert.equal(result.estadoVenta, "COBRADA");
+    assert.equal(result.totalVenta, 118.9);
+    assert.equal(result.importeAsignado, 118.9);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.persisted, false);
     assert.equal(result.realPayment, undefined);
+});
+
+test("TPV sale draft with no payment selection remains unverified and does not throw", () => {
+    const result = validateSaleDraft({
+        lineas: [{
+            tipoLinea: "SERVICIO",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            concepto: "Servicio pendiente de cobro",
+            cantidad: 1,
+            precioUnitario: 25,
+            descuentoImporte: 0,
+            impuestosImporte: 0,
+        }],
+    });
+    assert.equal(result.importeAsignado, 0);
+    assert.equal(result.importePendienteAsignacion, 25);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
 });
 
 test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT twice", () => {
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "PRODUCTO",
-            itemId: "product-1",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
             concepto: "Producto con IVA incluido",
             cantidad: 1,
             precioUnitario: 22.90,
@@ -62,8 +91,8 @@ test("TPV sale draft reconciles tax-inclusive catalog price without adding VAT t
     assert.equal(result.lineas[0].taxIncludedInPrice, true);
 });
 
-test("TPV custom tariff lines remain explicitly typed and validated", () => {
-    const result = validateSaleDraft({
+test("TPV custom tariff lines are rejected until a server-owned catalog contract exists", () => {
+    assert.throws(() => validateSaleDraft({
         lineas: [{
             tipoLinea: "PERSONALIZADA",
             concepto: "Tarifa especial acordada",
@@ -73,18 +102,18 @@ test("TPV custom tariff lines remain explicitly typed and validated", () => {
             impuestosImporte: 0,
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 25 }],
-    });
-    assert.equal(result.lineas[0].tipoLinea, "PERSONALIZADA");
-    assert.equal(result.totalVenta, 25);
-    assert.equal(result.importePendiente, 0);
+    }), /TPV_INVALID_LINE_TYPE/);
 });
 
 test("TPV product variant identity is retained and restricted to product lines", () => {
     const product = validateSaleDraft({
         lineas: [{
             tipoLinea: "PRODUCTO",
-            itemId: "product-123",
-            varianteId: "variant-123",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            varianteId: "1d560c12-fefc-4cdf-b0dc-dd2a96af6919",
             concepto: "Producto · Talla M",
             cantidad: 1,
             precioUnitario: 20,
@@ -92,11 +121,15 @@ test("TPV product variant identity is retained and restricted to product lines",
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
     });
-    assert.equal(product.lineas[0].varianteId, "variant-123");
+    assert.equal(product.lineas[0].varianteId, "1d560c12-fefc-4cdf-b0dc-dd2a96af6919");
     assert.throws(() => validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            varianteId: "variant-123",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            varianteId: "1d560c12-fefc-4cdf-b0dc-dd2a96af6919",
             concepto: "Servicio",
             cantidad: 1,
             precioUnitario: 20,
@@ -110,6 +143,10 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Servicio con cambio",
             cantidad: 1,
             precioUnitario: 40,
@@ -118,13 +155,19 @@ test("TPV cash tender subtracts change before reconciling amount applied", () =>
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 50, importeCambio: 10 }],
     });
-    assert.equal(result.importePagado, 40);
-    assert.equal(result.importePendiente, 0);
+    assert.equal(result.importeAsignado, 40);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.pagos[0].importeAplicado, 40);
     assert.throws(
         () => validateSaleDraft({
             lineas: [{
                 tipoLinea: "SERVICIO",
+                itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+                appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+                currency: "EUR",
+                taxIncludedInPrice: false,
                 concepto: "Cambio no efectivo",
                 cantidad: 1,
                 precioUnitario: 40,
@@ -140,7 +183,11 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
-            concepto: "Venta mixta SANDBOX",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            concepto: "Venta mixta",
             cantidad: 1,
             precioUnitario: 100,
             descuentoImporte: 0,
@@ -153,15 +200,18 @@ test("TPV mixed tender breakdown reconciles commercial totals separately from ph
         ],
     });
 
-    assert.equal(result.totalCobrado, 100);
-    assert.equal(result.desgloseMedios.EFECTIVO, 40);
-    assert.equal(result.desgloseMedios.TARJETA, 35);
-    assert.equal(result.desgloseMedios.BIZUM, 25);
-    assert.equal(result.desgloseMedios.OTROS, 0);
-    assert.equal(result.efectivoRecibido, 45);
-    assert.equal(result.cambioEntregado, 5);
-    assert.equal(result.efectivoAplicado, 40);
-    assert.equal(result.importePendiente, 0);
+    assert.equal(result.importeAsignado, 100);
+    assert.equal(result.desgloseMediosSeleccionados.EFECTIVO, 40);
+    assert.equal(result.desgloseMediosSeleccionados.TARJETA, 35);
+    assert.equal(result.desgloseMediosSeleccionados.BIZUM, 25);
+    assert.equal(result.desgloseMediosSeleccionados.OTROS, 0);
+    assert.equal(result.efectivoDeclarado, 45);
+    assert.equal(result.cambioDeclarado, 5);
+    assert.equal(result.efectivoAsignado, 40);
+    assert.equal(result.importePendienteAsignacion, 0);
+    assert.equal(result.estadoVenta, "PENDIENTE_CONFIRMACION");
+    assert.equal(result.estadoPago, "NO_VERIFICADO");
+    assert.equal(result.paymentVerified, false);
     assert.equal(result.realPayment, undefined);
 });
 
@@ -169,7 +219,11 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     const valid = {
         lineas: [{
             tipoLinea: "PRODUCTO",
-            concepto: "Producto SANDBOX",
+            itemId: "b0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "215238eb-22a5-4c36-9e7b-e7c08025e04e",
+            currency: "EUR",
+            taxIncludedInPrice: false,
+            concepto: "Producto de catálogo",
             cantidad: 1,
             precioUnitario: 10,
             descuentoImporte: 0,
@@ -180,6 +234,10 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
     assert.throws(
         () => validateSaleDraft({ ...valid, lineas: [{ ...valid.lineas[0], subtotalNeto: 9 }] }),
         /TPV_LINE_SUBTOTAL_MISMATCH/
+    );
+    assert.throws(
+        () => validateSaleDraft({ ...valid, lineas: [{ ...valid.lineas[0], descuentoImporte: 1 }] }),
+        /TPV_DISCOUNT_NOT_CONFIGURED/
     );
     assert.throws(
         () => validateSaleDraft({ ...valid, pagos: [{ medioPago: "EFECTIVO", importe: 20 }] }),
@@ -203,8 +261,19 @@ test("TPV sale draft rejects invalid tax, overpayment, unknown methods and sub-c
                 impuestosImporte: 0,
             }],
         }),
-        /TPV_INVALID_LINE_AMOUNT/
+        /TPV_INVALID_QUANTITY/
     );
+});
+
+test("TPV caja advertises operational writes only while a session is open", async () => {
+    const caja = await source("tpv/tpvCaja.web.js");
+    const start = caja.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const end = caja.indexOf("export const abrirSesionCaja = webMethod(", start);
+    assert.ok(start >= 0 && end > start);
+    const method = caja.slice(start, end);
+    assert.match(method, /operationalWritesAvailable: false/);
+    assert.match(method, /operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS\.OPEN/);
+    assert.match(method, /operationalWritesUnavailableReason: status === OPERATIONAL_CASH_STATUS\.OPEN \? null : "TPV_SESSION_NOT_OPEN"/);
 });
 
 test("TPV dependency manifest and npm lockfile remain synchronized", async () => {
@@ -244,6 +313,8 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.doesNotMatch(payments, /SIMULATED|SANDBOX/);
     assert.doesNotMatch(payments, /wixPay|checkout|createOrder|processRefund/i);
     assert.match(payments, /paymentVerified: false/);
+    assert.match(payments, /validationScope: "ARITHMETIC_ONLY"/);
+    assert.match(payments, /currency: SDK_CONFIG\.CURRENCY_CODE/);
 
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /procesarDevolucion/);
@@ -277,7 +348,9 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     const cash = await source("tpv/tpvCaja.web.js");
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
-    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit|withTpvSaleLock/);
+    assert.match(refunds, /appendTpvAudit/);
+    assert.match(refunds, /TPV_REFUND_BLOCKED/);
+    assert.doesNotMatch(refunds, /insertTpvEvent|withTpvSaleLock/);
     assert.match(movements, /withTpvSessionLock\(session\.sessionId/);
     assert.match(cash, /withTpvSessionLock\(session\.sessionId/);
     assert.match(closures, /withTpvSessionLock\(session\.sessionId/);
@@ -552,11 +625,13 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(sales, /insertTpvEvent/);
     assert.match(sales, /appendTpvAudit/);
-    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit/);
+    assert.match(refunds, /appendTpvAudit/);
+    assert.match(refunds, /TPV_REFUND_BLOCKED/);
+    assert.doesNotMatch(refunds, /insertTpvEvent/);
 });
 
 
-test("Ticket X and Z use neutral status values and explicit synthetic source metadata", async () => {
+test("Ticket X and Z use neutral status values and explicit TPV source metadata", async () => {
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(closures, /action: "TICKET_X_GENERATED"/);
     assert.match(closures, /entityType: "TICKET_X"/);

@@ -113,7 +113,7 @@ test("TPV split payments reconcile in minor units and cash movements affect phys
         source("internalConfig.js"),
     ]);
 
-    assert.ok(validation.includes('import { TPV_PAYMENT_METHOD } from "backend/internalConfig"'));
+    assert.match(validation, /import \{[^}]*TPV_PAYMENT_METHOD[^}]*\} from "backend\/internalConfig"/);
     assert.ok(validation.includes("Object.values(TPV_PAYMENT_METHOD)"));
     for (const method of ["EFECTIVO", "TARJETA", "BIZUM", "BONO", "TARJETA_REGALO", "OTROS"]) {
         assert.ok(config.includes(method + ': "' + method + '"'));
@@ -206,7 +206,8 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.match(cash, /OPERATIONAL_CASH_STATUS = Object\.freeze/);
     assert.match(cash, /operationalStatus: OPERATIONAL_CASH_STATUS\.NONE/);
     assert.match(cash, /const canOpenSession = operator\.rolWebsite === "ADMIN" && cajaActual\.canStartSession === true/);
-    assert.match(cash, /operationalWritesAvailable: true/);
+    assert.match(cash, /operationalWritesAvailable: false/);
+    assert.match(cash, /operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS\.OPEN/);
     assert.match(cash, /session\.sessionId !== "TPV-SESSION-" \+ dayKey/);
     assert.match(cash, /operatorId: session\.operatorId/);
     assert.match(cash, /actorId: session\.actorId/);

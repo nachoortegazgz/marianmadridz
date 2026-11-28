@@ -1,5 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { requireCajero } from "backend/security";
+import { SDK_CONFIG } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 import { normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
 
@@ -33,6 +34,8 @@ export const validarDesglosePagos = webMethod(
                 status: "SUCCESS",
                 data: {
                     paymentVerified: false,
+                    validationScope: "ARITHMETIC_ONLY",
+                    currency: SDK_CONFIG.CURRENCY_CODE,
                     payments,
                     breakdown: Object.fromEntries(Object.entries(breakdown).map(([key, value]) => [key, value / 100])),
                     totalApplied: appliedMinor / 100,

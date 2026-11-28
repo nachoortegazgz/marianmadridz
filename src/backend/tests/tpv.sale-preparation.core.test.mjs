@@ -86,6 +86,18 @@ test("rejects voucher and gift-card tenders until balance validation is integrat
     );
 });
 
+test("rejects a syntactically valid but unauthorized Wix tax catalog app ID", () => {
+    assert.throws(() => buildTpvTaxCalculationLines([{
+        itemId: PRODUCT_ID,
+        tipoLinea: "PRODUCTO",
+        concepto: "Producto",
+        cantidad: 1,
+        precioUnitario: "22.90",
+        currency: "EUR",
+        appId: BOOKINGS_APP_ID,
+    }], false), { code: "TPV_TAX_CATALOG_APP_NOT_ALLOWED" });
+});
+
 test("builds tax lines with canonical Wix app IDs and the explicit global tax setting", () => {
     const result = buildTpvTaxCalculationLines([
         {
@@ -161,6 +173,10 @@ test("maps tax-exclusive Wix catalog prices to net base plus tax", () => {
     assert.equal(result.totalVenta, 148.71);
     assert.equal(result.taxIncludedInPrice, false);
     assert.equal(result.lineas[0].taxGroupId, PRODUCTS_TAX_GROUP);
+    assert.equal(result.lineas[0].appId, STORES_APP_ID);
+    assert.equal(result.lineas[0].currency, "EUR");
+    assert.equal(result.lineas[1].appId, BOOKINGS_APP_ID);
+    assert.equal(result.lineas[1].currency, "EUR");
     assert.equal(result.lineas[1].impuestosImporte, 21);
 });
 

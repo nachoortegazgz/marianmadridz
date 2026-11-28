@@ -1,4 +1,5 @@
 import { fromMinorUnits, toMinorUnits } from "backend/tpv/tpvUtils";
+import { TPV_CATALOG_APP_IDS } from "backend/internalConfig";
 
 const GUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -79,7 +80,10 @@ export function buildTpvTaxCalculationLines(catalogLines, taxIncludedInPrice) {
         if (String(line.currency || "").toUpperCase() !== "EUR") fail("TPV_CATALOG_CURRENCY_MISMATCH");
 
         const appId = String(line.appId || "").trim();
-        if (!GUID_RE.test(appId)) fail("TPV_TAX_CATALOG_APP_ID_INVALID");
+        const expectedAppId = line.tipoLinea === "PRODUCTO"
+            ? TPV_CATALOG_APP_IDS.WIX_STORES
+            : TPV_CATALOG_APP_IDS.WIX_BOOKINGS;
+        if (appId !== expectedAppId) fail("TPV_TAX_CATALOG_APP_NOT_ALLOWED");
 
         const taxGroupId = line.taxGroupId ? String(line.taxGroupId).trim() : null;
         if (taxGroupId && !GUID_RE.test(taxGroupId)) fail("TPV_TAX_GROUP_ID_INVALID");
@@ -166,6 +170,8 @@ export function mapTpvTaxCalculation({ catalogLines, taxResult, taxIncludedInPri
         return Object.freeze({
             tipoLinea: line.tipoLinea,
             itemId: line.itemId,
+            appId: line.appId,
+            currency: String(line.currency || "").toUpperCase(),
             ...(line.varianteId ? { varianteId: line.varianteId } : {}),
             concepto: String(line.concepto || "").trim(),
             cantidad: quantity,
