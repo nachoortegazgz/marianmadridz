@@ -417,7 +417,7 @@ Este addendum conserva el registro de una designación intermedia y de la discre
 
 ## DECISIÓN QA-2026-11-14-D — sitio QA único vigente
 
-**Decisión expresa del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA de Marian Madrid y se utiliza para pruebas previas al despliegue real. El sitio nunca ha tenido actividad real; los datos son sintéticos; el cliente sintético designado es Nacho Pitt (`nachoortegazgz@gmail.com`) y la pasarela está desconectada. No existe QA externo ni segundo sitio QA. Esta decisión supersede las designaciones anteriores de entorno y las descripciones de este sitio como producción. El estado Wix Published es un metadato técnico y no cambia la clasificación funcional QA.
+**Decisión expresa del propietario:** el Site ID `188bed94-177c-4bc9-a9f0-35080d874f3e` es el único entorno QA de Marian Madrid y se utiliza para pruebas previas al despliegue real. El sitio nunca ha tenido actividad real; los datos son sintéticos; el cliente sintético designado es Nacho Pitt (`[CONTACTO PERSONAL REDACTADO]`) y la pasarela está desconectada. No existe QA externo ni segundo sitio QA. Esta decisión supersede las designaciones anteriores de entorno y las descripciones de este sitio como producción. El estado Wix Published es un metadato técnico y no cambia la clasificación funcional QA.
 
 **Restricciones:** no cobros, reembolsos, comunicaciones, transmisiones fiscales ni efectos externos reales. Usar mocks/sinks offline. Mantener append-only: una pausa de writers no permite modificar ni borrar registros existentes. La ejecución runtime con efectos potenciales requiere comprobar antes la ruta concreta y mantenerla aislada.
 
