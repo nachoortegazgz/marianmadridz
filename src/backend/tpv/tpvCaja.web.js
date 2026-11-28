@@ -51,7 +51,7 @@ export const inicializarCaja = webMethod(
         const traceId = makeTraceId("tpv-bootstrap");
 
         try {
-            await requireTpvOperator(traceId);
+            await requireAdmin(traceId);
             const result = await initializeTpvCaja(traceId);
             return {
                 status: "SUCCESS",
