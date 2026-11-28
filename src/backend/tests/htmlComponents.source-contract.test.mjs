@@ -146,6 +146,14 @@ test("admin widget actions are explicitly allowlisted and match implemented page
   }
 });
 
+test("admin widget requires its negotiated bridge ID after READY", () => {
+  assert.match(adminPage, /allowOpaqueOrigin:\s*true/);
+  assert.match(adminPage, /requireBridgeId:\s*true/);
+  assert.match(bridge, /const requireBridgeId = settings\.requireBridgeId === true/);
+  assert.match(bridge, /safeMessageId\(source\.bridgeId\) !== bridgeId/);
+  assert.match(adminHtml, /bridgeId = String\(msg\.bridgeId \|\| ''\)/);
+});
+
 test("admin C3 widget uses the versioned bridge and exposes only the outbox workflow", () => {
   assert.match(adminHtml, /version:\s*1/);
   assert.match(adminHtml, /messageId:\s*'admin-/);
