@@ -193,7 +193,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}, externalOrderId
         order: Object.freeze(order),
         options: Object.freeze({
             settings: Object.freeze({
-                orderApprovalStrategy: "PAYMENT_RECEIVED",
+                orderApprovalStrategy: "DEFAULT",
             }),
         }),
     });
