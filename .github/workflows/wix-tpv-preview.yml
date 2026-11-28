@@ -1,15 +1,14 @@
-name: Wix TPV Preview (authenticated browser)
+name: Wix TPV Editor Preview E2E
 
 on:
   workflow_dispatch:
     inputs:
-      create_preview:
-        description: Create a Wix Preview (never publish)
+      preview_url:
+        description: HTTPS Preview URL opened from Wix Editor / Local Editor for this commit
         required: true
-        type: boolean
-        default: true
+        type: string
       authenticated_browser:
-        description: Use WIX_STORAGE_STATE_B64 for the Preview browser
+        description: Use WIX_STORAGE_STATE_B64 for the authenticated Preview browser
         required: true
         type: boolean
         default: true
@@ -17,20 +16,21 @@ on:
 permissions:
   contents: read
 
+# Never cancel a running operational E2E: interruption after SESSION_OPEN can leave a session open.
 concurrency:
-  group: wix-tpv-preview
-  cancel-in-progress: true
+  group: wix-tpv-editor-preview-e2e
+  cancel-in-progress: false
 
 jobs:
-  preview:
-    name: Create Wix Preview and verify authenticated browser
-    if: github.event_name == 'workflow_dispatch' && inputs.create_preview == true && github.ref == 'refs/heads/main'
+  tpv-e2e:
+    name: Execute TPV bridge and persisted E2E against Editor Preview
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3
         with:
-          ref: main
+          ref: ${{ github.ref }}
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
         with:
           node-version: "24.22.1"
@@ -38,11 +38,21 @@ jobs:
       - name: Verify Wix site binding
         run: |
           node -e "const c=require('./wix.config.json'); if(c.siteId!=='188bed94-177c-4bc9-a9f0-35080d874f3e'||!c.uiVersion) process.exit(1)"
-      - name: Require Wix CLI API key
+      - name: Validate Editor Preview URL
         env:
-          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
+          WIX_PREVIEW_URL: ${{ inputs.preview_url }}
         run: |
-          test -n "$CLI_API_KEY" || { echo "::error::Missing CLI_API_KEY"; exit 1; }
+          node --input-type=module - <<'NODE'
+          const value = process.env.WIX_PREVIEW_URL || "";
+          const url = new URL(value);
+          const host = url.hostname;
+          const wixHost = host === "wix.com" || host.endsWith(".wix.com") ||
+            host === "wixsite.com" || host.endsWith(".wixsite.com");
+          if (url.protocol !== "https:" || !wixHost) {
+            throw new Error("WIX_PREVIEW_URL must be an HTTPS Wix Editor Preview URL");
+          }
+          NODE
+      - run: npm ci
       - name: Decode authenticated browser state
         if: inputs.authenticated_browser == true
         env:
@@ -54,40 +64,25 @@ jobs:
           printf '%s' "$WIX_STORAGE_STATE_B64" | base64 --decode > "$RUNNER_TEMP/wix-auth/storage-state.json"
           node -e "const s=require(process.argv[1]); if(!Array.isArray(s.cookies)||!Array.isArray(s.origins)) process.exit(1)" "$RUNNER_TEMP/wix-auth/storage-state.json"
           chmod 600 "$RUNNER_TEMP/wix-auth/storage-state.json"
-      - run: npm ci
-      - name: Install Wix CLI (pinned)
-        run: npm install --global @wix/cli@1.2.14
-      - name: Authenticate Wix CLI
-        env:
-          CLI_API_KEY: ${{ secrets.CLI_API_KEY }}
-        run: npm run wix login -- --api-key "$CLI_API_KEY"
-      - name: Create Preview (never publish)
-        id: wix-preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run wix preview -- --source remote 2>&1 | tee "$RUNNER_TEMP/wix-preview.log"
-          url="$(grep -Eo 'https?://wix\.to/[[:alnum:]]+' "$RUNNER_TEMP/wix-preview.log" | tail -n 1 || true)"
-          test -n "$url" || { echo "::error::Wix CLI did not return a wix.to Preview URL"; exit 1; }
-          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
       - name: Install Playwright (pinned)
         run: |
           npm install --global @playwright/test@1.65.1
           playwright install --with-deps chromium
-      - name: Verify authenticated Preview browser
+      - name: Execute authenticated TPV E2E
         if: inputs.authenticated_browser == true
         env:
-          WIX_PREVIEW_URL: ${{ steps.wix-preview.outputs.preview_url }}
+          WIX_PREVIEW_URL: ${{ inputs.preview_url }}
           WIX_STORAGE_STATE_PATH: ${{ runner.temp }}/wix-auth/storage-state.json
-          WIX_RUNTIME_REPORT: ${{ runner.temp }}/wix-preview-authenticated.json
+          WIX_TPV_E2E_REPORT: ${{ runner.temp }}/wix-tpv-e2e.json
+          WIX_TPV_PAGE_PATH: /tpv
         run: |
           export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
-          node scripts/wix-preview-authenticated.mjs
-      - name: Upload report only (never storageState)
+          node scripts/wix-preview-tpv-e2e.mjs
+      - name: Upload E2E report only (never storageState)
         if: always() && inputs.authenticated_browser == true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: wix-preview-authenticated-report
-          path: ${{ runner.temp }}/wix-preview-authenticated.json
+          name: wix-tpv-editor-preview-e2e
+          path: ${{ runner.temp }}/wix-tpv-e2e.json
           if-no-files-found: warn
-          retention-days: 3
+          retention-days: 7
