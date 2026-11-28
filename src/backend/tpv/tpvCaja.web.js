@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvOperationalLedgerConfigured, closeTpvCajaSessionProjection, initializeTpvCaja, readTpvCajaSnapshot, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvLedgerTypeSupported, closeTpvCajaSessionProjection, initializeTpvCaja, readTpvCajaSnapshot, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { wql } from "backend/dataAccess";
 import { fromMinorUnits, makeTpvPayload, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -170,7 +170,7 @@ export const abrirSesionCaja = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
             const dayKey = madridDayKey();
@@ -314,7 +314,7 @@ export const registrarArqueoParcial = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const requestedSessionId = String(input.sessionId || "").trim();
             if (!requestedSessionId) throw new Error("TPV_SESSION_REQUIRED");
@@ -406,7 +406,7 @@ export const cerrarSesionCaja = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const sessionId = String(input.sessionId || "").trim();
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
