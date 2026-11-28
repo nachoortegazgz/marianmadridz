@@ -136,14 +136,27 @@ test("admin widget actions are explicitly allowlisted and match implemented page
     "Z_CLOSING",
     "FISCAL_SUMMARY",
     "FISCAL_BOOK",
-    "DOCUMENT_PREPARED",
-    "DOCUMENT_DOWNLOAD",
+    "EXTERNAL_PREPARE",
+    "EXTERNAL_EVENTS",
   ]) {
     assert.ok(allowlist[1].includes('"'+type+'"'), type+" must be allowed by the admin bridge");
     assert.match(adminPage, new RegExp(type+"\\s*:"), type+" must have a page handler");
     assert.ok(adminHtml.includes(type+":"+ "'"+type+"'") || adminHtml.includes(type+": '"+type+"'"),
       type+" must be emitted by the admin HTML component");
   }
+});
+
+test("admin C3 widget uses the versioned bridge and exposes only the outbox workflow", () => {
+  assert.match(adminHtml, /version:\s*1/);
+  assert.match(adminHtml, /messageId:\s*'admin-/);
+  assert.match(adminHtml, /EXTERNAL_PREPARE_RES/);
+  assert.match(adminHtml, /EXTERNAL_EVENTS_RES/);
+  assert.match(adminHtml, /RegistroIntegracion/);
+  assert.match(adminHtml, /PENDIENTE DE CONFIGURACIÓN/);
+  assert.doesNotMatch(adminHtml, /DOCUMENT_DOWNLOAD|DOCUMENT_PREPARED|CREATE_SNAPSHOT/);
+  assert.match(adminPage, /prepareExternalRegistryPackage/);
+  assert.match(adminPage, /getExternalIntegrationEvents/);
+  assert.doesNotMatch(adminPage, /createManagerPackageVersion|getPreparedManagerPackages|downloadManagerPackageVersion/);
 });
 
 test("cashier DTO is consumed only by the Marian manager panel", () => {
@@ -168,7 +181,7 @@ test("admin widget no longer exposes discarded staff management or business stat
 
 test("admin widget excludes inactive AI, accountant dispatch and staff management flows", () => {
   assert.doesNotMatch(adminHtml, /aiPanel|sendPanel|AI_QUERY|ACCOUNTANT_RECIPIENTS|SEND_MONTHLY_PACKAGE|SEND_QUARTERLY_PACKAGE|SEND_SPECIFIC_DOCUMENT/);
-  assert.ok(adminHtml.includes("d.packageStatus"));
+  assert.ok(adminHtml.includes("event.deliveryStatus"));
 });
 
 test("admin fallback hides unsupported capabilities and ticket output uses text nodes", () => {
