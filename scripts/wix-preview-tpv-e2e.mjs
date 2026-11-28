@@ -338,6 +338,7 @@ async function run() {
         const data = context.data || {};
         return {
             status: context.status || null,
+            role: data.role || null,
             protocolVersion: data.protocolVersion ?? null,
             currency: data.currency ?? null,
             timeZone: data.timeZone ?? null,
@@ -349,6 +350,9 @@ async function run() {
                 : {},
         };
     });
+    assert.equal(report.runtimeContext.status, "SUCCESS", "TPV runtime context failed");
+    assert.equal(report.runtimeContext.permissionsStatus, "SUCCESS", "TPV permissions could not be resolved");
+    assert.ok(report.runtimeContext.role, "TPV role was not resolved");
     const connectionLabel = (await frame.locator("#connLabel").innerText()).trim();
     report.authenticatedBrowser = true;
     report.operationalWritesAuthorized = connectionLabel.includes("Operaciones autorizadas");
@@ -408,12 +412,24 @@ async function run() {
         }
         report.result = "PASS_READ_ONLY";
         report.completedPhase = phase;
+        const invokedMethods = report.operations.map((operation) => operation.name);
+        const allowedReadOnlyMethods = new Set([
+            "CASHIER_STATE",
+            "CASH_MOVEMENTS_EXPORT",
+            "AUDIT_LIST",
+        ]);
         report.readOnlyAssertions = {
             handshakeConnected: true,
+            runtimeContextResolved: report.runtimeContext.status === "SUCCESS",
+            roleAndCapabilitiesResolved: Boolean(report.runtimeContext.role) &&
+                report.runtimeContext.permissionsStatus === "SUCCESS",
             cashierStateRead: true,
-            noBusinessWritesInvoked: report.businessWebMethodsInvoked === (state.sessionId ? 3 : 1),
+            invokedMethods,
+            noBusinessWritesInvoked: invokedMethods.every((name) => allowedReadOnlyMethods.has(name)),
             preexistingSessionUntouched: true,
         };
+        assert.ok(report.readOnlyAssertions.noBusinessWritesInvoked,
+            "Read-only mode invoked a non-read-only WebMethod");
         await persistReport();
         return;
     }
