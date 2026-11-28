@@ -178,3 +178,25 @@ test("FISCAL-LOCK-06 refuses to allocate when the CajaActual principal item is m
     await releaseFiscalLedgerLock(lock);
   }
 });
+test("FISCAL-LOCK-08 rejects a malformed sequence counter without resetting it to zero", async () => {
+  wixDataMock._reset();
+  wixDataMock._seed("CajaActual", [{
+    _id: "SINGLE_ITEM_ID",
+    singletonKey: "CAJA_PRINCIPAL",
+    fiscalSequenceCounter: "corrupt-counter",
+    sequenceCounters: { appliedMovementIds: [] },
+  }]);
+
+  const lock = await acquireFiscalLedgerLock("trace-sequence-counter-invalid-001", { waitMs: 0 });
+  try {
+    await assert.rejects(
+      () => allocateFiscalSequence(lock, null),
+      (error) => error?.code === "FISCAL_SEQUENCE_COUNTER_INVALID",
+    );
+    const register = await getCashRegisterSingleton();
+    assert.equal(register.fiscalSequenceCounter, "corrupt-counter");
+    assert.equal(register.sequenceCounters.seqGlobal, undefined);
+  } finally {
+    await releaseFiscalLedgerLock(lock);
+  }
+});
