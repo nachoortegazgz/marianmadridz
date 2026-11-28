@@ -438,7 +438,6 @@ async function appendSaleAudit(record, traceId) {
             subtotalNeto: record.subtotalNeto,
             impuestosTotal: record.impuestosTotal,
             totalVenta: record.totalVenta,
-            medioPago: record.medioPago || null,
             lineCount: Array.isArray(record.lineas) ? record.lineas.length : 0,
             currency: record.currency,
             sourceType: record.sourceType,
