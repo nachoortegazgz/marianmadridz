@@ -790,8 +790,9 @@ body {
     openModal("Reservas de " + (state.customerLabel || "cliente"), `
       <div id="customerBookingsList" class="status">Cargando reservas de Wix Bookings…</div>
       <button id="loadMoreCustomerBookings" type="button" class="btn" style="display:none;margin-top:10px;">Cargar más</button>
-    `, async () => ({ keepOpen: true }));
+    `, async () => {});
 
+    $("modalConfirm").textContent = "Cerrar";
     const list = $("customerBookingsList");
     const more = $("loadMoreCustomerBookings");
     const render = () => {
@@ -847,7 +848,12 @@ body {
       more.textContent = "Cargar más";
     };
     more.onclick = () => loadPage().catch((e) => error(e));
-    await loadPage();
+    try {
+      await loadPage();
+    } catch (e) {
+      list.textContent = "No se pudieron cargar las reservas: " + publicErrorMessage(e);
+      throw e;
+    }
   }
 
   $("selectClient").onclick = () => {
