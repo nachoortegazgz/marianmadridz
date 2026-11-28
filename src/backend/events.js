@@ -637,7 +637,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
 
     const write = await _persistBooking({
         bookingId,
-        revision: Number(booking?.revision) || 1,
+        revision,
         serviceId,
         scheduleId,
         resourceId,
@@ -2721,6 +2721,24 @@ async function _persistReaderBookingProjection(booking, intent, pairToken, trace
         return { ok: false, reason: "READER_BOOKING_PROJECTION_FIELDS_INCOMPLETE" };
     }
 
+    const rawTotalAmount = intent?.totalAmount;
+    const validTotalAmountType = typeof rawTotalAmount === "number" ||
+        (typeof rawTotalAmount === "string" && rawTotalAmount.trim() !== "");
+    const totalAmount = validTotalAmountType ? Number(rawTotalAmount) : Number.NaN;
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+        return { ok: false, reason: "READER_BOOKING_TOTAL_AMOUNT_INVALID" };
+    }
+    const rawRevision = booking?.revision;
+    const validRevisionType = rawRevision === undefined || rawRevision === null ||
+        typeof rawRevision === "number" ||
+        (typeof rawRevision === "string" && rawRevision.trim() !== "");
+    const revision = rawRevision === undefined || rawRevision === null
+        ? 1
+        : validRevisionType ? Number(rawRevision) : Number.NaN;
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+        return { ok: false, reason: "READER_BOOKING_REVISION_INVALID" };
+    }
+
     const contactDetails = booking?.contactDetails || {};
     const persisted = await _persistBooking({
         bookingId,
@@ -2733,7 +2751,7 @@ async function _persistReaderBookingProjection(booking, intent, pairToken, trace
         revision: Number(booking?.revision) || 1,
         bookingStatus: booking?.status || intent.bookingStatus,
         paymentStatus: booking?.paymentStatus || intent.paymentStatus,
-        totalAmount: Number(intent.totalAmount) || 0,
+        totalAmount,
         pairToken,
         contactDetails: {
             firstName: contactDetails.firstName || "",
