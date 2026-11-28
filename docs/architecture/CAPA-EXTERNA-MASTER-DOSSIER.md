@@ -154,7 +154,7 @@ El marco PGC es obligatorio, pero el cuadro de cuentas no impone con carácter g
 | 8 | Gastos imputados al patrimonio neto |
 | 9 | Ingresos imputados al patrimonio neto |
 
-Cuentas de referencia potenciales para peluquería/estética, NO mapping aprobado: 430 Clientes; 400 Proveedores; 410 Acreedores por prestaciones de servicios; 472 IVA soportado; 477 IVA repercutido; 570 Caja; 572 Bancos; 600 Compras de mercaderías; 602 Otros aprovisionamientos; 621 Arrendamientos; 622 Reparaciones; 623 Profesionales independientes; 625 Seguros; 626 Servicios bancarios; 627 Publicidad; 628 Suministros; 629 Otros servicios; 640 Sueldos; 642 Seguridad Social empresa; 465 Remuneraciones pendientes; 4751 Retenciones; 476 Seguridad Social acreedora.
+Cuentas de referencia potenciales para peluquería/estética, NO mapping aprobado: 430 Clientes; 400 Proveedores; 410 Acreedores por prestaciones de servicios; 472 IVA soportado; 477 IVA repercutido; 570 Caja; 572 Bancos; 600 Compras de mercaderías; 602 Otros aprovisionamientos; 705 Prestaciones de servicios (referencia natural para servicios, sujeta al criterio de reconocimiento y plan de la asesoría); 621 Arrendamientos; 622 Reparaciones; 623 Profesionales independientes; 625 Seguros; 626 Servicios bancarios; 627 Publicidad; 628 Suministros; 629 Otros servicios; 640 Sueldos; 642 Seguridad Social empresa; 465 Remuneraciones pendientes; 4751 Retenciones; 476 Seguridad Social acreedora.
 
 No aprobar cuentas por intuición. El asiento depende de devengo, cobro, liquidación tarjeta, comisiones, anticipos, descuentos, devoluciones, régimen IVA, retenciones y forma jurídica. Cobro con tarjeta puede requerir cuenta transitoria de adquirente antes de banco; no contabilizar contra 572 sin conocer liquidación y extracto.
 
