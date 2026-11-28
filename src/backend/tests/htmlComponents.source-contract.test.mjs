@@ -138,6 +138,7 @@ test("admin widget actions are explicitly allowlisted and match implemented page
     "FISCAL_BOOK",
     "EXTERNAL_PREPARE",
     "EXTERNAL_EVENTS",
+    "EXTERNAL_DELIVER",
   ]) {
     assert.ok(allowlist[1].includes('"'+type+'"'), type+" must be allowed by the admin bridge");
     assert.match(adminPage, new RegExp(type+"\\s*:"), type+" must have a page handler");
@@ -159,11 +160,14 @@ test("admin C3 widget uses the versioned bridge and exposes only the outbox work
   assert.match(adminHtml, /messageId:\s*'admin-/);
   assert.match(adminHtml, /EXTERNAL_PREPARE_RES/);
   assert.match(adminHtml, /EXTERNAL_EVENTS_RES/);
+  assert.match(adminHtml, /EXTERNAL_DELIVER_RES/);
+  assert.match(adminHtml, /Enviar y verificar/);
   assert.match(adminHtml, /RegistroIntegracion/);
   assert.match(adminHtml, /PENDIENTE DE CONFIGURACIÓN/);
   assert.doesNotMatch(adminHtml, /DOCUMENT_DOWNLOAD|DOCUMENT_PREPARED|CREATE_SNAPSHOT/);
   assert.match(adminPage, /prepareExternalRegistryPackage/);
   assert.match(adminPage, /getExternalIntegrationEvents/);
+  assert.match(adminPage, /deliverExternalRegistryPackage/);
   assert.match(adminPage, /type === MESSAGE_TYPES\.READY \|\| type === MESSAGE_TYPES\.CONTEXT\) return/);
   assert.doesNotMatch(adminPage, /createManagerPackageVersion|getPreparedManagerPackages|downloadManagerPackageVersion/);
 });
