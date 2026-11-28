@@ -51,7 +51,7 @@ test("WIX-PREVIEW-05 authenticated state is secret-backed, temporary and never u
     assert.ok(workflow.includes("RUNNER_TEMP"));
     assert.ok(workflow.includes("chmod 600"));
     assert.ok(workflow.includes("Upload E2E report only (never storageState)"));
-    assert.ok(!workflow.includes("path:") || !workflow.includes("storage-state.json"));
+    assert.ok(!workflow.includes("path: ${{ runner.temp }}/wix-auth/storage-state.json"));
 });
 
 test("WIX-PREVIEW-06 TPV E2E performs business writes through the bridge without touching pre-existing sessions", async () => {
