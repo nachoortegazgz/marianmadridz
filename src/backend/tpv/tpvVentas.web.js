@@ -414,7 +414,7 @@ async function appendSaleAudit(record, traceId) {
         actorId: record.actorId || record.operatorId,
         entityType: "TRANSACCION_TPV",
         entityId: record._id,
-        traceId,
+        traceId: record.traceId || traceId,
         payload: {
             sessionId: record.sessionId,
             orderId: record.orderId || null,
@@ -422,16 +422,36 @@ async function appendSaleAudit(record, traceId) {
             impuestosTotal: record.impuestosTotal,
             totalVenta: record.totalVenta,
             medioPago: record.medioPago || null,
-            paymentStatus: record.status === "CONFIRMADA" ? "PAID" : "NOT_PAID",
-            paymentIds: (record.paymentSelection || []).map((payment) => payment.paymentId).filter(Boolean),
-            ledgerMovementIds: (record.paymentSelection || []).map((payment) => payment.ledgerMovementId).filter(Boolean),
             lineCount: Array.isArray(record.lineas) ? record.lineas.length : 0,
             currency: record.currency,
-            status: record.status,
             sourceType: record.sourceType,
             recordTimestamp: record.recordTimestamp,
-            requiresReconciliation: record.requiresReconciliation === true,
             requestFingerprint: record.requestFingerprint,
+        },
+    });
+}
+
+async function appendSalePaymentAudit(record, traceId) {
+    const payment = record.paymentSelection?.[0];
+    if (!payment?.paymentId || !payment?.ledgerMovementId) {
+        throw new Error("TPV_PAYMENT_AUDIT_REFERENCES_MISSING");
+    }
+    return appendTpvAudit({
+        idempotencyKey: record._id + ":PAYMENT_AUDIT",
+        action: "PAGO_TPV_CONFIRMADO",
+        actorId: record.actorId || record.operatorId,
+        entityType: "TRANSACCION_TPV",
+        entityId: record._id,
+        traceId: record.traceId || traceId,
+        payload: {
+            sessionId: record.sessionId,
+            orderId: record.orderId,
+            paymentId: payment.paymentId,
+            ledgerMovementId: payment.ledgerMovementId,
+            amountMinor: payment.amountMinor,
+            paymentMethod: "EFECTIVO",
+            paymentStatus: payment.paymentStatus,
+            currency: record.currency,
         },
     });
 }
