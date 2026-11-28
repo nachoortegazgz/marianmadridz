@@ -49,7 +49,7 @@ El TPV solo se considera GO cuando:
 La documentación de Wix permite usar `@wix/ecom/orders.createOrder()` para registrar ventas manuales de POS y pedidos de sistemas externos. El canal `channelInfo.type = POS` está soportado. Wix documenta además un ejemplo de un único pedido con líneas de Wix Stores y Wix Bookings.
 
 - Un pedido Wix por venta, con todas las líneas de producto/servicio y el cliente cuando exista.
-- Usar `settings.orderApprovalStrategy = DEFAULT` para reservar/decrementar stock al crear el pedido, evitando que dos cajas cobren la última unidad a la vez. El pedido puede estar `APPROVED` y `NOT_PAID`; eso no es una venta cobrada ni se suma a ingresos.
+- Usar `settings.orderApprovalStrategy = DEFAULT` y `settings.notifications.sendNotificationToBuyer=false / sendNotificationsToBusiness=false` para reservar/decrementar stock al crear el pedido sin enviar una confirmación antes del cobro. La notificación fiscal/recibo se emite después de completar pago y factura. El pedido puede estar `APPROVED` y `NOT_PAID`; eso no es una venta cobrada ni se suma a ingresos.
 - Si no se completa ningún pago, cancelar el pedido con `orders.cancelOrder(..., {sendOrderCanceledEmail:false, restockAllItems:true})` para liberar stock.
 - Si existe pago parcial, primero completar su reembolso por el medio correspondiente y verificarlo; después cancelar el pedido y restock. No asumir que `cancelOrder` devuelve dinero.
 - No ejecutar decrementos ni reposiciones manuales paralelos.
