@@ -657,6 +657,11 @@ function _sessionCajaPatch(caja, record, eventHash) {
     const openedAt = record.openedAt instanceof Date ? record.openedAt : new Date(record.openedAt || Date.now());
     const openingCash = Number(record.openingCashMinor || 0) / 100;
     const previousRuntime = getTpvRuntimeState(caja);
+    const existingSequenceCounters = caja.sequenceCounters == null ? {} : caja.sequenceCounters;
+    if (!existingSequenceCounters || typeof existingSequenceCounters !== "object" ||
+        Array.isArray(existingSequenceCounters)) {
+        throw new Error("TPV_SHARED_SEQUENCE_COUNTERS_INVALID");
+    }
     const legacyProjection = _isLegacyUnverifiedProjection(caja)
         ? {
             projectionStatus: "LEGACY_UNVERIFIED",
@@ -718,7 +723,7 @@ function _sessionCajaPatch(caja, record, eventHash) {
         cashMovementId: null,
         lastMovementAt: null,
         ticketSequence: 0,
-        sequenceCounters: {},
+        sequenceCounters: { ...existingSequenceCounters },
         snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
         traceId: String(record.payload?.traceId || "TPV_SESSION:" + record.sessionId),
         lastOperationId: "TPV_SESSION_OPEN:" + record.sessionId,
