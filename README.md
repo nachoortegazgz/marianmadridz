@@ -11,7 +11,7 @@ Plataforma: Wix Editor clásico + Velo.
 
 ## Estado del proyecto
 
-**MVP operativo/comercial: NO-GO.** El sitio permanece Draft/no publicado según el último read-back documentado. La CI offline de Capa 0 está validada para PR #675 (89 suites / 804 tests PASS en su HEAD); no acredita Wix Local Editor, Preview E2E, Runtime ni producción. No publicar ni ejecutar cobros reales.
+**MVP operativo/comercial: NO-GO.** El sitio permanece Draft/no publicado según el último read-back documentado. La CI offline de Capa 0 está validada para el HEAD correctivo de `main` tras PR #679 (91 suites / 816 tests PASS); no acredita Wix Local Editor, Preview E2E, Runtime ni producción. No publicar ni ejecutar cobros reales.
 
 El estado y la evidencia fechada se mantienen exclusivamente en [docs/STATE-NOW.md](docs/STATE-NOW.md). No mantener aquí copias de SHAs, métricas CI ni recuentos CMS.
 

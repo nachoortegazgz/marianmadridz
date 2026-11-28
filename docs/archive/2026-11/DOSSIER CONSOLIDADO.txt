@@ -1,7 +1,7 @@
 # DOSSIER TÉCNICO CONSOLIDADO  
 ## Marian Madrid Peluquería y Estética
 
-> **AVISO IMPORTANTE:Para acceder a API de cuenta WIX usar llave CLI_API_KEY y la ID: ab7708e9-6471-441e-b5f9-93a9e02bf4b3**
+> **AVISO DE SEGURIDAD:** las credenciales se gestionan mediante los almacenes de secretos autorizados. No documentar valores ni identificadores de credenciales en archivos del repositorio.
 > **AVISO IMPORTANTE:el sitio web está en fase de desarrollo y pruebas. Se creo como base de pruebas y no tiene ninguna actividad real.Todos sus registros son sintéticos y serán eliminados cuando se despliegue para uso real.** . El usuario autoriza pruebas completas con registros para comprobar funcionalidad de procesos y depuración de errores. Los registros generados en estas pruebas se usaran solo como comprobacion de funcionalidad y se eliminaran antes del despliegue real del sitio desarrollado. Realizar simulacros completos con registros como ensayo previo a uso real. Ten como prioridad y avanza siempre enfocado en lista breve de objetivos finales que junto con fuentes oficiales son la unica SSOT, todo lo demás es editable: funcionalidades que debe cumplir el sitio web por peticion de Marian Madrid para su negocio ( SDK v2 o version actual recomendada, mínimo código para que sea funcional evitando entropía y código innecesario, 100% según directrices de documentación oficial, cero deprecated, directrices de calidad para el código implementado, normativas definidas por ley vigente, etc.
 
 ---
