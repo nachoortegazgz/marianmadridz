@@ -40,7 +40,7 @@ const REQUEST_TYPES = Object.freeze([
     "AUDIT_EXPORT",
 ]);
 const activeBridges = new WeakMap();
-const CONTROLLER_BUILD = "TPV_BRIDGE_DIAGNOSTICS_2026-11-27";
+const CONTROLLER_BUILD = "TPV_BRIDGE_E2E_2026-11-28";
 const MAX_KEY_LEN = 120;
 
 function optionalString(value, maxLength = MAX_KEY_LEN) {
