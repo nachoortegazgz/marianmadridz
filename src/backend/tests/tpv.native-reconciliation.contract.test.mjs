@@ -79,7 +79,7 @@ test("TPV role guards and session lifecycle are explicit backend contracts", asy
     assert.match(permissions, /requestRefund: false/);
     assert.ok(permissions.includes('closeSession: staff.rolWebsite === "ADMIN"'));
     assert.ok(permissions.includes('issueTicketX: staff.rolWebsite === "ADMIN"'));
-    assert.match(permissions, /issueTicketZ: staff\\.rolWebsite === "ADMIN"/);
+    assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(permissions, /operationalWritesAvailable: true/);
     assert.match(permissions, /getMyCajeroContext/);
