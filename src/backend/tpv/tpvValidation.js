@@ -5,7 +5,7 @@ const PAYMENT_METHODS = Object.freeze(Object.values(TPV_PAYMENT_METHOD));
 
 function normalizeQuantity(value) {
     const quantity = Number(value);
-    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > 100000) {
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 || quantity > 100000) {
         throw new Error("TPV_INVALID_QUANTITY");
     }
     return quantity;
@@ -22,10 +22,10 @@ function normalizeLine(line, index) {
     const catalogFullPriceMinor = quantity * unitMinor;
     const taxIncludedInPrice = line.taxIncludedInPrice === true;
 
-    if (!Number.isSafeInteger(catalogFullPriceMinor) ||
-        catalogFullPriceMinor <= 0 || discountMinor > catalogFullPriceMinor) {
+    if (!Number.isSafeInteger(catalogFullPriceMinor) || catalogFullPriceMinor <= 0) {
         throw new Error("TPV_INVALID_LINE_AMOUNT");
     }
+    if (discountMinor !== 0) throw new Error("TPV_DISCOUNT_NOT_CONFIGURED");
 
     const taxMinor = toMinorUnits(line.impuestosImporte || 0, "TAX");
     let subtotalMinor;
@@ -55,7 +55,7 @@ function normalizeLine(line, index) {
     }
 
     const tipoLinea = String(line.tipoLinea || "").trim().toUpperCase();
-    if (!["SERVICIO", "PRODUCTO", "PERSONALIZADA"].includes(tipoLinea)) {
+    if (!["SERVICIO", "PRODUCTO"].includes(tipoLinea)) {
         throw new Error("TPV_INVALID_LINE_TYPE");
     }
 
@@ -188,18 +188,18 @@ export function validateSaleDraft(input = {}) {
         currency: "EUR",
         lineas,
         pagos: paymentResult.pagos,
-        desgloseMedios: paymentBreakdown,
-        efectivoRecibido: paymentResult.efectivoRecibidoMinor / 100,
-        cambioEntregado: paymentResult.cambioEntregadoMinor / 100,
-        efectivoAplicado: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
-        totalCobrado: paymentResult.importePagadoMinor / 100,
         subtotalNeto: subtotalMinor / 100,
         impuestosTotal: taxMinor / 100,
         totalVenta: totalMinor / 100,
-        importePagado: paymentResult.importePagadoMinor / 100,
-        importePendiente: importePendienteMinor / 100,
-        estadoVenta: importePendienteMinor === 0 ? "COBRADA" :
-            paymentResult.importePagadoMinor > 0 ? "PARCIAL" : "BORRADOR",
+        importeAsignado: paymentResult.importePagadoMinor / 100,
+        importePendienteAsignacion: importePendienteMinor / 100,
+        desgloseMediosSeleccionados: paymentBreakdown,
+        efectivoDeclarado: paymentResult.efectivoRecibidoMinor / 100,
+        cambioDeclarado: paymentResult.cambioEntregadoMinor / 100,
+        efectivoAsignado: paymentResult.paymentBreakdownMinor.EFECTIVO / 100,
+        estadoVenta: "PENDIENTE_CONFIRMACION",
+        estadoPago: "NO_VERIFICADO",
+        paymentVerified: false,
         persisted: false,
     });
 }
