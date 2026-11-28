@@ -219,6 +219,7 @@
       const btnLoadPrepared=$('btnLoadPrepared'), btnCreateSnapshot=$('btnCreateSnapshot'), documentsBody=$('documentsBody');
       const externalDeliveryStatus=$('externalDeliveryStatus');
       let activeExternalRequest = false;
+      let activeDeliveryButton = null;
 
 
       function send(type, payload={}) {
@@ -238,7 +239,11 @@
             setLoading(btnCreateSnapshot, false);
           }
           if (type === MESSAGE_TYPES.EXTERNAL_EVENTS) setLoading(btnLoadPrepared, false);
-          if (type === MESSAGE_TYPES.EXTERNAL_DELIVER) activeExternalRequest = false;
+          if (type === MESSAGE_TYPES.EXTERNAL_DELIVER) {
+            activeExternalRequest = false;
+            if (activeDeliveryButton) setLoading(activeDeliveryButton, false);
+            activeDeliveryButton = null;
+          }
           err('No se pudo comunicar con el controlador de administración. Recarga la página y conserva el traceId.');
         }
       }
@@ -441,6 +446,7 @@
             deliverButton.addEventListener('click', () => {
               if (activeExternalRequest) return;
               activeExternalRequest = true;
+              activeDeliveryButton = deliverButton;
               setLoading(deliverButton, true);
               send(MESSAGE_TYPES.EXTERNAL_DELIVER, { artifactId: payload.artifactId });
             });
@@ -559,6 +565,8 @@
             break;
           case 'EXTERNAL_DELIVER_RES':
             activeExternalRequest = false;
+            if (activeDeliveryButton) setLoading(activeDeliveryButton, false);
+            activeDeliveryButton = null;
             if (ok) {
               info('Archivo entregado y checksum verificado mediante lectura desde SharePoint.');
               if (externalDeliveryStatus) externalDeliveryStatus.textContent =
