@@ -1,6 +1,6 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
-import { services } from "@wix/bookings";
+import { services, extendedBookings } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import {
     searchTpvContacts,
