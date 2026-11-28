@@ -104,14 +104,35 @@ test("rejects missing native catalog identity or tax classification", () => {
     assert.throws(() => buildTpvNativeOrderPayload(value), { code: "TPV_ORDER_CATALOG_APP_INVALID:0" });
 });
 
-test("does not accept an invalid buyer identity or non-EUR preparation", () => {
-    const result = buildTpvNativeOrderPayload(prepared(), {
+test("rejects invalid buyer identity and non-EUR preparation", () => {
+    assert.throws(() => buildTpvNativeOrderPayload(prepared(), {
         contactId: "not-a-guid",
         email: "fixture@example.com",
-    });
-    assert.equal(result.order.buyerInfo, undefined);
+    }), { code: "TPV_ORDER_BUYER_CONTACT_INVALID" });
 
     const value = prepared();
     value.taxCurrency = "USD";
     assert.throws(() => buildTpvNativeOrderPayload(value), { code: "TPV_ORDER_CURRENCY_INVALID" });
+});
+
+test("reconciles gross catalog price when Wix catalog prices include tax", () => {
+    const value = prepared();
+    value.taxIncludedInPrice = true;
+    value.subtotalNeto = 30;
+    value.impuestosTotal = 6.3;
+    value.totalVenta = 36.3;
+    value.lineas[0].taxIncludedInPrice = true;
+    value.lineas[0].precioUnitario = "24.20";
+    value.lineas[0].subtotalNeto = 20;
+    value.lineas[0].impuestosImporte = 4.2;
+    value.lineas[0].totalLinea = 24.2;
+    value.lineas[1].taxIncludedInPrice = true;
+    value.lineas[1].precioUnitario = "12.10";
+    value.lineas[1].subtotalNeto = 10;
+    value.lineas[1].impuestosImporte = 2.1;
+    value.lineas[1].totalLinea = 12.1;
+    const result = buildTpvNativeOrderPayload(value);
+    assert.equal(result.order.lineItems[0].price.amount, "24.20");
+    assert.equal(result.order.lineItems[0].totalPriceBeforeTax.amount, "20.00");
+    assert.equal(result.order.lineItems[0].totalPriceAfterTax.amount, "24.20");
 });
