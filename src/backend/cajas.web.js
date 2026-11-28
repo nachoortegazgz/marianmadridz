@@ -755,12 +755,13 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             };
         }
 
-        const readOptionalFiscalNumber = (value, field) => {
+        const readOptionalFiscalNumber = (value, field, max = null) => {
             if (value === undefined || value === null) return 0;
             const validType = typeof value === "number" ||
                 (typeof value === "string" && value.trim() !== "");
             const parsed = validType ? Number(value) : Number.NaN;
-            if (!Number.isFinite(parsed) || parsed < 0) {
+            if (!Number.isFinite(parsed) || parsed < 0 ||
+                (max !== null && parsed > max)) {
                 const error = new Error("FISCAL_NUMERIC_FIELD_INVALID:" + field);
                 error.code = "FISCAL_NUMERIC_FIELD_INVALID";
                 error.meta = { field };
@@ -780,7 +781,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
                 traceId,
             };
         }
-        const irpfWithholdingRate = readOptionalFiscalNumber(inDto.irpfWithholdingRate, "irpfWithholdingRate");
+        const irpfWithholdingRate = readOptionalFiscalNumber(inDto.irpfWithholdingRate, "irpfWithholdingRate", 1);
         const withholdingBase = readOptionalFiscalNumber(inDto.withholdingBase, "withholdingBase");
         let irpfWithholdingAmount = readOptionalFiscalNumber(inDto.irpfWithholdingAmount, "irpfWithholdingAmount");
 
@@ -788,7 +789,7 @@ export const registerManualTransaction = webMethod(Permissions.SiteMember, async
             irpfWithholdingAmount = _roundMoney(withholdingBase * irpfWithholdingRate);
         }
 
-        const surchargeRate = readOptionalFiscalNumber(inDto.surchargeRate, "surchargeRate");
+        const surchargeRate = readOptionalFiscalNumber(inDto.surchargeRate, "surchargeRate", 1);
         let surchargeAmount = readOptionalFiscalNumber(inDto.surchargeAmount, "surchargeAmount");
 
         if (surchargeRate > 0 && surchargeAmount === 0) {
