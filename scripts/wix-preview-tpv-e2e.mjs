@@ -23,7 +23,9 @@ const wixHost = (hostname) =>
     hostname === "wix.com" ||
     hostname.endsWith(".wix.com") ||
     hostname === "wixsite.com" ||
-    hostname.endsWith(".wixsite.com");
+    hostname.endsWith(".wixsite.com") ||
+    hostname === "marianmadrid.es" ||
+    hostname === "www.marianmadrid.es";
 
 const allowedParentOrigins = [
     "https://www.marianmadrid.es",
