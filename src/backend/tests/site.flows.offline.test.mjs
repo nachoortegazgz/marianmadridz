@@ -1184,6 +1184,9 @@ test('FLOW-CAJA-11 unknown cash status cannot authorize manual writes or Z close
     operationDate,
     netAmount: 300,
     cashAmount: 300,
+    cardAmount: 0,
+    otherAmount: 0,
+    salesCount: 0,
     sequenceCounters: { seqGlobal: 0, appliedMovementIds: [] },
   }]);
   await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
