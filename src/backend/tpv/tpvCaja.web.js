@@ -79,47 +79,95 @@ export const obtenerEstadoCaja = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-session-read");
-        await requireTpvOperator(traceId);
-
-        const operator = await resolveTpvContext(traceId);
-        let cajaActual;
         try {
-            cajaActual = await readTpvCajaSnapshot();
-        } catch (error) {
-            const code = String(error?.code || error?.message || "");
-            if (operator.rolWebsite !== "ADMIN" || code !== "TPV_CASH_REGISTER_NOT_PRESEEDED") {
-                throw error;
+            await requireTpvOperator(traceId);
+            const operator = await resolveTpvContext(traceId);
+            const session = await latestTpvSession();
+            let cajaActual;
+            try {
+                cajaActual = await readTpvCajaSnapshot();
+            } catch (error) {
+                const code = String(error?.code || error?.message || "");
+                if (code !== "TPV_CASH_REGISTER_NOT_PRESEEDED" || session) throw error;
+                // Reads never create state. The first explicit SESSION_OPEN bootstraps
+                // the singleton under the repository's projection lock.
+                cajaActual = {
+                    projectionStatus: "NOT_INITIALIZED",
+                    canStartSession: true,
+                    cashRegisterStatus: "CERRADA",
+                    snapshotSource: null,
+                    sessionId: null,
+                    openedAt: null,
+                    openedBy: null,
+                };
             }
-            await initializeTpvCaja(traceId);
-            cajaActual = await readTpvCajaSnapshot();
-        }
-        const session = await latestTpvSession();
-        const dayKey = madridDayKey();
-        const nextSessionPreview = {
-            operationDate: dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8),
-            sessionId: "TPV-SESSION-" + dayKey,
-            timeZone: SDK_CONFIG.TZ,
-            preparedAt: new Date().toISOString(),
-        };
-        if (!session) {
-            const canOpenSession = cajaActual.canStartSession === true;
+            const dayKey = madridDayKey();
+            const nextSessionPreview = {
+                operationDate: dayKey.slice(0, 4) + "-" + dayKey.slice(4, 6) + "-" + dayKey.slice(6, 8),
+                sessionId: "TPV-SESSION-" + dayKey,
+                timeZone: SDK_CONFIG.TZ,
+                preparedAt: new Date().toISOString(),
+            };
+            if (!session) {
+                const canOpenSession = cajaActual.canStartSession === true;
+                return {
+                    status: "SUCCESS",
+                    data: {
+                        status: OPERATIONAL_CASH_STATUS.NONE,
+                        operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
+                        canOpenSession,
+                        nextSessionPreview: canOpenSession ? nextSessionPreview : null,
+                        cajaActual,
+                        operationalWritesAvailable: false,
+                        operationalWritesUnavailableReason: "TPV_SESSION_NOT_OPEN",
+                        sessionId: null,
+                        operatorId: null,
+                        actorId: null,
+                        operatorResourceId: null,
+                        authenticatedOperatorId: operator.operatorId,
+                        authenticatedActorId: operator.actorId,
+                        authenticatedDisplayName: operator.operatorDisplayName,
+                        integrationStatus: "NO_ENVIADO",
+                        paymentStatus: "NOT_APPLICABLE",
+                        ...responseClock(),
+                    },
+                    error: null,
+                    traceId,
+                };
+            }
+            const status = operationalStatus(session.status);
+            const summary = status === OPERATIONAL_CASH_STATUS.OPEN
+                ? await buildTpvSessionSummary(session)
+                : null;
+            const canOpenSession = status === OPERATIONAL_CASH_STATUS.CLOSED &&
+                session.sessionId !== "TPV-SESSION-" + dayKey;
             return {
                 status: "SUCCESS",
                 data: {
-                    status: OPERATIONAL_CASH_STATUS.NONE,
-                    operationalStatus: OPERATIONAL_CASH_STATUS.NONE,
+                    sessionId: session.sessionId,
+                    status,
+                    operationalStatus: status,
                     canOpenSession,
                     nextSessionPreview: canOpenSession ? nextSessionPreview : null,
                     cajaActual,
-                    operationalWritesAvailable: false,
-                    operationalWritesUnavailableReason: "TPV_SESSION_NOT_OPEN",
-                    sessionId: null,
-                    operatorId: null,
-                    actorId: null,
-                    operatorResourceId: null,
+                    operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS.OPEN,
+                    operationalWritesUnavailableReason: status === OPERATIONAL_CASH_STATUS.OPEN ? null : "TPV_SESSION_NOT_OPEN",
+                    operatorId: session.operatorId || session.cashierMemberId || null,
+                    actorId: session.actorId || session.cashierMemberId || null,
+                    operatorDisplayName: session.operatorDisplayName || null,
+                    operatorResourceId: session.operatorResourceId || null,
                     authenticatedOperatorId: operator.operatorId,
                     authenticatedActorId: operator.actorId,
                     authenticatedDisplayName: operator.operatorDisplayName,
+                    openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
+                    expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
+                    cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
+                    cardAmount: summary ? fromMinorUnits(summary.cardMinor) : null,
+                    bizumAmount: summary ? fromMinorUnits(summary.bizumMinor) : null,
+                    otherAmount: summary ? fromMinorUnits(summary.otherMinor) : null,
+                    totalOperations: summary?.ticketCount ?? null,
+                    openedAt: session.openedAt,
+                    closedAt: session.closedAt || null,
                     integrationStatus: "NO_ENVIADO",
                     paymentStatus: "NOT_APPLICABLE",
                     ...responseClock(),
@@ -127,50 +175,11 @@ export const obtenerEstadoCaja = webMethod(
                 error: null,
                 traceId,
             };
+        } catch (error) {
+            return errorResult(error, "TPV_CASHIER_STATE_FAILED", traceId);
         }
-        const status = operationalStatus(session.status);
-        const summary = status === OPERATIONAL_CASH_STATUS.OPEN
-            ? await buildTpvSessionSummary(session)
-            : null;
-        const canOpenSession = status === OPERATIONAL_CASH_STATUS.CLOSED &&
-            session.sessionId !== "TPV-SESSION-" + dayKey;
-        return {
-            status: "SUCCESS",
-            data: {
-                sessionId: session.sessionId,
-                status,
-                operationalStatus: status,
-                canOpenSession,
-                nextSessionPreview: canOpenSession ? nextSessionPreview : null,
-                cajaActual,
-                operationalWritesAvailable: status === OPERATIONAL_CASH_STATUS.OPEN,
-                operationalWritesUnavailableReason: status === OPERATIONAL_CASH_STATUS.OPEN ? null : "TPV_SESSION_NOT_OPEN",
-                operatorId: session.operatorId || session.cashierMemberId || null,
-                actorId: session.actorId || session.cashierMemberId || null,
-                operatorDisplayName: session.operatorDisplayName || null,
-                operatorResourceId: session.operatorResourceId || null,
-                authenticatedOperatorId: operator.operatorId,
-                authenticatedActorId: operator.actorId,
-                authenticatedDisplayName: operator.operatorDisplayName,
-                openingCash: fromMinorUnits(Number(session.openingCashMinor || 0)),
-                expectedCash: summary ? fromMinorUnits(summary.expectedCashMinor) : null,
-                cashAmount: summary ? fromMinorUnits(summary.cashMinor) : null,
-                cardAmount: summary ? fromMinorUnits(summary.cardMinor) : null,
-                bizumAmount: summary ? fromMinorUnits(summary.bizumMinor) : null,
-                otherAmount: summary ? fromMinorUnits(summary.otherMinor) : null,
-                totalOperations: summary?.ticketCount ?? null,
-                openedAt: session.openedAt,
-                closedAt: session.closedAt || null,
-                integrationStatus: "NO_ENVIADO",
-                paymentStatus: "NOT_APPLICABLE",
-                ...responseClock(),
-            },
-            error: null,
-            traceId,
-        };
     }
 );
-
 export const abrirSesionCaja = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
@@ -189,6 +198,9 @@ export const abrirSesionCaja = webMethod(
             if (expectedSessionId !== sessionId) {
                 throw new Error("TPV_SESSION_PREVIEW_STALE");
             }
+            // Bootstrap is an explicit side effect of the SESSION_OPEN command,
+            // never a side effect of the read-only CASHIER_STATE query.
+            await initializeTpvCaja(traceId);
             return await withTpvSessionLock(sessionId, traceId, async () => {
                 const idempotencyKey = "SESSION_OPEN:" + dayKey;
                 const current = await latestOpenTpvSession();
