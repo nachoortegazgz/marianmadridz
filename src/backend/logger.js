@@ -40,7 +40,7 @@ function _sanitizeText(value) {
         .replace(/\b(authorization|proxy-authorization|cookie|set-cookie)\s*[:=]\s*[^\r\n]*/gi, "$1=[REDACTED_SECRET]")
         .replace(/([?&](?:access[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|private[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|secret|hmac|signature|cookie|session[_-]?id|fiscal[_-]?key|authorization|password)=)[^&#\s]*/gi, "$1[REDACTED_SECRET]")
         .replace(/\b(password|secret|token|api[_-]?key|apikey|private[_-]?key|resend[_-]?api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|authorization|hmac|signature|cookie|session[_-]?id|fiscal[_-]?key)\s*[:=]\s*(['"]?)[^\s,;'\"&]+/gi, "$1=[REDACTED_SECRET]")
-        .replace(/([/\\](?:access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|private[_-]?key|secret|hmac|signature|cookie)[/\\])[^/\\\s?#]+/gi, "$1[REDACTED_SECRET]")
+        .replace(/([/\\](?:access[_-]?token|refresh[_-]?token|token|api[_-]?key|apikey|private[_-]?key|secret|hmac|signature|cookie)[/\\])[^/\\\s?#]+/gi, "$1[REDACTED_SECRET]")
         .replace(/(https?:\/\/)[^/@\s:]+:[^/@\s]+@/gi, "$1[REDACTED]@")
         .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]");
 }
