@@ -50,6 +50,10 @@ test("TPV sale draft with no payment selection remains unverified and does not t
     const result = validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
+            itemId: "a0a75e2a-e194-437b-b8b3-64225a29b6c3",
+            appId: "13d21c63-b5ec-5912-8397-c3a5ddb27a97",
+            currency: "EUR",
+            taxIncludedInPrice: false,
             concepto: "Servicio pendiente de cobro",
             cantidad: 1,
             precioUnitario: 25,
@@ -117,7 +121,7 @@ test("TPV product variant identity is retained and restricted to product lines",
         }],
         pagos: [{ medioPago: "EFECTIVO", importe: 20 }],
     });
-    assert.equal(product.lineas[0].varianteId, "variant-123");
+    assert.equal(product.lineas[0].varianteId, "1d560c12-fefc-4cdf-b0dc-dd2a96af6919");
     assert.throws(() => validateSaleDraft({
         lineas: [{
             tipoLinea: "SERVICIO",
@@ -617,11 +621,13 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
     assert.doesNotMatch(sales, /insertTpvEvent/);
     assert.match(sales, /appendTpvAudit/);
-    assert.doesNotMatch(refunds, /insertTpvEvent|appendTpvAudit/);
+    assert.match(refunds, /appendTpvAudit/);
+    assert.match(refunds, /TPV_REFUND_BLOCKED/);
+    assert.doesNotMatch(refunds, /insertTpvEvent/);
 });
 
 
-test("Ticket X and Z use neutral status values and explicit synthetic source metadata", async () => {
+test("Ticket X and Z use neutral status values and explicit TPV source metadata", async () => {
     const closures = await source("tpv/tpvCierres.web.js");
     assert.match(closures, /action: "TICKET_X_GENERATED"/);
     assert.match(closures, /entityType: "TICKET_X"/);
