@@ -593,6 +593,11 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                     next.difference = amount - Number(caja.cashAmount || 0);
                     next.differenceReason = String(record.reason || "");
                 }
+                if (type === "APERTURA") {
+                    next.lastOperationType = "TPV_SESSION_OPEN";
+                    next.lastOperationAmount = amount;
+                    next.lastOperationPaymentMethod = "EFECTIVO";
+                }
                 next.expectedCash = Number(next.cashAmount || 0);
             }
             if (collection === TPV_COLLECTIONS.TICKET_Z) {
@@ -603,6 +608,11 @@ async function _writeCajaProjection(collection, record, eventId, eventHash) {
                 next.difference = Number(record.totals?.differenceMinor || 0) / 100;
                 next.differenceReason = String(record.totals?.differenceReason || "");
                 next.lastOperationType = "TPV_SESSION_CLOSE";
+            } else if (
+                collection === TPV_COLLECTIONS.MOVIMIENTOS_CAJA &&
+                String(record.movementType || "").toUpperCase() === "APERTURA"
+            ) {
+                next.lastOperationType = "TPV_SESSION_OPEN";
             } else {
                 next.lastOperationType = "TPV_" + String(collection).replace(/^TPV_LOGICAL_/, "");
             }
