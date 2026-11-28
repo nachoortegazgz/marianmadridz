@@ -29,8 +29,22 @@ test("TPV bootstrap receives the trace identifier from its authorized WebMethod"
     assert.match(source, /await requireTpvOperator\(traceId\)[\s\S]*?initializeTpvCaja\(traceId\)/);
 });
 
-test("only an ADMIN read initializes a missing CajaActual singleton", async () => {
+test("CASHIER_STATE is read-only and never bootstraps CajaActual", async () => {
     const source = await readFile(pageUrl, "utf8");
-    assert.match(source, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
-    assert.match(source, /await initializeTpvCaja\(traceId\);[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
+    const start = source.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const end = source.indexOf("\nexport const abrirSesionCaja = webMethod(", start);
+    assert.ok(start >= 0 && end > start);
+    const reader = source.slice(start, end);
+    assert.ok(reader.includes("await readTpvCajaSnapshot()"));
+    assert.match(reader, /projectionStatus: "NOT_INITIALIZED"/);
+    assert.ok(!reader.includes("initializeTpvCaja("));
+});
+
+test("SESSION_OPEN explicitly bootstraps CajaActual before acquiring the session lock", async () => {
+    const source = await readFile(pageUrl, "utf8");
+    const start = source.indexOf("export const abrirSesionCaja = webMethod(");
+    const end = source.indexOf("\nexport const registrarArqueoParcial = webMethod(", start);
+    assert.ok(start >= 0 && end > start);
+    const writer = source.slice(start, end);
+    assert.ok(writer.indexOf("await initializeTpvCaja(traceId);") < writer.indexOf("withTpvSessionLock("));
 });
