@@ -20,6 +20,7 @@ const suites = [
   'tpv.qa.persistence.policy.test.mjs',
   'tpv-widget.contract.test.mjs',
   'tpv.native-order-payload.test.mjs',
+  'tpv.native-commerce.contract.test.mjs',
   'members.sdk.contract.test.mjs',
   'booking.members-required.contract.test.mjs',
   'staff.identity.contract.test.mjs',
