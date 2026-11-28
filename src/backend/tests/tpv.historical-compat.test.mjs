@@ -25,7 +25,7 @@ test("TPV ledger readers do not branch on synthetic or smoke markers", async () 
     const reconciliationQuery = eventLog.slice(reconciliationStart, reconciliationEnd);
     assert.ok(reconciliationStart >= 0 && reconciliationEnd > reconciliationStart);
     assert.doesNotMatch(reconciliationQuery, /SMOKE_TEST|recordSource/);
-    assert.match(reconciliationQuery, /\\.gt\\("sequenceNumber", 0\\)/);
+    assert.match(reconciliationQuery, /\.gt\("sequenceNumber", 0\)/);
 
     // Keep neutral TPV origin and ledger integrity metadata; neither denotes
     // whether an operation or record is synthetic or real.
