@@ -25,6 +25,9 @@ const ALLOWED_PAYLOAD_KEYS = Object.freeze([
     "artifactPurpose",
     "legalUseStatus",
     "reconciliationStatus",
+    "sharePointItemId",
+    "webUrl",
+    "responseStatus",
 ]);
 
 function stableJson(value) {
@@ -89,7 +92,7 @@ export async function appendC3PreparedEvent({ manifest, traceId } = {}) {
     const payload = {
         exportId: String(manifest.exportId),
         artifactId: String(manifest.artifactId),
-        fileName: String(manifest.exportId) + ".json",
+        fileName: String(manifest.exportId) + "-" + String(manifest.artifactId).slice(0, 12) + ".json",
         contentChecksum: String(manifest.contentChecksum),
         year,
         quarter,
@@ -165,4 +168,91 @@ export async function listC3IntegrationEvents(limit = 25) {
         items: result.items.map(safeEvent),
         totalCount: result.totalCount,
     };
+}
+
+
+/** Returns the immutable preparation/verification events for one artifact. */
+export async function getC3ArtifactEvents(artifactId) {
+    const normalized = String(artifactId || "").trim();
+    if (!/^[a-f0-9]{64}$/.test(normalized)) {
+        throw Object.assign(new Error("C3_OUTBOX_ARTIFACT_ID_INVALID"), { code: "C3_OUTBOX_ARTIFACT_ID_INVALID" });
+    }
+    const result = await queryItems({
+        dataCollectionId: COLLECTION,
+        filter: wql.eq("sourceItemId", normalized),
+        sort: order.desc("occurredAt"),
+        limit: 10,
+        offset: 0,
+        consistency: CONSISTENCY.STRONG,
+    });
+    const prepared = result.items.find((item) => item.eventType === EVENT_TYPE) || null;
+    const verified = result.items.find((item) => item.eventType === "C3_PACKAGE_VERIFIED") || null;
+    return {
+        prepared: prepared ? safeEvent(prepared) : null,
+        verified: verified ? safeEvent(verified) : null,
+    };
+}
+
+/** Appends the SharePoint read-back result; the prepared event is never updated. */
+export async function appendC3VerifiedEvent({ manifest, delivery, traceId } = {}) {
+    if (!manifest || !delivery || typeof delivery !== "object") {
+        throw Object.assign(new Error("C3_OUTBOX_DELIVERY_REQUIRED"), { code: "C3_OUTBOX_DELIVERY_REQUIRED" });
+    }
+    const artifactId = String(manifest.artifactId || "");
+    const contentChecksum = String(manifest.contentChecksum || "");
+    if (!/^[a-f0-9]{64}$/.test(artifactId) || !/^[a-f0-9]{64}$/.test(contentChecksum) ||
+        String(delivery.contentChecksum || "") !== contentChecksum ||
+        !String(delivery.itemId || "").trim()) {
+        throw Object.assign(new Error("C3_OUTBOX_DELIVERY_INVALID"), { code: "C3_OUTBOX_DELIVERY_INVALID" });
+    }
+    const payload = {
+        exportId: String(manifest.exportId),
+        artifactId,
+        fileName: String(delivery.fileName),
+        contentChecksum,
+        year: Number(manifest.period.year),
+        quarter: Number(manifest.period.quarter),
+        recordCount: Number(manifest.recordCount),
+        dataClassification: String(manifest.dataClassification || ""),
+        artifactPurpose: String(manifest.artifactPurpose || ""),
+        legalUseStatus: String(manifest.legalUseStatus || ""),
+        reconciliationStatus: String(manifest.reconciliationStatus || ""),
+        sharePointItemId: String(delivery.itemId),
+        ...(delivery.webUrl ? { webUrl: String(delivery.webUrl) } : {}),
+        responseStatus: Number(delivery.responseStatus),
+    };
+    const payloadHash = await hashSHA256(stableJson(payload));
+    const idempotencyKey = "C3_PACKAGE_VERIFIED:" + artifactId;
+    const eventId = await hashSHA256(idempotencyKey);
+    const normalizedTraceId = String(traceId || manifest.traceId || "").trim();
+    if (!normalizedTraceId) throw Object.assign(new Error("C3_OUTBOX_TRACE_ID_REQUIRED"), { code: "C3_OUTBOX_TRACE_ID_REQUIRED" });
+    const item = {
+        _id: uuidV8FromHash(eventId),
+        eventId,
+        eventType: "C3_PACKAGE_VERIFIED",
+        sourceModule: "C3_SHAREPOINT",
+        sourceCollection: "WIX_CMS",
+        sourceItemId: artifactId,
+        occurredAt: new Date(),
+        traceId: normalizedTraceId,
+        correlationId: artifactId,
+        idempotencyKey,
+        schemaVersion: "1",
+        payload,
+        payloadHash,
+        deliveryStatus: "VERIFIED",
+        deliveryAttempts: 1,
+    };
+    try {
+        const inserted = await insertItem(COLLECTION, item);
+        return { created: true, event: safeEvent(inserted || item) };
+    } catch (insertError) {
+        const existing = await getItem(COLLECTION, item._id, CONSISTENCY.STRONG);
+        if (!existing) throw insertError;
+        if (existing.eventId !== eventId || existing.idempotencyKey !== idempotencyKey ||
+            existing.payloadHash !== payloadHash) {
+            throw Object.assign(new Error("C3_OUTBOX_IDEMPOTENCY_CONFLICT"), { code: "C3_OUTBOX_IDEMPOTENCY_CONFLICT" });
+        }
+        return { created: false, duplicate: true, event: safeEvent(existing) };
+    }
 }
