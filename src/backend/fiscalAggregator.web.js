@@ -400,7 +400,7 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
 
   for (const m of fetchResult.items) {
     if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
-    const accountingAmount = Number(m.accountingAmount || 0);
+    const accountingAmount = _num(m.accountingAmount, "accountingAmount");
     const movementType = _readMovementType(m).toUpperCase();
     const operationNature = _readOperationNature(m);
     const isTip = operationNature === "PROPINA" || movementType === MOVEMENT_TYPE.PROPINA;
@@ -418,9 +418,9 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
       incluidoEnBorradorIva: !isTip && !isAdjustment,
       referenciaRectificativa: _readPreviousInvoiceId(m),
       paymentMethod: _readPaymentMethod(m),
-      taxableAmount: _roundMoney(_readTaxableAmount(m)),
-      taxRate: `${Math.round(_readTaxRate(m) * 100)}%`,
-      taxAmount: _roundMoney(_readTaxAmount(m)),
+      taxableAmount: isTip || isAdjustment ? null : _roundMoney(_readTaxableAmount(m)),
+      taxRate: isTip || isAdjustment ? null : `${Math.round(_readTaxRate(m) * 100)}%`,
+      taxAmount: isTip || isAdjustment ? null : _roundMoney(_readTaxAmount(m)),
       totalAmount: _roundMoney(accountingAmount),
       concepto: _readOperationDescription(m),
       origen: _readRecordSource(m),

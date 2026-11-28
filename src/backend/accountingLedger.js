@@ -50,7 +50,11 @@ function _isNotFound(error) {
 }
 
 function _roundMoney(value) {
-    return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+    const validType = typeof value === "number" ||
+        (typeof value === "string" && value.trim() !== "");
+    const amount = validType ? Number(value) : Number.NaN;
+    if (!Number.isFinite(amount)) return Number.NaN;
+    return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
 function _normalizeEntry(input, traceId) {

@@ -313,6 +313,65 @@ test('FISCAL-PAYMENT-01 transfer and Wix Payments use distinct payment buckets',
 });
 
 
+test('FISCAL-BOOK-01 tips and adjustments remain visible without fabricated tax zeroes', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [
+    {
+      _id: 'tip-without-tax-fields',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 1,
+      movementType: 'PROPINA',
+      operationNature: 'PROPINA',
+      accountingAmount: 5,
+      hash: 'a'.repeat(64),
+      previousRecordHash: '0'.repeat(64),
+    },
+    {
+      _id: 'adjustment-without-tax-fields',
+      fiscalPeriod: '2026-11',
+      sequenceNumber: 2,
+      movementType: 'AJUSTE',
+      operationNature: 'AJUSTE',
+      accountingAmount: -2,
+      hash: 'b'.repeat(64),
+      previousRecordHash: 'a'.repeat(64),
+    },
+  ]);
+
+  const result = await FA.getLibroRegistroFacturasExpedidasInternal(2026, 4, {
+    traceId: 'trace-fiscal-book-non-tax-001',
+  });
+  assert.equal(result.status, 'SUCCESS', JSON.stringify(result.error));
+  assert.equal(result.data.filas.length, 2);
+  assert.equal(result.data.filas[0].taxTreatment, 'PENDIENTE_VALIDACION');
+  assert.equal(result.data.filas[0].taxableAmount, null);
+  assert.equal(result.data.filas[0].taxRate, null);
+  assert.equal(result.data.filas[0].taxAmount, null);
+  assert.equal(result.data.filas[1].taxableAmount, null);
+  assert.equal(result.data.filas[1].taxAmount, null);
+});
+
+test('FISCAL-BOOK-02 issued-sales ledger rejects missing accountingAmount', async () => {
+  wixDataMock._reset();
+  wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MOVIMIENTOS_CAJA, [{
+    _id: 'issued-ledger-missing-accounting-amount',
+    fiscalPeriod: '2026-11',
+    sequenceNumber: 1,
+    movementType: 'VENTA',
+    operationNature: 'VENTA',
+    hash: 'a'.repeat(64),
+    previousRecordHash: '0'.repeat(64),
+  }]);
+
+  await assert.rejects(
+    () => FA.getLibroRegistroFacturasExpedidasInternal(2026, 4, {
+      traceId: 'trace-fiscal-book-missing-amount-001',
+    }),
+    (error) => error.code === 'FISCAL_LEDGER_NUMERIC_FIELD_INVALID' &&
+      error.meta?.field === 'accountingAmount'
+  );
+});
+
 test('FISCAL-SMOKE-01 explicit smoke-test movements are excluded from quarterly totals', async () => {
   wixDataMock._reset();
   wixDataMock._seed(IC.BUSINESS_COLLECTIONS.MAPA_STAFF, [
