@@ -368,10 +368,14 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    const cashStateReader = caja.match(/export const obtenerEstadoCaja = webMethod\([\s\S]*?\n\);\n\nexport const abrirSesionCaja/)?.[0] || "";
-    assert.match(cashStateReader, /await readTpvCajaSnapshot\(\)/);
-    assert.doesNotMatch(cashStateReader, /initializeTpvCaja\(/);
-    assert.match(caja, /await initializeTpvCaja\(traceId\);[\s\S]*?withTpvSessionLock\(/);
+    const cashStateStart = caja.indexOf("export const obtenerEstadoCaja = webMethod(");
+    const cashStateEnd = caja.indexOf("\nexport const abrirSesionCaja = webMethod(", cashStateStart);
+    assert.ok(cashStateStart >= 0 && cashStateEnd > cashStateStart);
+    const cashStateReader = caja.slice(cashStateStart, cashStateEnd);
+    assert.ok(cashStateReader.includes("await readTpvCajaSnapshot()"));
+    assert.ok(!cashStateReader.includes("initializeTpvCaja("));
+    assert.ok(caja.includes("await initializeTpvCaja(traceId);"));
+    assert.ok(caja.indexOf("await initializeTpvCaja(traceId);") < caja.indexOf("withTpvSessionLock("));
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
