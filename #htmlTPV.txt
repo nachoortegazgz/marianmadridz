@@ -589,7 +589,7 @@ body {
       TPV_INVALID_SALE_TOTAL: "No se ha podido interpretar el total de la venta. Revisa el importe y usa, por ejemplo, 25,90.",
       TPV_INVALID_UNIT_PRICE: "El precio unitario no es válido. Usa un importe como 25,90.",
       TPV_INVALID_CHANGE_AMOUNT: "El cambio debe ser un importe válido, por ejemplo 2,50.",
-      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago no está admitido en el contrato de escritura V1. Elige Efectivo o Tarjeta.",
+      TPV_PAYMENT_METHOD_UNSUPPORTED: "El medio de pago no está integrado. Actualmente solo se admite Efectivo.",
       TPV_INVALID_PAYMENT_METHOD: "El medio de pago no es válido. Selecciona una de las opciones disponibles.",
 
       TPV_OVERPAYMENT: "El importe aplicado supera el total del ticket. Corrige el desglose; solo el efectivo admite cambio.",
