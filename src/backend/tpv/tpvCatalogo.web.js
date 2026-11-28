@@ -1,11 +1,12 @@
 import { Permissions, webMethod } from "wix-web-module";
 import { auth } from "@wix/essentials";
-import { services, extendedBookings } from "@wix/bookings";
+import { services } from "@wix/bookings";
 import { catalogVersioning, productsV3 } from "@wix/stores";
 import {
     searchTpvContacts,
     resolveTpvContact,
     listAuthorizedProfessionals,
+    listCustomerBookings,
 } from "backend/tpv/tpvNativeDirectory";
 import { requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
@@ -16,7 +17,6 @@ const getCatalogVersionElevated = auth.elevate(
     catalogVersioning.getCatalogVersion
 );
 const queryServicesElevated = auth.elevate(services.queryServices);
-const queryExtendedBookingsElevated = auth.elevate(extendedBookings.queryExtendedBookings);
 const queryProductsElevated = auth.elevate(productsV3.queryProducts);
 const getProductElevated = auth.elevate(productsV3.getProduct);
 
@@ -158,75 +158,16 @@ export const obtenerReservasClienteTPV = webMethod(
                 };
             }
 
-            const limit = Number(input.limit ?? 50);
-            if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-                throw new Error("TPV_INVALID_BOOKINGS_PAGING");
-            }
-            const cursor = String(input.cursor || "").trim();
-            if (cursor.length > 16000) throw new Error("TPV_INVALID_BOOKINGS_CURSOR");
-
-            const result = await queryExtendedBookingsElevated(
-                {
-                    filter: {
-                        "booking.contactDetails.contactId": customer.contactId,
-                        "booking.status": {
-                            $in: ["CONFIRMED", "PENDING", "CREATED"],
-                        },
-                    },
-                    sort: [{
-                        fieldName: "booking.startDate",
-                        order: "DESC",
-                    }],
-                    cursorPaging: {
-                        limit,
-                        ...(cursor ? { cursor } : {}),
-                    },
-                },
-                {
-                    withBookingAllowedActions: true,
-                }
-            );
-
-            const items = (result?.extendedBookings || []).map((entry) => {
-                const booking = entry?.booking || {};
-                const bookingId = String(booking._id || booking.id || "");
-                const bookedEntity = booking.bookedEntity || {};
-                const slot = bookedEntity.slot || bookedEntity.schedule || {};
-                const resource = slot.resource || {};
-                const location = slot.location || {};
-                const startDate = booking.startDate || slot.startDate || null;
-                const endDate = booking.endDate || slot.endDate || null;
-                const paymentStatus = String(booking.paymentStatus || "");
-                if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId) ||
-                    !["CREATED", "CONFIRMED", "PENDING"].includes(String(booking.status || "")) ||
-                    !startDate || !endDate ||
-                    !["UNDEFINED", "NOT_PAID", "PAID", "PARTIALLY_PAID", "REFUNDED", "EXEMPT", "FAILED"].includes(paymentStatus)) {
-                    throw new Error("TPV_BOOKING_RECORD_INVALID");
-                }
-                return {
-                    bookingId,
-                    serviceId: slot.serviceId || null,
-                    scheduleId: slot.scheduleId || null,
-                    serviceName: bookedEntity.title || null,
-                    startDate,
-                    endDate,
-                    status: booking.status,
-                    paymentStatus,
-                    selectedPaymentOption: booking.selectedPaymentOption || null,
-                    totalParticipants: Number(booking.totalParticipants || 1),
-                    staffName: resource.name || null,
-                    locationName: location.name || location.formattedAddress || null,
-                    revision: booking.revision || null,
-                    doubleBooked: booking.doubleBooked === true,
-                    allowedActions: entry.allowedActions || null,
-                };
+            const bookings = await listCustomerBookings(customer.contactId, {
+                limit: input.limit,
+                cursor: input.cursor,
             });
 
             return {
                 status: "SUCCESS",
                 data: {
-                    items,
-                    pagingMetadata: result?.pagingMetadata || null,
+                    items: bookings.items,
+                    pagingMetadata: bookings.pagingMetadata || null,
                 },
                 error: null,
                 traceId,
