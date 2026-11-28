@@ -71,7 +71,7 @@ test("WIX-PREVIEW-06 read-only smoke is the default and exits before all operati
     );
     assert.match(runner, /report\.result = "PASS_READ_ONLY"/);
     assert.match(runner, /noBusinessWritesInvoked/);
-    assert.match(runner, /data\\.capabilities/);
-    assert.match(runner, /permissionsStatus/);
-    assert.match(runner, /window\\.__tpvE2eContext/);
+    assert.ok(runner.includes("data.capabilities"));
+    assert.ok(runner.includes("permissionsStatus"));
+    assert.ok(runner.includes("window.__tpvE2eContext"));
 });
