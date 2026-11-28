@@ -652,10 +652,18 @@ export async function registrarEventoEconomico(input) {
                     throw new Error("REFUND_HISTORY_INCOMPLETE");
                 }
 
-                const refundedCents = refundRows.reduce((sum, movement) =>
-                    sum + Math.round(Math.abs(Number(
-                        movement?.accountingAmount ?? movement?.totalAmount ?? 0
-                    )) * 100), 0);
+                const refundedCents = refundRows.reduce((sum, movement) => {
+                    const rawAmount = movement?.accountingAmount ?? movement?.totalAmount;
+                    const validType = typeof rawAmount === "number" ||
+                        (typeof rawAmount === "string" && rawAmount.trim() !== "");
+                    const amount = validType ? Number(rawAmount) : Number.NaN;
+                    const cents = Math.round(Math.abs(amount) * 100);
+                    if (!Number.isFinite(amount) || !Number.isSafeInteger(cents) ||
+                        !Number.isSafeInteger(sum + cents)) {
+                        throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+                    }
+                    return sum + cents;
+                }, 0);
                 const requestedRefundCents = Math.round(Math.abs(Number(input.totalAmount)) * 100);
                 if (!Number.isSafeInteger(requestedRefundCents) || requestedRefundCents <= 0 ||
                     refundedCents + requestedRefundCents > originalAmountCents) {
