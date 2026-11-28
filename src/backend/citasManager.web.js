@@ -210,14 +210,6 @@ function _getOrderBookingLineItems(order) {
     );
 }
 
-function _getBookingLineItemsTotal(lineItems) {
-    return (lineItems || []).reduce((sum, item) => {
-        const amount = Number(item?.price?.amount ?? item?.price ?? 0) || 0;
-        const quantity = Number(item?.quantity) || 1;
-        return sum + amount * quantity;
-    }, 0);
-}
-
 // REVIEW-BY: 2027-01-31. Retirar el fallback cuando no existan filas
 // CitasF2 que dependan de meta.paymentMethod.
 function _isOnlinePaymentAllowed(cita) {
