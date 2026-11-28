@@ -33,8 +33,7 @@ const allowedParentOrigins = [
 
 const report = {
     result: "FAIL",
-    environment: "WIX_PREVIEW",
-    dataEnvironment: "SANDBOX_EXPECTED_CMS_SANDBOX_MUST_BE_ENABLED",
+    executionSurface: "Wix Preview",
     previewHttpStatus: null,
     tpvPageHttpStatus: null,
     previewHost: null,
@@ -208,7 +207,9 @@ function cashTotalFromMovements(items) {
         const amount = Number(item.amount);
         if (!Number.isFinite(amount)) throw new Error("TPV_MOVEMENT_AMOUNT_INVALID");
         const minor = Math.round(amount * 100);
-        switch (String(item.movementType || "").toUpperCase()) {
+        const type = String(item.movementType || "").toUpperCase();
+        const method = String(item.paymentMethod || "").toUpperCase();
+        switch (type) {
             case "APERTURA":
             case "ENTRADA":
                 totalMinor += minor;
@@ -217,10 +218,19 @@ function cashTotalFromMovements(items) {
             case "RETIRADA":
                 totalMinor -= minor;
                 break;
+            case "TPV_PAYMENT":
+                if (method === "EFECTIVO" || method === "CASH") totalMinor += minor;
+                break;
+            case "TPV_REFUND":
+                if (method === "EFECTIVO" || method === "CASH") totalMinor -= Math.abs(minor);
+                break;
+            case "CONTROL_X":
+            case "CONTROL_PARCIAL_X":
+            case "CONTROL_Z":
             case "CIERRE":
                 break;
             default:
-                throw new Error("TPV_UNEXPECTED_MOVEMENT_TYPE:" + String(item.movementType || "UNKNOWN"));
+                throw new Error("TPV_UNEXPECTED_MOVEMENT_TYPE:" + type);
         }
     }
     return totalMinor / 100;
@@ -307,66 +317,105 @@ async function run() {
         projectionStatus: state.cajaActual?.projectionStatus || null,
     });
 
-    if (state.operationalStatus === "ABIERTA" && state.sessionId) {
-        phase = "close-existing-session";
-        const expectedCash = Number(state.expectedCash);
-        assert.ok(Number.isFinite(expectedCash) && expectedCash >= 0,
-            "Existing open session has no reliable expectedCash; refusing to close it");
-        const closeExisting = await invokeWidget(frame, "SESSION_CLOSE", {
-            sessionId: state.sessionId,
-            contadoEfectivo: expectedCash,
-            observaciones: "Cierre previo autorizado antes de la comprobación funcional",
-        });
-        const closeExistingData = assertSuccess(closeExisting, "SESSION_CLOSE_EXISTING");
-        assert.equal(closeExistingData.sessionId, state.sessionId);
-        stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
-        state = assertSuccess(stateEnvelope, "CASHIER_STATE_AFTER_EXISTING_CLOSE");
+    let sessionId = String(state.sessionId || "");
+    let openingMovementId = null;
+    let baseCash = null;
+
+    if (state.operationalStatus === "ABIERTA" && sessionId) {
+        phase = "existing-open-session-ledger";
+        const initialLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
+        const initialLedger = assertSuccess(initialLedgerEnvelope, "CASH_MOVEMENTS_EXPORT_INITIAL");
+        const initialItems = Array.isArray(initialLedger.items) ? initialLedger.items : [];
+        baseCash = cashTotalFromMovements(initialItems);
+        assert.equal(
+            Math.round(baseCash * 100),
+            Math.round(Number(state.expectedCash) * 100),
+            "CajaActual expectedCash differs from the canonical movement ledger"
+        );
+        report.sessionReused = true;
+    } else {
         if (state.canOpenSession !== true) {
             report.result = "BLOCKED";
-            report.blockReason = "EXISTING_SESSION_CLOSED_BUT_TODAY_CANNOT_BE_REOPENED";
-            report.closedExistingSessionId = closeExistingData.sessionId;
+            report.blockReason = state.operationalStatus === "CERRADA"
+                ? "SESSION_ALREADY_CLOSED_OR_NOT_REOPENABLE_TODAY"
+                : "TPV_SESSION_OPEN_NOT_ALLOWED";
             throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
         }
-    } else if (state.operationalStatus === "ABIERTA" && !state.sessionId) {
-        throw Object.assign(new Error("OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION"), {
-            code: "OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION",
-        });
+
+        phase = "session-open";
+        await clearCapturedResponses(frame);
+        await frame.locator("#openCash").click();
+        await frame.locator("#openingCash").waitFor({ state: "visible", timeout: 15000 });
+        await frame.locator("#openingCash").fill("300,00");
+        await frame.locator("#openingReason").fill("");
+        await frame.locator("#modalConfirm").click();
+
+        const openEnvelope = await captureUiOperation(frame, "SESSION_OPEN_RES", "SESSION_OPEN");
+        const openData = assertSuccess(openEnvelope, "SESSION_OPEN");
+        sessionId = String(openData.sessionId || "");
+        assert.ok(sessionId, "SESSION_OPEN did not return sessionId");
+        assert.ok(openData.openingMovementId, "SESSION_OPEN did not return openingMovementId");
+        assert.ok(openData.openingTransactionId, "SESSION_OPEN did not return openingTransactionId");
+        assert.equal(openData.openingMovementId, openData.openingTransactionId,
+            "Opening movement ID and transactionId differ");
+        openingMovementId = openData.openingMovementId;
+        report.sessionId = sessionId;
+        report.openingMovementId = openingMovementId;
+        report.openingTransactionId = openData.openingTransactionId;
+
+        await frame.locator("#modalConfirm").waitFor({ state: "visible", timeout: 15000 });
+        await frame.waitForFunction(
+            () => (document.querySelector("#modalConfirm")?.textContent || "").includes("Cerrar y continuar"),
+            null,
+            { timeout: 15000 }
+        );
+        await frame.locator("#modalConfirm").click();
+        await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
+
+        phase = "opening-ledger-query";
+        const openingLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
+        const openingLedger = assertSuccess(openingLedgerEnvelope, "CASH_MOVEMENTS_EXPORT_AFTER_OPEN");
+        const openingItems = Array.isArray(openingLedger.items) ? openingLedger.items : [];
+        const openingItem = openingItems.find((item) => item.movementId === openingMovementId);
+        assert.ok(openingItem, "Opening movement was not found in the post-write ledger query");
+        assert.ok(openingItem.transactionId, "Opening transactionId missing from ledger query");
+        assert.equal(openingItem.movementId, openingItem.transactionId);
+        baseCash = cashTotalFromMovements(openingItems);
+        assert.equal(Math.round(baseCash * 100), 30000,
+            "Opening balance differs from the controlled cash float");
+        report.sessionReused = false;
     }
 
-    if (state.canOpenSession !== true) {
-        report.result = "BLOCKED";
-        report.blockReason = state.operationalStatus === "CERRADA"
-            ? "SESSION_ALREADY_CLOSED_OR_NOT_REOPENABLE_TODAY"
-            : "TPV_SESSION_OPEN_NOT_ALLOWED";
-        throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
-    }
+    assert.ok(sessionId, "No canonical session is available for the test flow");
+    report.sessionId = sessionId;
 
-    phase = "session-open";
+    phase = "cash-movement";
     await clearCapturedResponses(frame);
-    await frame.locator("#openCash").click();
-    await frame.locator("#openingCash").waitFor({ state: "visible", timeout: 15000 });
-    await frame.locator("#openingCash").fill("0,00");
-    await frame.locator("#openingReason").fill("");
+    await frame.locator("#cashIn").click();
+    await frame.locator("#movementAmount").waitFor({ state: "visible", timeout: 15000 });
+    await frame.locator("#movementAmount").fill("1,00");
+    await frame.locator("#movementConcept").fill("Reposición de cambio");
     await frame.locator("#modalConfirm").click();
 
-    const openEnvelope = await captureUiOperation(frame, "SESSION_OPEN_RES", "SESSION_OPEN");
-    const openData = assertSuccess(openEnvelope, "SESSION_OPEN");
-    const sessionId = String(openData.sessionId || "");
-    assert.ok(sessionId, "SESSION_OPEN did not return sessionId");
-    assert.ok(openData.openingMovementId, "SESSION_OPEN did not return openingMovementId");
-    assert.ok(openData.openingTransactionId, "SESSION_OPEN did not return openingTransactionId");
-    assert.equal(openData.openingMovementId, openData.openingTransactionId,
-        "Opening movement ID and transactionId differ");
-    report.sessionId = sessionId;
-    report.openingMovementId = openData.openingMovementId;
-    report.openingTransactionId = openData.openingTransactionId;
+    const cashEnvelope = await captureUiOperation(frame, "CASH_MOVEMENT_RES", "CASH_MOVEMENT");
+    const cashData = assertSuccess(cashEnvelope, "CASH_MOVEMENT");
+    assert.ok(cashData.movementId, "CASH_MOVEMENT did not return movementId");
+    report.cashMovementId = cashData.movementId;
 
-    await frame.locator("#modalConfirm").waitFor({ state: "visible", timeout: 15000 });
-    await frame.waitForFunction(
-        () => (document.querySelector("#modalConfirm")?.textContent || "").includes("Cerrar y continuar"),
-        null,
-        { timeout: 15000 }
-    );
+    phase = "ticket-x";
+    await clearCapturedResponses(frame);
+    await frame.locator("#ticketX").click();
+    const ticketEnvelope = await captureUiOperation(frame, "TICKET_X_RES", "TICKET_X");
+    const ticketData = assertSuccess(ticketEnvelope, "TICKET_X");
+    const ticketX = ticketData.ticketX || ticketData.data?.ticketX;
+    assert.equal(ticketX?.ticketType, "CONTROL_PARCIAL_X");
+    assert.equal(ticketX?.sessionId, sessionId);
+    report.ticketX = {
+        ticketType: ticketX.ticketType,
+        sessionId: ticketX.sessionId,
+        nOperaciones: ticketX.nOperaciones,
+        closesSession: ticketX.closesSession,
+    };
     await frame.locator("#modalConfirm").click();
     await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
 
@@ -413,18 +462,18 @@ async function run() {
     assert.equal(openingItem.movementId, openingItem.transactionId);
     assert.equal(cashItem.movementId, cashItem.transactionId);
     const expectedCash = cashTotalFromMovements(beforeItems);
-    assert.equal(Math.round(expectedCash * 100), 100,
-        "Expected cash differs from the controlled opening and cash-in operations");
+    assert.equal(Math.round(expectedCash * 100), Math.round((baseCash + 1) * 100),
+        "Expected cash differs from the canonical opening balance and cash-in operation");
 
     phase = "session-close";
     const closeEnvelope = await invokeWidget(frame, "SESSION_CLOSE", {
         sessionId,
         contadoEfectivo: expectedCash,
-        observaciones: "Cierre tras comprobación funcional",
+        observaciones: "Cierre de caja",
     });
     const closeData = assertSuccess(closeEnvelope, "SESSION_CLOSE");
     assert.equal(closeData.sessionId, sessionId);
-    assert.equal(Math.round(Number(closeData.saldoFinal) * 100), 100);
+    assert.equal(Math.round(Number(closeData.saldoFinal) * 100), Math.round(expectedCash * 100));
     assert.equal(Math.round(Number(closeData.diferencia) * 100), 0);
 
     phase = "post-close-state-query";
@@ -432,6 +481,8 @@ async function run() {
     const finalState = assertSuccess(finalStateEnvelope, "CASHIER_STATE_AFTER_CLOSE");
     assert.equal(finalState.operationalStatus, "CERRADA");
     assert.equal(finalState.sessionId, sessionId);
+    assert.equal(finalState.cajaActual?.cashRegisterStatus, "CERRADA");
+    assert.equal(finalState.cajaActual?.sessionId, sessionId);
 
     phase = "post-close-ledger-query";
     const finalLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
@@ -439,6 +490,7 @@ async function run() {
     const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
     const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
     assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
+    report.closingMovementId = closingItem.movementId;
     assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
     assert.equal(closingItem.movementId, closingItem.transactionId);
     for (const item of finalItems) {
@@ -460,7 +512,10 @@ async function run() {
 
     report.postChecks = {
         cashRegisterStatus: finalState.operationalStatus,
+        projection: redact(finalState.cajaActual),
         sessionId: finalState.sessionId,
+        sessionReused: report.sessionReused,
+        openingMovementId,
         movementCount: finalItems.length,
         movements: finalItems.map((item) => ({
             _id: item.movementId,
