@@ -14,7 +14,7 @@ import {
     getC3ArtifactEvents,
     listC3IntegrationEvents,
 } from "backend/exports/integrationOutbox";
-import { uploadAndVerifySharePointPackage } from "backend/exports/sharePointGraph";
+import { getSharePointConfigurationStatus, uploadAndVerifySharePointPackage } from "backend/exports/sharePointGraph";
 
 function errorResult(code, traceId, message) {
     return {
@@ -85,8 +85,8 @@ export const prepareExternalRegistryPackage = webMethod(
                         event: outbox.event,
                     },
                     delivery: {
-                        status: "PENDING_CONFIGURATION",
-                        message: "Evento persistido en RegistroIntegracion. SharePoint aún no está conectado; no se ha enviado ningún archivo.",
+                        status: "PENDING_DELIVERY",
+                        message: "Evento persistido en RegistroIntegracion. La entrega requiere configuración Graph y verificación de lectura.",
                     },
                 },
                 error: null,
@@ -115,8 +115,11 @@ export const getExternalIntegrationEvents = webMethod(
                 return errorResult("C3_OUTBOX_RATE_LIMITED", traceId, "No se pudo consultar la cola en este momento.");
             }
             const limit = Number(options?.limit ?? 25);
-            const result = await listC3IntegrationEvents(limit);
-            return { status: "SUCCESS", data: result, error: null, traceId };
+            const [result, transport] = await Promise.all([
+                listC3IntegrationEvents(limit),
+                getSharePointConfigurationStatus(),
+            ]);
+            return { status: "SUCCESS", data: { ...result, transport }, error: null, traceId };
         } catch (error) {
             return { status: "ERROR", data: null, error: _toPublicError(error, "C3_OUTBOX_READ_FAILED"), traceId };
         }
