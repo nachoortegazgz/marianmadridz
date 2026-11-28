@@ -64,6 +64,10 @@ export async function uploadAndVerifySharePointPackage(artifact) {
         secret(SECRETS.GRAPH_DRIVE_ID),
         secret(SECRETS.GRAPH_FOLDER_PATH),
     ]);
+    const normalizedFolderPath = String(folderPath || "").trim().replace(/^\\/+|\\/+$/g, "");
+    if (!normalizedFolderPath || normalizedFolderPath.split("/").some((part) =>
+        !part || part === "." || part === ".." || part.includes("\\\\") || part.includes(":")
+    )) throw fail("C3_GRAPH_FOLDER_PATH_INVALID");
 
     const serialized = serializeQuarterlyRegistryContent(artifact.content);
     const expectedChecksum = await hashSHA256(serialized);
@@ -96,7 +100,7 @@ export async function uploadAndVerifySharePointPackage(artifact) {
 
     const period = artifact.manifest.period;
     const fileName = artifact.manifest.exportId + "-" + artifact.manifest.artifactId.slice(0, 12) + ".json";
-    const relativePath = [folderPath, String(period.year), "Q" + String(period.quarter), fileName].join("/");
+    const relativePath = [normalizedFolderPath, String(period.year), "Q" + String(period.quarter), fileName].join("/");
     const encodedPath = encodePath(relativePath);
     const itemUrl = GRAPH_ROOT + "/drives/" + encodeURIComponent(driveId) + "/root:/" + encodedPath;
     const uploadUrl = itemUrl + ":/content?%40microsoft.graph.conflictBehavior=fail";
