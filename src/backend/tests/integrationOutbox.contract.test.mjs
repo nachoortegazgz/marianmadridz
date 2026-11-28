@@ -97,7 +97,9 @@ test("C3 outbox uses deterministic IDs and verifies duplicate payload hashes", (
 test("C3 export preparation persists the outbox and delivery is verified separately", () => {
     const source = readFileSync(new URL("../exports/exportService.web.js", import.meta.url), "utf8");
     assert.match(source, /appendC3PreparedEvent/);
-    assert.match(source, /PENDING_CONFIGURATION/);
-    assert.match(source, /no se ha enviado ningún archivo/i);
-    assert.doesNotMatch(source, /Sites\.ReadWrite\.All|SharePoint.*upload/i);
+    assert.match(source, /PENDING_DELIVERY/);
+    assert.match(source, /uploadAndVerifySharePointPackage/);
+    assert.match(source, /appendC3VerifiedEvent/);
+    assert.match(source, /getSharePointConfigurationStatus/);
+    assert.doesNotMatch(source, /Sites\.ReadWrite\.All/);
 });
