@@ -185,7 +185,7 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(bridge, /allowedTypes: Array\.from\(allowedTypes\)/);
     assert.match(bridge, /receivedType: extracted\.type \?\? null,[\s\S]{0,180}allowedTypes: Array\.from\(allowedTypes\)/);
     assert.match(bridge, /function isAllowedType\(type\)[\s\S]*?allowedTypes\.has\(type\)/);
-    assert.match(bridge, /send\(MESSAGE_TYPES\.CONTEXT, context, message\.messageId \|\| null\)/);
+    assert.match(bridge, /send\(MESSAGE_TYPES\.CONTEXT, contextPayload, message\.messageId \|\| null\)/);
     assert.match(html, /const HANDSHAKE_RETRY_MS = 500/);
     assert.match(html, /const HANDSHAKE_MAX_ATTEMPTS = 120/);
     const retryIntervalMs = Number(html.match(/const HANDSHAKE_RETRY_MS = (\d+)/)?.[1]);
