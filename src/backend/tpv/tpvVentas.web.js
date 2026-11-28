@@ -19,6 +19,7 @@ import {
     addTpvNativeCashPayment,
     createTpvNativeOrder,
     findTpvNativeOrderByExternalId,
+    readTpvNativeOrder,
 } from "backend/tpv/tpvNativeCommerce";
 
 function _safeTpvErrorCode(error, fallbackCode) {
@@ -753,6 +754,74 @@ export const registrarVenta = webMethod(
                     traceId,
                     technicalDetail: _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED"),
                 }
+            );
+        }
+    }
+);
+
+
+export const obtenerEstadoVentaTPV = webMethod(
+    Permissions.SiteMember,
+    async (input = {}) => {
+        const traceId = makeTraceId("tpv-sale-readback");
+        try {
+            await requireTpvOperator(traceId);
+            const idempotencyKey = String(input.idempotencyKey || "").trim();
+            const sessionId = String(input.sessionId || "").trim();
+            if (!UUID_V4.test(idempotencyKey)) throw new Error("TPV_IDEMPOTENCY_KEY_INVALID");
+            if (!GUID.test(sessionId)) throw new Error("TPV_SESSION_ID_INVALID");
+
+            const record = await getItem(
+                BUSINESS_COLLECTIONS.TRANSACCIONES_TPV,
+                idempotencyKey,
+                { consistency: CONSISTENCY.STRONG }
+            );
+            if (!record || record.sessionId !== sessionId) throw new Error("TPV_SALE_NOT_FOUND");
+
+            let order = null;
+            if (record.orderId) {
+                const nativeOrder = await readTpvNativeOrder(record.orderId);
+                if (nativeOrder.externalOrderId !== idempotencyKey) {
+                    throw new Error("TPV_WIX_ORDER_CORRELATION_MISMATCH");
+                }
+                order = {
+                    orderId: nativeOrder.orderId,
+                    orderNumber: nativeOrder.orderNumber,
+                    externalOrderId: nativeOrder.externalOrderId,
+                    status: nativeOrder.status,
+                    paymentStatus: nativeOrder.paymentStatus,
+                    totalMinor: nativeOrder.totalMinor,
+                    currency: nativeOrder.currency,
+                };
+            }
+
+            return tpvOk({
+                idempotencyKey,
+                sessionId,
+                recordPersisted: true,
+                orderId: record.orderId || null,
+                status: record.status,
+                requiresReconciliation: record.requiresReconciliation === true,
+                totalVenta: record.totalVenta,
+                totalVentaMinor: record.totalVentaMinor,
+                medioPago: record.medioPago || null,
+                paymentSelection: (record.paymentSelection || []).map((payment) => ({
+                    medioPago: payment.medioPago,
+                    importeAplicado: payment.importeAplicado,
+                    confirmed: payment.confirmed === true,
+                    writeStatus: payment.writeStatus || null,
+                    paymentId: payment.paymentId || null,
+                    ledgerMovementId: payment.ledgerMovementId || null,
+                    paymentStatus: payment.paymentStatus || null,
+                })),
+                order,
+            }, { traceId });
+        } catch (error) {
+            return tpvError(
+                _safeTpvErrorCode(error, "TPV_SALE_READBACK_FAILED"),
+                "No se ha podido verificar el registro de la venta en Wix.",
+                ["Comprueba la clave idempotente y la sesión antes de repetir cualquier operación."],
+                { traceId, persisted: false, retryable: false }
             );
         }
     }
