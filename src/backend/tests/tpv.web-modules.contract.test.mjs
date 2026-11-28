@@ -333,13 +333,12 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.match(sales, /saleReady: saleReadinessBlockers\.length === 0/);
     assert.doesNotMatch(sales, /"PAYMENT_NOT_VERIFIED"|"CONSUMER_PRICE_PRESENTATION_UNVERIFIED"/);
     assert.match(sales, /const containsProducts = prepared\.lineas\.some/);
-    assert.match(sales, /if \(containsProducts\)/);
     assert.match(sales, /inventoryVerified: !containsProducts/);
     assert.match(sales, /UUID_V4/);
     assert.ok(sales.includes("BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
     assert.ok(sales.includes("getItem("));
     assert.match(sales, /async \(input = \{\}\)/);
-    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /insertTpvEvent/);
     assert.match(sales, /appendTpvAudit/);
     assert.match(sales, /withTpvSessionLock/);
     assert.ok(sales.includes("insertItem(BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
@@ -600,20 +599,28 @@ test("registrarVenta reports every unavailable Catalog V3 product ID", async () 
     assert.match(sales, /invalidProductIds\.join\(", "\)/);
 });
 
-test("registrarVenta blocks unready intents and avoids external Wix orders", async () => {
+test("registrarVenta persists intent before native Wix order and cash-payment side effects", async () => {
     const sales = await source("tpv/tpvVentas.web.js");
     assert.doesNotMatch(sales, /draftOrders|createDraftOrder|auth\.elevate/);
-    assert.match(sales, /TPV_DRAFT_ORDER_NOT_CONFIGURED/);
     assert.doesNotMatch(sales, /QA_EXTERNAL_SIDE_EFFECTS_DISABLED|SANDBOX|SIMULATION/);
-    assert.match(sales, /requiresReconciliation: draft\.requiresReconciliation/);
     assert.match(sales, /status: "PENDING_PAYMENT"/);
+    assert.match(sales, /status: "CONFIRMADA"/);
     assert.match(sales, /sourceType: TPV_RUNTIME_POLICY\.SOURCE_TYPE/);
     assert.match(sales, /createTpvRecordMetadata/);
     assert.match(sales, /TPV_SALE_NOT_READY/);
     assert.match(sales, /saleReadinessBlockers/);
+    assert.match(sales, /createTpvNativeOrder/);
+    assert.match(sales, /addTpvNativeCashPayment/);
+    assert.match(sales, /insertTpvEvent/);
+    assert.match(sales, /TPV_COLLECTIONS\.PAGOS/);
+    assert.match(sales, /findTpvNativeOrderByExternalId/);
+    assert.match(sales, /obtenerEstadoVentaTPV/);
+    assert.match(sales, /appendSaleOrderAudit/);
+    assert.match(sales, /appendSalePaymentAudit/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
-    assert.match(sales, /status: "SKIPPED", reason: record\.draftOrderReason/);
     assert.doesNotMatch(sales, /wixPay|checkout\.create|createPayment|capturePayment/);
+    assert.ok(sales.indexOf("insertItem(") < sales.indexOf("createTpvNativeOrder("),
+        "The durable TPV intent must exist before the native Wix order is created");
 });
 
 test("TPV sale persists a pending commercial transaction while refunds remain provider-gated", async () => {
@@ -621,7 +628,9 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     const refunds = await source("tpv/tpvDevoluciones.web.js");
     assert.match(sales, /PENDING_PAYMENT/);
     assert.match(sales, /TPV_PAYMENT_PROVIDER_NOT_CONFIGURED/);
-    assert.ok(sales.includes("requiresReconciliation: draft.requiresReconciliation"));
+    assert.match(sales, /requiresReconciliation/);
+    assert.match(sales, /createTpvNativeOrder/);
+    assert.match(sales, /appendSalePaymentAudit/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(refunds, /async \(input = \{\}\) =>/);
     assert.match(refunds, /validateRefundRequest\(input\)/);
@@ -633,9 +642,7 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
     assert.doesNotMatch(controller, /return registrarDevolucion\(\{/);
     assert.match(controller, /idempotencyKey: key/);
-    assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
-    assert.doesNotMatch(sales, /insertTpvEvent/);
     assert.match(sales, /appendTpvAudit/);
     assert.match(refunds, /appendTpvAudit/);
     assert.match(refunds, /TPV_REFUND_BLOCKED/);
