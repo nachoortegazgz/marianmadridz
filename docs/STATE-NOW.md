@@ -2,7 +2,7 @@
 
 **Estado de `main`:** `6f958323d784247f863abdac3a8173f3fed33f75` (sin cambios en esta rama).
 
-**Trabajo en curso:** PR [#714](https://github.com/nachoortegazgz/marianmadridz/pull/714), rama `feat/tpv-native-wix-commerce-2026-11-28`, SHA `a6ac7b2b64e90223d662ee3a6167cd67c53204a6`. PR #713 cerrado como supersedido por #714.
+**Trabajo en curso:** PR [#714](https://github.com/nachoortegazgz/marianmadridz/pull/714), rama `feat/tpv-native-wix-commerce-2026-11-28`, SHA `24a5d851a0725db8713cf426cdc41300e450f2ac`. PR #713 cerrado como supersedido por #714.
 
 **[Verificado en código en la rama #714]**
 - Orders nativo Wix: creación POS, correlación externa, búsqueda de recuperación y read-back de pedido/total.
@@ -13,7 +13,7 @@
 - Runner Editor Preview no destructivo con venta pendiente, venta con efectivo, arqueo parcial, Ticket X y Ticket Z.
 - Workflow manual para Wix Editor clásico; no usa `wix preview` de Headless/Apps como sustituto.
 
-**[CI offline]** Layer 1 y Layer 2 han terminado SUCCESS en la ejecución más reciente observada. La suite offline completa, verificadores SDK y ESLint están en curso para el SHA actual. No registrar PASS global hasta que el workflow termine SUCCESS.
+**[CI offline — PASS]** SHA `24a5d851a0725db8713cf426cdc41300e450f2ac`: Layer 1 = 32 suites / 411 tests PASS; Layer 2 = 16 suites / 263 tests PASS; suite completa = 97 suites / 864 tests PASS; Wix eCommerce Cart, Transactions y TPV SDK verifiers PASS; ESLint PASS; auditoría de dependencias PASS.
 
 **[No comprobado — Runtime/Preview]** No se ha ejecutado aún la batería contra Wix Runtime. PR #714 no está fusionada. El workflow requiere URL de Preview y secreto `WIX_STORAGE_STATE_B64`. Orders/Bookings de Wix Apps pueden escribir en Live desde Preview; la batería crea pedidos de servicio y un pago offline sintético, sin stock físico ni notificaciones.
 
