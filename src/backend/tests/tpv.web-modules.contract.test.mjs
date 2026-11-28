@@ -782,6 +782,17 @@ test("Capa 3 quarterly export is deterministic, minimized and source-gated", () 
     assert.equal(first.content.records[0].taxRateBasisPoints, 2100);
     assert.equal(first.content.records[0].taxAmountMinor, 2100);
     assert.equal(first.content.records[0].totalAmountMinor, 12100);
+    const noIssuerTest = buildQuarterlyRegistryPackage({
+        ...input,
+        summary: { ...summary, nifEmisor: null },
+    });
+    assert.equal(noIssuerTest.content.issuer.issuerTaxId, null);
+    assert.equal(noIssuerTest.manifest.dataClassification, "SYNTHETIC_TEST");
+    assert.throws(() => buildQuarterlyRegistryPackage({
+        ...input,
+        year: 2027,
+        summary: { ...summary, nifEmisor: null },
+    }), /C3_EXPORT_ISSUER_TAX_ID_MISSING/);
     assert.equal(JSON.stringify(first).includes("must not be exported"), false);
 });
 
