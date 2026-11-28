@@ -251,7 +251,7 @@ export async function addTpvNativeCashPayment(orderId, amountMinor, { allowCreat
         const amount = fromMinorUnits(amountMinor).toFixed(2);
         try {
             await addPaymentsElevated(orderId, [{
-                amount: { amount, currency: SDK_CONFIG.CURRENCY_CODE },
+                amount: { amount },
                 refundDisabled: false,
                 status: "APPROVED",
                 regularPaymentDetails: {
