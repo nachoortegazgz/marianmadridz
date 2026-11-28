@@ -19,7 +19,7 @@ export const validarDesglosePagos = webMethod(
             const payments = input.payments.map((payment) => {
                 const method = normalizePaymentMethod(payment?.medioPago);
                 const receivedMinor = toMinorUnits(payment?.importe, "PAYMENT_AMOUNT");
-                const changeMinor = toMinorUnits(payment?.importeCambio || 0, "CHANGE_AMOUNT");
+                const changeMinor = toMinorUnits(payment?.importeCambio ?? 0, "CHANGE_AMOUNT");
                 if (receivedMinor <= 0 || changeMinor > receivedMinor) throw new Error("TPV_PAYMENT_AMOUNT_INVALID");
                 if (changeMinor > 0 && method !== "EFECTIVO") throw new Error("TPV_CHANGE_REQUIRES_CASH");
                 const appliedMinor = receivedMinor - changeMinor;
