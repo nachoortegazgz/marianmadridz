@@ -67,7 +67,7 @@ function normalizeOrder(order) {
     };
 }
 
-async function searchOrdersByExternalId({ externalOrderId, startedAt, buyer }) {
+async function searchOrdersByExternalId({ externalOrderId, startedAt }) {
     const start = new Date(startedAt).getTime();
     if (!Number.isFinite(start)) fail("TPV_ORDER_RECOVERY_START_DATE_INVALID");
 
@@ -75,10 +75,6 @@ async function searchOrdersByExternalId({ externalOrderId, startedAt, buyer }) {
         { purchasedDate: { $gte: new Date(start - 15 * 60 * 1000).toISOString() } },
         { purchasedDate: { $lte: new Date(Date.now() + 60 * 1000).toISOString() } },
     ];
-    if (buyer?.contactId) {
-        filterParts.push({ "buyerInfo.contactId": String(buyer.contactId) });
-    }
-
     const matches = [];
     let cursor = null;
     let pageCount = 0;
@@ -114,7 +110,6 @@ export async function findTpvNativeOrderByExternalId(input = {}) {
     const order = await searchOrdersByExternalId({
         externalOrderId,
         startedAt: input.startedAt,
-        buyer: input.buyer || {},
     });
     return order ? normalizeOrder(order) : null;
 }
@@ -139,7 +134,6 @@ export async function createTpvNativeOrder(prepared, buyer, externalOrderId, sta
         const recovered = await findTpvNativeOrderByExternalId({
             externalOrderId,
             startedAt,
-            buyer,
         });
         if (recovered) {
             return verifyCreatedTpvOrder(
