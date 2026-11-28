@@ -57,6 +57,7 @@ export const WIDGET_ERROR_CODE = Object.freeze({
     VERSION_UNSUPPORTED: "WIDGET_PROTOCOL_VERSION_UNSUPPORTED",
     MESSAGE_REJECTED: "WIDGET_MESSAGE_REJECTED",
     MESSAGE_ID_INVALID: "WIDGET_MESSAGE_ID_INVALID",
+    HANDSHAKE_NONCE_REQUIRED: "WIDGET_HANDSHAKE_NONCE_REQUIRED",
     HANDSHAKE_TIMEOUT: "WIDGET_HANDSHAKE_TIMEOUT",
     CONTEXT_TIMEOUT: "WIDGET_CONTEXT_TIMEOUT",
     CONTEXT_FAILED: "WIDGET_CONTEXT_FAILED",
@@ -209,10 +210,14 @@ export function createWidgetBridge(widgetElement, options = {}) {
         const version = toProtocolVersion(source.version);
         if (version !== PROTOCOL_VERSION) return { message: null, code: WIDGET_ERROR_CODE.VERSION_UNSUPPORTED };
         const messageId = safeMessageId(source.messageId);
+        const nonce = safeMessageId(source.nonce);
+        if (type === MESSAGE_TYPES.READY && wixHtmlComponentTransport && !nonce) {
+            return { message: null, code: WIDGET_ERROR_CODE.HANDSHAKE_NONCE_REQUIRED };
+        }
         const requiresMessageId = type === MESSAGE_TYPES.AVAIL || type === MESSAGE_TYPES.BOOK || type === MESSAGE_TYPES.NAV;
         if (requiresMessageId && !messageId) return { message: null, code: WIDGET_ERROR_CODE.MESSAGE_ID_INVALID };
         return {
-            message: Object.freeze({ type, payload: Object.freeze(safeObject(source.payload)), messageId, requestId: safeMessageId(source.requestId) || messageId, version: PROTOCOL_VERSION, bridgeId }),
+            message: Object.freeze({ type, payload: Object.freeze(safeObject(source.payload)), messageId, nonce, requestId: safeMessageId(source.requestId) || messageId, version: PROTOCOL_VERSION, bridgeId }),
             code: null
         };
     }
@@ -293,7 +298,10 @@ export function createWidgetBridge(widgetElement, options = {}) {
                 timers
             );
             if (destroyed || context === undefined || context === null) return;
-            send(MESSAGE_TYPES.CONTEXT, context, message.messageId || null);
+            const contextPayload = message.nonce
+                ? { ...safeObject(context), nonce: message.nonce }
+                : context;
+            send(MESSAGE_TYPES.CONTEXT, contextPayload, message.messageId || null);
         } catch (cause) {
             const code = cause?.code === WIDGET_ERROR_CODE.CONTEXT_TIMEOUT ? WIDGET_ERROR_CODE.CONTEXT_TIMEOUT : WIDGET_ERROR_CODE.CONTEXT_FAILED;
             reportError(code, {
