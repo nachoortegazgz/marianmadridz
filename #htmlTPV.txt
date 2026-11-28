@@ -296,7 +296,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger">Devolución</button>
+          <button id="refund" class="btn danger" disabled title="Proveedor de reembolsos no configurado ni verificado">Devolución no habilitada</button>
           <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
@@ -547,7 +547,7 @@ body {
     "exportMovements", "exportAudit", "printReceipt",
   ]);
   // Los controles se habilitan únicamente cuando llegan las capabilities backend.
-  const PERMANENTLY_DISABLED = new Set();
+  const PERMANENTLY_DISABLED = new Set(["refund"]);
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -596,7 +596,7 @@ body {
       TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED: "El ledger fiscal aún no está configurado. La operación fiscal no se ha registrado.",
       TPV_WRITE_V1_CONTRACT_UNSUPPORTED: "La venta no cumple el contrato de escritura V1. Revisa los bloqueos fiscales y de pago.",
       TPV_REFUND_INPUT_INVALID: "La devolución requiere una venta original, sesión, motivo e importe válidos.",
-      TPV_REFUND_DISABLED: "Las devoluciones están deshabilitadas en este modo de operación.",
+      TPV_REFUND_DISABLED: "Las devoluciones están deshabilitadas hasta configurar y verificar el proveedor de reembolsos.",
       TPV_REFUND_PROVIDER_NOT_CONFIGURED: "La solicitud está validada, pero el proveedor de pagos no está configurado. No se ha ejecutado ni registrado el reembolso.",
       TPV_PREVIOUS_SESSION_NOT_CLOSED: "Existe una sesión anterior sin cierre. Consulta el estado antes de abrir otra.",
       TPV_SESSION_ALREADY_CLOSED_TODAY: "La sesión de hoy ya está cerrada y no puede volver a abrirse.",
@@ -1464,35 +1464,6 @@ body {
   }
   $("cashIn").onclick = () => openCashMovement("ENTRADA");
   $("cashOut").onclick = () => openCashMovement("SALIDA");
-
-  /* ---------- Devolución: validación backend y proveedor autorizado ---------- */
-  $("refund").onclick = () => openModal("Devolución", `
-    <input id="refundSaleId" class="field" maxlength="160" placeholder="ID de la venta original">
-    <input id="refundAmount" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 25,50)">
-    <select id="refundPaymentMethod" class="field">
-      <option value="EFECTIVO">Efectivo</option>
-      <option value="TARJETA">Tarjeta</option>
-    </select>
-    <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
-  `, async () => {
-    const saleId = $("refundSaleId").value.trim();
-    const amount = num($("refundAmount").value);
-    const reason = $("refundReason").value.trim();
-    if (!saleId || !Number.isFinite(amount) || amount <= 0 || reason.length < 3) {
-      throw new Error("TPV_REFUND_INPUT_INVALID");
-    }
-    await keyedAction("REFUND", "REFUND", {
-      saleId,
-      sessionId: state.session?.sessionId,
-      reason,
-      payments: [{
-        paymentMethod: $("refundPaymentMethod").value,
-        amount,
-      }],
-    }, "REFUND_RES");
-    await refreshCashState();
-    toast("Solicitud de devolución registrada para conciliación.");
-  });
 
   /* ---------- Arqueo parcial de caja ---------- */
   $("partialCount").onclick = () => openModal("Arqueo parcial", `

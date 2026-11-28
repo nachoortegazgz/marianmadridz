@@ -48,7 +48,6 @@ import {
 import { makeTraceId, _safeTrim, _roundMoney, withTimeout } from "public/mmUtils";
 import { requireCajero, requireAdmin, rateLimiter } from "backend/security";
 import { logger } from "backend/logger";
-import { isExplicitSimulationLedgerRecord } from "backend/validation";
 import { createActionableError } from "backend/errors/actionableError";
 
 import { _toPublicError } from "backend/responseUtils";
@@ -265,7 +264,7 @@ async function _fetchQuarterMovements(months, options = {}) {
     log.warn("_fetchQuarterMovements: reached maxPages limit", { months, limit, traceId });
   }
 
-  return { items: allItems.filter((item) => !isExplicitSimulationLedgerRecord(item)), reachedMaxPages, totalPages: page - 1 };
+  return { items: allItems, reachedMaxPages, totalPages: page - 1 };
 }
 
 function _getFiscalFetchLimitError(fetchResult, traceId, months, reportType) {
