@@ -1346,6 +1346,7 @@ body {
         profesionalId: state.profesionalId,
       })),
       medioPago: state.paymentMethod || null,
+      contactId: state.customerIdentityId || null,
       payments: state.payments.map((payment) => ({
         method: payment.method,
         amount: payment.amountMinor / 100,
@@ -1354,7 +1355,16 @@ body {
     }, "SALE_REGISTER_RES");
     if (result?.persisted !== true) throw new Error("TPV_SALE_NOT_PERSISTED");
     state.lastSale = result;
-    toast("Venta registrada. Pago pendiente de confirmación.");
+    if (result.paymentStatus === "PAID" && result.orderPersisted === true &&
+        result.paymentPersisted === true && result.ledgerPersisted === true &&
+        result.auditPersisted === true) {
+      toast("Venta cobrada y registrada en Wix.");
+    } else if (result.requiresReconciliation === true) {
+      toast("Operación registrada, pero requiere conciliación. No repitas la venta; referencia: " +
+        (result.idempotencyKey || "consulta TransaccionesTPV"));
+    } else {
+      toast("Pedido Wix registrado. El cobro queda pendiente.");
+    }
     state.items = [];
     state.payments = [];
     state.saleQuote = null;
