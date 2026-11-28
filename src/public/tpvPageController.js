@@ -502,6 +502,7 @@ export function initializeTpvPage(widget) {
                     protocolVersion: PROTOCOL_VERSION,
                     currency: config.status === "SUCCESS" ? config.data?.currency : null,
                     timeZone: config.status === "SUCCESS" ? config.data?.timeZone : null,
+                    role: permissionsReady ? (permissions.data?.role || "UNKNOWN") : "UNKNOWN",
                     capabilities,
                     permissionsStatus: permissions.status,
                     operationalWritesAvailable: permissionsReady && permissions.data?.operationalWritesAvailable === true,
