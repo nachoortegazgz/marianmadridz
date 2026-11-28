@@ -229,7 +229,9 @@ test("TPV operational session contract exposes authenticated identity, Madrid ti
     assert.ok(sales.includes("BUSINESS_COLLECTIONS.TRANSACCIONES_TPV"));
     assert.match(sales, /latestOpenTpvSession/);
     assert.match(sales, /withTpvSessionLock/);
-    assert.doesNotMatch(sales, /insertTpvEvent/);
+    assert.match(sales, /insertTpvEvent/);
+    assert.match(sales, /addTpvNativeCashPayment/);
+    assert.match(sales, /TPV_COLLECTIONS\.PAGOS/);
     assert.doesNotMatch(sales, /realPayment: false|isSynthetic: true/);
     assert.match(refunds, /TPV_REFUND_PROVIDER_NOT_CONFIGURED/);
     assert.match(movements, /paymentStatus: "NOT_APPLICABLE"/);
