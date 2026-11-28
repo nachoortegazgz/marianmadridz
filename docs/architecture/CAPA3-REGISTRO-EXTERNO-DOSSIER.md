@@ -9,6 +9,8 @@
 
 > Este dossier consolida decisiones, contratos y hallazgos encontrados en el repositorio. No constituye dictamen fiscal, aprobación del PGC, certificación SIF/VERI*FACTU, ni evidencia de que SharePoint, Microsoft 365 o Power Automate estén conectados.
 
+> **Documento de detalle:** el punto de entrada y plan de configuración vigente es [CAPA-EXTERNA-MASTER-DOSSIER.md](CAPA-EXTERNA-MASTER-DOSSIER.md). Este documento conserva el detalle técnico de preparación de exportación, transporte, PGC y flujos. Si hay diferencias, prevalece PROJECT-CANON y el dossier maestro para la organización externa; los contratos de código prevalecen para la implementación real.
+
 ## 1. Objetivo y alcance
 
 Definir una arquitectura trazable para preparar, entregar, registrar y conservar fuera de Wix la documentación estructurada que corresponda a las obligaciones fiscales, contables, laborales y de auditoría de Marian Madrid.
