@@ -45,6 +45,7 @@ const PREPARATION_MESSAGES = Object.freeze({
     TPV_SERVICE_CATALOG_PAGE_INCOMPLETE: "No se ha podido consultar el catálogo completo de servicios.",
     TPV_STAFF_NOT_ALLOWED: "El profesional seleccionado no está vinculado a un miembro autorizado de Bookings.",
     TPV_PAYMENT_METHOD_NOT_VERIFIED: "Los bonos y tarjetas regalo requieren consultar y validar su saldo antes de aceptarse como pago.",
+    TPV_PAYMENT_PROVIDER_NOT_CONFIGURED: "Actualmente solo se admite efectivo. El terminal de tarjeta aún no está integrado.",
     TPV_CATALOG_PRICE_UNAVAILABLE: "Wix no ha devuelto un precio actual verificable para esta línea.",
     TPV_CATALOG_CURRENCY_MISMATCH: "El producto o servicio no está configurado en euros.",
     TPV_TAX_CALCULATION_FAILED: "Wix no ha podido calcular los impuestos de la venta.",
