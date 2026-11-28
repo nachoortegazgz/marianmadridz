@@ -4,7 +4,7 @@
 
 ## 1. Runtime único
 
-Desarrollo, pruebas y producción ejecutan el mismo código y reglas de dominio. Fixtures y adaptadores simulados sustituyen dependencias externas, no la lógica de negocio.
+Todas las ejecuciones utilizan el mismo código, WebMethods, validaciones, permisos y writers. No existen ramas de negocio ni clasificación de registros por entorno. La fecha y el cliente de prueba seleccionado son el único contexto diferenciador.
 
 Frontend presenta/orquesta. Backend resuelve identidad, autorización, catálogo, importes, impuestos, validación, idempotencia, persistencia y recuperación.
 
@@ -12,7 +12,7 @@ Frontend presenta/orquesta. Backend resuelve identidad, autorización, catálogo
 
 No hay interruptores globales de escritura por entorno ni gates fiscales genéricos que impidan probar el dominio.
 
-- **No bloquea unitarias/contratos/integración simulada:** ausencia de serie/configuración fiscal productiva, credenciales reales, terminal, CMS live, AEAT, SharePoint o notificaciones; se inyectan fixtures y dobles.
+- **No bloquea el flujo interno:** las dependencias externas se aíslan en su frontera. En pagos se simula únicamente la respuesta del proveedor; el resto del flujo y la persistencia se ejecutan normalmente.
 - **Sí bloquea la operación concreta:** identidad/autorización inválida; configuración requerida para esa operación; campos/tipos/importes/secuencia/hash inválidos; catálogo/precio no verificable; falta de lock, idempotencia o concurrencia segura; destino de escritura no aislado.
 - **Preview/Runtime:** mismo dominio con fixture aislado y efectos externos interceptados. Persistencia solo mediante writer canónico en ámbito de prueba inequívoco.
 - **Producción:** configuración legal, permisos, pago verificado y controles de integridad obligatorios.
@@ -43,7 +43,7 @@ Identidad transaccional:
 - Crons retiran lógicamente esos controles efímeros. Idempotencia, flags y evidencia de auditoría se conservan; no se purgan físicamente.
 - Intenciones comerciales/proyecciones operativas admiten actualización validada y autorizada.
 - Movimientos físicos, ledgers fiscales/contables contabilizados, jornada y cierres son append-only. Rectificar mediante nuevos eventos/registros trazables.
-- No modificar ni reclasificar históricos durante QA. No reutilizar la caja singleton ABIERTA.
+- No modificar ni borrar movimientos históricos. La apertura de sesión sustituye la proyección heredada mediante el writer canónico y conserva su trazabilidad; cada prueba debe cerrar la sesión que abre o utiliza.
 
 ## 5. Errores explícitos
 
@@ -60,17 +60,11 @@ Contrato público:
 
 El frontend muestra mensaje y remediation, conserva código/`traceId` para soporte y no convierte un error en éxito. No reintentar automáticamente si `retryable=false` o la persistencia es incierta.
 
-## 6. Fiscalidad y fixtures
+## 6. Fiscalidad, caja y pruebas
 
-- `recordTimestamp` UTC lo genera backend; no usar etiquetas genéricas de entorno para clasificar negocio.
-- Solo marcadores explícitos de smoke/fixture (p. ej. `SMOKE_TEST`, movement types de simulación, `SIMULATED_ONLY` o la triple marca legacy QA) se excluyen de lecturas fiscales/recibos cuando el contrato lo requiere. Un campo genérico `synthetic` o `sourceType` por sí solo no clasifica un registro.
-- No confundir hash interno con hash AEAT. El mapping de alta/anulación, serie/número, fecha, importes, hash previo y campos CMS debe contrastarse con especificación oficial.
-- No recalcular ni alterar históricos.
-
-## 7. Venta y medios
-
-El backend vuelve a resolver catálogo, precio e impuestos; el navegador no es autoridad. Intención comercial, pago verificado, movimiento físico y registro fiscal son etapas separadas. Medios no soportados por el contrato V1 se rechazan explícitamente.
-
-## 8. Evidencia
-
-CI offline PASS no acredita Preview, Runtime ni producción. Cada aceptación identifica SHA, entorno, flujo y resultado. No declarar E2E sin ejecución real en Wix Runtime.
+- Las operaciones de prueba recorren el mismo flujo de negocio que las operaciones ordinarias. No se excluyen por etiquetas de entorno ni se utilizan ramas especiales de persistencia.
+- La fecha y el cliente de prueba seleccionado identifican el contexto de la prueba; no alteran validaciones, writers, permisos, ledger ni contabilización.
+- En el pago, el único elemento simulado es la respuesta del proveedor externo. Una respuesta aprobada debe recorrer el mismo tratamiento interno que la respuesta del proveedor real; nunca se declara un cobro confirmado sin esa respuesta.
+- Los movimientos de caja se escriben en `MovimientosCaja` con `transactionId`, secuencia, hash, hash anterior, timestamp, sesión, operador y correlación. `CajaActual` se actualiza como proyección de la sesión.
+- Los eventos fiscales y contables mantienen sus validaciones específicas y append-only. Los campos de factura no se exigen a un movimiento físico TPV cuando no aplican; el hook aplica el contrato según el tipo de registro.
+- No borrar, editar ni reclasificar movimientos históricos para preparar pruebas. Las correcciones se registran como nuevos eventos trazables.
