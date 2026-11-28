@@ -409,7 +409,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
     assert.match(catalog, /catalogVersionPromise = getCatalogVersionElevated\(\)/);
     assert.doesNotMatch(catalog, /catalogVersioning\.getCatalogVersion\(\)/);
-    assert.match(catalog, /auth\\.elevate\\(\\s*catalogVersioning\\.getCatalogVersion\\s*\\)/);
+    assert.match(catalog, /auth\.elevate\(\s*catalogVersioning\.getCatalogVersion\s*\)/);
     assert.match(catalog, /auth\.elevate\(services\.queryServices\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.queryProducts\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.getProduct\)/);
