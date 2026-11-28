@@ -619,8 +619,8 @@ async function _assertPeriodNotClosed(operationDate, traceId) {
 }
 
 function _resolveFiscalBase({ amount, taxRate, taxBase, taxAmount, irpfWithholdingAmount, surchargeAmount }) {
-    const hasTaxBase = taxBase !== undefined && taxBase !== null && taxBase !== "";
-    const hasTaxAmount = taxAmount !== undefined && taxAmount !== null && taxAmount !== "";
+    const hasTaxBase = taxBase !== undefined && taxBase !== null;
+    const hasTaxAmount = taxAmount !== undefined && taxAmount !== null;
     if (hasTaxBase !== hasTaxAmount) {
         return { ok: false, code: "FISCAL_TAX_BREAKDOWN_INCOMPLETE", message: "Base imponible y cuota deben proporcionarse conjuntamente." };
     }
