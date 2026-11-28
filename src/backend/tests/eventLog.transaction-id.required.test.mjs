@@ -37,6 +37,29 @@ test("fiscal event writer rejects missing fiscal amounts and VAT rate before mas
   assert.equal((wixDataMock._store.get("MapaStaff") || []).length, 0);
 });
 
+test("fiscal event writer rejects invalid optional tax rates instead of coercing them", async () => {
+  wixDataMock._reset();
+
+  const result = await registrarEventoEconomico({
+    eventType: "VENTA",
+    movementType: "VENTA",
+    paymentMethod: "EFECTIVO",
+    channelType: "PRESENCIAL",
+    transactionId: "fiscal-invalid-optional-rate-001",
+    totalAmount: 10,
+    taxBase: 8.26,
+    taxAmount: 1.74,
+    tipoImpositivo: 0.21,
+    surchargeRate: "not-a-rate",
+  });
+
+  assert.equal(result.status, "ERROR");
+  assert.equal(result.error.code, "FISCAL_NUMERIC_FIELD_INVALID");
+  assert.equal(result.error.field, "surchargeRate");
+  assert.equal((wixDataMock._store.get("MovimientosCaja") || []).length, 0);
+  assert.equal((wixDataMock._store.get("MapaStaff") || []).length, 0);
+});
+
 test("fiscal event writer rejects transactionId longer than the canonical limit", async () => {
   wixDataMock._reset();
 
