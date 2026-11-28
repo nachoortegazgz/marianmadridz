@@ -82,7 +82,17 @@ export const obtenerEstadoCaja = webMethod(
         await requireTpvOperator(traceId);
 
         const operator = await resolveTpvContext(traceId);
-        const cajaActual = await readTpvCajaSnapshot();
+        let cajaActual;
+        try {
+            cajaActual = await readTpvCajaSnapshot();
+        } catch (error) {
+            const code = String(error?.code || error?.message || "");
+            if (operator.rolWebsite !== "ADMIN" || code !== "TPV_CASH_REGISTER_NOT_PRESEEDED") {
+                throw error;
+            }
+            await initializeTpvCaja(traceId);
+            cajaActual = await readTpvCajaSnapshot();
+        }
         const session = await latestTpvSession();
         const dayKey = madridDayKey();
         const nextSessionPreview = {

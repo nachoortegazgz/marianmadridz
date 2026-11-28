@@ -28,3 +28,9 @@ test("TPV bootstrap receives the trace identifier from its authorized WebMethod"
     const source = await readFile(pageUrl, "utf8");
     assert.match(source, /await requireAdmin\(traceId\)[\s\S]*?initializeTpvCaja\(traceId\)/);
 });
+
+test("only an ADMIN read initializes a missing CajaActual singleton", async () => {
+    const source = await readFile(pageUrl, "utf8");
+    assert.match(source, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
+    assert.match(source, /await initializeTpvCaja\(traceId\);[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
+});
