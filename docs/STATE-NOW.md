@@ -196,3 +196,35 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Read-only Wix CMS tras el reset comunicado: `CajaActual=0`, `MovimientosCaja=0`, `TransaccionesTPV=0`, `HistoricoCierresZ=1`, `ControlOperativo=90`. No se escribieron datos en CMS.
 - Sitio sigue Draft/no publicado. No hay evidencia de sincronización del código fusionado con Wix Editor/Preview. No se ejecutó apertura de 300 €, movimientos, Ticket X/Z ni simulacro runtime.
 - **Estado:** IMPLEMENTADO + CI VALIDADO; Wix Runtime y E2E PENDIENTES. No declarar producción ni MVP TPV COMPLETADO.
+
+
+## Cierre de sesión de trabajo — 28-11-2026
+
+### Repositorio y PRs
+- Estado base: `main` contiene las fusiones #710, #711 y #712. La última referencia de main leída antes de esta actualización fue `a274f1627ceb1336052bd99c371989af7094ec82`; esta actualización documental genera un nuevo commit en main.
+- PR #707 cerrada sin merge. Rama conservada: `fix/tpv-widget-ledger-runtime-2026-11-28`. Motivo: divergencia (31 commits exclusivos de rama y 19 commits exclusivos de main). Parte de la infraestructura Preview/Playwright ya existe en main; no fusionar la rama completa.
+- PR #709 cerrada sin merge. Rama conservada: `docs/tpv-runtime-success-flows-2026-11-28`. Motivo: divergencia (19 commits exclusivos de rama y 19 commits exclusivos de main). El plan vigente de aceptación permanece en `tests/runtime/RUNTIME-TEST-PLAN.md`; los 20 flujos de la rama cerrada quedan para extracción selectiva.
+- No se borraron ramas ni commits. No quedan PR abiertas conocidas después del cierre de #707 y #709; confirmar listado al inicio de la próxima sesión.
+
+### Wix y datos
+- Consulta GetSiteContext del 28-11-2026 confirma sitio Marian Madrid, ID `188bed94-177c-4bc9-a9f0-35080d874f3e`, Editor clásico, Velo habilitado, zona horaria Europe/Madrid y estado Draft/no publicado.
+- Último recuento CMS de solo lectura disponible en esta sesión de trabajo (consulta realizada tras el reset del usuario): `CajaActual=0`, `MovimientosCaja=0`, `TransaccionesTPV=0`, `HistoricoCierresZ=1`, `ControlOperativo=90`. No se hizo una nueva lectura CMS en el cierre actual; no afirmar que los recuentos sigan iguales.
+- No se realizaron escrituras CMS, apertura, movimientos, ventas, arqueos, tickets X/Z, cobros, reembolsos, notificaciones, impresiones ni publicación.
+
+### Runner Runtime disponible y precaución pendiente
+- En `main` existen `.github/workflows/wix-tpv-preview.yml` y `scripts/wix-preview-tpv-e2e.mjs`; el workflow es manual (`workflow_dispatch`), crea Wix Preview y no publica.
+- Auditoría estática del runner detectó que, si encuentra una sesión ABIERTA con `sessionId`, intenta cerrarla automáticamente antes de iniciar la batería. Esto puede afectar una sesión legítima; por tanto, NO ejecutar el workflow hasta modificar el runner para detenerse sin mutaciones cuando encuentre cualquier sesión abierta o estado incoherente.
+- El runner también abre con 0,00 € y registra una entrada de 1,00 €. La próxima batería debe parametrizar fondo inicial y movimientos acordados (p.ej. apertura 300 €) y garantizar que el entorno CMS de Preview no afecta sesiones fuera de la batería.
+- Requisitos de Actions a comprobar sin mostrar valores: `CLI_API_KEY` y `WIX_STORAGE_STATE_B64`. No se ha comprobado su presencia en este cierre.
+- El conector disponible no ofrece una acción de dispatch de workflow; no se lanzó la batería desde esta sesión.
+
+### Punto exacto de reanudación
+1. Confirmar main y ausencia de PR abiertas.
+2. Corregir el runner en rama nueva: preflight read-only; si hay sesión abierta, Z previo o proyección incoherente, terminar BLOCKED sin cerrar/abrir ni escribir. Añadir apertura configurable de 300 € y movimientos de prueba explícitos.
+3. Revisar la semántica de datos compartidos entre Preview y CMS; no ejecutar si el runner puede cerrar una sesión ajena.
+4. Verificar presencia de secretos Actions sin leer ni imprimir sus valores; si falta `WIX_STORAGE_STATE_B64`, regenerarlo localmente en el equipo del usuario, nunca solicitar cookies ni storageState en chat.
+5. Lanzar workflow_dispatch manualmente desde GitHub Actions y descargar/revisar el artefacto JSON.
+6. Validar WebMethods reales y lecturas post-write: apertura, ledger, arqueo, Ticket X, ventas pendientes, Ticket Z, proyección CajaActual y auditoría. No simular pagos confirmados.
+7. Actualizar este documento con IDs/traceIds anonimizados y resultado por operación.
+
+**Estado al cierre:** repositorio ordenado en main, PRs antiguas cerradas conservando ramas, CI offline de #712 PASS (95 suites / 854 tests), sitio Draft, cero escrituras en CMS durante esta sesión. Runtime E2E NO EJECUTADO. TPV NO-GO hasta corregir runner y obtener evidencia Preview.
