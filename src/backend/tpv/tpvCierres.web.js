@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_RUNTIME_POLICY } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvOperationalLedgerConfigured, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvLedgerTypeSupported, getPendingTpvRefunds, getPendingTpvSales, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { buildTpvSessionSummary } from "backend/tpv/tpvCierresCore";
 import { fromMinorUnits, makeRequestFingerprint, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { wql } from "backend/dataAccess";
@@ -65,7 +65,7 @@ export const generarTicketX = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("audit");
+            assertTpvLedgerTypeSupported("audit");
             const operator = await resolveTpvContext(traceId);
             const sessionId = String(input.sessionId || "").trim();
             if (!sessionId) throw new Error("TPV_SESSION_REQUIRED");
@@ -177,7 +177,7 @@ export const generarCierreZ = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const clientIdempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
             const requestedSessionId = String(input.sessionId || "").trim();
