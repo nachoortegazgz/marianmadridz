@@ -1637,7 +1637,9 @@ export const getCashierState = webMethod(Permissions.SiteMember, async (options 
             cardAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.CARD, cashRegister[CAJA_KEYS.CARD], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
             otherAmount: _readRequiredLedgerAmount(cashRegister, CAJA_KEYS.OTHER, cashRegister[CAJA_KEYS.OTHER], "CAJA_STATE_NUMERIC_FIELD_INVALID"),
         };
-        const salesCount = Number(cashRegister[CAJA_KEYS.OPERATIONS]);
+        const salesCount = _readRequiredLedgerAmount(
+            cashRegister, CAJA_KEYS.OPERATIONS, cashRegister[CAJA_KEYS.OPERATIONS], "CAJA_STATE_OPERATIONS_INVALID"
+        );
         if (!Number.isSafeInteger(salesCount) || salesCount < 0) {
             throw new Error("CAJA_STATE_OPERATIONS_INVALID");
         }
