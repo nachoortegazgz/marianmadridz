@@ -187,6 +187,10 @@ export function buildQuarterlyRegistryPackage({
         checksumAlgorithm: "SHA-256",
         contentChecksum,
         deliveryStatus: "PREPARED_NOT_DELIVERED",
+        dataClassification: year < 2027 ? "SYNTHETIC_TEST" : "PRODUCTION_CANDIDATE",
+        artifactPurpose: "ACCOUNTING_REVIEW_DRAFT",
+        legalUseStatus: "INTERNAL_DRAFT_ONLY",
+        reconciliationStatus: "SOURCE_RECONCILIATION_REQUIRED",
     };
 
     return Object.freeze({ manifest, content });
