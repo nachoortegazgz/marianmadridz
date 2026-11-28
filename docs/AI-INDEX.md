@@ -30,7 +30,8 @@ Este índice evita cargar el repositorio completo en cada consulta. Buscar prime
 | [TPV-UNIFIED-FLOW](TPV-UNIFIED-FLOW.md) | Contrato funcional/técnico TPV | Cambiar solo con cambio de contrato |
 | [RELEASE-READINESS](RELEASE-READINESS.md) | Gates de release por entorno | No confundir CI con Runtime |
 | [ESQUEMA_CMS](ESQUEMA_CMS.md) | Esquema físico y recuentos Wix | Snapshot 27-11-2026; no es live |
-| [Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Contrato export, transporte SharePoint, automatización, PGC y matrices de correspondencia | Diseño consolidado; transporte y E2E pendientes |\n| [VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | Requisitos SIF, modalidad VERI*FACTU, QR tributario, remisión AEAT, impresión térmica y pruebas | Diseño normativo/técnico documentado; implementación no acreditada |
+| [Capa 3 — registro externo](architecture/CAPA3-REGISTRO-EXTERNO-DOSSIER.md) | Contrato export, transporte SharePoint, automatización, PGC y matrices de correspondencia | Diseño consolidado; transporte y E2E pendientes |
+| [VERI*FACTU y QR](architecture/VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md) | Requisitos SIF, modalidad VERI*FACTU, QR tributario, remisión AEAT, impresión térmica y pruebas | Diseño normativo/técnico documentado; implementación no acreditada |
 | [INDEX](INDEX.md) | Catálogo de documentos especializados | Navegación humana |
 | [ARCHIVE-MANIFEST](ARCHIVE-MANIFEST.md) | Política y localización de históricos | No es fuente de estado |
 
