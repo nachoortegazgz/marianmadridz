@@ -195,10 +195,10 @@ function _readRequiredLedgerAmount(movement, field, raw = movement?.[field]) {
     return amount;
 }
 
-function _signedFiscalValue(movement, reader) {
+function _signedFiscalValue(movement, reader, field) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
     const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
-    return Math.abs(_readRequiredLedgerAmount(movement, "fiscalAmount", reader(movement))) * sign;
+    return Math.abs(_readRequiredLedgerAmount(movement, field, reader(movement))) * sign;
 }
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
@@ -1712,8 +1712,8 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             !isTipMovement(m) && !isAdjustmentMovement(m));
         const fiscalMovements = allMovements.filter((movement) =>
             !isTipMovement(movement) && !isAdjustmentMovement(movement));
-        const netTaxableAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxBase), 0);
-        const netTaxAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxAmount), 0);
+        const netTaxableAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxBase, "taxBase"), 0);
+        const netTaxAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxAmount, "taxAmount"), 0);
         const consolidatedTotalAmount = _roundMoney(totalCash + totalCard + totalBizum + totalOnline);
 
         let approverUser = null;
@@ -1739,21 +1739,13 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const taxTypeBreakdown = {};
         for (const m of fiscalMovements) {
             const rawRate = readMovementField(m, "tipoImpositivo");
-            const validRateType = typeof rawRate === "number" ||
-                (typeof rawRate === "string" && rawRate.trim() !== "");
-            const rateValue = validRateType ? Number(rawRate) : Number.NaN;
-            if (!Number.isFinite(rateValue)) {
-                const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:tipoImpositivo");
-                error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
-                error.meta = { field: "tipoImpositivo", movementId: m?._id || null };
-                throw error;
-            }
+            const rateValue = _readRequiredLedgerAmount(m, "tipoImpositivo", rawRate);
             const rate = String(rateValue);
             if (!taxTypeBreakdown[rate]) {
                 taxTypeBreakdown[rate] = { taxableBaseOrNonSubjectAmount: 0, taxAmount: 0, total: 0, operations: 0 };
             }
-            taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount = _roundMoney(taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount + _signedFiscalValue(m, readTaxBase));
-            taxTypeBreakdown[rate].taxAmount = _roundMoney(taxTypeBreakdown[rate].taxAmount + _signedFiscalValue(m, readTaxAmount));
+            taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount = _roundMoney(taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount + _signedFiscalValue(m, readTaxBase, "taxBase"));
+            taxTypeBreakdown[rate].taxAmount = _roundMoney(taxTypeBreakdown[rate].taxAmount + _signedFiscalValue(m, readTaxAmount, "taxAmount"));
             taxTypeBreakdown[rate].total = _roundMoney(taxTypeBreakdown[rate].total + accountingAmount(m));
             taxTypeBreakdown[rate].operations++;
         }
@@ -1951,13 +1943,21 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         };
         const publicCodes = new Set(Object.keys(publicMessages));
         const publicCode = publicCodes.has(normalized.code) ? normalized.code : "Z_CLOSING_FAIL";
-        log.error("_registerZClosing failed", { traceId, code: normalized.code, error: normalized.message });
+        log.error("_registerZClosing failed", {
+            traceId,
+            code: normalized.code,
+            error: normalized.message,
+            meta: normalized.meta || err?.meta || null,
+        });
         return {
             status: "ERROR",
             data: null,
             error: {
                 code: publicCode,
                 message: publicMessages[publicCode] || "No se pudo completar el cierre Z.",
+                ...(publicCode === "Z_LEDGER_NUMERIC_FIELD_INVALID"
+                    ? { field: normalized.meta?.field || err?.meta?.field || null }
+                    : {}),
             },
         };
     } finally {
