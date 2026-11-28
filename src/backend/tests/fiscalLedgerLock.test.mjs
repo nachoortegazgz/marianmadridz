@@ -224,3 +224,26 @@ test("FISCAL-LOCK-09 rejects malformed previous invoice number instead of restar
     await releaseFiscalLedgerLock(lock);
   }
 });
+test("FISCAL-LOCK-10 rejects a latest movement without sequenceNumber", async () => {
+  wixDataMock._reset();
+  wixDataMock._seed("CajaActual", [{
+    _id: "SINGLE_ITEM_ID",
+    singletonKey: "CAJA_PRINCIPAL",
+    fiscalSequenceCounter: 14,
+    sequenceCounters: { appliedMovementIds: [] },
+  }]);
+
+  const lock = await acquireFiscalLedgerLock("trace-last-movement-sequence-missing-001", { waitMs: 0 });
+  try {
+    await assert.rejects(
+      () => allocateFiscalSequence(lock, {
+        numSerieFactura: "FAC-2026-00014",
+      }),
+      (error) => error?.code === "FISCAL_SEQUENCE_LAST_MOVEMENT_INVALID",
+    );
+    const register = await getCashRegisterSingleton();
+    assert.equal(register.sequenceCounters.seqGlobal, undefined);
+  } finally {
+    await releaseFiscalLedgerLock(lock);
+  }
+});
