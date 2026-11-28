@@ -141,7 +141,7 @@ La consulta de estado combinado de GitHub para `796e8eaf8317d35d02744f40d0504e9a
 - `src/backend/tpv/tpvCaja.web.js`, `tpvCatalogo.web.js`, `tpvCierres.web.js`, `tpvPagos.web.js`, `tpvUtils.web.js` y `tpvVentas.web.js`: cambian las lecturas/preparaciones requeridas por el flujo de venta y caja al guard específico `requireTpvOperator`.
 - `src/backend/tpv/tpvAuditoria.web.js` y `tpvGiftCards.web.js` mantienen `requireCajero`; la lectura de auditoría se desactiva en capacidades para ESTILISTA.
 - `src/backend/tpv/tpvMovimientos.web.js`: `registrarMovimientoCaja` y la lectura ordinaria de movimientos usan `requireTpvOperator`; las exportaciones mantienen sus guards administrativos.
-- Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs` y `tpv.web-modules.contract.test.mjs` para reflejar el nuevo perímetro de autorización.
+- Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs`, `tpv.web-modules.contract.test.mjs` y `tpv.qa.persistence.policy.test.mjs` para reflejar el nuevo guard específico y preservar la autorización genérica.
 - No se realizan escrituras CMS, pagos, reembolsos, fichajes, cierres, comunicaciones ni operaciones físicas.
 - No se despliega a Wix.
 - No se han ejecutado tests ni CI en esta intervención. El cambio está implementado en la rama y pendiente de validación.
