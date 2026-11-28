@@ -390,7 +390,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     );
     assert.match(movementWriter, /requireTpvOperator\(traceId\)/);
     assert.match(movements, /export const exportarMovimientosCaja[\s\S]*?requireAdmin\(traceId\)/);
-    assert.match(sales, /requireCajero/);
+    assert.match(sales, /requireTpvOperator/);
 });
 
 test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff resource mapping", async () => {
@@ -415,7 +415,7 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(catalog, /catalogVersioning\.getCatalogVersion/);
     assert.match(catalog, /catalogVersionPromise = getCatalogVersionElevated\(\)/);
     assert.doesNotMatch(catalog, /catalogVersioning\.getCatalogVersion\(\)/);
-    assert.match(catalog, /auth\.elevate\(catalogVersioning\.getCatalogVersion\)/);
+    assert.match(catalog, /auth\.elevate\(\s*catalogVersioning\.getCatalogVersion\s*\)/);
     assert.match(catalog, /auth\.elevate\(services\.queryServices\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.queryProducts\)/);
     assert.match(catalog, /auth\.elevate\(productsV3\.getProduct\)/);
