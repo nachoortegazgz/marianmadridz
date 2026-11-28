@@ -1,54 +1,36 @@
-> **AVISO DE ARCHIVO — NO ES ÍNDICE OPERATIVO ACTUAL.** Este índice refleja la organización documental del 23-11-2026. Sus tablas de autoridad, documentos operativos y estados son históricas y no deben utilizarse como instrucciones vigentes. Para trabajar en el estado actual, comenzar por [AI-ENTRYPOINT](../../AI-ENTRYPOINT.md), [AI-INDEX](../../AI-INDEX.md) y [índice documental activo](../../INDEX.md). El contenido de este directorio se conserva para trazabilidad; revalidar cada decisión, SHA, estado Wix y contrato antes de reutilizarlo.
+# Archivo documental — noviembre 2026
 
----
+> **ARCHIVO HISTÓRICO. No es fuente operativa.** Los documentos de esta carpeta describen decisiones, código, esquemas, pruebas y estados observados en fechas distintas entre octubre y noviembre de 2026. No deben utilizarse como instrucciones actuales sin revalidación.
 
-# Índice documental y reglas de vigencia
+**Revisión individual:** [ARCHIVE-REVIEW-2026-11-28.md](ARCHIVE-REVIEW-2026-11-28.md) — inventario documento a documento de los 161 archivos, clasificación, supersedencias, tratamiento recomendado y limpieza de datos personales/credenciales.
 
-**Corte de reorganización:** 2026-11-23  
-**Repositorio:** nachoortegazgz/marianmadridz
+## Ruta correcta para trabajar en el proyecto
 
-Este índice evita que informes históricos, handoffs y resúmenes duplicados se interpreten como fuentes operativas simultáneas.
+1. [AI-ENTRYPOINT](../../AI-ENTRYPOINT.md) — reglas, autoridad y método de consulta.
+2. [AI-INDEX](../../AI-INDEX.md) — recuperación selectiva por dominio.
+3. [STATE-NOW](../../STATE-NOW.md) — estado técnico y evidencias actuales.
+4. [PROJECT-CANON](../../PROJECT-CANON.md) — arquitectura e invariantes.
+5. [TPV-UNIFIED-FLOW](../../TPV-UNIFIED-FLOW.md) — contrato operativo TPV.
+6. [ESQUEMA_CMS](../../ESQUEMA_CMS.md) — último snapshot físico documentado del CMS.
+7. [RELEASE-READINESS](../../RELEASE-READINESS.md) — gates y límites de aceptación.
 
-## Jerarquía de autoridad documental
+## Estructura del archivo
 
-| Orden | Documento | Autoridad y uso |
+| Carpeta | Contenido | Uso correcto |
 |---|---|---|
-| 1 | [PROJECT-STATUS.md](PROJECT-STATUS.md) | Único resumen operativo del estado, evidencias, riesgos y release gate vigente. |
-| 2 | [MASTER-EXECUTION-PLAN.md](MASTER-EXECUTION-PLAN.md) | Plan, prioridades, secuencia y criterios de aceptación. No duplica el detalle del backlog. |
-| 3 | [PROJECT-KNOWLEDGE-BASE.md](PROJECT-KNOWLEDGE-BASE.md) | Base consolidada de contexto, arquitectura, invariantes, contradicciones resueltas y mapa de trabajo. No sustituye el estado live, la directriz del propietario ni las fuentes especializadas. |
-| 4 | [PROJECT-OWNER-DIRECTIVE-2026-11-20.md](PROJECT-OWNER-DIRECTIVE-2026-11-20.md) | Requisitos/objetivos expresos del propietario y precedencia de decisiones. |
-| 5 | [qa/BACKLOG-RECONCILIATION-2026-11-23.md](qa/BACKLOG-RECONCILIATION-2026-11-23.md) | Estado GitHub de issues y acciones siguientes. Revalidar issues antes de actuar. |
-| 6 | [TPV acceptance matrix](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md) | Contratos y pruebas de aceptación funcional TPV. |
-| 7 | [QA Environment SSOT](qa/QA-ENVIRONMENT-SSOT.md) | Clasificación funcional y reglas del entorno QA; no demuestra aislamiento Runtime. |
-| 8 | [DOSSIER TÉCNICO CONSOLIDADO](../DOSSIER%20T%C3%89CNICO%20CONSOLIDADO.md) | Arquitectura, decisiones y contexto consolidado según sus cortes y addenda; no es fuente de estado live. |
-| 9 | [DECISION-LOG](DECISION-LOG.md), [estándares](engineering/DEVELOPMENT-STANDARDS.md), [referencias CMS](reference/DICCIONARIO_DATOS_CMS.md) y [flujos](reference/DOSSIER-FLUJOS-CAPA-1-A-CAPA-3.md) | Decisiones, normas técnicas, esquemas y flujos. Consultar con sus límites de fecha/entorno. |
-| 10 | [Verificación Wix CMS 2026-11-23](reference/WIX-CMS-SCHEMA-VERIFICATION-2026-11-23.md) | Lectura real del esquema físico: revisiones, tipos, obligatoriedad, referencias y diferencias respecto al inventario previo. |
+| Raíz | Checkpoints, dossiers, estados, decision log y handoffs | Contexto histórico; los resúmenes de estado están supersedidos |
+| `adr/` | Decisiones de arquitectura y negocio | Rationale histórico; comprobar si fueron sustituidas |
+| `architecture/` | Contratos y diseños TPV/VeriFactu | Revalidar contra código y flujo unificado |
+| `audits/` | Auditorías fechadas de Wix, CMS, reservas, TPV y Capa 3 | Evidencia del corte indicado; nunca estado live actual |
+| `engineering/` | Estándares de desarrollo históricos | Prevalecen las directrices actuales del proyecto |
+| `milestones/` | Hitos de implementación/CI | Evidencia de PR/CI, no certificación Runtime |
+| `qa/` | Pruebas, fixtures, read-backs, runbooks y handoffs | Distinguir mock/offline, especificación y ejecución Runtime |
+| `reference/` | Diccionario CMS y dossier de flujos | Snapshots sustituidos; conservar como referencia histórica |
 
-La precedencia entre requisitos del propietario, normativa y documentación oficial Wix se define en `PROJECT-OWNER-DIRECTIVE-2026-11-20.md`. La tabla anterior organiza la navegación documental; no cambia esa precedencia.
+## Reglas de conservación
 
-## Reglas de vigencia
-
-- Un documento de estado operativo no debe mantener copias de la tabla de issues ni repetir resultados CI completos; enlaza a la fuente especializada.
-- Cada resultado CI debe identificar workflow run y SHA. El resultado de otro SHA no se traslada automáticamente.
-- Un read-back de Wix Site Context describe el instante consultado; no demuestra el SHA ejecutado, Preview, Runtime, CMS ni ausencia de efectos.
-- Las issues conservan el historial de sus hallazgos. Cuando una lectura actual contradiga una descripción antigua, registrar fecha y fuente sin reescribir la historia.
-- Los documentos fechados de `audits/`, `qa/`, `milestones/` y `architecture/` son evidencia histórica/especializada, no snapshots live por defecto.
-- No eliminar auditorías, snapshots CMS, fixtures o decisiones por antigüedad. Eliminar solo duplicados demostrados y después de revisar referencias y valor probatorio.
-- Los handoffs de sesión son notas de relevo; no son SSOT ni sustituyen el plan, el estado o la matriz de aceptación.
-- La base de conocimiento consolida contexto y resuelve precedencias documentales, pero no reemplaza una comprobación actual de código, Wix, CMS, integraciones o normativa.
-
-## Documentos operativos vigentes
-
-- [Estado del proyecto](PROJECT-STATUS.md)
-- [Plan maestro](MASTER-EXECUTION-PLAN.md)
-- [Base de conocimiento del proyecto](PROJECT-KNOWLEDGE-BASE.md)
-- [Directriz del propietario](PROJECT-OWNER-DIRECTIVE-2026-11-20.md)
-- [Backlog reconciliado](qa/BACKLOG-RECONCILIATION-2026-11-23.md)
-- [Aceptación TPV](qa/TPV-NATIVE-RECONCILIATION-ACCEPTANCE-2026-11-23.md)
-- [Auditoría Wix de contexto TPV](qa/2026-11-23-tpv-wix-audit-validation.md)
-- [Handoff resumido](qa/2026-11-23-tpv-session-handoff.md)
-- [Backend TPV](../src/backend/tpv/README.md)
-
-## Histórico que se conserva
-
-Las auditorías, ADR, snapshots, runbooks y reportes fechados siguen disponibles en sus carpetas originales para preservar trazabilidad. Si su conclusión ha sido reemplazada, debe constar como histórica/supersedida y enlazar a la fuente vigente; no se deben usar para inferir el estado actual.
+- Se conserva el historial probatorio; no se borran snapshots ni auditorías por antigüedad.
+- No se ejecutan instrucciones de handoffs, runbooks o ADR antiguos sin revisión del contrato actual.
+- Los documentos marcados `SUPERSEDED` se conservan para explicar la transición, no para reutilizar su implementación.
+- Las decisiones históricas pueden conservar valor, pero solo son aplicables si no existe una enmienda posterior.
+- Las cifras CMS, estados de publicación, PR y CI siempre se interpretan con su fecha y SHA.
