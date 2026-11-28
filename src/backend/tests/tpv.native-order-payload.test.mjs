@@ -64,9 +64,10 @@ test("maps mixed Wix Stores and Bookings lines to one POS order", () => {
     const result = buildTpvNativeOrderPayload(prepared(), {
         contactId: "9f1f0a0a-1111-4111-8111-111111111111",
         email: "fixture@example.com",
-    });
+    }, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19");
 
     assert.equal(result.order.channelInfo.type, "POS");
+    assert.equal(result.order.channelInfo.externalOrderId, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19");
     assert.equal(result.order.currency, "EUR");
     assert.equal(result.order.buyerInfo.contactId, "9f1f0a0a-1111-4111-8111-111111111111");
     assert.equal(result.order.lineItems.length, 2);
@@ -95,24 +96,24 @@ test("maps mixed Wix Stores and Bookings lines to one POS order", () => {
 test("rejects order totals or line tax breakdowns that do not reconcile", () => {
     const value = prepared();
     value.lineas[0].desgloseImpuestos[0].taxAmount = "4.19";
-    assert.throws(() => buildTpvNativeOrderPayload(value), { code: "TPV_ORDER_TAX_BREAKDOWN_MISMATCH:0" });
+    assert.throws(() => buildTpvNativeOrderPayload(value, {}, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19"), { code: "TPV_ORDER_TAX_BREAKDOWN_MISMATCH:0" });
 });
 
 test("rejects missing native catalog identity or tax classification", () => {
     const value = prepared();
     value.lineas[0].appId = BOOKINGS_APP_ID;
-    assert.throws(() => buildTpvNativeOrderPayload(value), { code: "TPV_ORDER_CATALOG_APP_INVALID:0" });
+    assert.throws(() => buildTpvNativeOrderPayload(value, {}, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19"), { code: "TPV_ORDER_CATALOG_APP_INVALID:0" });
 });
 
 test("rejects invalid buyer identity and non-EUR preparation", () => {
     assert.throws(() => buildTpvNativeOrderPayload(prepared(), {
         contactId: "not-a-guid",
         email: "fixture@example.com",
-    }), { code: "TPV_ORDER_BUYER_CONTACT_INVALID" });
+    }, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19"), { code: "TPV_ORDER_BUYER_CONTACT_INVALID" });
 
     const value = prepared();
     value.taxCurrency = "USD";
-    assert.throws(() => buildTpvNativeOrderPayload(value), { code: "TPV_ORDER_CURRENCY_INVALID" });
+    assert.throws(() => buildTpvNativeOrderPayload(value, {}, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19"), { code: "TPV_ORDER_CURRENCY_INVALID" });
 });
 
 test("reconciles gross catalog price when Wix catalog prices include tax", () => {
@@ -131,7 +132,7 @@ test("reconciles gross catalog price when Wix catalog prices include tax", () =>
     value.lineas[1].subtotalNeto = 10;
     value.lineas[1].impuestosImporte = 2.1;
     value.lineas[1].totalLinea = 12.1;
-    const result = buildTpvNativeOrderPayload(value);
+    const result = buildTpvNativeOrderPayload(value, {}, "b2e8c1aa-2b44-4c7f-9f7d-2f4d0d5f7b19");
     assert.equal(result.order.lineItems[0].price.amount, "24.20");
     assert.equal(result.order.lineItems[0].totalPriceBeforeTax.amount, "20.00");
     assert.equal(result.order.lineItems[0].totalPriceAfterTax.amount, "24.20");
