@@ -232,6 +232,11 @@
           }, PARENT_ORIGIN || '*');
         } catch (error) {
           console.error('[admin-widget] No se pudo enviar mensaje al controlador Velo.', error);
+          if (type === MESSAGE_TYPES.EXTERNAL_PREPARE) {
+            activeExternalRequest = false;
+            setLoading(btnCreateSnapshot, false);
+          }
+          if (type === MESSAGE_TYPES.EXTERNAL_EVENTS) setLoading(btnLoadPrepared, false);
           err('No se pudo comunicar con el controlador de administración. Recarga la página y conserva el traceId.');
         }
       }
