@@ -421,3 +421,312 @@ BLOQUE 2
 6. Ejecutar la batería de pruebas en modo simulado.
 7. Publicar únicamente cuando todas las comprobaciones críticas estén aprobadas.
 
+
+## Diagnóstico de redundancias frente a funciones nativas de Wix
+
+> Basado en el HTML TPV y el controlador compartidos. Para confirmar todo el backend sería necesario revisar también los módulos `tpvVentas`, `tpvCaja`, `tpvCatalogo`, `tpvPermisos` y `tpvCierres`.
+
+### 1. Impuestos y preparación fiscal
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `SALE_VALIDATE` calcula y valida impuestos antes de registrar la venta. | Configuración fiscal de Wix Stores, Bookings y checkout. | **Necesaria solo si el TPV presencial necesita una cotización previa.** |
+| `tax`, `impuestosTotal`, `taxVerified`, `saleReadinessBlockers`. | Wix ya calcula impuestos en checkout y catálogo. | **Duplicación parcial.** Puede producir diferencias entre el TPV y el checkout nativo. |
+| Validaciones como `TPV_TAX_ROUNDING_MISMATCH`, `TPV_TAX_REGION_EXCLUDES_TAX` y `TPV_TAX_CURRENCY_MISMATCH`. | Reglas fiscales y regionales configuradas en Wix. | **Necesarias como controles de seguridad**, pero no deberían sustituir la configuración fiscal nativa. |
+| Clasificación fiscal manual por línea. | Categorías, precios y configuración fiscal del producto/servicio en Wix. | **Fuente de fricción.** Debe consumirse desde Wix, no mantenerse duplicada en código. |
+| Bloqueo de múltiples tipos de IVA. | Wix puede gestionar impuestos según configuración. | **Posible restricción artificial** del contrato V1, no una limitación necesariamente nativa. |
+
+**Recomendación:** Wix debe ser la fuente fiscal única. El TPV solo debería solicitar una cotización, mostrarla y conservar la referencia devuelta por Wix.
+
+---
+
+### 2. Catálogo de productos y servicios
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `CATALOG_SERVICES`, `CATALOG_PRODUCTS`, `CATALOG_VARIANTS`. | Wix Bookings y Wix Stores Catalog V3. | **Necesaria como adaptador del TPV.** |
+| `precioMinor`, `precioFijo`, `requiereSeleccionVariante`. | Precios y variantes nativas. | **Redundancia si se mantienen precios propios.** |
+| Validación de disponibilidad de variantes. | Inventario y catálogo de Wix Stores. | **Necesaria como comprobación**, no como inventario alternativo. |
+| `tipoLinea: PRODUCTO/SERVICIO`. | El origen nativo ya identifica producto o servicio. | **Necesaria para unificar el ticket**, pero no debe crear una clasificación independiente. |
+| `TPV_PRODUCT_NOT_AVAILABLE_IN_POS`. | Visibilidad, disponibilidad e inventario de Wix. | **Correcta como regla específica del TPV**, si existe una política presencial real. |
+| Cache o copia local del catálogo. | Catálogo nativo de Wix. | **Redundante y peligrosa** si no se invalida con cada cambio. |
+
+**Recomendación:** mantener solo un adaptador de lectura. No duplicar nombre, precio, variante, stock ni clasificación fiscal.
+
+---
+
+### 3. Pagos y cobros
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| Métodos `EFECTIVO`, `TARJETA`, `BIZUM`, `BONO`, `TARJETA_REGALO`. | Wix Payments, Gift Cards y checkout. | **Duplicación parcial.** |
+| `payments: []` y `medioPago` eliminado. | Estado real de Wix Payments. | **Correcto para modo consulta**, pero no es un cobro. |
+| `paymentAmount`, `applied`, `pending`, `change`. | Checkout y flujo de pago nativo. | **Necesario solo para una futura simulación local.** |
+| Bloqueo de Bizum, bonos y tarjetas regalo por código. | Configuración y saldo de Wix. | **Fuente de fricción** si Wix ya puede determinar su disponibilidad. |
+| Restricción a un único medio de pago. | Contrato personalizado `V1`. | **Limitación propia**, no necesariamente nativa. |
+| Cambio calculado en frontend. | TPV físico o proceso de caja. | **Necesario para efectivo**, pero debe confirmarse en backend. |
+
+**Recomendación:** separar dos modos explícitos:
+
+- **Venta pendiente:** sin pagos ni medios declarados.
+- **Cobro real:** utilizar el flujo nativo de Wix Payments/checkout, no un registro paralelo.
+
+---
+
+### 4. Ventas pendientes y ledger fiscal
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `SALE_REGISTER` registra una venta pendiente. | Pedidos, pagos, invoices o registros comerciales de Wix. | **Necesaria solo si se requiere un flujo presencial que Wix no cubre directamente.** |
+| `commercialRecordReady`, `persisted`, `saleReadiness`. | Estados propios del sistema nativo. | **Posible duplicación de estados.** |
+| `TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED`. | Wix Invoices, Orders o registros fiscales nativos. | **Bloqueo de seguridad**, pero crea un segundo sistema contable. |
+| `lineas`, `pagos`, `medioPago` transformados por el controlador. | Modelos nativos de Wix. | **Necesario como traducción**, no como modelo persistente adicional. |
+
+**Riesgo principal:** tener una venta en el ledger del TPV y otra en Wix, con estados distintos.
+
+**Recomendación:** decidir una única fuente de verdad: pedido, factura o registro comercial nativo. El TPV no debería crear un ledger fiscal paralelo.
+
+---
+
+### 5. Permisos
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `obtenerPermisosTPV()`. | Roles y permisos de colaboradores de Wix. | **Necesaria solo para capacidades específicas del TPV.** |
+| `operationalWritesAvailable`. | Permisos nativos y autorización de Web Methods. | **Duplicación de control.** |
+| `capabilities.createSale`, `issueTicketZ`, `readAudit`, etc. | Roles de Wix y permisos backend. | **Útil para la interfaz**, pero no debe ser la autorización final. |
+| Bloqueos en `updateControlAvailability()`. | Permisos y visibilidad nativos. | **Fuente de fricción** si el usuario tiene permiso en Wix pero el mapa TPV no lo refleja. |
+| Autorización repetida en cada módulo backend. | Sistema de roles de Wix. | **Necesaria como defensa**, aunque debe centralizarse. |
+
+**Recomendación:** usar Wix como autoridad de identidad y roles. Mantener únicamente una capa de capacidades específicas del TPV, sin duplicar roles completos.
+
+---
+
+### 6. Colecciones CMS y permisos
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| Bloqueos de escritura por código. | Permisos de colección CMS y permisos de backend. | **Redundancia parcial.** |
+| Estados como `operationalWritesAvailable`. | Permisos de lectura/escritura de Wix CMS. | **Puede duplicar o contradecir la configuración del dashboard.** |
+| Protección manual de campos y operaciones. | Roles de colección, permisos del sitio y Web Methods. | **Necesaria para reglas de negocio**, no para sustituir permisos de colección. |
+| Uso de colecciones como ledger, auditoría o caja. | Wix Data/CMS no es necesariamente un sistema contable transaccional. | **Riesgo arquitectónico.** |
+
+**Recomendación:** separar:
+
+- Permiso técnico: CMS/Wix.
+- Regla de negocio: backend TPV.
+- Auditoría: registro inmutable o sistema diseñado para ello.
+
+No usar bloqueos de código para compensar permisos mal configurados en el dashboard.
+
+---
+
+### 7. Caja y sesiones
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `CASHIER_STATE`, `SESSION_OPEN`, `TICKET_X`, `TICKET_Z`. | Wix no ofrece necesariamente una caja física completa equivalente. | **Principalmente necesaria.** |
+| `CajaActual`, movimientos, arqueos y sesiones. | No parece existir un TPV nativo completo para este flujo presencial. | **Necesaria si se requiere caja física.** |
+| Apertura condicionada por `nextSessionPreview`. | No es una función nativa equivalente. | **Control válido de integridad.** |
+| Verificaciones repetidas en frontend y backend. | El backend debería ser la fuente de control. | **Redundancia de validación**, aunque el frontend puede mostrar estados. |
+| Cierre Z bloqueado por ventas pendientes. | Regla operativa del negocio. | **Necesaria**, no redundante. |
+
+**Recomendación:** conservar este módulo, pero concentrar la lógica de estado en backend y convertir el frontend en una vista.
+
+---
+
+### 8. Auditoría y trazabilidad
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `AUDIT_LIST`, `AUDIT_EXPORT`, `traceId`. | Historiales y registros de Wix. | **Necesaria para operaciones TPV específicas.** |
+| `controllerBuild`, `bridgeId`, `traceId`. | Herramientas de diagnóstico de Wix. | **Útil para soporte**, no debe mezclarse con auditoría comercial. |
+| Exportación CSV propia. | Exportaciones nativas de Wix. | **Necesaria solo si Wix no ofrece el informe requerido.** |
+| Auditoría de cada botón. | Logs técnicos de Wix. | **Duplicación si se almacenan ambos sin un propósito definido.** |
+
+**Recomendación:** diferenciar claramente:
+
+- Auditoría comercial.
+- Auditoría de caja.
+- Log técnico.
+- Registro de errores.
+
+---
+
+### 9. Comunicación frontend–backend
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `MM_READY` / `MM_CONTEXT`. | Comunicación estándar del componente HTML de Wix. | **Necesaria para integrar el TPV personalizado.** |
+| `postMessage`, `messageId`, `requestId`, `responseType`. | Wix ya proporciona el puente de componente. | **Necesario como contrato propio**, pero debe ser mínimo. |
+| Validación manual de `PARENT_ORIGIN`. | Frontera de confianza del componente Wix. | **Necesaria como defensa**, pero puede duplicar controles del bridge. |
+| Handshake con reintentos durante 60 segundos. | Bridge de Wix y ciclo de vida del componente. | **Posible complejidad excesiva.** |
+| Nonce adicional aún no implementado. | Seguridad del bridge. | **Mejora recomendable**, no función comercial. |
+
+---
+
+### 10. Mensajería y errores
+
+| Lógica personalizada | Función nativa relacionada | Evaluación |
+|---|---|---|
+| `ERROR_CATALOG`. | Errores de Web Methods y Wix. | **Necesario para traducir errores técnicos al usuario.** |
+| `publicErrorMessage()`. | Mensajes nativos de Wix. | **Correcto como capa de presentación.** |
+| Códigos propios para cada validación. | Validaciones nativas del catálogo, pagos y caja. | **Duplicación parcial**, pero útil para reglas TPV. |
+| `recoverable`, `retryable`, `requiresReconciliation`. | Estados de operación de Wix. | **Necesario para operaciones críticas**, si se aplica coherentemente. |
+
+---
+
+## Principales fuentes de fricción detectadas
+
+1. **Fiscalidad duplicada:** configuración en Wix más reglas fiscales en backend y frontend.
+2. **Permisos duplicados:** permisos de dashboard/CMS más `capabilities` y bloqueos locales.
+3. **Pagos duplicados:** métodos nativos de Wix más pagos simulados del TPV.
+4. **Estados duplicados:** estados nativos más `saleReady`, `commercialRecordReady`, `persisted` y `operationalWritesAvailable`.
+5. **Catálogo duplicado:** datos nativos más precios, variantes y clasificación transformados por código.
+6. **Auditoría duplicada:** logs de Wix, auditoría TPV, `traceId` y exportaciones propias.
+7. **Bloqueos excesivos en frontend:** el usuario puede tener autorización nativa, pero la interfaz continuar mostrando “modo consulta”.
+8. **Contrato V1 demasiado restrictivo:** un solo medio de pago, sin devoluciones y sin pagos en ventas pendientes.
+9. **Inconsistencia de nombres:** `payments/pagos`, `amount/importe`, `method/medioPago`, `lineItems/lineas`.
+10. **Dos posibles fuentes contables:** Wix y el ledger propio del TPV.
+
+## Procesos que deberían conservarse
+
+- Adaptación del catálogo nativo al ticket TPV.
+- Gestión de caja física, sesiones, arqueos y cierre Z.
+- Control X.
+- Idempotencia y conciliación.
+- Auditoría específica de operaciones TPV.
+- Adaptación del puente HTML–Wix.
+- Reglas de negocio que Wix no cubre, como impedir cerrar con ventas pendientes.
+
+## Procesos que deberían eliminarse o simplificarse
+
+- Precios y clasificación fiscal duplicados.
+- Roles completos duplicados en `obtenerPermisosTPV()`.
+- Ledger fiscal paralelo.
+- Declaración de `medioPago` en ventas pendientes.
+- Devoluciones sintéticas.
+- Bloqueos de medios de pago que Wix ya pueda resolver.
+- Estados duplicados sin una definición única.
+- Exportaciones que repitan informes nativos sin aportar datos adicionales.
+
+He auditado los **33 módulos adicionales de `/src/backend`** (núcleo fiscal, reservas, eventos Wix, seguridad, acceso a datos y *crons*).
+
+### Valoración general de `/src/backend`
+La capa de infraestructura del backend está **muy trabajada** en seguridad y control de concurrencia:
+* **Acceso a datos y políticas (`dataAccess.js`, `dataAccessPolicy.js`, `data.js`):** cero `suppressAuth`, capa única `@wix/data` con *hooks* y políticas *append-only* estrictas.
+* **Concurrencia (`fiscalLedgerLock.js`, `webhookEventClaims.js`):** *locks* distribuidos mediante `bulkPatchItems` con *compare-and-swap* (`version`/`expiresAt`) y *fencing*.
+* **Observabilidad y secretos (`logger.js`, `secretAccess.js`, `security.js`):** sanitización recursiva de PII/secretos, *rate limiter* GCRA persistente y verificación de identidad por `memberId` + `contactId` en Bookings Staff API.
+
+Sin embargo, la auditoría cruzada revela **6 bugs críticos/altos**, destacando una **colisión estructural grave entre `backend/tpv/*` y el núcleo fiscal (`cajas.web.js` / `eventLog.js`)**.
+
+---
+
+## 1. Bugs Críticos y Altos en `/src/backend`
+
+### B-BK-01 (Crítico) — Colisión de cadenas y esquemas entre `backend/tpv/*` y el núcleo fiscal
+* **Archivos:** `backend/tpv/tpvRepository.js` vs `backend/cajas.web.js`, `backend/eventLog.js`, `backend/fiscalAggregator.web.js`, `backend/fiscalLedgerLock.js`.
+* **Causa:** Ambos subsistemas escriben sobre las **mismas colecciones físicas (`MovimientosCaja` y `CajaActual`)** con contratos incompatibles:
+  1. **Dos cadenas paralelas en `MovimientosCaja`:** `tpvRepository.js` inserta registros con `recordSource: "TPV_LEDGER"`, iniciando su propio `sequenceNumber` desde `1` y con un formato de `hash` propio (sin `tipoImpositivo` ni `_buildInternalFiscalChainPayload`). Sin embargo, `cajas.web.js` (`_getLastMovement`, `verifyFiscalHashChainIntegrity`), `eventLog.js` (`_getLastCashEvent`) y `fiscalAggregator.web.js` (`_fetchQuarterMovements`) consultan `MovimientosCaja` con `.gt("sequenceNumber", 0)` **sin filtrar `recordSource !== "TPV_LEDGER"`**.
+  2. **Sobrescritura de `CajaActual` (`CAJA_PRINCIPAL`):** `_sessionCajaPatch` en `tpvRepository.js` reinicia `sequenceCounters: {}` y exige `snapshotSource: "TPV_LEDGER"` + `conceptOperations.tpvRuntime`, mientras `cajas.web.js` (`_updateCajaActual`) espera `sequenceCounters.appliedMovementIds` y `netAmount`, y `fiscalLedgerLock.js` guarda `seqGlobal` / `[yearKey]` en `sequenceCounters`.
+* **Impacto en producción:** En cuanto coexistan un movimiento TPV y una venta/reserva online:
+  * `verifyFiscalHashChainIntegrity()` y el cron diario `systemHealthCheck` fallan con `FISCAL_CHAIN_CORRUPTED` o `MOVEMENT_NUMERIC_FIELD_INVALID:tipoImpositivo`.
+  * `fiscalAggregator.web.js` (resúmenes 303/130 y libro de facturas) crashea al leer registros TPV sin `tipoImpositivo`.
+  * Se mezclan las secuencias (`sequenceNumber` y `previousRecordHash`) entre eventos TPV y ventas online.
+
+### B-BK-02 (Crítico) — `registerZClosing` y `verifyNightlyZClosing` siempre fallan
+* **Archivos:** `backend/cajas.web.js` (`_registerZClosing`, líneas 1818 y 1996) y `backend/crons.js` (`verifyNightlyZClosing`).
+* **Causa:**
+  * En `_registerZClosing`: `const recordDomain = authorizeCashier ? "" : _safeTrim(options?.recordDomain);` y más abajo `if (!hasValidClosedBy || !recordDomain) return { error: { code: "Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED" } };`. Como `registerZClosing` (público para cajero/admin) pasa `authorizeCashier = true`, **`recordDomain` siempre es `""`** y el cierre Z público es **imposible de ejecutar**.
+  * A su vez, el cron `verifyNightlyZClosing` llama a `registerZClosingInternal(ymd, { traceId })` sin pasar `closedBy` ni `recordDomain`, por lo que el cierre automático nocturno **también falla cada noche** con `Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED` y dispara la alerta `NIGHTLY_Z_CLOSING_MANUAL_REQUIRED`.
+
+### B-BK-03 (Alto) — `citasManager.web.js` rompe la idempotencia y recuperación parcial de pagos
+* **Archivo:** `backend/citasManager.web.js` (`_validatePaymentCitaSet` L847 y `_validatePaymentIdempotency` L890).
+* **Causa:** Ambos validadores leen `const existingOrderId = _safeTrim(meta.orderId || "");` ignorando `cita[FIELD_ORDER_ID]` (el campo raíz `orderId`). Sin embargo, `_setCitasPaymentState` y `events.js` (`_markCitasPaidByBookingIds`) **eliminan `meta.orderId`** (`delete meta[key]`) y guardan `orderId` exclusivamente en la raíz `cita.orderId`.
+* **Impacto:** En un par dual con escritura parcial (`PAID` en F1, pendiente en F2) o en un reintento de `confirmPayment` con el **mismo `orderId`**, `existingOrderId` se evalúa como `""` y rechaza la recuperación con `"Booking has already been paid with another order."`.
+
+### B-BK-04 (Alto) — `events.js` desincroniza `eventType` al marcar reembolsos como procesados
+* **Archivo:** `backend/events.js` (`_handleWixEcom_onOrderPaymentStatusUpdated` L1871 y `_handleWixEcom_onOrderUpdated` L2573).
+* **Causa:**
+  * `_handleWixEcom_onOrderPaymentStatusUpdated` consulta `isEventProcessed(eventId, "ORDER_PAYMENT_STATUS_UPDATED")`, pero si el pedido es un reembolso guarda `markEventAsProcessed(eventId, "ORDER_REFUND_STATUS_UPDATED")` (omitiendo además `traceId` y `metadata`).
+  * `_handleWixEcom_onOrderUpdated` consulta `isEventProcessed(eventId, "ORDER_UPDATED")`, pero guarda `markEventAsProcessed(eventId, "ORDER_REFUND_ORDER_UPDATED")`.
+* **Impacto:** Como `getWebhookEventClaimId` calcula el SHA-256 de `[eventType, eventId]`, `isEventProcessed` siempre devuelve `false` en reintentos de eventos de reembolso (quedando únicamente protegido por `WEBHOOK_CLAIM` mientras el claim siga activo).
+
+### B-BK-05 (Alto) — 3 crons de `crons.js` quedan ciegos tras 50 registros históricos
+* **Archivo:** `backend/crons.js` (`reconcileUnknownTransactions` L1020, `reconcileInconsistentDualPairs` L1284 y `retryCompletionRequired` L1697).
+* **Causa:** Los tres consultan `ControlOperativo` con `.eq("controlType", ...).limit(50)` **sin paginar ni ordenar ni filtrar por estado**, y luego filtran en memoria (`status === "RESULT_UNKNOWN"`, `REPAIR_REQUIRED`, `COMPLETION_RETRY_REQUIRED`). Como `cleanExpiredBookingControl` ya no elimina los registros `COMPLETED` (los retiene todos), en cuanto existan 50 registros `IDEMPOTENCY` o `SYSTEM_FLAG` antiguos, **las nuevas incidencias nunca entran en la ventana de los 50 primeros** y quedan sin reconciliar para siempre.
+
+### B-BK-06 (Medio) — Bug de regex doblemente escapada en `fiscalHashPayload.js`
+* **Archivo:** `backend/fiscalHashPayload.js` (línea 55).
+* **Causa:** `const match = /GMT([+-])(\\d{2}):?(\\d{2})/.exec(madridStr);` usa `\\d` dentro de un literal `/.../`, por lo que busca una barra invertida literal seguida de `d` y **nunca hace match** (siempre cae al cálculo manual por diferencia horaria). *(En `cajas.web.js` y `eventLog.js` sí está escrito correctamente como `\d{2}`).*
+
+---
+
+## 2. Observaciones de Arquitectura y Mejoras Recomendadas
+
+1. **Separar físicamente o unificar el contrato `TPV_LEDGER` vs `MovimientosCaja` fiscal:**
+   * **Opción recomendada (limpia):** Que el TPV físico (`backend/tpv/*`) use su propia colección operativa para movimientos de caja/arqueos/tickets X/Z (o que `cajas.web.js`, `eventLog.js` y `fiscalAggregator.web.js` excluyan explícitamente `ne("recordSource", "TPV_LEDGER")` en todas sus consultas de cadena secuencial y agregación fiscal, y que el TPV no comparta el singleton `CAJA_PRINCIPAL` de `cajas.web.js`).
+   * Mientras compartan `MovimientosCaja` y `CajaActual`, ambos flujos se rompen mutuamente.
+2. **Corregir `_registerZClosing` (`cajas.web.js`) y `verifyNightlyZClosing` (`crons.js`):**
+   * Definir `recordDomain` en `internalConfig.js` (en lugar de esperar que venga en `options` mientras se prohíbe al cajero enviarlo) y dotar al cron nocturno de una identidad de sistema válida si se quiere permitir el cierre automático, o restringir el cron a verificación + alerta.
+3. **Corregir `citasManager.web.js`:**
+   * Usar `cita?.[FIELD_ORDER_ID] || meta.orderId || ""` de forma consistente en `_validatePaymentCitaSet` y `_validatePaymentIdempotency`.
+4. **Corregir los 3 crons de `crons.js`:**
+   * Paginar con `.skip()` / bucle o guardar un campo indexado de estado pendiente para que `reconcileUnknownTransactions`, `reconcileInconsistentDualPairs` y `retryCompletionRequired` no queden bloqueados por registros `COMPLETED` antiguos.
+5. **Veri\*Factu (`aeatHash.js`):**
+   * Confirmado en código: `aeatHash.js` (contrato oficial AEAT v0.1.2) está correctamente aislado y **no cableado** a `eventLog.js` ni a `cajas.web.js`, por lo que debe mantenerse la política actual de **no dar Veri\*Factu por operativo** hasta su integración y homologación completa.
+  
+He auditado los **8 módulos adicionales** que completan la lógica personalizada (**páginas** `servicio-2.js`, `calendario-2.js`, `zonamarian.js` y **motor de reservas** `bookingCore.js`, `bookingSaga.js`, `bookingUtils.js`, `dualRescheduleJournal.js`, `dualRescheduleReconciliation.js`).
+
+### Valoración general
+El motor transaccional de reservas (`bookingSaga.js`, `bookingCore.js`, `bookingUtils.js` y la pareja de reprogramación dual `dualRescheduleJournal.js` / `dualRescheduleReconciliation.js`) tiene un nivel técnico **muy alto**:
+* Validación estricta del contrato SDK V2 (`_id`, fechas ISO UTC/Madrid, *gap* exacto, `doubleBooked`, verificación de `resource._id` asignado).
+* Cart V2 aislado al miembro autenticado (`memberId` + `contactId` + `openAccess !== true`) con limpieza automática (`deleteCartV2`) ante fallo.
+* Máquina de estados de reprogramación dual determinista y reconciliación *read-only* limpia.
+
+Los problemas principales se concentran en **`zonamarian.js`** (conectado a endpoints rotos o retirados del backend) y en detalles de flujo en **`calendario-2.js`** y **`bookingSaga.js`**.
+
+---
+
+## 1. Bugs y Desalineaciones Detectadas
+
+### B-PG-01 (Crítico) — `pages/zonamarian.js` llama a endpoints de backend rotos o retirados
+* **Archivo:** `pages/zonamarian.js` (`ACTIONS` y `onContextReady`).
+* **Causa doble:**
+  1. **`Z_CLOSING` siempre falla:** invoca `registerZClosing(payload?.diaKey || null, { traceId })` en `backend/cajas.web.js`, el cual (como detectamos en `B-BK-02`) fuerza `recordDomain = ""` cuando `authorizeCashier === true` y devuelve siempre `Z_CLOSING_REQUIRED_FIELDS_UNRESOLVED`.
+  2. **`CREATE_SNAPSHOT`, `DOCUMENT_PREPARED`, `DOCUMENT_DOWNLOAD` siempre fallan:** `onContextReady` envía `enableDocuments: true`, pero esas tres acciones llaman a `createManagerPackageVersion`, `getPreparedManagerPackages` y `downloadManagerPackageVersion` en `backend/fiscalDocuments.web.js`, las cuales fueron desactivadas y devuelven **siempre `ERROR: PACKAGE_STORAGE_REMOVED`**. En cambio, `previewManagerPackage` (única operativa) no está conectada en `ACTIONS`.
+* **Impacto:** Desde `zonamarian.js` no se puede ejecutar el Cierre Z ni consultar/descargar paquetes de gestoría.
+
+### B-PG-02 (Medio) — `pages/calendario-2.js`: `activeBookingMessageId` bloquea reintentos legítimos tras cancelar login
+* **Archivo:** `pages/calendario-2.js` (`handleBooking`).
+* **Causa:** `activeBookingMessageId = messageId` se asigna **antes** de `ensureBookingMemberSession()`. Si el usuario cierra el diálogo de login (`AUTH_REQUIRED`) y el widget reintenta la reserva sin regenerar `messageId`, `messageId === activeBookingMessageId` lo bloquea como `DUPLICATE_REQUEST`.
+* **Mejora:** Limpiar `activeBookingMessageId = ""` cuando falle por `AUTH_REQUIRED` (antes de llamar a `processDualBooking`).
+
+### B-PG-03 (Bajo/Medio) — `pages/zonamarian.js`: fallback inseguro de selector `$w(...)`
+* **Archivo:** `pages/zonamarian.js` (`const widget = $w("#htmlAdministracion") || $w("#htmlAdmin");`).
+* **Causa:** En Wix Velo, `$w("#idInexistente")` puede devolver un objeto/wrapper no nulo sin `postMessage` en lugar de `null`. Conviene comprobar `typeof $w("#htmlAdministracion")?.postMessage === "function"` antes de pasar al fallback `#htmlAdmin`.
+
+### B-BK-07 (Bajo — Optimización de cuota CMS) — Doble liberación de *locks* en `bookingSaga.js`
+* **Archivos:** `backend/booking/bookingSaga.js` (paso `LockSlots` + bloque `finally`).
+* **Causa:** Cuando falla `Step 2` (`CreateBookings`), `saga.execute()` ejecuta la compensación de `LockSlots` (que llama a `_bestEffortUnlockAll`), y al salir del `try`, el bloque `finally` de `executeBookingSaga` **vuelve a ejecutar `_bestEffortUnlockAll`** sobre los mismos `lockKeys`.
+* **Impacto:** Aunque es idempotente (`alreadyReleased: true`), duplica lecturas `getItem` sobre `ControlOperativo` en cada fallo, consumiendo cuota de Wix Data (donde el sistema ya contempla el error `WDE0014`). Basta vaciar `lockKeys = []` tras liberar en la compensación de `LockSlots`.
+
+### B-BK-08 (Documentación / Mantenimiento) — Comentario obsoleto contradictorio en `bookingCore.js`
+* **Archivo:** `backend/booking/bookingCore.js` (`_resolveWriteLocation`).
+* **Causa:** El comentario indica `BookedSlot.Location usa id, no _id`, mientras el código devuelve correctamente `{ _id: incoming, locationType: "OWNER_BUSINESS" }` (acorde a `V5022` y `_assertPristineSlotContract`). Conviene actualizar el comentario para evitar regresiones futuras.
+
+---
+
+## 2. Mejoras Recomendadas para Completar la Integración
+
+1. **Reparar `pages/zonamarian.js` + `cajas.web.js` + `fiscalDocuments.web.js`:**
+   * En `fiscalDocuments.web.js` / `zonamarian.js`: reemplazar las acciones retiradas (`CREATE_SNAPSHOT`, `DOCUMENT_PREPARED`, `DOCUMENT_DOWNLOAD`) por `previewManagerPackage` (y `listAccountantRecipients` si aplica) o poner `enableDocuments: false` mientras no haya almacenamiento aprobado.
+   * Resolver `recordDomain` en `cajas.web.js` para que `Z_CLOSING` desde `zonamarian.js` pueda ejecutarse.
+2. **Alinear la UX de autenticación en `pages/servicio-2.js` (`handlePricingPlanPurchase`):**
+   * `calendario-2.js` verifica/solicita sesión de miembro con `ensureBookingMemberSession()` antes de llamar a `processDualBooking`, mientras `servicio-2.js` llama directo a `checkout.startOnlinePurchase(service.pricingPlanId)`. Conviene asegurar sesión de miembro o manejar explícitamente el error de autenticación si el visitante no está logueado.
+3. **Ajustar ventana de timeout/reintentos en `pages/calendario-2.js`:**
+   * `AVAILABILITY_ATTEMPT_TIMEOUT_MS` es de `45000 ms` con 2 reintentos (hasta `210000 ms`), mientras los WebMethods de Wix tienen un límite rígido de ejecución (~59 s) y `reservas.web.js` usa `15000 ms`. Reducir el timeout por intento en frontend a ~`20000 ms` evita esperas largas al usuario si Wix corta el WebMethod.
+4. **Módulos sin incidencias detectadas:**
+   * `bookingUtils.js`, `dualRescheduleJournal.js` y `dualRescheduleReconciliation.js` son consistentes, puros y no presentan bugs funcionales.
+  
+   *  
