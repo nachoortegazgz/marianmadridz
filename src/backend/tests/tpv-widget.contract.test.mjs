@@ -89,6 +89,7 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
 
 test("TPV widget exposes authorized physical and commercial capabilities independently of fiscal gates", async () => {
     const html = await source("%23htmlTPV.txt");
+    const controller = await source("src/public/tpvPageController.js");
     const permissions = await source("src/backend/tpv/tpvPermisos.web.js");
     const sales = await source("src/backend/tpv/tpvVentas.web.js");
     assert.match(permissions, /operationalWritesAvailable: true/);
