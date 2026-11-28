@@ -619,6 +619,17 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
         return { ok: false, reason: "NATIVE_BOOKING_MISSING_REQUIRED_FIELDS", missing };
     }
 
+    const rawRevision = booking?.revision;
+    const validRevisionType = rawRevision === undefined || rawRevision === null ||
+        typeof rawRevision === "number" ||
+        (typeof rawRevision === "string" && rawRevision.trim() !== "");
+    const revision = rawRevision === undefined || rawRevision === null
+        ? 1
+        : validRevisionType ? Number(rawRevision) : Number.NaN;
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+        return { ok: false, reason: "NATIVE_BOOKING_REVISION_INVALID" };
+    }
+
     const selectedPaymentOption = _safeTrim(booking?.selectedPaymentOption || "UNDEFINED").toUpperCase();
     const rawPaymentStatus = _safeTrim(booking?.paymentStatus || "").toUpperCase();
     const validPaymentStatuses = Object.values(PAYMENT_STATUS);
@@ -638,8 +649,13 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
     const rawAmount = amountCandidates.find(value =>
         value !== undefined && value !== null && value !== ""
     );
-    const parsedAmount = Number(rawAmount);
-    const hasExactAmount = rawAmount !== undefined && Number.isFinite(parsedAmount) && parsedAmount >= 0;
+    const validAmountType = typeof rawAmount === "number" ||
+        (typeof rawAmount === "string" && rawAmount.trim() !== "");
+    const parsedAmount = validAmountType ? Number(rawAmount) : Number.NaN;
+    if (rawAmount !== undefined && (!Number.isFinite(parsedAmount) || parsedAmount < 0)) {
+        return { ok: false, reason: "NATIVE_BOOKING_AMOUNT_INVALID" };
+    }
+    const hasExactAmount = rawAmount !== undefined && validAmountType && Number.isFinite(parsedAmount) && parsedAmount >= 0;
 
     const appointmentNotes = (Array.isArray(booking?.additionalFields) ? booking.additionalFields : [])
         .filter(field => /note|nota|observaci[oó]n|comentario|comment/i.test(_safeTrim(field?.label)))
@@ -679,7 +695,7 @@ async function _syncNativeBookingToCitas(booking, eventId, traceId, options = {}
 
     const write = await _persistBooking({
         bookingId,
-        revision: Number(booking?.revision) || 1,
+        revision,
         serviceId,
         scheduleId,
         resourceId,
@@ -1286,14 +1302,21 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
             throw new Error("RESCHEDULED_BOOKING_CITASF2_NOT_FOUND");
         }
 
-        const incomingRevision = Number(booking?.revision);
-        const currentRevision = Number(currentCita?.revision);
-        if (
-            Number.isFinite(incomingRevision) &&
-            incomingRevision > 0 &&
-            Number.isFinite(currentRevision) &&
-            currentRevision > incomingRevision
-        ) {
+        const readBookingRevision = (value, field) => {
+            const validType = typeof value === "number" ||
+                (typeof value === "string" && value.trim() !== "");
+            const revision = validType ? Number(value) : Number.NaN;
+            if (!Number.isSafeInteger(revision) || revision <= 0) {
+                const error = new Error("BOOKING_REVISION_INVALID:" + field);
+                error.code = "BOOKING_REVISION_INVALID";
+                error.meta = { field, bookingId };
+                throw error;
+            }
+            return revision;
+        };
+        const incomingRevision = readBookingRevision(booking?.revision, "incomingRevision");
+        const currentRevision = readBookingRevision(currentCita.revision, "currentRevision");
+        if (currentRevision > incomingRevision) {
             const alreadyProcessed = await isEventProcessed(eventId, "BOOKING_RESCHEDULED");
             if (!alreadyProcessed) {
                 await markEventAsProcessed(eventId, "BOOKING_RESCHEDULED", traceId, {
@@ -1340,10 +1363,8 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
                     _safeTrim(cita.resourceId) === resourceId &&
                     _safeTrim(cita.scheduleId) === scheduleId &&
                     _safeTrim(cita.serviceId) === serviceId;
-                if (
-                    sameSlot &&
-                    (!Number.isFinite(incomingRevision) || incomingRevision <= Number(cita.revision || 0))
-                ) {
+                const persistedRevision = readBookingRevision(cita.revision, "persistedRevision");
+                if (sameSlot && incomingRevision <= persistedRevision) {
                     return null;
                 }
                 return {
@@ -1354,9 +1375,7 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
                     slotStart: startDate,
                     slotEnd: endDate,
                     dateYmd,
-                    revision: Number.isFinite(incomingRevision) && incomingRevision > 0
-                        ? incomingRevision
-                        : cita.revision,
+                    revision: incomingRevision,
                 };
             },
             traceId,
@@ -1408,7 +1427,7 @@ async function _handleWixBookingsV2_onBookingRescheduled(eventPayload) {
                 pairToken: pairToken || null,
                 pairRepairRequired,
                 bookingIds: pairedBookingIds,
-                revision: Number.isFinite(incomingRevision) ? incomingRevision : null,
+                revision: incomingRevision,
             });
         }
 
@@ -1516,11 +1535,28 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
 
             if (originalMovement) {
                 let rectificationPayload = null;
+                let amountOriginal = null;
                 try {
                     const emisor = await _getEmisorFiscal();
-                    const amountOriginal = Math.abs(
-                        Number(originalMovement.totalAmount ?? 0)
-                    );
+                    const rawOriginalAmount = originalMovement.totalAmount ?? originalMovement.accountingAmount;
+                    const validOriginalAmountType = typeof rawOriginalAmount === "number" ||
+                        (typeof rawOriginalAmount === "string" && rawOriginalAmount.trim() !== "");
+                    const parsedOriginalAmount = validOriginalAmountType
+                        ? Number(rawOriginalAmount)
+                        : Number.NaN;
+                    if (!Number.isFinite(parsedOriginalAmount) || parsedOriginalAmount <= 0) {
+                        throw new Error("FISCAL_ORIGINAL_AMOUNT_INVALID");
+                    }
+                    amountOriginal = Math.abs(parsedOriginalAmount);
+                    const rawOriginalTaxRate = readMovementField(originalMovement, "tipoImpositivo");
+                    const validOriginalTaxRateType = typeof rawOriginalTaxRate === "number" ||
+                        (typeof rawOriginalTaxRate === "string" && rawOriginalTaxRate.trim() !== "");
+                    const originalTaxRate = validOriginalTaxRateType
+                        ? Number(rawOriginalTaxRate)
+                        : Number.NaN;
+                    if (!Number.isFinite(originalTaxRate) || originalTaxRate < 0 || originalTaxRate > 1) {
+                        throw new Error("FISCAL_ORIGINAL_TAX_RATE_INVALID");
+                    }
 
                     rectificationPayload = {
                         eventType: EVENT_TYPE.RECTIFICATIVA,
@@ -1531,9 +1567,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                         totalAmount: -amountOriginal,
                         taxBase: -Math.abs(readTaxBase(originalMovement)),
                         taxAmount: -Math.abs(readTaxAmount(originalMovement)),
-                        tipoImpositivo: Number(
-                            readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                        ),
+                        tipoImpositivo: originalTaxRate,
                         operationDescription: pairToken
                             ? `Rectificacion cancelacion reserva dual ${pairToken}`
                             : `Rectificacion cancelacion booking ${bookingId}`,
@@ -1595,9 +1629,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                     const recovery = await queueFiscalRecovery({
                         kind: "FISCAL_LEDGER",
                         bookingIds: rectificationBookingIds,
-                        totalAmount: -Math.abs(
-                            Number(originalMovement.totalAmount || 0)
-                        ),
+                        totalAmount: amountOriginal === null ? null : -amountOriginal,
                         paymentMethod:
                             originalMovement.paymentMethod ||
                             LEDGER_PAYMENT_METHOD_ONLINE,
@@ -2241,11 +2273,15 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
             return { status: "OK" };
         }
 
-        const originalAmount = Math.abs(Number(originalMovement.totalAmount ?? originalMovement.accountingAmount ?? 0));
+        const rawOriginalAmount = originalMovement.totalAmount ?? originalMovement.accountingAmount;
+        const validOriginalAmountType = typeof rawOriginalAmount === "number" ||
+            (typeof rawOriginalAmount === "string" && rawOriginalAmount.trim() !== "");
+        const originalAmountValue = validOriginalAmountType ? Number(rawOriginalAmount) : Number.NaN;
+        const originalAmount = Math.abs(originalAmountValue);
         const linkedBookingIds = _normalizeBookingIds(
             originalMovement.linkedBookingIds
         );
-        if (!Number.isFinite(originalAmount) || originalAmount <= 0) {
+        if (!Number.isFinite(originalAmountValue) || originalAmount <= 0) {
             throw new Error("REFUND_ORIGINAL_AMOUNT_INVALID");
         }
 
@@ -2298,17 +2334,28 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
         const priorRefundMovements = refundMovements.filter(
             movement => _safeTrim(movement?.transactionId) !== transactionId
         );
-        const refundedBeforeCents = priorRefundMovements.reduce(
-            (sum, movement) => sum + Math.round(Math.abs(Number(
-                movement?.accountingAmount ?? movement?.totalAmount ?? 0
-            )) * 100),
-            0
-        );
+        const refundedBeforeCents = priorRefundMovements.reduce((sum, movement) => {
+            const rawAmount = movement?.accountingAmount ?? movement?.totalAmount;
+            const validType = typeof rawAmount === "number" ||
+                (typeof rawAmount === "string" && rawAmount.trim() !== "");
+            const amount = validType ? Number(rawAmount) : Number.NaN;
+            const cents = Math.round(Math.abs(amount) * 100);
+            if (!Number.isFinite(amount) || !Number.isSafeInteger(cents) ||
+                !Number.isSafeInteger(sum + cents)) {
+                throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+            }
+            return sum + cents;
+        }, 0);
         const remainingCents = Math.max(0, originalAmountCents - refundedBeforeCents);
         if (existingRefundMovement) {
-            const existingAmountCents = Math.round(Math.abs(Number(
-                existingRefundMovement?.accountingAmount ?? existingRefundMovement?.totalAmount ?? 0
-            )) * 100);
+            const rawExistingAmount = existingRefundMovement?.accountingAmount ?? existingRefundMovement?.totalAmount;
+            const validExistingAmountType = typeof rawExistingAmount === "number" ||
+                (typeof rawExistingAmount === "string" && rawExistingAmount.trim() !== "");
+            const existingAmount = validExistingAmountType ? Number(rawExistingAmount) : Number.NaN;
+            const existingAmountCents = Math.round(Math.abs(existingAmount) * 100);
+            if (!Number.isFinite(existingAmount) || !Number.isSafeInteger(existingAmountCents)) {
+                throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
+            }
             if (existingAmountCents !== refundAmountCents) {
                 throw new Error("REFUND_IDEMPOTENCY_AMOUNT_MISMATCH");
             }
@@ -2326,6 +2373,14 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
         const previousRefundTaxAmount = priorRefundMovements.reduce(
             (sum, movement) => sum + Math.abs(readTaxAmount(movement)), 0
         );
+        const rawOriginalTaxRate = readMovementField(originalMovement, "tipoImpositivo");
+        const validOriginalTaxRateType = typeof rawOriginalTaxRate === "number" ||
+            (typeof rawOriginalTaxRate === "string" && rawOriginalTaxRate.trim() !== "");
+        const originalTaxRate = validOriginalTaxRateType ? Number(rawOriginalTaxRate) : Number.NaN;
+        if (!Number.isFinite(originalTaxRate) || originalTaxRate < 0 || originalTaxRate > 1) {
+            throw new Error("FISCAL_ORIGINAL_TAX_RATE_INVALID");
+        }
+
         const refundTaxBase = fullyRefunded
             ? Math.max(0, Math.round((originalTaxBase - previousRefundTaxBase) * 100) / 100)
             : Math.round(originalTaxBase * refundAmountCents / originalAmountCents * 100) / 100;
@@ -2351,9 +2406,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
                 totalAmount: -refundAmount,
                 taxBase: -refundTaxBase,
                 taxAmount: -refundTaxAmount,
-                tipoImpositivo: Number(
-                    readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                ),
+                tipoImpositivo: originalTaxRate,
                 operationDescription: `Refund - Order ${orderId}`,
                 numSerieFactura: readInvoiceNumber(originalMovement),
                 fechaExpedicionFactura: todayDate,
@@ -2378,9 +2431,7 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
                 breakdown: [
                     {
                         base: -refundTaxBase,
-                        tipo: Number(
-                            readMovementField(originalMovement, "tipoImpositivo") ?? 21
-                        ),
+                        tipo: originalTaxRate * 100,
                         cuota: -refundTaxAmount,
                         operationDescription: `Refund - Order ${orderId}`,
                         units: 1,
@@ -2731,6 +2782,24 @@ async function _persistReaderBookingProjection(booking, intent, pairToken, trace
         return { ok: false, reason: "READER_BOOKING_PROJECTION_FIELDS_INCOMPLETE" };
     }
 
+    const rawTotalAmount = intent?.totalAmount;
+    const validTotalAmountType = typeof rawTotalAmount === "number" ||
+        (typeof rawTotalAmount === "string" && rawTotalAmount.trim() !== "");
+    const totalAmount = validTotalAmountType ? Number(rawTotalAmount) : Number.NaN;
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+        return { ok: false, reason: "READER_BOOKING_TOTAL_AMOUNT_INVALID" };
+    }
+    const rawRevision = booking?.revision;
+    const validRevisionType = rawRevision === undefined || rawRevision === null ||
+        typeof rawRevision === "number" ||
+        (typeof rawRevision === "string" && rawRevision.trim() !== "");
+    const revision = rawRevision === undefined || rawRevision === null
+        ? 1
+        : validRevisionType ? Number(rawRevision) : Number.NaN;
+    if (!Number.isSafeInteger(revision) || revision <= 0) {
+        return { ok: false, reason: "READER_BOOKING_REVISION_INVALID" };
+    }
+
     const contactDetails = booking?.contactDetails || {};
     const persisted = await _persistBooking({
         bookingId,
@@ -2740,10 +2809,10 @@ async function _persistReaderBookingProjection(booking, intent, pairToken, trace
         startDate,
         endDate,
         bookingType: intent.bookingType,
-        revision: Number(booking?.revision) || 1,
+        revision,
         bookingStatus: booking?.status || intent.bookingStatus,
         paymentStatus: booking?.paymentStatus || intent.paymentStatus,
-        totalAmount: Number(intent.totalAmount) || 0,
+        totalAmount,
         pairToken,
         contactDetails: {
             firstName: contactDetails.firstName || "",
