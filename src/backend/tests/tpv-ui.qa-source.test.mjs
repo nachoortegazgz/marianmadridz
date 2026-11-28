@@ -50,16 +50,17 @@ test("POS DTOs map to operational WebMethods without trusting client prices or t
     assert.match(script, /operationMayContinue:\s*true/);
 });
 
-test("TPV fiscal quotes expose readiness blockers and keep payments disabled without backend authorization", async () => {
+test("TPV fiscal quotes expose readiness blockers and enable only backend-authorized cash payments", async () => {
     const html = await read("%23htmlTPV.txt");
     assert.match(html, /id="tax"[^>]*disabled/);
     assert.match(html, /Impuestos \(cálculo fiscal Wix\)/);
     assert.match(html, /call\("SALE_VALIDATE"/);
+    assert.match(html, /data-method="TARJETA" disabled/);
     assert.match(html, /data-method="BIZUM" disabled/);
     assert.match(html, /data-method="BONO" disabled/);
     assert.match(html, /data-method="TARJETA_REGALO" disabled/);
     assert.match(html, /data-method="OTROS" disabled/);
-    assert.match(html, /const PAYMENT_METHODS = \["EFECTIVO", "TARJETA"\]/);
+    assert.match(html, /const PAYMENT_METHODS = \["EFECTIVO"\]/);
     assert.match(html, /state\.saleQuote\.totalVenta/);
     assert.match(html, /paymentReady = state\.saleQuote\?\.catalogVerified === true && state\.saleQuote\?\.taxVerified === true && state\.saleQuote\?\.commercialRecordReady === true && state\.operationalWritesAvailable === true/);
     assert.match(html, /state\.operationalWritesAvailable !== true/);
