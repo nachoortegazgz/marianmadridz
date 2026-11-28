@@ -400,6 +400,9 @@ test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff res
     assert.match(directory, /contactsV5\.searchContacts/);
     assert.match(directory, /contactsV5\.getContact/);
     assert.match(directory, /staffMembers\.queryStaffMembers/);
+    assert.match(directory, /extendedBookings\.queryExtendedBookings/);
+    assert.match(directory, /export async function listCustomerBookings/);
+    assert.match(catalog, /listCustomerBookings/);
     assert.match(directory, /BUSINESS_COLLECTIONS\.MAPA_STAFF/);
     assert.match(directory, /resourceId/);
     assert.match(catalog, /searchTpvContacts/);
