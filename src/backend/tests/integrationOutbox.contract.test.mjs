@@ -27,7 +27,7 @@ const event = () => ({
     payload: {
         exportId: "MM-C3-ACCOUNTING-2026-Q4-V1",
         artifactId: "artifact-1",
-        fileName: "MM-C3-ACCOUNTING-2026-Q4-V1.json",
+        fileName: "MM-C3-ACCOUNTING-2026-Q4-V1-artifact-1.json",
         contentChecksum: "b".repeat(64),
         year: 2026,
         quarter: 4,
