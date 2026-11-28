@@ -36,6 +36,22 @@ El archivo contiene evidencia técnica útil, pero mezcla snapshots de distintos
 
 ## Registro individual
 
+### Documentos raíz (11)
+
+| Documento | Clasificación | Resultado y acción |
+|---|---|---|
+| `CHECKPOINT-2026-11-01-PHASE0.md` | SUPERSEDED — RETAIN | Checkpoint del 01-11; estado, PR y backlog sustituidos por `docs/STATE-NOW.md` y `docs/RELEASE-READINESS.md`. |
+| `DECISION-LOG.md` | DECISION RECORD — REVALIDATE | Registro cronológico con decisiones revocadas y adendas. Conservar; nunca consumirlo como política vigente sin comprobar fecha, supersedencia y `docs/PROJECT-CANON.md`. Se han redactado contactos personales. |
+| `DOSSIER CONSOLIDADO.txt` | SUPERSEDED — RETAIN | Dossier raíz duplicado/antiguo; sustituido para consulta por `DOSSIER CONSOLIDADO.md`, `AI-ENTRYPOINT.md` y documentos canónicos. Se ha eliminado el identificador de credencial y redactado el contacto personal. |
+| `MASTER-EXECUTION-PLAN.md` | SUPERSEDED — RETAIN | Plan de 23-11 con PR/issues/estados superados; usar `STATE-NOW` y `RELEASE-READINESS`. |
+| `PROJECT-KNOWLEDGE-BASE.md` | SUPERSEDED — RETAIN | Base de conocimiento 23-11; sustituida como entrada IA por `AI-ENTRYPOINT`, `AI-INDEX` y `PROJECT-CANON`. |
+| `PROJECT-OWNER-DIRECTIVE-2026-11-20.md` | HISTORICAL DECISION — RETAIN | Directriz original del 20-11; existen instrucciones y enmiendas posteriores del propietario. No prevalece sobre las directrices del proyecto actuales. |
+| `PROJECT-STATUS.md` | SUPERSEDED — RETAIN | Estado del 23-11; sustituido por `docs/STATE-NOW.md`. |
+| `README.md` | HISTORICAL INDEX — RETAIN | Índice del archivo al 23-11; el registro de segunda pasada lo complementa y lo sustituye como inventario documento a documento. |
+| `RUNTIME-EVIDENCE-CHECKLIST.md` | SUPERSEDED TEST SPEC — RETAIN | Checklist previo a cambios posteriores de Capa 0/TPV; usar `tests/runtime/RUNTIME-TEST-PLAN.md` y verificar precondiciones actuales. |
+| `SESSION-STATUS-2026-10-31.md` | SUPERSEDED HANDOFF — RETAIN | Handoff de 31-10; solo evidencia histórica, no instrucciones de continuación. |
+| `VELO-MANIFEST-BOOTSTRAP.md` | EPHEMERAL ARTIFACT — RETAIN | Artefacto temporal de bootstrap. No ejecutar como runbook; consultar workflows y documentación Wix CLI actuales. |
+
 
 ### Documentos raíz (0)
 
