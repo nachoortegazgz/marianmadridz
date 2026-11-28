@@ -509,7 +509,13 @@ async function run() {
     assert.equal(cashSaleReadback.order.status, "APPROVED");
     assert.equal(cashSaleReadback.order.paymentStatus, "PAID");
     assert.equal(cashSaleReadback.paymentSelection.length, 1);
+    assert.equal(cashSaleReadback.paymentSelection[0].medioPago, "EFECTIVO");
     assert.equal(cashSaleReadback.paymentSelection[0].confirmed, true);
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importe) * 100),
+        Math.round(Number(cashSale.totalVenta) * 100));
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importeCambio) * 100), 0);
+    assert.equal(Math.round(Number(cashSaleReadback.paymentSelection[0].importeAplicado) * 100),
+        Math.round(Number(cashSale.totalVenta) * 100));
     assert.ok(/^TPV_[a-f0-9]{64}$/i.test(cashSaleReadback.paymentSelection[0].ledgerMovementId));
     report.cashSaleReadback = {
         orderId: cashSaleReadback.orderId,
