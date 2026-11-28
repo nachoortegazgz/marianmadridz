@@ -249,7 +249,7 @@ export const abrirSesionCaja = webMethod(
                         replayed,
                         sessionId,
                         movementId: openingMovement.item._id,
-                        transactionId: openingMovement.item.transactionId,
+                        transactionId: openingMovement.item._id,
                     }),
                 });
                 const openingAmount = fromMinorUnits(openingCashMinor);
@@ -267,7 +267,7 @@ export const abrirSesionCaja = webMethod(
                         openingCash: openingAmount,
                         openedAt,
                         openingMovementId: openingMovement.item._id,
-                        openingTransactionId: openingMovement.item.transactionId,
+                        openingTransactionId: openingMovement.item._id,
                         openingReceipt: {
                             ticketType: "APERTURA_CAJA",
                             sessionId,
@@ -287,7 +287,7 @@ export const abrirSesionCaja = webMethod(
                                 OTROS: 0,
                             },
                             movementId: openingMovement.item._id,
-                            transactionId: openingMovement.item.transactionId,
+                            transactionId: openingMovement.item._id,
                         },
                         integrationStatus: "NO_ENVIADO",
                         paymentStatus: "NOT_APPLICABLE",
