@@ -33,13 +33,15 @@ Ante contradicciones, separar autoridad de negocio, contrato técnico, implement
 
 **Criterio de aceptación:** cero bloqueos silenciosos; 100 % de salidas bloqueantes/anticipadas con error accionable y log correlacionado; 100 % de datos aplicables contabilizados como persistidos, rechazados con causa o pendientes explícitos, sin pérdidas ni ocultación.
 
-## Datos sensibles y fixtures de prueba
+## Un solo flujo de negocio y pruebas
 
-- En documentación, fixtures, capturas, logs y evidencias se sustituyen los datos sensibles por placeholders realistas, coherentes y claramente sintéticos. No copiar datos reales de clientes, empleados o terceros.
-- **Excepción explícita del propietario para este proyecto:** Nacho Ortega es un cliente de prueba. Los contactos `nachoortegazgz@gmail.com` y `666724634` quedan autorizados como datos de contacto seguros para identificar ese fixture de prueba en los flujos controlados del proyecto.
-- Esta excepción es específica de ese cliente de prueba y de esos dos valores. No convierte otros datos personales en seguros ni autoriza a reutilizarlos como credenciales, secretos, datos de otros clientes o contactos de producción.
-- Los logs deben seguir minimizando datos: usar identificadores de fixture/correlación y no volcar payloads completos. La excepción de fixture no justifica registrar indiscriminadamente información personal.
-- Mantener metadatos de procedencia y condición sintética conforme al contrato; no presentar el fixture como cliente real ni como operación económica real.
+- Desarrollo, pruebas y operación utilizan el mismo código, WebMethods, validaciones, permisos, writers, colecciones y contratos.
+- No existen ramas de negocio por entorno ni etiquetas para distinguir datos u operaciones. No utilizar `LIVE`, `SANDBOX`, `QA`, `synthetic`, `isSynthetic`, `SIMULATED`, `processingMode` o campos equivalentes para seleccionar un comportamiento diferente.
+- La única diferencia contextual de una prueba es la fecha y el cliente de prueba seleccionado. Los datos se escriben con los mismos campos y reglas que cualquier otra operación.
+- Cuando se prueba un pago, solo se simula la respuesta del proveedor externo. El flujo interno de autorización, validación, persistencia, idempotencia, conciliación y auditoría se ejecuta sin bifurcaciones.
+- Las pruebas no provocan capturas, reembolsos, remesas AEAT, notificaciones ni otros efectos económicos externos. No se simula ni sustituye la persistencia interna.
+- Los registros de caja, fiscales, contables y laborales se contabilizan mediante sus writers canónicos. No se crean datos directamente por REST/CMS ni se limpian registros históricos para maquillar una prueba.
+- Los datos personales se minimizan en logs y evidencias. El cliente de prueba autorizado se selecciona explícitamente; no se copian datos de otros clientes o empleados.
 
 ## Capas y responsabilidades
 
@@ -50,7 +52,7 @@ Ante contradicciones, separar autoridad de negocio, contrato técnico, implement
 
 ## Invariantes
 
-1. Un único código y contrato de dominio para desarrollo, pruebas y producción. Fixtures y adaptadores simulados sustituyen dependencias externas, no la lógica de negocio.
+1. Un único código y contrato de dominio para desarrollo, pruebas y operación. No hay runtimes, flags ni bifurcaciones de negocio por entorno.
 2. No usar interruptores globales que bloqueen writers por entorno. Cada operación valida sus precondiciones concretas: identidad, permisos, configuración requerida, esquema, importes, secuencias, hashes, idempotencia y concurrencia.
 3. Una condición incumplida devuelve error explícito y estable; no se omite validación ni se convierte en éxito parcial silencioso.
 4. Wix CMS se escribe mediante DAL, hooks y writers canónicos. Prohibido saltárselos con REST/CMS directo.
@@ -58,10 +60,10 @@ Ante contradicciones, separar autoridad de negocio, contrato técnico, implement
 6. Los datos operativos/comerciales editables admiten actualización validada. Los ledgers fiscales, contables, laborales, movimientos contabilizados y cierres finalizados conservan evidencia append-only; correcciones mediante nuevos registros/eventos rectificativos trazables.
 7. Webhooks, jobs, writers y reintentos son idempotentes y trazables. No asumir transacciones multi-documento de Wix Data; definir recuperación ante fallos parciales.
 8. No confiar en identidad, rol, propiedad, precios, impuestos, totales o permisos aportados por navegador.
-9. No clasificar negocio por entorno ni por etiquetas cliente-controladas. Los marcadores explícitos de smoke/fixture solo identifican pruebas cuando el contrato lo requiere; no acreditan operaciones reales.
-10. No habilitar pagos reales, AEAT, notificaciones ni servicios externos en pruebas; interceptarlos mediante adaptadores simulados.
+9. No clasificar operaciones ni registros por entorno o por marcadores. La fecha y el cliente de prueba seleccionado son el único contexto diferenciador; nunca gobiernan el flujo.
+10. En pruebas, simular únicamente la respuesta del proveedor de pago y mantener desactivados los efectos externos no autorizados. El proceso interno se ejecuta íntegro.
 11. `transactionId` es obligatorio y estable en los writers de transacciones económicas que lo requieren; usarlo para deduplicación y recuperación. No sustituirlo por secuencia, traceId o sessionId.
-12. No modificar, reclasificar ni recalcular históricos durante QA. Los datos anteriores al despliegue oficial de producción de 2027 son sintéticos según la regla del proyecto, pero eso no autoriza su borrado ni mutación destructiva.
+12. No modificar ni borrar ledgers históricos. Las correcciones se incorporan mediante eventos rectificativos append-only; no se crean etiquetas de entorno ni se altera el significado de una operación para hacerla pasar como prueba.
 
 ## TPV y fiscalidad
 
