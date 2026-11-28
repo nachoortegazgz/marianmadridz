@@ -1048,6 +1048,7 @@ test('FLOW-CAJA-07 devoluciones y reembolsos reducen caja y conservan cadena fis
         operationDescription: `Devolucion simulada ${movementType} (SIMULACION PREVIA A DESPLIEGUE REAL)`,
         paymentMethod: 'EFECTIVO',
         channelType: 'PRESENCIAL',
+        tipoImpositivo: 0.21,
         transactionId: `facsimil-refund-${movementType.toLowerCase()}`,
         correctionReason: 'OTRAS',
         previousInvoiceId: 'FACSIMIL-FAC-2026-00001',
@@ -1151,6 +1152,7 @@ test('FLOW-CAJA-10C reopens the current session when closedAt belongs to a prior
       paymentMethod: 'EFECTIVO',
       channelType: 'PRESENCIAL',
       movementType: 'VENTA',
+      tipoImpositivo: 0.21,
       transactionId: 'cash-stale-closed-at-001',
       operationDescription: 'Venta de prueba aislada para normalización de sesión QA',
     });
@@ -1257,6 +1259,7 @@ test('FLOW-CAJA-12 explicit smoke rows are excluded from live fiscal sequence, c
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
+    tipoImpositivo: 0.21,
     transactionId: 'real-after-smoke-001',
   });
   assert.equal(tx.status, 'SUCCESS', JSON.stringify(tx.error));
@@ -1629,6 +1632,7 @@ test('FLOW-CAJA-13 Z closing rejects missing ledger accounting amounts without p
     paymentMethod: 'EFECTIVO',
     channelType: 'PRESENCIAL',
     movementType: 'VENTA',
+    tipoImpositivo: 0.21,
     transactionId: 'z-closing-missing-accounting-amount-001',
   });
   assert.equal(movement.status, 'SUCCESS', JSON.stringify(movement.error));
