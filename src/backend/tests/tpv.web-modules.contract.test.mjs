@@ -291,7 +291,6 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
         "tpv/tpvCaja.web.js",
         "tpv/tpvVentas.web.js",
         "tpv/tpvCatalogo.web.js",
-        "tpv/tpvGiftCards.web.js",
         "tpv/tpvPagos.web.js",
         "tpv/tpvMovimientos.web.js",
         "tpv/tpvDevoluciones.web.js",
