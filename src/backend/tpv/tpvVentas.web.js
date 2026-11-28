@@ -293,7 +293,7 @@ async function persistSaleCashPayment(record, traceId) {
         );
         const ledgerItem = ledger?.item || ledger?.data || ledger;
         const ledgerMovementId = String(ledgerItem?._id || ledgerItem?.transactionId || "");
-        if (!GUID.test(ledgerMovementId)) throw new Error("TPV_PAYMENT_LEDGER_ID_INVALID");
+        if (!/^TPV_[a-f0-9]{64}$/i.test(ledgerMovementId)) throw new Error("TPV_PAYMENT_LEDGER_ID_INVALID");
 
         const confirmedPayment = {
             ...originalPayment,
