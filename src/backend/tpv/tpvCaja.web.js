@@ -179,7 +179,7 @@ export const abrirSesionCaja = webMethod(
         const traceId = makeTraceId("tpv-session-open");
 
         try {
-            await requireAdmin(traceId);
+            await requireTpvOperator(traceId);
             assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const openingCashMinor = toMinorUnits(input.openingCash, "OPENING_CASH");
