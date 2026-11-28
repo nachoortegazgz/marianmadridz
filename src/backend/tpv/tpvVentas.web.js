@@ -553,16 +553,17 @@ export const registrarVenta = webMethod(
                 throw new Error("TPV_SALE_NOT_READY:" + readiness.saleReadinessBlockers.join(","));
             }
 
-            const buyer = input.contactId
-                ? await resolveTpvContact(String(input.contactId))
-                : {};
+            const customerContactId = input.contactId ? String(input.contactId).trim() : null;
+            if (customerContactId && !GUID.test(customerContactId)) {
+                throw new Error("TPV_CUSTOMER_CONTACT_ID_INVALID");
+            }
             const operatorResourceId = operator?.operatorResourceId || null;
             const requestFingerprint = createHash("sha256").update(JSON.stringify({
                 sessionId,
                 lineas,
                 pagos: validated.pagos,
                 operatorResourceId,
-                customerContactId: buyer?.contactId || null,
+                customerContactId,
                 sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
             })).digest("hex");
 
@@ -573,7 +574,7 @@ export const registrarVenta = webMethod(
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
                     return resumeExistingSale(existing, {
-                        buyer,
+                        buyer: customerContactId ? { contactId: customerContactId } : {},
                         replayed: true,
                         traceId,
                     });
@@ -628,10 +629,17 @@ export const registrarVenta = webMethod(
                         throw new Error("TPV_IDEMPOTENCY_CONFLICT");
                     }
                     return resumeExistingSale(concurrentWinner, {
-                        buyer,
+                        buyer: customerContactId ? { contactId: customerContactId } : {},
                         replayed: true,
                         traceId,
                     });
+                }
+
+                const buyer = customerContactId
+                    ? await resolveTpvContact(customerContactId)
+                    : {};
+                if (customerContactId && buyer.contactId !== customerContactId) {
+                    throw new Error("TPV_CUSTOMER_CONTACT_MISMATCH");
                 }
 
                 let orderErrorCode = null;
