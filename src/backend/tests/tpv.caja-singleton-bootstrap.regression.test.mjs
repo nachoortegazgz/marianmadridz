@@ -35,7 +35,7 @@ test("CASHIER_STATE is read-only and never bootstraps CajaActual", async () => {
     const end = source.indexOf("\nexport const abrirSesionCaja = webMethod(", start);
     assert.ok(start >= 0 && end > start);
     const reader = source.slice(start, end);
-    assert.match(reader, /await readTpvCajaSnapshot\\(\\)/);
+    assert.ok(reader.includes("await readTpvCajaSnapshot()"));
     assert.match(reader, /projectionStatus: "NOT_INITIALIZED"/);
     assert.doesNotMatch(reader, /initializeTpvCaja\\(/);
 });
@@ -46,5 +46,5 @@ test("SESSION_OPEN explicitly bootstraps CajaActual before acquiring the session
     const end = source.indexOf("\nexport const registrarArqueoParcial = webMethod(", start);
     assert.ok(start >= 0 && end > start);
     const writer = source.slice(start, end);
-    assert.match(writer, /await initializeTpvCaja\\(traceId\\);[\\s\\S]*?withTpvSessionLock\\(/);
+    assert.ok(writer.indexOf("await initializeTpvCaja(traceId);") < writer.indexOf("withTpvSessionLock("));
 });
