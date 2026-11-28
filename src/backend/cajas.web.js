@@ -182,10 +182,24 @@ function readHistoricalPaymentMethod(movement) {
     return value;
 }
 
+function _readRequiredLedgerAmount(movement, field) {
+    const raw = movement?.[field];
+    const validType = typeof raw === "number" ||
+        (typeof raw === "string" && raw.trim() !== "");
+    const amount = validType ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(amount)) {
+        const error = new Error(`Z_LEDGER_NUMERIC_FIELD_INVALID:${field}`);
+        error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+        error.meta = { field, movementId: movement?._id || null };
+        throw error;
+    }
+    return amount;
+}
+
 function _signedFiscalValue(movement, reader) {
-    const accountingAmount = Number(movement?.accountingAmount);
+    const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
     const sign = Number(movement?.accountingSign) < 0 || accountingAmount < 0 ? -1 : 1;
-    return Math.abs(Number(reader(movement)) || 0) * sign;
+    return Math.abs(_readRequiredLedgerAmount({ value: reader(movement) }, "value")) * sign;
 }
 
 const STRONG_READ = Object.freeze({ consistencyMode: "strong" });
@@ -1675,16 +1689,26 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
             return { status: "ERROR", data: null, error: { code: "NO_MOVEMENTS", message: "No hay movimientos para cerrar" } };
         }
 
-        const totalCash = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.EFECTIVO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalCard = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.TARJETA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalBizum = allMovements.filter(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.BIZUM).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalOnline = allMovements.filter(m => ONLINE_PAYMENT_METHODS.includes(readHistoricalPaymentMethod(m))).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalRefunds = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalTips = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.PROPINA).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const totalAdjustments = allMovements.filter(m => m.movementType === MOVEMENT_TYPE.AJUSTE).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const grossSalesTotal = allMovements.filter(m => m.movementType && !["REEMBOLSO", "PROPINA", "AJUSTE"].includes(m.movementType)).reduce((s, m) => s + Number(m.accountingAmount || 0), 0);
-        const netTaxableAmount = allMovements.reduce((s, m) => s + _signedFiscalValue(m, readTaxBase), 0);
-        const netTaxAmount = allMovements.reduce((s, m) => s + _signedFiscalValue(m, readTaxAmount), 0);
+        const accountingAmount = (movement) => _readRequiredLedgerAmount(movement, "accountingAmount");
+        const sumBy = (predicate) => allMovements
+            .filter(predicate)
+            .reduce((sum, movement) => sum + accountingAmount(movement), 0);
+        const totalCash = sumBy(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.EFECTIVO);
+        const totalCard = sumBy(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.TARJETA);
+        const totalBizum = sumBy(m => readHistoricalPaymentMethod(m) === PAYMENT_METHOD.BIZUM);
+        const totalOnline = sumBy(m => ONLINE_PAYMENT_METHODS.includes(readHistoricalPaymentMethod(m)));
+        const totalRefunds = sumBy(m => m.movementType === MOVEMENT_TYPE.REEMBOLSO);
+        const totalTips = sumBy(m => m.movementType === MOVEMENT_TYPE.PROPINA);
+        const totalAdjustments = sumBy(m => m.movementType === MOVEMENT_TYPE.AJUSTE);
+        const grossSalesTotal = sumBy(m => m.movementType && !["REEMBOLSO", "PROPINA", "AJUSTE"].includes(m.movementType));
+        const fiscalMovements = allMovements.filter((movement) => {
+            const movementType = _safeTrim(movement.movementType).toUpperCase();
+            const operationNature = _safeTrim(readMovementField(movement, "operationNature")).toUpperCase();
+            return ![MOVEMENT_TYPE.PROPINA, MOVEMENT_TYPE.AJUSTE, "PROPINA", "AJUSTE"].includes(movementType) &&
+                !["PROPINA", "AJUSTE"].includes(operationNature);
+        });
+        const netTaxableAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxBase), 0);
+        const netTaxAmount = fiscalMovements.reduce((sum, movement) => sum + _signedFiscalValue(movement, readTaxAmount), 0);
         const consolidatedTotalAmount = _roundMoney(totalCash + totalCard + totalBizum + totalOnline);
 
         let approverUser = null;
@@ -1704,18 +1728,28 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const movementTypeBreakdown = {};
         for (const m of allMovements) {
             const mt = m.movementType || "UNKNOWN";
-            movementTypeBreakdown[mt] = _roundMoney((movementTypeBreakdown[mt] || 0) + Number(m.accountingAmount || 0));
+            movementTypeBreakdown[mt] = _roundMoney((movementTypeBreakdown[mt] || 0) + accountingAmount(m));
         }
 
         const taxTypeBreakdown = {};
-        for (const m of allMovements) {
-            const rate = String(Number(readMovementField(m, "tipoImpositivo")) || 0);
+        for (const m of fiscalMovements) {
+            const rawRate = readMovementField(m, "tipoImpositivo");
+            const validRateType = typeof rawRate === "number" ||
+                (typeof rawRate === "string" && rawRate.trim() !== "");
+            const rateValue = validRateType ? Number(rawRate) : Number.NaN;
+            if (!Number.isFinite(rateValue)) {
+                const error = new Error("Z_LEDGER_NUMERIC_FIELD_INVALID:tipoImpositivo");
+                error.code = "Z_LEDGER_NUMERIC_FIELD_INVALID";
+                error.meta = { field: "tipoImpositivo", movementId: m?._id || null };
+                throw error;
+            }
+            const rate = String(rateValue);
             if (!taxTypeBreakdown[rate]) {
                 taxTypeBreakdown[rate] = { taxableBaseOrNonSubjectAmount: 0, taxAmount: 0, total: 0, operations: 0 };
             }
             taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount = _roundMoney(taxTypeBreakdown[rate].taxableBaseOrNonSubjectAmount + _signedFiscalValue(m, readTaxBase));
             taxTypeBreakdown[rate].taxAmount = _roundMoney(taxTypeBreakdown[rate].taxAmount + _signedFiscalValue(m, readTaxAmount));
-            taxTypeBreakdown[rate].total = _roundMoney(taxTypeBreakdown[rate].total + Number(m.accountingAmount || 0));
+            taxTypeBreakdown[rate].total = _roundMoney(taxTypeBreakdown[rate].total + accountingAmount(m));
             taxTypeBreakdown[rate].operations++;
         }
 
@@ -1908,6 +1942,7 @@ async function _registerZClosing(diaKey, options = {}, authorizeCashier = true) 
         const publicMessages = {
             PERIOD_CLOSED: "El periodo fiscal esta cerrado.",
             Z_CLOSING_RESULT_UNKNOWN: "El resultado del cierre es incierto y requiere reconciliacion.",
+            Z_LEDGER_NUMERIC_FIELD_INVALID: "El cierre no puede continuar: un movimiento contiene un importe fiscal ausente o invalido.",
         };
         const publicCodes = new Set(Object.keys(publicMessages));
         const publicCode = publicCodes.has(normalized.code) ? normalized.code : "Z_CLOSING_FAIL";
