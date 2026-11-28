@@ -330,3 +330,19 @@ La exportación laboral deberá conservar los datos exigibles, identidad del tra
 La Capa 3 ya dispone de una base backend real para preparar un paquete JSON contable/fiscal minimizado, determinista y verificable. No existe evidencia de transporte externo operativo. SharePoint, Power Automate, tenant, biblioteca, permisos, retención, DLP y recepción por asesoría siguen pendientes. El mapeo PGC automático no está aprobado. La remisión AEAT/SIF es un flujo normativo separado y no debe confundirse con el archivo documental. El registro laboral requiere su propio contrato y controles.
 
 **Estado final:** preparación de exportación IMPLEMENTADA; automatización y transporte externo PENDIENTES; registro normativo oficial NO HABILITADO; aceptación E2E NO ACREDITADA.
+
+
+## 16. VERI*FACTU y QR tributario del ticket
+
+La facturación/VERI*FACTU es un flujo normativo separado de la exportación documental Capa 3. Su destino oficial es AEAT; SharePoint solo puede custodiar copias y evidencias. No confundir el QR tributario con QR de pago, ticket de caja, cierre Z o justificante comercial.
+
+Se incorpora el dossier especializado [VERI*FACTU y QR tributario — implementación](VERIFACTU-QR-IMPLEMENTATION-DOSSIER.md), que consolida:
+- normativa BOE y especificaciones AEAT vigentes consultadas a 28-11-2026;
+- modificación de plazos por RDL 43/2026 y cómputo resultante 06-10-2028 para los obligados del artículo 3.1, sujeto a aplicabilidad;
+- distinción factura completa/simplificada frente a justificante no-factura;
+- dos modalidades SIF y recomendación condicionada de VERI*FACTU;
+- formato, dimensiones, nivel de corrección, quiet zone, URL y datos del QR;
+- registro de alta/anulación, huella AEAT, remisión XML, incidencias, respuestas e idempotencia;
+- propuesta de integración Wix/Velo, impresora Epson, criterios de prueba y hitos de implementación.
+
+**Estado:** DOCUMENTADO. No se acredita SIF elegido, declaración responsable, registro AEAT, integración, QR generado ni impresión física conforme. No activar remisión real ni declarar conformidad sin cerrar los hitos VQ-01…VQ-10 del dossier especializado.
