@@ -234,11 +234,14 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Último recuento CMS de solo lectura disponible en esta sesión de trabajo (consulta realizada tras el reset del usuario): `CajaActual=0`, `MovimientosCaja=0`, `TransaccionesTPV=0`, `HistoricoCierresZ=1`, `ControlOperativo=90`. No se hizo una nueva lectura CMS en el cierre actual; no afirmar que los recuentos sigan iguales.
 - No se realizaron escrituras CMS, apertura, movimientos, ventas, arqueos, tickets X/Z, cobros, reembolsos, notificaciones, impresiones ni publicación.
 
-### Runner Runtime disponible y precaución pendiente
-- En `main` existen `.github/workflows/wix-tpv-preview.yml` y `scripts/wix-preview-tpv-e2e.mjs`; el workflow es manual (`workflow_dispatch`), crea Wix Preview y no publica.
-- Auditoría estática del runner detectó que, si encuentra una sesión ABIERTA con `sessionId`, intenta cerrarla automáticamente antes de iniciar la batería. Esto puede afectar una sesión legítima; por tanto, NO ejecutar el workflow hasta modificar el runner para detenerse sin mutaciones cuando encuentre cualquier sesión abierta o estado incoherente.
-- El runner también abre con 0,00 € y registra una entrada de 1,00 €. La próxima batería debe parametrizar fondo inicial y movimientos acordados (p.ej. apertura 300 €) y garantizar que el entorno CMS de Preview no afecta sesiones fuera de la batería.
-- Requisitos de Actions a comprobar sin mostrar valores: `CLI_API_KEY` y `WIX_STORAGE_STATE_B64`. No se ha comprobado su presencia en este cierre.
+### Runner Runtime disponible y revisión de seguridad
+- En `main` existen `.github/workflows/wix-tpv-preview.yml` y `scripts/wix-preview-tpv-e2e.mjs`; el workflow es manual (`workflow_dispatch`) y no publica.
+- Contraste del código actual: si `CASHIER_STATE` detecta una sesión `ABIERTA`, el runner original marca `PREEXISTING_OPEN_SESSION_NOT_TOUCHED` y termina; no ejecuta `SESSION_CLOSE` ni adopta la sesión.
+- Contraste del código actual: la batería original abre con `300,00 €` y registra una entrada de `1,00 €`; no abre con cero.
+- Riesgo real corregido en la rama `fix/tpv-preview-readonly-first-2026-11-28`: el mismo runner mezclaba diagnóstico de lectura con escrituras de sesión, movimientos, ventas, pedidos Wix, pago offline y Ticket X/Z. La nueva versión separa `read-only` (predeterminado, sin escritores) de `e2e` (requiere confirmación explícita de escrituras y de aislamiento CMS).
+- La confirmación manual de aislamiento no prueba el aislamiento: antes de ejecutar E2E debe verificarse CMS Sandbox para colecciones propias y revisar los efectos Live de Wix Orders/Bookings. Sin evidencia, mantener solo `read-only`.
+- El modo E2E sigue bloqueando si detecta una sesión preexistente; no la cierra ni la altera.
+- Requisitos de Actions a comprobar sin mostrar valores: `WIX_STORAGE_STATE_B64`. `CLI_API_KEY` no es requerido por este workflow de Editor Preview. No se ha comprobado la presencia del secreto.
 - El conector disponible no ofrece una acción de dispatch de workflow; no se lanzó la batería desde esta sesión.
 
 ### Punto exacto de reanudación

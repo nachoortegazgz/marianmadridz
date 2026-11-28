@@ -110,7 +110,11 @@ Workflow: `.github/workflows/wix-tpv-preview.yml`.
 - Se lanza manualmente desde la rama/commit que se quiere probar.
 - Requiere la URL HTTPS de Preview abierta desde Wix Editor/Local Editor.
 - Usa el secreto `WIX_STORAGE_STATE_B64` para autenticar Playwright; nunca se publica ni se adjunta el storageState.
-- El workflow ejecuta `scripts/wix-preview-tpv-e2e.mjs` y conserva únicamente el informe JSON anonimizado.
+- El modo predeterminado es `read-only`: handshake, identidad/rol visible, capabilities de UI, `CASHIER_STATE` y, si hay sesión, lecturas de ledger/auditoría. Termina con `PASS_READ_ONLY` sin invocar escritores.
+- El modo `e2e` solo se habilita con dos confirmaciones explícitas: `confirm_writes=YES` y `data_isolation_confirmed=YES`. El runner vuelve a exigir `WIX_TPV_E2E_ALLOW_WRITES=YES` y `WIX_TPV_DATA_ISOLATION_CONFIRMED=YES`; los valores por defecto son NO.
+- La confirmación de aislamiento no sustituye su comprobación: antes del E2E hay que verificar en Wix CMS que Sandbox está habilitado para todas las colecciones propias afectadas y que las colecciones de aplicaciones Wix (Orders/Bookings) no producen efectos operativos no deseados. Si no se acredita aislamiento, no autorizar escrituras.
+- El modo `e2e` crea pedidos Wix y escribe en el ledger; no es una prueba inocua. Nunca adopta ni cierra una sesión preexistente. Si detecta una sesión abierta, bloquea sin mutarla.
+- Conserva únicamente el informe JSON anonimizado; nunca adjunta storageState.
 - No usa `wix preview` de Headless/Apps como sustituto del Preview de Wix Editor clásico.
 - No publica el sitio.
 

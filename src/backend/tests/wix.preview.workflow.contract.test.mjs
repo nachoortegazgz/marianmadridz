@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const workflowUrl = new URL("../../../.github/workflows/wix-tpv-preview.yml", import.meta.url);
 const runnerUrl = new URL("../../../scripts/wix-preview-tpv-e2e.mjs", import.meta.url);
+const controllerUrl = new URL("../../public/tpvPageController.js", import.meta.url);
 
 test("WIX-PREVIEW-01 TPV Editor Preview E2E is manually dispatchable with an explicit Preview URL", async () => {
     const workflow = await readFile(workflowUrl, "utf8");
@@ -52,4 +53,29 @@ test("WIX-PREVIEW-05 runner is non-destructive and verifies the native Wix order
     assert.match(runner, /TICKET_X/);
     assert.match(runner, /TICKET_Z/);
     assert.match(runner, /TICKET_Z_CLOSED/);
+});
+
+test("WIX-PREVIEW-06 read-only smoke is the default and exits before all operational writes", async () => {
+    const workflow = await readFile(workflowUrl, "utf8");
+    const runner = await readFile(runnerUrl, "utf8");
+    assert.match(workflow, /default: read-only/);
+    assert.match(workflow, /confirm_writes:[\s\S]*?default: NO/);
+    assert.match(workflow, /data_isolation_confirmed:[\s\S]*?default: NO/);
+    assert.match(runner, /WIX_TPV_E2E_MODE \|\| "read-only"/);
+    assert.match(runner, /executionMode === "e2e"/);
+    assert.match(runner, /WIX_TPV_E2E_ALLOW_WRITES=YES/);
+    assert.match(runner, /WIX_TPV_DATA_ISOLATION_CONFIRMED=YES/);
+    assert.ok(
+        runner.indexOf('if (executionMode === "read-only")') <
+        runner.indexOf('phase = "session-open"'),
+        "Read-only return must precede SESSION_OPEN"
+    );
+    assert.match(runner, /report\.result = "PASS_READ_ONLY"/);
+    assert.match(runner, /noBusinessWritesInvoked/);
+    assert.ok(runner.includes("data.capabilities"));
+    assert.ok(runner.includes("permissionsStatus"));
+    assert.ok(runner.includes("window.__tpvE2eContext"));
+    assert.match(runner, /report\.runtimeContext\.role/);
+    const controller = await readFile(controllerUrl, "utf8");
+    assert.match(controller, /role: permissionsReady \? \(permissions\.data\?\.role \|\| "UNKNOWN"\) : "UNKNOWN"/);
 });
