@@ -125,7 +125,7 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.doesNotMatch(html, /setInterval\s*\(/);
     assert.match(html, /id="refreshCatalog"/);
     assert.match(html, /\$\("refreshCatalog"\)\.onclick = \(\) => loadCatalog/);
-    assert.match(repository, /export async function initializeTpvCaja\(\)[\s\S]*?_getCajaActual\(\)/);
+    assert.match(repository, /export async function initializeTpvCaja\(traceId = null\)[\s\S]*?_getCajaActual\(\)/);
     assert.match(repository, /saved = await insertItem\(BUSINESS_COLLECTIONS\.MOVIMIENTOS_CAJA, ledgerItem\)/);
     assert.match(repository, /await _projectPersistedTpvEvent\([\s\S]*?collection, record, item\._id, item\.hash, key, false/);
     assert.match(repository, /await updateItem\(BUSINESS_COLLECTIONS\.CAJA_ACTUAL, next\)/);
@@ -359,7 +359,9 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(html, /expectedSessionId,/);
     assert.match(controller, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(controller, /expectedSessionId,/);
-    assert.match(caja, /const cajaActual = await readTpvCajaSnapshot\(\)/);
+    assert.match(caja, /let cajaActual;[\s\S]*?cajaActual = await readTpvCajaSnapshot\(\)/);
+    assert.match(caja, /operator\.rolWebsite !== "ADMIN" \|\| code !== "TPV_CASH_REGISTER_NOT_PRESEEDED"/);
+    assert.match(caja, /await initializeTpvCaja\(traceId\)/);
     assert.match(caja, /nextSessionPreview/);
     assert.match(caja, /TPV_SESSION_PREVIEW_REQUIRED/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);

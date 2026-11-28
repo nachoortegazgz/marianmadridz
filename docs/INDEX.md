@@ -24,6 +24,8 @@
 
 ## Evidencia y auditorías
 
+- [Remediación bootstrap singleton TPV — 28-11-2026](audits/2026-11-28-tpv-caja-singleton-bootstrap.md).
+
 - [Auditoría de persistencia operativa — 28-11-2026](audits/2026-11-28-operational-persistence-audit.md): lectura Wix de colecciones propias, conciliación Bookings/eCommerce y brechas de persistencia por dominio.
 - [Remediación P0 TPV ledger / cierre Z — 28-11-2026](audits/2026-11-28-p0-tpv-ledger-zclosing-remediation.md): aislamiento de lectores fiscales, conservación de contadores compartidos y estado del cierre Z.
 
