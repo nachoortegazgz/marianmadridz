@@ -33,7 +33,7 @@ test("TPV page attaches the shared controller to the existing #htmlTPV component
 test("TPV controller imports operational WebMethods and no longer imports the separate test runtime", async () => {
     const controller = await source("src/public/tpvPageController.js");
     const modules = {
-        "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial", "cerrarSesionCaja"],
+        "src/backend/tpv/tpvCaja.web.js": ["obtenerEstadoCaja", "abrirSesionCaja", "registrarArqueoParcial"],
         "src/backend/tpv/tpvVentas.web.js": ["validarVentaBorrador", "registrarVenta"],
         "src/backend/tpv/tpvMovimientos.web.js": ["registrarMovimientoCaja", "exportarMovimientosCaja", "exportarAuditoriaTPV"],
         "src/backend/tpv/tpvCierres.web.js": ["obtenerResumenCaja", "generarTicketX", "generarCierreZ"],
@@ -100,7 +100,8 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(permissions, /requestRefund: false/);
     assert.match(permissions, /issueTicketZ: staff\.rolWebsite === "ADMIN"/);
     assert.match(permissions, /exportAudit: staff\.rolWebsite === "ADMIN"/);
-    for (const capability of ["closeSession", "issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
+    assert.doesNotMatch(controller, /SESSION_CLOSE|cerrarSesionCaja/);
+    for (const capability of ["issueTicketX", "exportMovements"]) assert.match(permissions, new RegExp(capability + ": staff\\.rolWebsite === \"ADMIN\""));
     assert.doesNotMatch(permissions, /testRuntimeAvailable|testRuntimeMode/);
     assert.match(html, /!state\.operationalWritesAvailable/);
     assert.match(html, /id="refund"[^>]*disabled/);
