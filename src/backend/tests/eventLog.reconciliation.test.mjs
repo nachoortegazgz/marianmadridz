@@ -22,6 +22,16 @@ test("EVENTLOG-SIGN-01 refund amounts are always negative regardless of input si
   }), 125.5);
 });
 
+test("EVENTLOG-AMOUNT-01 missing, null, blank and non-numeric amounts are rejected; explicit zero is preserved", () => {
+  for (const value of [undefined, null, "", "not-a-number", true]) {
+    assert.throws(
+      () => eventLogTest.normalizeAccountingAmount({ movementType: "VENTA", totalAmount: value }),
+      (error) => error.code === "ACCOUNTING_AMOUNT_INVALID"
+    );
+  }
+  assert.equal(eventLogTest.normalizeAccountingAmount({ movementType: "VENTA", totalAmount: 0 }), 0);
+});
+
 test("EVENTLOG-LINK-01 booking references are normalized to a unique array", () => {
   assert.deepEqual(
     eventLogTest.normalizeLinkedBookingIds("booking-a, booking-b,booking-a"),
