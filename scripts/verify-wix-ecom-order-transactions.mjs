@@ -11,6 +11,7 @@ for (const [name, fn] of [
     ["orders.createOrder", orders?.createOrder],
     ["orders.getOrder", orders?.getOrder],
     ["orders.searchOrders", orders?.searchOrders],
+    ["orders.cancelOrder", orders?.cancelOrder],
     ["orderTransactions.addPayments", orderTransactions?.addPayments],
     ["orderTransactions.updatePaymentStatus", orderTransactions?.updatePaymentStatus],
     ["orderBilling.getOrderRefundability", orderBilling?.getOrderRefundability],
