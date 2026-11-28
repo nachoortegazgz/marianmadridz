@@ -1629,14 +1629,18 @@ body {
       const countedCash = num(countedCashInput);
       if (!String(countedCashInput ?? "").trim() || !Number.isFinite(countedCash) || countedCash < 0) throw new Error("TPV_INVALID_AMOUNT");
       const differenceReason = $("differenceReason").value.trim();
-      await keyedAction("TICKET_Z", "TICKET_Z", {
+      const result = await keyedAction("TICKET_Z", "TICKET_Z", {
         sessionId: state.session?.sessionId,
         countedCash,
         differenceReason: differenceReason,
         profesionalId: state.profesionalId,
       }, "TICKET_Z_RES");
       await refreshCashState();
-      toast("Cierre Z registrado.");
+      const pendingSalesCount = Number(result?.pendingSalesCount || 0);
+      const pendingSalesGross = Number(result?.pendingSalesGross || 0);
+      toast(pendingSalesCount > 0
+        ? "Cierre Z registrado. " + pendingSalesCount + " ventas pendientes de cobro (" + money(pendingSalesGross) + ")."
+        : "Cierre Z registrado.");
     });
   };
 
