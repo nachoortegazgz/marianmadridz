@@ -198,7 +198,7 @@ function _signedFiscalValue(movement, reader, field) {
     const accountingAmount = _readRequiredLedgerAmount(movement, "accountingAmount");
     const rawSign = movement?.accountingSign;
     let sign = accountingAmount < 0 ? -1 : 1;
-    if (rawSign !== undefined && rawSign !== null && rawSign !== "") {
+    if (rawSign !== undefined && rawSign !== null) {
         const explicitSign = Number(rawSign);
         if (!Number.isFinite(explicitSign) || ![-1, 1].includes(explicitSign) ||
             (accountingAmount !== 0 && explicitSign !== sign)) {
