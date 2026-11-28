@@ -1,8 +1,34 @@
 # TPV profesional — arquitectura objetivo y plan de ejecución
 
 **Fecha:** 2026-11-28  
-**Estado:** decisión de arquitectura propuesta a partir del código de `main`, la auditoría de persistencia del 28-11-2026 y documentación oficial Wix/BOE.  
+**Estado:** arquitectura objetivo + implementación incremental en `feat/tpv-native-wix-commerce-2026-11-28`. La documentación oficial Wix/BOE gobierna los contratos; este documento no sustituye las especificaciones vigentes.  
 **Objetivo:** una TPV profesional, nativa en su integración, con el mínimo código propio y trazabilidad completa de cada operación.
+
+## Estado de implementación — 28-11-2026
+
+**[Verificado en código]**
+- Adaptador nativo Wix Orders: `orders.createOrder`, `orders.getOrder`, `orders.searchOrders`, `orders.cancelOrder` con canal POS, `externalOrderId`, estrategia de aprobación y notificaciones desactivadas.
+- `TransaccionesTPV` se persiste antes del pedido Wix; la recuperación busca por `externalOrderId` y evita crear otro pedido ante timeout incierto.
+- Read-back obligatorio de pedido y total en céntimos antes de considerar persistido el pedido.
+- Cobro de efectivo mediante `orderTransactions.addPayments` como pago offline, lectura de transacción, apunte `TPV_PAYMENT/COBRO` en `MovimientosCaja` y auditoría separada de venta/pedido/pago.
+- Contacto CRM enlazado al pedido; consulta paginada de reservas Wix Bookings.
+- `SALE_READBACK` permite verificar la intención TPV y el pedido Wix.
+- `CASHIER_STATE` no escribe; `SESSION_OPEN` inicializa explícitamente `CajaActual`.
+- Runner Editor Preview no destructivo: fondo 300 €, entrada 1 €, arqueo parcial, venta/pedido, Ticket X y Ticket Z.
+
+**[CI offline]** El último SHA de esta rama es `5ce4964cecb15dfb5043235a047b391bcf78f998`. La ejecución completa de quality gates aún debe terminar en SUCCESS para registrar PASS.
+
+**[No comprobado — Runtime/Preview]** No se ha ejecutado todavía el flujo contra Wix Preview. La creación real de Orders, Add Payments, la reducción de inventario y los read-backs de CMS/Orders solo se considerarán validados después de ejecutar el workflow y revisar sus evidencias.
+
+**Pendiente antes de GO productivo**
+- Ejecutar Preview E2E y probar autorización con usuarios/cajeros reales; Preview usa rol Admin.
+- Probar la rama de cobro en efectivo y su conciliación de caja en Runtime.
+- Elegir e integrar el proveedor/terminal real de tarjeta.
+- Implementar devolución/reembolso nativo y su ledger inverso.
+- Completar facturación/SIF y cumplimiento fiscal productivo según normativa vigente.
+- Añadir flujo operativo de cobro posterior/cancelación de pedidos pendientes y UI de recuperación.
+
+---
 
 ## 1. Criterio de éxito
 
