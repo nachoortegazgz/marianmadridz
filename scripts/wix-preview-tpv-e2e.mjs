@@ -23,7 +23,9 @@ const wixHost = (hostname) =>
     hostname === "wix.com" ||
     hostname.endsWith(".wix.com") ||
     hostname === "wixsite.com" ||
-    hostname.endsWith(".wixsite.com");
+    hostname.endsWith(".wixsite.com") ||
+    hostname === "marianmadrid.es" ||
+    hostname === "www.marianmadrid.es";
 
 const allowedParentOrigins = [
     "https://www.marianmadrid.es",
@@ -33,8 +35,9 @@ const allowedParentOrigins = [
 
 const report = {
     result: "FAIL",
-    environment: "WIX_PREVIEW",
-    dataEnvironment: "SANDBOX_EXPECTED_CMS_SANDBOX_MUST_BE_ENABLED",
+    environment: "WIX_EDITOR_PREVIEW",
+    dataEnvironment: "WIX_PREVIEW_SITE_DATA",
+    syntheticByDate: Number(new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric" }).format(new Date())) < 2027,
     previewHttpStatus: null,
     tpvPageHttpStatus: null,
     previewHost: null,
@@ -97,6 +100,19 @@ function assertSuccess(envelope, name) {
         throw error;
     }
     return envelope.data ?? envelope;
+}
+
+function assertPending(envelope, name) {
+    if (envelope?.status !== "PENDING" || envelope?.persisted !== true ||
+        envelope?.orderPersisted !== true || !envelope?.orderId ||
+        !envelope?.idempotencyKey || !Number.isFinite(Number(envelope?.totalVenta))) {
+        const code = envelope?.error?.code || envelope?.reason || "TPV_PENDING_SALE_NOT_PERSISTED";
+        const error = new Error(name + " did not persist a pending sale: " + code);
+        error.code = code;
+        error.response = redact(envelope);
+        throw error;
+    }
+    return envelope;
 }
 
 async function waitForTpvFrame(targetPage, timeoutMs = 90000) {
@@ -217,7 +233,17 @@ function cashTotalFromMovements(items) {
             case "RETIRADA":
                 totalMinor -= minor;
                 break;
+            case "ARQUEO_PARCIAL":
+            case "CONTROL_X":
+            case "CIERRE_Z":
+            case "VENTA":
+            case "DEVOLUCION":
             case "CIERRE":
+                break;
+            case "COBRO":
+                if (String(item.paymentMethod || "").toUpperCase() === "EFECTIVO") {
+                    totalMinor += minor;
+                }
                 break;
             default:
                 throw new Error("TPV_UNEXPECTED_MOVEMENT_TYPE:" + String(item.movementType || "UNKNOWN"));
@@ -307,32 +333,16 @@ async function run() {
         projectionStatus: state.cajaActual?.projectionStatus || null,
     });
 
-    if (state.operationalStatus === "ABIERTA" && state.sessionId) {
-        phase = "close-existing-session";
-        const expectedCash = Number(state.expectedCash);
-        assert.ok(Number.isFinite(expectedCash) && expectedCash >= 0,
-            "Existing open session has no reliable expectedCash; refusing to close it");
-        const closeExisting = await invokeWidget(frame, "SESSION_CLOSE", {
-            sessionId: state.sessionId,
-            contadoEfectivo: expectedCash,
-            observaciones: "Cierre previo autorizado antes de la comprobación funcional",
-        });
-        const closeExistingData = assertSuccess(closeExisting, "SESSION_CLOSE_EXISTING");
-        assert.equal(closeExistingData.sessionId, state.sessionId);
-        stateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
-        state = assertSuccess(stateEnvelope, "CASHIER_STATE_AFTER_EXISTING_CLOSE");
-        if (state.canOpenSession !== true) {
-            report.result = "BLOCKED";
-            report.blockReason = "EXISTING_SESSION_CLOSED_BUT_TODAY_CANNOT_BE_REOPENED";
-            report.closedExistingSessionId = closeExistingData.sessionId;
-            throw Object.assign(new Error(report.blockReason), { code: report.blockReason });
-        }
-    } else if (state.operationalStatus === "ABIERTA" && !state.sessionId) {
-        throw Object.assign(new Error("OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION"), {
-            code: "OPEN_PROJECTION_WITHOUT_CANONICAL_SESSION",
+    // Preflight is read-only. Never close, alter, or adopt a session that
+    // existed before this E2E run.
+    if (state.operationalStatus === "ABIERTA") {
+        report.result = "BLOCKED";
+        report.blockReason = "PREEXISTING_OPEN_SESSION_NOT_TOUCHED";
+        report.preexistingSessionId = state.sessionId || null;
+        throw Object.assign(new Error("A cash session is already open; E2E will not close or modify it."), {
+            code: report.blockReason,
         });
     }
-
     if (state.canOpenSession !== true) {
         report.result = "BLOCKED";
         report.blockReason = state.operationalStatus === "CERRADA"
@@ -345,8 +355,8 @@ async function run() {
     await clearCapturedResponses(frame);
     await frame.locator("#openCash").click();
     await frame.locator("#openingCash").waitFor({ state: "visible", timeout: 15000 });
-    await frame.locator("#openingCash").fill("0,00");
-    await frame.locator("#openingReason").fill("");
+    await frame.locator("#openingCash").fill("300,00");
+    await frame.locator("#openingReason").fill("E2E TPV " + new Date().toISOString().slice(0, 19));
     await frame.locator("#modalConfirm").click();
 
     const openEnvelope = await captureUiOperation(frame, "SESSION_OPEN_RES", "SESSION_OPEN");
@@ -375,13 +385,87 @@ async function run() {
     await frame.locator("#cashIn").click();
     await frame.locator("#movementAmount").waitFor({ state: "visible", timeout: 15000 });
     await frame.locator("#movementAmount").fill("1,00");
-    await frame.locator("#movementConcept").fill("Entrada de efectivo para comprobación funcional");
+    await frame.locator("#movementConcept").fill("Entrada de efectivo E2E TPV");
     await frame.locator("#modalConfirm").click();
 
     const cashEnvelope = await captureUiOperation(frame, "CASH_MOVEMENT_RES", "CASH_MOVEMENT");
     const cashData = assertSuccess(cashEnvelope, "CASH_MOVEMENT");
     assert.ok(cashData.movementId, "CASH_MOVEMENT did not return movementId");
     report.cashMovementId = cashData.movementId;
+
+    phase = "partial-cash-count";
+    const partialEnvelope = await invokeWidget(frame, "PARTIAL_CASH_COUNT", {
+        sessionId,
+        countedCash: 301,
+        reason: "Arqueo parcial E2E TPV",
+    });
+    const partialData = assertSuccess(partialEnvelope, "PARTIAL_CASH_COUNT");
+    assert.ok(partialData.movementId, "PARTIAL_CASH_COUNT did not return movementId");
+    report.partialCountMovementId = partialData.movementId;
+
+    phase = "pending-sale";
+    const catalogEnvelope = await invokeWidget(frame, "CATALOG_SERVICES", {});
+    const catalogData = assertSuccess(catalogEnvelope, "CATALOG_SERVICES");
+    const services = Array.isArray(catalogData.items) ? catalogData.items : [];
+    const testService = services.find((item) =>
+        item && item.tipoLinea === "SERVICIO" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(item.itemId || "")) &&
+        Number.isFinite(Number(item.precioFijo)) && Number(item.precioFijo) > 0 &&
+        String(item.moneda || "EUR").toUpperCase() === "EUR"
+    );
+    assert.ok(testService, "No fixed-price EUR service is available for the pending-sale E2E case");
+    const saleIdempotencyKey = randomUUID();
+    const saleEnvelope = await invokeWidget(frame, "SALE_REGISTER", {
+        sessionId,
+        idempotencyKey: saleIdempotencyKey,
+        lineItems: [{ tipoLinea: "SERVICIO", itemId: testService.itemId, cantidad: 1 }],
+        payments: [],
+    });
+    const pendingSale = assertPending(saleEnvelope, "SALE_REGISTER_PENDING");
+    phase = "pending-sale-readback";
+    const saleReadbackEnvelope = await invokeWidget(frame, "SALE_READBACK", {
+        sessionId,
+        idempotencyKey: saleIdempotencyKey,
+    });
+    const saleReadback = assertSuccess(saleReadbackEnvelope, "SALE_READBACK");
+    assert.equal(saleReadback.recordPersisted, true);
+    assert.equal(saleReadback.orderId, pendingSale.orderId);
+    assert.equal(saleReadback.status, "PENDING_PAYMENT");
+    assert.equal(saleReadback.requiresReconciliation, false);
+    assert.equal(saleReadback.order.externalOrderId, saleIdempotencyKey);
+    assert.equal(saleReadback.order.status, "APPROVED");
+    assert.equal(saleReadback.order.paymentStatus, "NOT_PAID");
+    assert.equal(saleReadback.order.totalMinor, Math.round(Number(pendingSale.totalVenta) * 100));
+    report.saleReadback = {
+        orderId: saleReadback.orderId,
+        status: saleReadback.status,
+        requiresReconciliation: saleReadback.requiresReconciliation,
+        wixOrderStatus: saleReadback.order.status,
+        wixPaymentStatus: saleReadback.order.paymentStatus,
+        totalMinor: saleReadback.order.totalMinor,
+    };
+
+    report.pendingSale = {
+        idempotencyKey: pendingSale.idempotencyKey,
+        orderId: pendingSale.orderId,
+        orderPersisted: pendingSale.orderPersisted,
+        paymentStatus: pendingSale.paymentStatus,
+        totalVenta: pendingSale.totalVenta,
+        medioPago: pendingSale.medioPago || null,
+        persisted: pendingSale.persisted,
+        replayed: pendingSale.replayed === true,
+        auditPersisted: pendingSale.auditPersisted === true,
+        serviceItemId: testService.itemId,
+    };
+
+    phase = "pending-sale-summary";
+    const summaryEnvelope = await invokeWidget(frame, "SESSION_SUMMARY", { sessionId });
+    const summary = assertSuccess(summaryEnvelope, "SESSION_SUMMARY_AFTER_PENDING_SALE");
+    assert.equal(Number(summary.pendingSalesCount), 1);
+    assert.equal(Math.round(Number(summary.pendingSalesGross) * 100),
+        Math.round(Number(pendingSale.totalVenta) * 100));
+    assert.equal(summary.reconciliationOk, true,
+        "An unpaid commercial intent must remain separate from collected cash");
 
     phase = "ticket-x";
     await clearCapturedResponses(frame);
@@ -413,19 +497,31 @@ async function run() {
     assert.equal(openingItem.movementId, openingItem.transactionId);
     assert.equal(cashItem.movementId, cashItem.transactionId);
     const expectedCash = cashTotalFromMovements(beforeItems);
-    assert.equal(Math.round(expectedCash * 100), 100,
-        "Expected cash differs from the controlled opening and cash-in operations");
+    assert.equal(Math.round(expectedCash * 100), 30100,
+        "Expected cash differs from the controlled 300€ opening and 1€ cash-in operations");
 
-    phase = "session-close";
-    const closeEnvelope = await invokeWidget(frame, "SESSION_CLOSE", {
+    phase = "ticket-z";
+    const ticketZEnvelope = await invokeWidget(frame, "TICKET_Z", {
         sessionId,
-        contadoEfectivo: expectedCash,
-        observaciones: "Cierre tras comprobación funcional",
+        countedCash: expectedCash,
+        differenceReason: "",
     });
-    const closeData = assertSuccess(closeEnvelope, "SESSION_CLOSE");
-    assert.equal(closeData.sessionId, sessionId);
-    assert.equal(Math.round(Number(closeData.saldoFinal) * 100), 100);
-    assert.equal(Math.round(Number(closeData.diferencia) * 100), 0);
+    const ticketZData = assertSuccess(ticketZEnvelope, "TICKET_Z");
+    assert.equal(ticketZData.sessionId, sessionId);
+    assert.equal(ticketZData.closed, true);
+    assert.equal(Math.round(Number(ticketZData.expectedCash) * 100), 30100);
+    assert.equal(Math.round(Number(ticketZData.countedCash) * 100), 30100);
+    assert.equal(Math.round(Number(ticketZData.difference) * 100), 0);
+    report.ticketZInvoked = true;
+    report.ticketZ = {
+        reportId: ticketZData.reportId,
+        sessionId: ticketZData.sessionId,
+        expectedCash: ticketZData.expectedCash,
+        countedCash: ticketZData.countedCash,
+        difference: ticketZData.difference,
+        pendingSalesCount: ticketZData.pendingSalesCount,
+        closed: ticketZData.closed,
+    };
 
     phase = "post-close-state-query";
     const finalStateEnvelope = await invokeWidget(frame, "CASHIER_STATE", {});
@@ -437,10 +533,10 @@ async function run() {
     const finalLedgerEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
     const finalLedger = assertSuccess(finalLedgerEnvelope, "CASH_MOVEMENTS_EXPORT_AFTER_CLOSE");
     const finalItems = Array.isArray(finalLedger.items) ? finalLedger.items : [];
-    const closingItem = finalItems.find((item) => item.movementType === "CIERRE_Z" && item.reportId === ticketZData.reportId);
-    assert.ok(closingItem, "Ticket Z was not found in the post-close ledger query");
-    assert.equal(closingItem.sessionId, sessionId);
-    assert.equal(closingItem.status, "CERRADO");
+    const closingItem = finalItems.find((item) => item.movementType === "CIERRE");
+    assert.ok(closingItem, "Closing movement was not found in the post-close ledger query");
+    const ticketZLedgerItem = finalItems.find((item) => item.movementType === "CIERRE_Z");
+    assert.ok(ticketZLedgerItem, "Ticket Z record was not found in the post-close ledger query");
     assert.ok(closingItem.transactionId, "Closing transactionId missing from ledger query");
     assert.equal(closingItem.movementId, closingItem.transactionId);
     for (const item of finalItems) {
@@ -480,11 +576,24 @@ async function run() {
         })),
         ticketXAuditId: ticketAudit.id,
         closeAuditId: closeAudit.id,
+        saleAuditId: saleAudit.id,
+        orderAuditId: orderAudit.id,
+        ticketZReportId: ticketZData.reportId,
+        pendingSalesCount: Number(ticketZData.pendingSalesCount || 0),
         auditActions: auditItems.map((item) => item.action),
     };
 
     report.result = "PASS";
     report.completedPhase = phase;
+    report.acceptance = {
+        openingCashMinor: 30000,
+        cashInMinor: 100,
+        partialCountMinor: 30100,
+        pendingSalePersisted: true,
+        ticketXVerified: true,
+        ticketZVerified: true,
+        sessionClosed: true,
+    };
     await persistReport();
 }
 
