@@ -3,7 +3,7 @@ import { resolveTpvContext } from "backend/tpv/tpvContext";
 import { requireAdmin, requireCajero } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 import { SDK_CONFIG, TPV_COLLECTIONS, TPV_LEDGER_SOURCE, TPV_PAYMENT_METHOD } from "backend/internalConfig";
-import { appendTpvAudit, assertTpvOperationalLedgerConfigured, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvOperationalLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
+import { appendTpvAudit, assertTpvLedgerTypeSupported, insertTpvEvent, latestOpenTpvSession, latestTpvSession, queryTpvOperationalLedgerRecords, queryTpvRecords, withTpvSessionLock } from "backend/tpv/tpvRepository";
 import { resolveAuthorizedProfessional } from "backend/tpv/tpvNativeDirectory";
 import { fromMinorUnits, normalizeClientIdempotencyKey, toMinorUnits } from "backend/tpv/tpvUtils";
 import { buildCashMovementFailure, buildCashMovementSuccessData, resolveCashSessionOperationalStatus } from "backend/tpv/tpvMovementContracts";
@@ -73,7 +73,7 @@ export const registrarMovimientoCaja = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const movementType = String(input.movementType || "").trim().toUpperCase();
             if (!["ENTRADA", "SALIDA", "RETIRADA"].includes(movementType)) throw new Error("TPV_CASH_MOVEMENT_TYPE_INVALID");
@@ -215,7 +215,7 @@ export const exportarMovimientosCaja = webMethod(
 
         try {
             await requireAdmin(traceId);
-            assertTpvOperationalLedgerConfigured("physical");
+            assertTpvLedgerTypeSupported("physical");
             const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);
             const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);
@@ -270,7 +270,7 @@ export const exportarAuditoriaTPV = webMethod(
 
         try {
             await requireCajero(traceId);
-            assertTpvOperationalLedgerConfigured("audit");
+            assertTpvLedgerTypeSupported("audit");
             const operator = await resolveTpvContext(traceId);
             const sessionId = sessionIdFromInput(input);
             const idempotencyKey = normalizeClientIdempotencyKey(input.idempotencyKey);

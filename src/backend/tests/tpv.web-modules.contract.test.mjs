@@ -460,9 +460,9 @@ test("TPV physical, commercial and audit ledgers are separated from the fiscal g
     assert.match(config, /SCHEMA_VERSION: 3/);
     assert.doesNotMatch(config, /TPV_HISTORICAL_POLICY|TPV_SYNTHETIC_LEDGER/);
     assert.doesNotMatch(config, /ALLOW_REAL_PAYMENTS|ALLOW_NATIVE_WRITES|CAPABILITIES:/);
-    assert.match(repository, /assertTpvOperationalLedgerConfigured/);
+    assert.match(repository, /assertTpvLedgerTypeSupported/);
     assert.doesNotMatch(repository, /TPV_OPERATIONAL_LEDGER_NOT_CONFIGURED/);
-    assert.match(repository, /assertTpvOperationalLedgerConfigured\(ledgerType = "fiscal"\)/);
+    assert.match(repository, /assertTpvLedgerTypeSupported\(ledgerType = "fiscal"\)/);
     assert.match(repository, /TPV_COMMERCIAL_SALES_MUST_USE_TRANSACCIONES_TPV/);
     assert.match(repository, /_isTpvLedgerItem/);
     assert.doesNotMatch(repository, /_isHistoricalTpvLedgerItem/);
@@ -798,7 +798,7 @@ test("TPV operational ledger assertions and operator resolution are inside WebMe
             const start = content.indexOf("export const " + method);
             assert.notEqual(start, -1, path + ":" + method + " exists");
             const tryIndex = content.indexOf("try {", start);
-            const guardIndex = content.indexOf("assertTpvOperationalLedgerConfigured(", start);
+            const guardIndex = content.indexOf("assertTpvLedgerTypeSupported(", start);
             const contextIndex = content.indexOf("resolveTpvContext(traceId)", start);
             const nextMethod = content.indexOf("export const ", start + 1);
             assert.ok(tryIndex > start && guardIndex > tryIndex && (nextMethod === -1 || guardIndex < nextMethod),

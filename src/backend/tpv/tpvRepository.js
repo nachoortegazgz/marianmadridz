@@ -39,10 +39,10 @@ const ALLOWED_TPV_COLLECTIONS = new Set(Object.values(TPV_COLLECTIONS));
 const REFUND_LOCK_TTL_MS = 300000;
 
 /**
- * Fiscal configuration gates fiscal-ledger writes only. Physical cash,
- * commercial sales and operational audit records have independent stores.
+ * Validates the requested logical ledger type. This does not probe CMS
+ * configuration, permissions, connectivity, or write availability.
  */
-export function assertTpvOperationalLedgerConfigured(ledgerType = "fiscal") {
+export function assertTpvLedgerTypeSupported(ledgerType = "fiscal") {
     const allowed = new Set(["physical", "commercial", "audit", "fiscal", "accounting"]);
     if (!allowed.has(ledgerType)) {
         const error = new Error("TPV_LEDGER_TYPE_INVALID");
