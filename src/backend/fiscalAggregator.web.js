@@ -400,7 +400,6 @@ export async function getLibroRegistroFacturasExpedidasInternal(year, quarter, o
   let orderIndex = 1;
 
   for (const m of fetchResult.items) {
-    if (options.requireRealRecords === true && m.recordNature !== "REAL") continue;
     const accountingAmount = _num(m.accountingAmount, "accountingAmount");
     const movementType = _readMovementType(m).toUpperCase();
     const operationNature = _readOperationNature(m);
