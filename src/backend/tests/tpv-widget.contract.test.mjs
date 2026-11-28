@@ -182,7 +182,7 @@ test("TPV bridge permits the context response and retries READY until a valid co
     assert.match(controller, /allowedTypes:\s*\[MESSAGE_TYPES\.READY,\s*MESSAGE_TYPES\.CONTEXT,\s*\.\.\.REQUEST_TYPES\]/);
     assert.match(controller, /receivedType: typeof detail\.receivedType/);
     assert.match(controller, /controllerBuild: CONTROLLER_BUILD/);
-    assert.match(controller, /TPV_BRIDGE_DIAGNOSTICS_2026-11-27/);
+    assert.match(controller, /TPV_BRIDGE_E2E_2026-11-28/);
     assert.ok(controller.includes("onError: (error, reportedDetail)"));
     assert.ok(controller.includes('reportedDetail && typeof reportedDetail === "object"'));
     assert.match(controller, /attemptedType: typeof detail\.attemptedType/);
