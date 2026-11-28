@@ -183,8 +183,7 @@ test("FISCAL-LOCK-08 rejects a malformed sequence counter without resetting it t
   wixDataMock._seed("CajaActual", [{
     _id: "SINGLE_ITEM_ID",
     singletonKey: "CAJA_PRINCIPAL",
-    fiscalSequenceCounter: "corrupt-counter",
-    sequenceCounters: { appliedMovementIds: [] },
+    sequenceCounters: { seqGlobal: "corrupt-counter", appliedMovementIds: [] },
   }]);
 
   const lock = await acquireFiscalLedgerLock("trace-sequence-counter-invalid-001", { waitMs: 0 });
@@ -194,8 +193,7 @@ test("FISCAL-LOCK-08 rejects a malformed sequence counter without resetting it t
       (error) => error?.code === "FISCAL_SEQUENCE_COUNTER_INVALID",
     );
     const register = await getCashRegisterSingleton();
-    assert.equal(register.fiscalSequenceCounter, "corrupt-counter");
-    assert.equal(register.sequenceCounters.seqGlobal, undefined);
+    assert.equal(register.sequenceCounters.seqGlobal, "corrupt-counter");
   } finally {
     await releaseFiscalLedgerLock(lock);
   }
