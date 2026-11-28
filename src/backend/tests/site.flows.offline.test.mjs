@@ -1543,6 +1543,29 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
   assert.strictEqual(maximumLength.data.transactionId.length, 128);
 });
 
+test('P0-FISCAL-TX-03 manual fiscal writer rejects missing VAT rate before ledger append', async () => {
+  wixDataMock._reset();
+  seedCajaPrincipal(new Date(Date.now() - 60_000));
+  await seedStaff({ resourceId: GUID_ADMIN_RESOURCE });
+  setMember({ _id: GUID_MEMBER, contactId: GUID_CONTACT, loginEmail: 'marta@test.local' });
+  const { cajas } = await freshImports();
+  await setupFiscalSecrets();
+
+  const result = await cajas.registerManualTransaction({
+    totalAmount: 50,
+    tipoFactura: 'F2',
+    operationDescription: 'Venta sin tipo impositivo',
+    paymentMethod: 'EFECTIVO',
+    movementType: 'VENTA',
+    transactionId: 'p0-missing-vat-rate-0001',
+    channelType: 'PRESENCIAL',
+  });
+
+  assert.equal(result.status, 'ERROR');
+  assert.equal(result.error.code, 'FISCAL_TAX_RATE_REQUIRED');
+  assert.equal((wixDataMock._store.get('MovimientosCaja') || []).length, 0);
+});
+
 test('P0-FISCAL-TX-02 identical retries are idempotent and changed payload is rejected', async () => {
   wixDataMock._reset();
   seedCajaPrincipal(new Date(Date.now() - 60_000));
