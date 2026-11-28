@@ -1317,7 +1317,8 @@ body {
           throw new Error("TPV_INVALID_AMOUNT");
         }
         const expectedSessionId = preview.sessionId;
-        if (state.busy !== true) throw new Error("TPV_OPERATION_STATE_INVALID");
+        if (state.busy) return { keepOpen: true };
+        setBusy(true);
 
         let openedSessionId = null;
         let confirmed = null;
@@ -1378,6 +1379,8 @@ body {
             return { keepOpen: true };
           }
           throw operationError;
+        } finally {
+          setBusy(false);
         }
       });
     } catch (e) {
