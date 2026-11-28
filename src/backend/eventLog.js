@@ -99,8 +99,15 @@ const REFUND_MOVEMENT_TYPES = new Set([
 
 function normalizeAccountingAmount(input = {}) {
     const movementType = _safeTrim(input.movementType).toUpperCase();
-    const rawAmount = Number(input.accountingAmount ?? input.totalAmount ?? 0);
-    if (!Number.isFinite(rawAmount)) throw new Error("ACCOUNTING_AMOUNT_INVALID");
+    const raw = input.accountingAmount ?? input.totalAmount;
+    const validType = typeof raw === "number" ||
+        (typeof raw === "string" && raw.trim() !== "");
+    const rawAmount = validType ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(rawAmount)) {
+        const error = new Error("ACCOUNTING_AMOUNT_INVALID");
+        error.code = "ACCOUNTING_AMOUNT_INVALID";
+        throw error;
+    }
     return REFUND_MOVEMENT_TYPES.has(movementType)
         ? -Math.abs(rawAmount)
         : rawAmount;
