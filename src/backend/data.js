@@ -123,25 +123,43 @@ export function readInvoiceIssueDate(item) {
     return readMovementField(item, "fechaExpedicionFactura");
 }
 
+function _readRequiredMovementNumber(item, field) {
+    const raw = readMovementField(item, field);
+    const validType = typeof raw === "number" ||
+        (typeof raw === "string" && raw.trim() !== "");
+    const amount = validType ? Number(raw) : Number.NaN;
+    if (!Number.isFinite(amount)) {
+        const error = new Error("MOVEMENT_NUMERIC_FIELD_INVALID:" + field);
+        error.code = "MOVEMENT_NUMERIC_FIELD_INVALID";
+        error.meta = { field, movementId: item?._id || null };
+        throw error;
+    }
+    return amount;
+}
+
+function _readOptionalMovementNumber(item, field) {
+    const raw = readMovementField(item, field);
+    return raw === undefined || raw === null
+        ? 0
+        : _readRequiredMovementNumber(item, field);
+}
+
 export function readTotalAmount(item) {
-    // MATRIZ v15: totalAmount es clave canonica propia (total cobrado con
-    // impuestos); "importeTotal" se tolera solo como alias historico via el
-    // contrato unico MOVEMENT_HISTORICAL_READ_ALIASES.
-    return Number(readMovementField(item, "totalAmount")) || 0;
+    // Canonical total with tax; historical aliases are resolved only by readMovementField.
+    return _readRequiredMovementNumber(item, "totalAmount");
 }
 
 export function readBaseAmount(item) {
-    // MATRIZ v15: amount es clave canonica propia (importe base) hasta cerrar
-    // el ADR de la formula fiscal; aliases historicos via contrato unico.
-    return Number(readMovementField(item, "amount")) || 0;
+    // Canonical taxable/non-taxable base; historical aliases are resolved only by readMovementField.
+    return _readRequiredMovementNumber(item, "amount");
 }
 
 export function readTaxBase(item) {
-    return Number(readMovementField(item, "taxBase")) || 0;
+    return _readRequiredMovementNumber(item, "taxBase");
 }
 
 export function readTaxAmount(item) {
-    return Number(readMovementField(item, "taxAmount")) || 0;
+    return _readRequiredMovementNumber(item, "taxAmount");
 }
 
 export function readInvoiceType(item) {
@@ -205,7 +223,7 @@ export function readRecordTimestamp(item) {
 }
 
 export function readSurchargeAmount(item) {
-    return Number(readMovementField(item, "surchargeAmount")) || 0;
+    return _readOptionalMovementNumber(item, "surchargeAmount");
 }
 
 export function readFiscalPayload(item) {
