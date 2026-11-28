@@ -11,7 +11,7 @@ import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV 
 import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { obtenerResumenCaja, generarTicketX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
-import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV } from "backend/tpv/tpvCatalogo.web";
+import { obtenerServicios, obtenerProductos, obtenerStaff, obtenerVariantesProducto, buscarClientesTPV, obtenerReservasClienteTPV } from "backend/tpv/tpvCatalogo.web";
 import { obtenerConfiguracionTPV } from "backend/tpv/tpvUtils.web";
 import { obtenerPermisosTPV } from "backend/tpv/tpvPermisos.web";
 
@@ -25,6 +25,7 @@ const REQUEST_TYPES = Object.freeze([
     "CATALOG_VARIANTS",
     "CATALOG_STAFF",
     "CUSTOMERS_SEARCH",
+    "CUSTOMER_BOOKINGS",
     "SALE_VALIDATE",
     "SALE_REGISTER",
     "CASH_MOVEMENT",
@@ -334,6 +335,12 @@ async function dispatch(message) {
             return obtenerStaff();
         case "CUSTOMERS_SEARCH":
             return buscarClientesTPV({ search: optionalString(payload.search, 100) || "" });
+        case "CUSTOMER_BOOKINGS":
+            return obtenerReservasClienteTPV({
+                identityId: optionalString(payload.contactId, 64) || "",
+                limit: boundedInteger(payload.limit ?? 50, "BOOKINGS_LIMIT", 1, 100),
+                cursor: optionalString(payload.cursor, 16000) || "",
+            });
         case "SALE_VALIDATE": {
             if (!Array.isArray(payload.lineItems) || payload.lineItems.length === 0) throw new Error("TPV_LINES_REQUIRED");
             if (payload.lineItems.length > 100 || (Array.isArray(payload.payments) && payload.payments.length > 100)) {
