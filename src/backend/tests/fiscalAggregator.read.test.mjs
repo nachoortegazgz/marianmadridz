@@ -50,7 +50,7 @@ test('READ-04 tax rate prefers canonical tipoImpositivo', () => {
   assert.strictEqual(T.readTaxRate({ tipoImpositivo: 0.21, taxRate: 0.1, tasaIva: 0.04 }), 0.21);
 });
 
-test('READ-06 numeric fiscal fields reject missing or invalid values without masking them as zero', () => {
+test('NUM-01 numeric fiscal fields reject missing or invalid values without masking them as zero', () => {
   for (const [reader, value, field] of [
     [T.readTaxableAmount, null, 'taxBase'],
     [T.readTaxAmount, '', 'taxAmount'],
@@ -64,13 +64,13 @@ test('READ-06 numeric fiscal fields reject missing or invalid values without mas
   }
 });
 
-test('READ-07 zero remains a valid fiscal numeric value', () => {
+test('NUM-02 zero remains a valid fiscal numeric value', () => {
   assert.strictEqual(T.readTaxableAmount({ taxBase: 0 }), 0);
   assert.strictEqual(T.readTaxAmount({ taxAmount: 0 }), 0);
   assert.strictEqual(T.readTaxRate({ tipoImpositivo: 0 }), 0);
 });
 
-test('READ-08 fiscal aggregation rejects a movement without accountingAmount', () => {
+test('NUM-03 fiscal aggregation rejects a movement without accountingAmount', () => {
   const state = T.initTaxAccumulator(['2026-01']);
   assert.throws(
     () => T.accumulatePage([{
