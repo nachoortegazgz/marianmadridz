@@ -1523,6 +1523,7 @@ test('P0-FISCAL-TX-01 transactionId is mandatory and capped at 128 characters', 
     paymentMethod: 'EFECTIVO',
     movementType: 'VENTA',
     tipoFactura: 'F2',
+    tipoImpositivo: 0.21,
     operationDescription: 'Prueba de contrato transactionId',
     channelType: 'PRESENCIAL',
   };
