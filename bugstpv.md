@@ -2,7 +2,7 @@
 >
 > Esta auditoría antecede a la integración nativa implementada en la rama `feat/tpv-native-wix-commerce-2026-11-28`. Los hallazgos que siguen deben contrastarse con el código actual y con `tests/runtime/RUNTIME-TEST-PLAN.md`.
 >
-> **Implementado en código en esta rama (pendiente de CI final y Runtime Preview):**
+> **Implementado en código y CI offline PASS en esta rama; Runtime Preview pendiente:**
 > - Pedido nativo Wix Orders: creación, correlación por `channelInfo.externalOrderId`, lectura posterior y verificación de total/estado.
 > - Venta TPV persistida antes del pedido Wix, con recuperación por clave idempotente.
 > - Cobro en efectivo mediante `orderTransactions.addPayments` como pago offline; el TPV no simula un cobro de tarjeta ni procesa una pasarela.
@@ -18,7 +18,7 @@
 > - Devoluciones/reembolsos nativos, cancelación de pedidos pagados, factura/recibo y cumplimiento fiscal productivo.
 > - Pruebas de permisos con usuarios/cajeros reales; Preview ejecuta como Admin y no acredita los roles productivos.
 >
-> **Evidencia:** CI offline se informa por SHA y no sustituye Runtime Preview. No se debe declarar PASS/GO hasta completar ambos niveles.
+> **Evidencia:** CI offline PASS en SHA `24a5d851a0725db8713cf426cdc41300e450f2ac` (97 suites, 864 tests, 0 fallos; Wix SDK verifiers, ESLint y auditoría SUCCESS). No sustituye Runtime Preview. No se debe declarar GO hasta completar ambos niveles.
 >
 > ---
 
