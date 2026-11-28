@@ -526,19 +526,17 @@ export const registrarVenta = webMethod(
     Permissions.SiteMember,
     async (input = {}) => {
         const traceId = makeTraceId("tpv-sale-register");
+        let idempotencyKey = "";
+        let requestFingerprint = null;
+        let customerContactId = null;
         try {
             await requireTpvOperator(traceId);
             const operator = await getMyCajeroContext(traceId);
             if (!operator?.operatorId) throw new Error("TPV_OPERATOR_CONTEXT_UNAVAILABLE");
-            const idempotencyKey = String(input.idempotencyKey || "").trim();
+            idempotencyKey = String(input.idempotencyKey || "").trim();
             const sessionId = String(input.sessionId || "").trim();
             if (!UUID_V4.test(idempotencyKey)) throw new Error("TPV_IDEMPOTENCY_KEY_INVALID");
             if (!GUID.test(sessionId)) throw new Error("TPV_SESSION_ID_INVALID");
-
-            const session = await latestOpenTpvSession();
-            if (!session || session.sessionId !== sessionId) {
-                throw new Error("TPV_SESSION_NOT_OPEN");
-            }
 
             const pagosInput = Array.isArray(input.pagos) ? input.pagos : [];
             assertTpvPaymentMethodsSupported(pagosInput);
@@ -560,12 +558,12 @@ export const registrarVenta = webMethod(
                 throw new Error("TPV_SALE_NOT_READY:" + readiness.saleReadinessBlockers.join(","));
             }
 
-            const customerContactId = input.contactId ? String(input.contactId).trim() : null;
+            customerContactId = input.contactId ? String(input.contactId).trim() : null;
             if (customerContactId && !GUID.test(customerContactId)) {
                 throw new Error("TPV_CUSTOMER_CONTACT_ID_INVALID");
             }
             const operatorResourceId = operator?.operatorResourceId || null;
-            const requestFingerprint = createHash("sha256").update(JSON.stringify({
+            requestFingerprint = createHash("sha256").update(JSON.stringify({
                 sessionId,
                 lineas,
                 pagos: validated.pagos,
@@ -585,6 +583,11 @@ export const registrarVenta = webMethod(
                         replayed: true,
                         traceId,
                     });
+                }
+
+                const session = await latestOpenTpvSession();
+                if (!session || session.sessionId !== sessionId) {
+                    throw new Error("TPV_SESSION_NOT_OPEN");
                 }
 
                 const recordMetadata = createTpvRecordMetadata({
@@ -756,8 +759,29 @@ export const registrarVenta = webMethod(
                 });
             });
         } catch (error) {
+            const errorCode = _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED");
+            if (UUID_V4.test(idempotencyKey) && requestFingerprint && errorCode !== "TPV_IDEMPOTENCY_CONFLICT") {
+                try {
+                    const existing = await readExisting(idempotencyKey);
+                    if (existing && existing.requestFingerprint === requestFingerprint) {
+                        return await withTpvSessionLock(existing.sessionId, traceId, async () =>
+                            resumeExistingSale(existing, {
+                                buyer: customerContactId ? { contactId: customerContactId } : {},
+                                replayed: true,
+                                traceId,
+                            })
+                        );
+                    }
+                } catch (recoveryError) {
+                    logger.error("TPV sale post-error recovery failed", {
+                        traceId,
+                        idempotencyKey,
+                        errorCode: _safeTpvErrorCode(recoveryError, "TPV_SALE_RECOVERY_FAILED"),
+                    });
+                }
+            }
             return tpvError(
-                _safeTpvErrorCode(error, "TPV_SALE_PERSISTENCE_FAILED"),
+                errorCode,
                 "No se ha podido completar la venta. Consulta la clave de operación antes de repetirla.",
                 [
                     "No generes una segunda venta con una clave nueva hasta comprobar TransaccionesTPV y el pedido Wix.",
