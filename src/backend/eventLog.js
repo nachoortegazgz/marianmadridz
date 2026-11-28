@@ -65,7 +65,7 @@ import {
 } from "backend/internalConfig";
 
 import { readFiscalPayload, readMovementField, readMovementHash } from "backend/data";
-import { assertFiscalMovementInputEnums, isValidNifOrEuVat, isExplicitSimulationLedgerRecord } from "backend/validation";
+import { assertFiscalMovementInputEnums, isValidNifOrEuVat } from "backend/validation";
 
 import { hashChain } from "backend/securityEngine";
 import { buildEventLogFiscalChainPayload } from "backend/fiscalHashPayload";
@@ -322,11 +322,10 @@ function _buildInternalFiscalChainPayload(movement, generatedAt) {
 async function _getLastCashEvent() {
     const res = await dalQuery(MOVIMIENTOS_CAJA_COL)
         .gt("sequenceNumber", 0)
-        .ne("recordSource", "SMOKE_TEST")
         .descending("sequenceNumber")
         .limit(20)
         .find({ consistencyMode: "strong" });
-    return (res?.items || []).find((item) => !isExplicitSimulationLedgerRecord(item)) || null;
+    return (res?.items || [])[0] || null;
 }
 
 // ============================================================================
