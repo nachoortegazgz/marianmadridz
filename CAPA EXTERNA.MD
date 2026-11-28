@@ -1,3 +1,18 @@
+> **ESTADO DE VIGENCIA — 28-11-2026**  
+> Este dossier es una propuesta de diseño y configuración, no evidencia de que SharePoint, Entra ID, Power Automate o el transporte estén desplegados. Para la arquitectura vigente y los contratos actuales prevalece [docs/architecture/CAPA-EXTERNA-MASTER-DOSSIER.md](docs/architecture/CAPA-EXTERNA-MASTER-DOSSIER.md).  
+>  
+> **Correcciones obligatorias antes de ejecutar los ejemplos de este documento:**  
+> - No crear ni consultar `DatosFiscales` ni `PaquetesGestoria`: no forman parte del CMS físico vigente. La configuración fiscal canónica está asociada a `MapaStaff` con `recordType=CONFIG_SISTEMA`; el almacenamiento de paquetes en CMS fue retirado.  
+> - No insertar paquetes en `HistoricoCierresZ`: es un registro de cierres Z, no un almacén documental. La Capa 3 debe usar el contrato de exportación y un registro de entrega separado.  
+> - No usar `wix-secrets-backend.getSecret()`: está deprecado. La implementación nueva debe usar `wix-secrets-backend.v2` y `secrets.getSecretValue` en backend, elevado según la API oficial de Wix.  
+> - No considerar implementados los cinco flujos de Power Automate ni la biblioteca SharePoint por aparecer aquí descritos. Su existencia, permisos y ejecución requieren verificación en el tenant.  
+> - El límite general de pagos en efectivo es **1.000 € cuando alguna parte actúa como empresario o profesional**; la excepción es 10.000 € para persona física pagadora sin domicilio fiscal en España que no actúe como empresario/profesional. No existe un límite general B2C de 2.500 €. Véase Ley 7/2012, art. 7, modificada por Ley 11/2021.  
+> - No aplicar un plazo único de seis años a toda la información: el Código de Comercio establece seis años para libros/documentación empresarial; el registro de jornada se conserva cuatro años; la prescripción tributaria general de cuatro años no sustituye al deber mercantil de conservación. Definir retención por categoría y finalidad.  
+>  
+> **Estado del código:** preparación de un informe trimestral en memoria; transporte a SharePoint, read-back, outbox y aceptación de gestoría aún no acreditados. El paquete actual se etiqueta como borrador interno y no como libro oficial de facturas ni presentación AEAT.
+>
+> ---
+>
 Perfecto. Eliminamos **`_Buzon_Entrada`**, **`_Inbox_Web`**, **`_Alertas_Error`** y cualquier carpeta técnica intermedia.
 
 El principio de este rediseño es: **Marian solo ve carpetas humanas de negocio** y **el contable abre el mes y en 1 segundo tiene todo listo para importar fuera (A3, Sage, Contasol, Holded) o descargarlo en un único ZIP**.
