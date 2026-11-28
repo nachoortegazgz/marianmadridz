@@ -495,4 +495,13 @@ test("TPV locks preserve CajaActual integrity; only session opening can supersed
     const guard = repository.slice(guardStart, guardEnd);
     assert.match(guard, /if \(allowLegacyProjection && _isLegacyUnverifiedProjection\(caja\)\) return true/);
     assert.match(guard, /assertTpvCajaIntegrity\(caja, \{ allowBootstrap: true \}\)/);
+    const legacyStart = repository.indexOf("function _isLegacyUnverifiedProjection(");
+    const legacyEnd = repository.indexOf("function _sessionFromCaja", legacyStart);
+    const legacyProjection = repository.slice(legacyStart, legacyEnd);
+    assert.ok(legacyStart >= 0 && legacyEnd > legacyStart);
+    assert.doesNotMatch(legacyProjection, /SIMULATED_SUCCESS|SYNTHETIC|SANDBOX|QA/);
+    assert.ok(legacyProjection.includes('cashRegisterStatus === "ABIERTA"'));
+    assert.ok(legacyProjection.includes('snapshotSource === "MOVIMIENTOS_CAJA_RECONCILIADOS"'));
+    assert.ok(legacyProjection.includes('String(caja?.traceId || "") === "0"'));
+    assert.ok(legacyProjection.includes('!String(state?.sessionId || "").trim()'));
 });
