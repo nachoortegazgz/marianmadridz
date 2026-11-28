@@ -7,11 +7,6 @@ on:
         description: HTTPS Preview URL opened from Wix Editor / Local Editor for this commit
         required: true
         type: string
-      authenticated_browser:
-        description: Use WIX_STORAGE_STATE_B64 for the authenticated Preview browser
-        required: true
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -54,7 +49,6 @@ jobs:
           NODE
       - run: npm ci
       - name: Decode authenticated browser state
-        if: inputs.authenticated_browser == true
         env:
           WIX_STORAGE_STATE_B64: ${{ secrets.WIX_STORAGE_STATE_B64 }}
         run: |
@@ -69,7 +63,6 @@ jobs:
           npm install --global @playwright/test@1.65.1
           playwright install --with-deps chromium
       - name: Execute authenticated TPV E2E
-        if: inputs.authenticated_browser == true
         env:
           WIX_PREVIEW_URL: ${{ inputs.preview_url }}
           WIX_STORAGE_STATE_PATH: ${{ runner.temp }}/wix-auth/storage-state.json
@@ -79,7 +72,7 @@ jobs:
           export PLAYWRIGHT_MODULE_ROOT="$(npm root --global)"
           node scripts/wix-preview-tpv-e2e.mjs
       - name: Upload E2E report only (never storageState)
-        if: always() && inputs.authenticated_browser == true
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: wix-tpv-editor-preview-e2e
