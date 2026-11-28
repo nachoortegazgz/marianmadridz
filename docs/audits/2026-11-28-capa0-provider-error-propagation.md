@@ -1,6 +1,6 @@
 # Capa 0 — proveedores, identidad y DAL — 28-11-2026
 
-Estado: PR #675 integrada en main (squash 910ad3faa6e543c23e81b2902726d4d8cd43087f); CI offline PASS. Sin modificaciones de CMS, publicación, cobros ni operaciones fiscales.
+Estado: PR #675 integrada en `main` mediante squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`. CI offline PASS en el HEAD validado de PR #675. Sin modificaciones de CMS, publicación, cobros ni operaciones fiscales.
 
 ## Diagnóstico confirmado
 
@@ -30,7 +30,7 @@ Defectos confirmados en el código:
 - horario.web.js mantenía una resolución de identidad propia basada en contactId, en vez de delegar en security.js, que además verifica el memberId asociado y re-resuelve el resourceId.
 - citasManager.web.js ocultaba errores de consulta de staff en la comprobación de rol administrador; además consultaba staff antes de comprobar si el miembro era propietario de la reserva.
 
-## Cambios propuestos
+## Cambios integrados en PR #675
 
 - DAL: argumentos inválidos generan DATA_COLLECTION_REQUIRED o DATA_ITEM_ID_REQUIRED; ausencia real sigue siendo null.
 - Código muerto: eliminado queryReferencedItems() al no existir consumidores.
@@ -71,7 +71,13 @@ Defectos confirmados en el código:
 
 ## Validación
 
-- PR #675: Layer 1 29/390 PASS; Layer 2 16/250 PASS; suite offline 89/804 PASS; SDK Cart, Transactions y TPV PASS; ESLint, npm audit y Gitleaks PASS. Backend run 46083433335; Secret scanning run 46083433301.
-- npm ci/lint/test local: no ejecutados en este entorno.
-- Wix Local Editor/Preview/Runtime: pendiente.
-- E2E: pendiente, sin escrituras económicas o fiscales reales.
+- PR #675 integrada en `main`: squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`.
+- HEAD de PR validado: `7073d3de` (SHA corto documentado en el PR).
+- Layer 1: 29 suites / 390 tests PASS.
+- Layer 2: 16 suites / 250 tests PASS.
+- Suite offline completa: 89 suites / 804 tests PASS.
+- Wix eCommerce Cart, Transactions y TPV SDK: PASS.
+- ESLint, npm audit y Gitleaks: PASS.
+- Backend quality gates run `46083433335`; secret scanning run `46083433301`.
+- No se ejecutaron npm ci/lint/test local en este entorno.
+- Wix Local Editor/Preview/Runtime y E2E siguen pendientes; sin escrituras económicas o fiscales reales.

@@ -41,8 +41,8 @@ export const CONSISTENCY = Object.freeze({
 });
 
 export const order = Object.freeze({
-    asc: (fieldName) => [{ fieldName, direction: "ASC" }],
-    desc: (fieldName) => [{ fieldName, direction: "DESC" }],
+    asc: (fieldName) => [{ fieldName, order: "ASC" }],
+    desc: (fieldName) => [{ fieldName, order: "DESC" }],
 });
 
 /*
@@ -111,30 +111,48 @@ function normalizeOffset(value) {
 }
 
 function normalizeSort(sort) {
-    if (!Array.isArray(sort)) return [];
-    return sort
-        .map((entry) => {
-            if (typeof entry === "string") {
-                const [fieldName, direction = "ASC"] =
-                    entry.trim().split(/\s+/);
-                if (!fieldName) return null;
-                return {
-                    fieldName,
-                    order: direction.toUpperCase() === "DESC" ? "DESC" : "ASC",
-                };
+    if (sort === undefined || sort === null) return [];
+    if (!Array.isArray(sort)) {
+        throw dataAccessError("QUERY_SORT_INVALID");
+    }
+
+    return sort.map((entry) => {
+        let fieldName;
+        let rawOrder = "ASC";
+
+        if (typeof entry === "string") {
+            const parts = entry.trim().split(/\s+/);
+            if (!parts[0] || parts.length > 2) {
+                throw dataAccessError("QUERY_SORT_INVALID");
             }
-            if (entry && typeof entry === "object") {
-                const fieldName = String(entry.fieldName || "");
-                if (!fieldName) return null;
-                return {
-                    fieldName,
-                    order: String(entry.direction || entry.order || "ASC")
-                        .toUpperCase() === "DESC" ? "DESC" : "ASC",
-                };
+            fieldName = parts[0];
+            if (parts.length === 2) rawOrder = parts[1];
+        } else if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+            if (Object.prototype.hasOwnProperty.call(entry, "direction")) {
+                throw dataAccessError("QUERY_SORT_DIRECTION_UNSUPPORTED");
             }
-            return null;
-        })
-        .filter(Boolean);
+            if (typeof entry.fieldName !== "string") {
+                throw dataAccessError("QUERY_SORT_FIELD_INVALID");
+            }
+            fieldName = entry.fieldName.trim();
+            if (entry.order !== undefined) rawOrder = entry.order;
+        } else {
+            throw dataAccessError("QUERY_SORT_INVALID");
+        }
+
+        if (!fieldName || fieldName.length > 1000) {
+            throw dataAccessError("QUERY_SORT_FIELD_INVALID");
+        }
+        if (typeof rawOrder !== "string") {
+            throw dataAccessError("QUERY_SORT_ORDER_INVALID");
+        }
+        const normalizedOrder = rawOrder.trim().toUpperCase();
+        if (normalizedOrder !== "ASC" && normalizedOrder !== "DESC") {
+            throw dataAccessError("QUERY_SORT_ORDER_INVALID");
+        }
+
+        return { fieldName, order: normalizedOrder };
+    });
 }
 
 const elevatedGet = auth.elevate(items.get);

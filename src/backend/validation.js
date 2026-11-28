@@ -117,6 +117,11 @@ export function assertCitasF2Insert(item) {
         String(item.bookingType).trim() === "") {
         throw new Error("SCHEMA_VIOLATION: CitasF2 insert requires bookingType");
     }
+    if (normalizeBookingType(item.bookingType) !== item.bookingType) {
+        const error = new Error("SCHEMA_VIOLATION: CitasF2 insert requires canonical bookingType");
+        error.code = "BOOKING_TYPE_NON_CANONICAL";
+        throw error;
+    }
     for (const field of ["serviceId", "resourceId"]) {
         if (!isValidGuid(item[field])) {
             throw new Error(`SCHEMA_VIOLATION: CitasF2 requires valid GUID ${field}`);

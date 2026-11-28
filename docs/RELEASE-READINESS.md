@@ -1,55 +1,66 @@
-# Release readiness — 2026-11-27
+# Release readiness — 2026-11-28
 
-**NO-GO para MVP operativo/comercial.** Desarrollo y QA offline: PASS. No hay aceptación Wix Runtime ni habilitación productiva.
+**Estado global: NO-GO para MVP operativo/comercial.** El sitio permanece Draft/no publicado según el último read-back documentado. La validación offline de Capa 0 está verde para PR #675 (89 suites / 804 tests PASS en su HEAD validado); no hay aceptación Wix Local Editor/Preview E2E, Wix Runtime ni producción acreditada.
+
+El estado detallado, los SHAs y la evidencia más reciente se mantienen en [STATE-NOW](STATE-NOW.md). Este documento define gates y criterios de aceptación; no duplica el historial de CI.
 
 ## Gates por contexto
 
 | Control | Desarrollo / CI | Wix Preview aislado | Producción |
 |---|---|---|---|
-| Configuración fiscal/serie ausente | No bloquea pruebas de dominio; probar el rechazo concreto | No bloquea si los efectos externos están interceptados | Bloquea la operación fiscal afectada |
+| Configuración fiscal/serie ausente | No bloquea pruebas de dominio; probar el rechazo específico | No bloquea si efectos externos están interceptados y el fixture es válido | Bloquea la operación fiscal afectada |
 | Identidad/permisos inválidos | Bloquea la operación bajo prueba | Bloquea | Bloquea |
 | Esquema, importe, secuencia o hash inválido | Bloquea el writer afectado | Bloquea | Bloquea |
 | Idempotencia/concurrencia no garantizadas | Las pruebas deben detectar el defecto | Bloquea escritura | Bloquea |
-| Pago, AEAT, terminal o notificación externa | Dobles simulados; cero efectos reales | Dobles o tenant de pruebas | Solo con configuración y autorización |
-| Persistencia CMS | Repositorio/fixture aislado | Solo writer canónico y fixture aislado | Writer autorizado y controles completos |
+| Pago, AEAT, terminal o notificación externa | Dobles simulados; cero efectos reales | Dobles o tenant de pruebas aislado | Solo con configuración y autorización |
+| Persistencia CMS | Repositorio/fixture aislado | Solo writer canónico y fixture aislado inequívoco | Writer autorizado y controles completos |
 | Wix Runtime | No requerido para unitarias/contrato | Requerido para aceptación Runtime | Evidencia posterior al despliegue |
+| Datos históricos/append-only | No alterar | No alterar; pruebas append-only aisladas | Rectificaciones trazables, nunca sobrescritura destructiva |
 
-## Estado verificado
+## Evidencia vigente conocida
 
-- PR #651 integrada en `main` (`abf862c9e7cbdc393c0186f650ed30f57aaeeee6`); código validado con CI PASS: `7771f4c6bb7da61ecf60bd58708b26d5331745dd`.
-- Layer 1: 29 suites / 376 tests PASS.
-- Layer 2: 16 suites / 249 tests PASS.
-- Suite completa: 81 suites / 763 tests PASS.
-- Gitleaks, npm audit, contratos SDK Wix y ESLint: PASS.
-- No hay evidencia Runtime E2E de venta, pago, movimiento físico, devolución, arqueo o cierre.
-- Configuración fiscal productiva y mapping AEAT no acreditados; no conectar el hash interno como hash AEAT.
-- Tres recuperaciones fiscales pendientes de correlación según último read-back.
-- Seis divergencias Bookings/CitasF2 pendientes de reconciliación.
-- Writer de jornada y transporte SharePoint/Graph E2E no validados.
-- Sin evidencia de sincronización del SHA Git con el código instalado en Wix.
+Consultar [STATE-NOW](STATE-NOW.md) para el detalle fechado. A 2026-11-28:
+
+- PR #670 está integrada en `main`; su CI offline reportó 88 suites / 794 tests PASS.
+- PR #675 está integrada en `main` mediante squash commit `910ad3faa6e543c23e81b2902726d4d8cd43087f`; su HEAD validado reportó 89 suites / 804 tests PASS, SDK Cart/Transactions/TPV, ESLint, npm audit y Gitleaks PASS.
+- La evidencia CI pertenece a los HEAD validados de cada PR; no se debe trasladar automáticamente a commits posteriores.
+- Capa 0 continúa EN EJECUCIÓN: quedan propagación de fallos del almacén de secretos, verificación de cobertura de Staff Members v1 para todos los resourceId, conversiones monetarias, configuración de moneda, matriz de writers/idempotencia, deuda/código muerto y validación Runtime.
+- El último read-back Wix documentado es 27-11-2026 y es histórico: Draft, una `CajaActual` ABIERTA, movimientos e históricos existentes y divergencias Bookings/CitasF2. No usar esos registros como fixtures ni asumir que los recuentos siguen vigentes.
+- No se ha acreditado sincronización entre el SHA de Git y el código instalado en Wix.
+- No se han acreditado venta, cobro, movimiento físico, devolución, arqueo, cierre Z ni jornada en Wix Runtime.
 
 ## Invariantes de QA
 
-- Un solo código y contrato de dominio en todos los contextos.
-- No borrar registros ni purgar físicamente. `bulkRemove` está prohibido; cachés, tokens, locks y rate limits autorizados se retiran lógicamente mediante CAS. Evidencia de idempotencia, auditoría y ledgers se conserva.
-- No modificar ledgers contabilizados, cierres ni evidencia histórica.
-- No reutilizar la caja singleton ABIERTA ni escribir sobre históricos.
-- Las pruebas usan fixtures y adaptadores simulados; ningún pago, reembolso, remesa AEAT, terminal o notificación real.
-- Los errores son específicos, estables y accionables. El detalle técnico expuesto al frontend se limita al código seguro; no se exponen mensajes brutos ni secretos.
+- Un solo código y contrato de dominio para todos los contextos.
+- No usar bloqueos globales por entorno ni bloqueos fiscales genéricos para impedir pruebas de dominio.
+- No borrar registros ni purgar físicamente. Los ledgers y registros append-only se conservan; las correcciones se realizan con eventos rectificativos.
+- No modificar ni reutilizar la caja singleton ABIERTA ni históricos compartidos.
+- Las pruebas usan fixtures y adaptadores simulados. Ningún pago, reembolso, remesa AEAT, terminal o notificación real.
+- Las escrituras Wix de prueba requieren ámbito aislado inequívoco y writer canónico. Los registros append-only de prueba se conservan y rectifican mediante nuevos eventos.
+- Errores específicos, estables y accionables; no exponer mensajes brutos ni secretos.
 - CI verde no autoriza publicación ni habilitación productiva.
 
 ## Criterios GO
 
-1. PR #651 integrada tras revisión final de diff, CI PASS y reversión definida.
-2. WebMethods TPV y bridge aceptados en Wix Preview/Runtime sobre identidad y fixture aislados.
-3. Confirmar destino de escritura y sincronización del SHA/fingerprint instalado.
-4. Configuración fiscal validada por fuente oficial y revisión profesional; mapping AEAT verificado.
-5. Correlacionar recuperaciones fiscales pendientes sin alterar registros fuente.
-6. Reconciliar Bookings/CitasF2 con proceso idempotente y evidencia.
-7. Validar pagos simulados, devoluciones, caja, cierres, conciliación y ausencia de efectos externos.
-8. Validar transporte Capa 3 en tenant SharePoint aislado.
-9. Superar CI, revisión, seguridad, reversión y aceptación posterior.
+1. Capa 0 cerrada en código y contratos con consumidores inventariados, pruebas pertinentes y sin fallbacks silenciosos que oculten fallos.
+2. CI completo PASS en el SHA candidato a release, con revisión final del diff y estrategia de reversión.
+3. Bridge TPV y WebMethods aceptados en Wix Preview/Runtime sobre identidad y fixture aislados.
+4. Confirmar destino de escritura y sincronización del SHA/fingerprint instalado en Wix.
+5. Reservas Bookings V2 y proyección CitasF2 reconciliadas con proceso idempotente y evidencia.
+6. Validar TPV: intención comercial, pago verificado simulado, movimiento físico de prueba, proyección, idempotencia, concurrencia, recuperación, devoluciones y cierres, sin efectos económicos reales.
+7. Validar jornada laboral y sus permisos/persistencia en Runtime aislado.
+8. Configuración fiscal y mapping normativo contrastados con fuentes oficiales y revisión profesional antes de habilitar operaciones fiscales productivas.
+9. Validar transporte Capa 3 en tenant SharePoint aislado, con permisos y evidencia.
+10. Aprobación expresa del propietario para publicación, pagos reales y cualquier activación productiva.
 
-## Evidencia
+## Evidencia requerida por aceptación
 
-Cada PASS identifica SHA, entorno, prueba y resultado. Niveles: estático/contrato, unitario, integración simulada, Preview, Runtime y producción. No extrapolar.
+Cada PASS identifica:
+- SHA exacto y rama.
+- Entorno: estático, unitario, integración simulada, Preview, Runtime o producción.
+- Flujo/método ejecutado y precondiciones.
+- Identidad/rol y ámbito de datos cuando aplique.
+- Resultado, logs seguros, correlación y read-back.
+- Efectos externos: deben ser cero durante QA.
+
+Un smoke HTTP, test estático, mock o CI offline no acredita Runtime E2E. Un read-back de Site Context no acredita sincronización Git-Wix. No extrapolar evidencia entre niveles.

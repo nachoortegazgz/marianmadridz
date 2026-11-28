@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { queryItems, query, wql, getItem } from "backend/dataAccess";
+import { queryItems, query, wql, getItem, order } from "backend/dataAccess";
 import * as DAL from "backend/dataAccess";
 
 test("DATA-QUERY-01 rejects negative, fractional and out-of-range offsets", async () => {
@@ -48,4 +48,35 @@ test("DATA-QUERY-04 getItem distinguishes invalid arguments from a genuinely mis
 
 test("DATA-QUERY-05 unused queryReferencedItems API is removed after consumer audit", () => {
     assert.equal(DAL.queryReferencedItems, undefined);
+});
+
+
+test("DATA-QUERY-06 sort builders emit the official Wix order property", async () => {
+    assert.deepEqual(order.asc("createdAt"), [{ fieldName: "createdAt", order: "ASC" }]);
+    assert.deepEqual(order.desc("createdAt"), [{ fieldName: "createdAt", order: "DESC" }]);
+    const result = await queryItems({
+        dataCollectionId: "TestCollection",
+        sort: order.desc("createdAt"),
+        limit: 10,
+        offset: 0,
+    });
+    assert.ok(Array.isArray(result.items));
+});
+
+test("DATA-QUERY-07 rejects invalid sort entries instead of silently defaulting to ASC", async () => {
+    const invalidSorts = [
+        { sort: "createdAt UP", code: "QUERY_SORT_ORDER_INVALID" },
+        { sort: "createdAt DESC extra", code: "QUERY_SORT_INVALID" },
+        { sort: [{ fieldName: "createdAt", order: "UP" }], code: "QUERY_SORT_ORDER_INVALID" },
+        { sort: [{ fieldName: "createdAt", direction: "DESC" }], code: "QUERY_SORT_DIRECTION_UNSUPPORTED" },
+        { sort: [{ fieldName: "", order: "ASC" }], code: "QUERY_SORT_FIELD_INVALID" },
+        { sort: "createdAt", code: "QUERY_SORT_INVALID" },
+    ];
+
+    for (const { sort, code } of invalidSorts) {
+        await assert.rejects(
+            queryItems({ dataCollectionId: "TestCollection", sort }),
+            { code }
+        );
+    }
 });

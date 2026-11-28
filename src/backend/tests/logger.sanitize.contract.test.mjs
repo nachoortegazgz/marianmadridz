@@ -11,7 +11,7 @@ test("LOGGER-SEC-01 redacts secrets and contact PII in messages, URLs, stacks an
 
     try {
         logger.info(
-            "GET https://api.example.test/path?api_key=top-secret Bearer access-token user@example.com",
+            "GET https://api.example.test/path?api_key=top-secret Bearer access-token token=plain-token apiKey=plain-api-key privateKey=plain-private-key hmac=plain-hmac signature=plain-signature https://api.example.test/v1/token/path-token user@example.com",
             {
                 resendApiKey: "resend-secret",
                 emailAddress: "person@example.com",
@@ -22,7 +22,8 @@ test("LOGGER-SEC-01 redacts secrets and contact PII in messages, URLs, stacks an
             "trace-redaction"
         );
 
-        const error = new Error("provider failed access_token=private-token");
+        logger.info("authorization=Basic basic-secret", { cookie: "session=private-cookie" }, "trace-auth");
+        const error = new Error("provider failed access_token=private-token privateKey=stack-private-secret");
         error.stack = "Error: provider failed?token=stack-secret at /home/private-user/app.js:1:1";
         logger.errorWithStack(error, {
             requestUrl: "https://api.example.test/?access_token=url-secret",
@@ -35,7 +36,9 @@ test("LOGGER-SEC-01 redacts secrets and contact PII in messages, URLs, stacks an
     const joined = output.join("\n");
     for (const secret of [
         "top-secret", "access-token", "resend-secret", "client-secret",
-        "private-token", "stack-secret", "url-secret",
+        "private-token", "plain-token", "plain-api-key", "plain-private-key",
+        "plain-hmac", "plain-signature", "path-token", "basic-secret",
+        "private-cookie", "stack-private-secret", "stack-secret", "url-secret",
         "user@example.com", "person@example.com", "+34600111222",
     ]) {
         assert.equal(joined.includes(secret), false, "log leaked " + secret);
@@ -45,4 +48,5 @@ test("LOGGER-SEC-01 redacts secrets and contact PII in messages, URLs, stacks an
     assert.match(joined, /REDACTED_PII/);
     assert.match(joined, /trace-redaction/);
     assert.match(joined, /trace-error/);
+    assert.match(joined, /trace-auth/);
 });

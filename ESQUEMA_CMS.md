@@ -1,3 +1,7 @@
+> **DOCUMENTO HISTÓRICO / SUPERSEDIDO.** Este inventario resumido no es el esquema físico vigente. Su fuente sustituta es [docs/ESQUEMA_CMS.md](docs/ESQUEMA_CMS.md), actualizado mediante lectura Wix read-only del 27-11-2026. No usar ambos como fuentes equivalentes ni ejecutar migraciones/escrituras a partir de este archivo. Se conserva para trazabilidad histórica.
+
+---
+
 # COLECCIONES PERSONALIZADAS EN CMS
 
 ### 1. CAJA_ACTUAL
