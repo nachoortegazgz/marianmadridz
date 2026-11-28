@@ -1503,7 +1503,7 @@ async function _handleWixBookingsV2_onBookingCanceled(eventPayload) {
                         paymentMethod:
                             originalMovement.paymentMethod ||
                             LEDGER_PAYMENT_METHOD_ONLINE,
-                        totalAmount: -amountOriginal,
+                        totalAmount: amountOriginal === null ? null : -amountOriginal,
                         taxBase: -Math.abs(readTaxBase(originalMovement)),
                         taxAmount: -Math.abs(readTaxAmount(originalMovement)),
                         tipoImpositivo: originalTaxRate,
@@ -2279,7 +2279,8 @@ async function processCompletedEcommerceRefund(orderId, refundId, refundAmount, 
                 (typeof rawAmount === "string" && rawAmount.trim() !== "");
             const amount = validType ? Number(rawAmount) : Number.NaN;
             const cents = Math.round(Math.abs(amount) * 100);
-            if (!Number.isFinite(amount) || !Number.isSafeInteger(cents)) {
+            if (!Number.isFinite(amount) || !Number.isSafeInteger(cents) ||
+                !Number.isSafeInteger(sum + cents)) {
                 throw new Error("REFUND_HISTORY_AMOUNT_INVALID");
             }
             return sum + cents;
