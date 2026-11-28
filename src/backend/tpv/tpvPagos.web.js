@@ -1,5 +1,5 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { requireTpvOperator } from "backend/security";
 import { SDK_CONFIG } from "backend/internalConfig";
 import { makeTraceId } from "public/mmUtils";
 import { normalizePaymentMethod, toMinorUnits } from "backend/tpv/tpvUtils";
@@ -11,7 +11,7 @@ export const validarDesglosePagos = webMethod(
         const traceId = makeTraceId("tpv-payment-validation");
 
         try {
-            await requireCajero(traceId);
+            await requireTpvOperator(traceId);
             if (!Array.isArray(input.payments) || input.payments.length === 0) {
                 throw new Error("TPV_PAYMENTS_REQUIRED");
             }
