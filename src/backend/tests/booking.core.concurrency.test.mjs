@@ -510,6 +510,27 @@ test('BCORE-PER-01B canonical CitasF2 references are root fields, not duplicated
   }
 });
 
+test('BCORE-PER-01C CitasF2 writer requires explicit amount, canonical type and valid revision', async () => {
+  for (const overrides of [
+    { totalAmount: undefined },
+    { totalAmount: 'not-money' },
+    { bookingType: undefined, tipo: undefined },
+    { revision: 'not-a-revision' },
+    { revision: 0 },
+  ]) {
+    wixDataMock._reset();
+    await assert.rejects(
+      () => BC._persistBooking(baseParams(overrides), 'tr-invalid-citasf2-contract'),
+      (error) => error.code === BC.ERROR_CODES.INVALID_PAYLOAD
+    );
+    assert.equal((wixDataMock._store.get(CITAS) || []).length, 0);
+  }
+
+  wixDataMock._reset();
+  const freeBooking = await BC._persistBooking(baseParams({ totalAmount: 0 }), 'tr-explicit-zero-booking');
+  assert.equal(freeBooking.item.totalAmount, 0);
+});
+
 test('BCORE-PER-02 missing traceId rejected (SSOT-12 audit trail)', async () => {
   wixDataMock._reset();
   await assert.rejects(
