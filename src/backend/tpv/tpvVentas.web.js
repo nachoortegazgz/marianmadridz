@@ -427,7 +427,6 @@ async function appendSaleAudit(record, traceId) {
         traceId: record.traceId || traceId,
         payload: {
             sessionId: record.sessionId,
-            orderId: record.orderId || null,
             subtotalNeto: record.subtotalNeto,
             impuestosTotal: record.impuestosTotal,
             totalVenta: record.totalVenta,
@@ -437,6 +436,26 @@ async function appendSaleAudit(record, traceId) {
             sourceType: record.sourceType,
             recordTimestamp: record.recordTimestamp,
             requestFingerprint: record.requestFingerprint,
+        },
+    });
+}
+
+async function appendSaleOrderAudit(record, traceId) {
+    if (!record.orderId) return null;
+    return appendTpvAudit({
+        idempotencyKey: record._id + ":ORDER_AUDIT",
+        action: "PEDIDO_WIX_TPV_VINCULADO",
+        actorId: record.actorId || record.operatorId,
+        entityType: "TRANSACCION_TPV",
+        entityId: record._id,
+        traceId: record.traceId || traceId,
+        payload: {
+            sessionId: record.sessionId,
+            orderId: record.orderId,
+            externalOrderId: record._id,
+            orderStatus: "APPROVED",
+            paymentStatus: "NOT_PAID",
+            currency: record.currency,
         },
     });
 }
