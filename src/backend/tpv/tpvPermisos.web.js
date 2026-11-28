@@ -9,8 +9,7 @@ export const obtenerPermisosTPV = webMethod(
         const traceId = makeTraceId("tpv-permissions");
         const staff = await getMyCajeroContext(traceId);
 
-        // Capability flags describe implemented non-fiscal writers only;
-        // refund and fiscal-close capabilities remain disabled independently.
+        // Capability flags describe the writers available to the authenticated operator.
         return {
             status: "SUCCESS",
             data: {
@@ -27,7 +26,7 @@ export const obtenerPermisosTPV = webMethod(
                     openSession: staff.rolWebsite === "ADMIN",
                     registerCashMovement: staff.rolWebsite === "ADMIN",
                     registerPartialCount: staff.rolWebsite === "ADMIN",
-                    requestRefund: false,
+                    requestRefund: staff.rolWebsite === "ADMIN",
                     closeSession: staff.rolWebsite === "ADMIN",
                     issueTicketX: staff.rolWebsite === "ADMIN",
                     issueTicketZ: false,

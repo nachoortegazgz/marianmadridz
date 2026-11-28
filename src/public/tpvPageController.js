@@ -8,6 +8,7 @@ import { createWidgetBridge, MESSAGE_TYPES, PROTOCOL_VERSION } from "public/widg
 import { obtenerEstadoCaja, abrirSesionCaja, registrarArqueoParcial, cerrarSesionCaja } from "backend/tpv/tpvCaja.web";
 import { validarVentaBorrador, registrarVenta } from "backend/tpv/tpvVentas.web";
 import { registrarMovimientoCaja, exportarMovimientosCaja, exportarAuditoriaTPV } from "backend/tpv/tpvMovimientos.web";
+import { registrarDevolucion } from "backend/tpv/tpvDevoluciones.web";
 import { exportarMovimientos } from "backend/tpv/tpvExport.web";
 import { obtenerResumenCaja, generarTicketX, generarCierreZ } from "backend/tpv/tpvCierres.web";
 import { obtenerAuditoriaTPV as obtenerAuditoriaTPVLista } from "backend/tpv/tpvAuditoria.web";
@@ -416,8 +417,16 @@ async function dispatch(message) {
                 reason: optionalString(payload.reason, 500) || "",
             });
         case "REFUND":
-            // El HTML SSOT mantiene las devoluciones deshabilitadas.
-            throw new Error("TPV_REFUND_DISABLED");
+            return registrarDevolucion({
+                saleId: optionalString(payload.saleId, 160) || "",
+                sessionId: optionalString(payload.sessionId, 160) || "",
+                reason: optionalString(payload.reason, 500) || "",
+                payments: Array.isArray(payload.payments) ? payload.payments.map((payment) => ({
+                    paymentMethod: optionalString(payment?.paymentMethod, 40) || "",
+                    amount: numeric(payment?.amount, "REFUND_AMOUNT", { allowZero: false }),
+                })) : [],
+                idempotencyKey: key,
+            });
         case "TICKET_X":
             return generarTicketX({ sessionId: optionalString(payload.sessionId, 160) || "" });
         case "TICKET_Z":

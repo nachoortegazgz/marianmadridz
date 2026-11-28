@@ -296,7 +296,7 @@ body {
         <div class="operations-grid">
           <button id="cashIn" class="btn">Entrada de efectivo</button>
           <button id="cashOut" class="btn">Salida de efectivo</button>
-          <button id="refund" class="btn danger" disabled title="Devoluciones deshabilitadas en modo consulta">Devolución no habilitada</button>
+          <button id="refund" class="btn danger">Devolución</button>
           <button id="partialCount" class="btn">Arqueo parcial</button>
           <button id="cashSummary" class="btn">Resumen de caja</button>
           <button id="audit" class="btn">Historial</button>
@@ -527,7 +527,7 @@ body {
     saveSale: "createSale",
     cashIn: "registerCashMovement",
     cashOut: "registerCashMovement",
-    refund: "requestRefund", // presente solo como dato; el botón está bloqueado abajo
+    refund: "requestRefund",
     partialCount: "registerPartialCount",
     ticketX: "issueTicketX",
     ticketZ: "issueTicketZ",
@@ -546,8 +546,8 @@ body {
     "issueTicketX", "issueTicketZ", "readCashSummary", "readAudit",
     "exportMovements", "exportAudit", "printReceipt",
   ]);
-  // Botones que NO deben reactivarse nunca desde updateControlAvailability.
-  const PERMANENTLY_DISABLED = new Set(["refund"]);
+  // Los controles se habilitan únicamente cuando llegan las capabilities backend.
+  const PERMANENTLY_DISABLED = new Set();
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -1465,11 +1465,34 @@ body {
   $("cashIn").onclick = () => openCashMovement("ENTRADA");
   $("cashOut").onclick = () => openCashMovement("SALIDA");
 
-  /* ---------- Devolución: PERMANENTEMENTE DESHABILITADA ---------- */
-  $("refund").disabled = true;
-  $("refund").onclick = () => {
-    toast("Las devoluciones están deshabilitadas en modo consulta. No se ha registrado ni ejecutado ningún reembolso.");
-  };
+  /* ---------- Devolución: validación backend y proveedor autorizado ---------- */
+  $("refund").onclick = () => openModal("Devolución", `
+    <input id="refundSaleId" class="field" maxlength="160" placeholder="ID de la venta original">
+    <input id="refundAmount" class="field" type="text" inputmode="decimal" placeholder="Importe (ej. 25,50)">
+    <select id="refundPaymentMethod" class="field">
+      <option value="EFECTIVO">Efectivo</option>
+      <option value="TARJETA">Tarjeta</option>
+    </select>
+    <input id="refundReason" class="field" maxlength="500" placeholder="Motivo obligatorio">
+  `, async () => {
+    const saleId = $("refundSaleId").value.trim();
+    const amount = num($("refundAmount").value);
+    const reason = $("refundReason").value.trim();
+    if (!saleId || !Number.isFinite(amount) || amount <= 0 || reason.length < 3) {
+      throw new Error("TPV_REFUND_INPUT_INVALID");
+    }
+    await keyedAction("REFUND", "REFUND", {
+      saleId,
+      sessionId: state.session?.sessionId,
+      reason,
+      payments: [{
+        paymentMethod: $("refundPaymentMethod").value,
+        amount,
+      }],
+    }, "REFUND_RES");
+    await refreshCashState();
+    toast("Solicitud de devolución registrada para conciliación.");
+  });
 
   /* ---------- Arqueo parcial de caja ---------- */
   $("partialCount").onclick = () => openModal("Arqueo parcial", `
@@ -1752,9 +1775,7 @@ body {
   function init() {
     $("connStatus").className = "dot";
     $("connLabel").textContent = "Conectando…";
-    // El botón de devolución queda bloqueado desde el arranque, antes de
-    // cualquier handshake, por si el DOM se manipula externamente.
-    $("refund").disabled = true;
+    updateControlAvailability();
     sendHandshake();
   }
 
