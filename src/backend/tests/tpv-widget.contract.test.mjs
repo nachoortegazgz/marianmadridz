@@ -124,7 +124,7 @@ test("TPV reads CajaActual on startup and refreshes the projection only after co
     assert.match(caja, /await buildTpvSessionSummary\(session\)/);
 });
 
-test("TPV open session revalidates CajaActual preview and generates a partial X ticket", async () => {
+test("TPV open session revalidates CajaActual preview and generates an opening receipt", async () => {
     const html = await source("%23htmlTPV.txt");
     const caja = await source("src/backend/tpv/tpvCaja.web.js");
     const cierres = await source("src/backend/tpv/tpvCierres.web.js");
@@ -133,12 +133,15 @@ test("TPV open session revalidates CajaActual preview and generates a partial X 
     assert.match(html, /expectedSessionId/);
     assert.match(html, /latest\?\.canOpenSession !== true/);
     assert.match(html, /latest\?\.authenticatedOperatorId !== authenticatedOperatorId/);
-    assert.match(html, /const ticketResult = await call\("TICKET_X"/);
-    assert.match(html, /ticketXReceiptHtml\(ticket\)/);
-    assert.match(html, /ticket\.closesSession !== false/);
+    assert.match(html, /const receipt = opened\.openingReceipt/);
+    assert.match(html, /openingReceiptHtml\(receipt\)/);
+    assert.match(html, /receipt\.ticketType !== "APERTURA_CAJA"/);
+    assert.match(html, /Cerrar y continuar/);
     assert.match(html, /No repitas la apertura/);
     assert.match(caja, /input\.expectedSessionId/);
     assert.match(caja, /TPV_SESSION_PREVIEW_STALE/);
+    assert.match(caja, /movementType: "APERTURA"/);
+    assert.match(caja, /openingReceipt: \{/);
     assert.match(cierres, /ticketType: "CONTROL_PARCIAL_X"/);
     assert.match(cierres, /issuedByMemberId: operator\.operatorId/);
     assert.match(cierres, /readOnly: true,[\s\S]*?closesSession: false/);
@@ -340,7 +343,7 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
 
     // Opening is a fresh read of CajaActual. The server issues the date/session
     // preview and revalidates it before creating the canonical session projection.
-    assert.match(html, /Apertura de caja: preflight autoritativo desde CajaActual/);
+    assert.match(html, /Apertura de caja: sesión, movimiento, recibo y continuidad/);
     assert.match(html, /Usuario autenticado: /);
     assert.match(html, /Operador de sesión: /);
     assert.match(html, /call\("CASHIER_STATE", \{\}, "CASHIER_STATE_RES"\)/);
