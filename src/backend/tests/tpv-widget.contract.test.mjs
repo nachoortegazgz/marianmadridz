@@ -81,6 +81,9 @@ test("TPV controller dispatches widget requests to canonical backend methods", a
     assert.match(controller, /saleUuidV4Key\(payload\.idempotencyKey\)/);
     assert.doesNotMatch(controller, /tpvTestRuntime\.web|registrarVentaPrueba/);
     assert.match(html, /state\.saleQuote\.saleReady !== true/);
+    assert.match(html, /state\.capabilities\.acceptPayment === true/);
+    assert.match(html, /paymentMethod: null/);
+    assert.match(html, /Cobros deshabilitados: el TPV registra ventas pendientes/);
     assert.match(controller, /!Number\.isSafeInteger\(minor\)/);
 });
 
