@@ -161,7 +161,7 @@ export function buildTpvNativeOrderPayload(prepared, buyer = {}) {
     const buyerContactId = String(buyer.contactId || "").trim();
     if (buyerContactId && !GUID.test(buyerContactId)) fail("TPV_ORDER_BUYER_CONTACT_INVALID");
     const buyerEmail = String(buyer.email || "").trim().toLowerCase();
-    if (buyerEmail && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(buyerEmail)) {
+    if (buyerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) {
         fail("TPV_ORDER_BUYER_EMAIL_INVALID");
     }
 
