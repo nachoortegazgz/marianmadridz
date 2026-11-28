@@ -1,5 +1,17 @@
 # Estado actual — 2026-11-28
 
+## Directriz transversal aprobada por el propietario — 28-11-2026
+
+**CERO BLOQUEOS SILENCIOSOS.** Directriz clave incorporada a [PROJECT-CANON](PROJECT-CANON.md). Todo bloqueo, rechazo o salida anticipada debe:
+- normalizar el dato mediante función determinista si la representación es válida y equivalente;
+- en caso contrario, generar error estable, detallado y accionable y log estructurado correlacionado;
+- preservar el significado y no fabricar defaults ni convertir fallos en éxito, vacío o cero;
+- marcar como PARTIAL/PENDING_RECOVERY cualquier paso secundario pendiente, con recuperación trazable;
+- disponer de pruebas para cada condición de bloqueo/early return.
+
+Métrica exigida: 100 % de condiciones bloqueantes/early return observables con error y log correlacionados; 100 % de datos esperados aplicables contabilizados como persistidos, rechazados con causa o pendientes explícitos. Esta directriz no elimina validaciones justificadas ni autoriza datos ficticios.
+
+
 **MVP operativo/comercial: NO-GO.** El sitio continúa en Draft/no publicado según el read-back Wix del 28-11-2026. CI offline de Capa 0 está PASS para PR #670, #675 y el hardening posterior de PR #679 en sus respectivos HEAD validados. Wix Local Editor, Wix Runtime E2E y producción no están acreditados. No se publica ni se ejecutan cobros reales.
 
 ## Auditoría de persistencia operativa — 28-11-2026
