@@ -144,7 +144,9 @@ La consulta de estado combinado de GitHub para `796e8eaf8317d35d02744f40d0504e9a
 - Se actualizan los contratos estáticos `tpv.native-reconciliation.contract.test.mjs`, `tpv.web-modules.contract.test.mjs`, `tpv.qa.persistence.policy.test.mjs`, `tpv-widget.contract.test.mjs` y `tpv-ui.qa-source.test.mjs` para reflejar el nuevo guard, las capacidades por rol y el formato real del contrato de catálogo.
 - No se realizan escrituras CMS, pagos, reembolsos, fichajes, cierres, comunicaciones ni operaciones físicas.
 - No se despliega a Wix.
-- No se han ejecutado tests ni CI en esta intervención. El cambio está implementado en la rama y pendiente de validación.
+- GitHub Actions `Backend offline quality gates`: **PASS** en el commit de código `b176ee1606e9d2dcb60770559465979e5cb57371`: Layer 1, 29 suites / 398 pruebas; Layer 2, 16 suites / 263 pruebas; suite offline completa, 92 suites / 843 pruebas; verificaciones SDK Wix eCommerce cart/transactions/TPV y ESLint, todas PASS.
+- GitHub Actions `Secret scanning`: **PASS** en el mismo commit.
+- La validación anterior acredita el código y los tests del commit indicado. No acredita runtime Wix, sesión de miembro real, escritura CMS desde el navegador ni despliegue; esos controles siguen PENDIENTES.
 - La rama se propone mediante el PR existente #708; no se fusiona automáticamente.
 
 ## 10. Fuentes internas
