@@ -180,3 +180,19 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Diagnóstico confirmado por read-only Wix CMS: CajaActual=0; el inicializador anterior no creaba el singleton y devolvía TPV_CASH_REGISTER_NOT_PRESEEDED.
 - Rama fix/tpv-caja-singleton-bootstrap-2026-11-28 añade creación backend del único item SINGLE_ITEM_ID bajo lock, con estado inicial CERRADA/0 €, contadores, validación y read-back.
 - No crea movimientos, apertura, cierre histórico ni cobros. Wix Runtime pendiente.
+
+
+## TPV — offline workflow y cierre de sesión (28-11-2026)
+
+- PR #711 fusionada: bootstrap backend del singleton `CajaActual` cuando está vacío; crea solo el item fijo en estado CERRADA/0 €, con lock y read-back. No crea apertura ni movimientos.
+- PR #712 fusionada en `main`, commit `2113da1e8b8928ca7e3eb0259ba37bc29a3c922f`.
+- El sistema mantiene un único flujo: no se añaden ramas operativas prueba/sandbox/live. El widget ya no presenta importes como simulados ni acepta tenders cuando `acceptPayment=false`.
+- Las intenciones comerciales pueden persistirse sin tender como `PENDING_PAYMENT`; no son cobros ni ventas confirmadas. La clave idempotente se libera cuando el backend confirma la persistencia del resultado PENDING.
+- El resumen de sesión/Ticket Z separa `pendingSalesCount` y `pendingSalesGrossMinor` de los importes cobrados. La existencia de intenciones no cobradas ya no impide el cierre físico; los reembolsos pendientes y los fallos de conciliación siguen bloqueándolo.
+- Ticket Z completa ahora el cierre físico mediante un único movimiento `CIERRE` idempotente y actualización de `CajaActual`. Los reintentos recuperan el movimiento/proyección si el Z ya se persistió.
+- ADMIN, GESTION y ESTILISTA validados por `requireTpvOperator` pueden abrir sesión y registrar movimientos. El bootstrap inicial y Ticket Z permanecen ADMIN-only.
+- Capacidades externas sin habilitar: cobros confirmados (no hay writer/pasarela), reembolsos externos, notificaciones exteriores e impresión/hardware (conexión no verificada). No bloquean apertura ni movimientos internos.
+- CI PR #712 PASS, run `46170554978`: Layer 1 29/398; Layer 2 16/263; suite completa 95/854; Wix SDK Cart, Transactions y TPV PASS; npm audit y ESLint PASS. Secret scanning PASS, run `46170554976`.
+- Read-only Wix CMS tras el reset comunicado: `CajaActual=0`, `MovimientosCaja=0`, `TransaccionesTPV=0`, `HistoricoCierresZ=1`, `ControlOperativo=90`. No se escribieron datos en CMS.
+- Sitio sigue Draft/no publicado. No hay evidencia de sincronización del código fusionado con Wix Editor/Preview. No se ejecutó apertura de 300 €, movimientos, Ticket X/Z ni simulacro runtime.
+- **Estado:** IMPLEMENTADO + CI VALIDADO; Wix Runtime y E2E PENDIENTES. No declarar producción ni MVP TPV COMPLETADO.
