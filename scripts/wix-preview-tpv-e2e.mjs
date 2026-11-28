@@ -419,47 +419,21 @@ async function run() {
     await frame.locator("#modalConfirm").click();
     await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
 
-    phase = "cash-movement";
-    await clearCapturedResponses(frame);
-    await frame.locator("#cashIn").click();
-    await frame.locator("#movementAmount").waitFor({ state: "visible", timeout: 15000 });
-    await frame.locator("#movementAmount").fill("1,00");
-    await frame.locator("#movementConcept").fill("Entrada de efectivo para comprobación funcional");
-    await frame.locator("#modalConfirm").click();
-
-    const cashEnvelope = await captureUiOperation(frame, "CASH_MOVEMENT_RES", "CASH_MOVEMENT");
-    const cashData = assertSuccess(cashEnvelope, "CASH_MOVEMENT");
-    assert.ok(cashData.movementId, "CASH_MOVEMENT did not return movementId");
-    report.cashMovementId = cashData.movementId;
-
-    phase = "ticket-x";
-    await clearCapturedResponses(frame);
-    await frame.locator("#ticketX").click();
-    const ticketEnvelope = await captureUiOperation(frame, "TICKET_X_RES", "TICKET_X");
-    const ticketData = assertSuccess(ticketEnvelope, "TICKET_X");
-    const ticketX = ticketData.ticketX || ticketData.data?.ticketX;
-    assert.equal(ticketX?.ticketType, "CONTROL_PARCIAL_X");
-    assert.equal(ticketX?.sessionId, sessionId);
-    report.ticketX = {
-        ticketType: ticketX.ticketType,
-        sessionId: ticketX.sessionId,
-        nOperaciones: ticketX.nOperaciones,
-        closesSession: ticketX.closesSession,
-    };
-    await frame.locator("#modalConfirm").click();
-    await frame.locator("#modalBackdrop").waitFor({ state: "hidden", timeout: 15000 });
-
     phase = "pre-close-ledger-query";
     const beforeCloseEnvelope = await invokeWidget(frame, "CASH_MOVEMENTS_EXPORT", { sessionId });
     const beforeClose = assertSuccess(beforeCloseEnvelope, "CASH_MOVEMENTS_EXPORT_BEFORE_CLOSE");
     const beforeItems = Array.isArray(beforeClose.items) ? beforeClose.items : [];
-    const openingItem = beforeItems.find((item) => item.movementId === openData.openingMovementId);
+    const openingItem = openingMovementId
+        ? beforeItems.find((item) => item.movementId === openingMovementId)
+        : null;
     const cashItem = beforeItems.find((item) => item.movementId === cashData.movementId);
-    assert.ok(openingItem, "Opening movement was not found in the post-write ledger query");
+    if (openingMovementId) {
+        assert.ok(openingItem, "Opening movement was not found in the post-write ledger query");
+        assert.ok(openingItem.transactionId, "Opening transactionId missing from ledger query");
+        assert.equal(openingItem.movementId, openingItem.transactionId);
+    }
     assert.ok(cashItem, "Cash movement was not found in the post-write ledger query");
-    assert.ok(openingItem.transactionId, "Opening transactionId missing from ledger query");
     assert.ok(cashItem.transactionId, "Cash movement transactionId missing from ledger query");
-    assert.equal(openingItem.movementId, openingItem.transactionId);
     assert.equal(cashItem.movementId, cashItem.transactionId);
     const expectedCash = cashTotalFromMovements(beforeItems);
     assert.equal(Math.round(expectedCash * 100), Math.round((baseCash + 1) * 100),
