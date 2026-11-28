@@ -390,7 +390,9 @@ test("TPV page is wired to the native POS widget bridge and operational backend 
     assert.match(html, /keyedAction\("CASH_" \+ type,\s*"CASH_MOVEMENT"/);
     assert.match(html, /openCashMovement\("ENTRADA"\)/);
     assert.match(html, /openCashMovement\("SALIDA"\)/);
-    assert.match(html, /keyedAction\("REFUND",\s*"REFUND"/);
+    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
+    assert.match(html, /id="refund"[^>]*disabled/);
+    assert.doesNotMatch(html, /keyedAction\("REFUND",\s*"REFUND"/);
     assert.match(html, /call\("TICKET_X",\s*\{\s*sessionId:\s*state\.session\?\.sessionId\s*\}/);
     assert.match(html, /keyedAction\("TICKET_Z",\s*"TICKET_Z"/);
 });
@@ -542,7 +544,8 @@ test("TPV sale persists a pending commercial transaction while refunds remain pr
     assert.match(refunds, /SUPPORTED_REFUND_METHODS/);
     assert.match(refunds, /originalSaleId: request\.saleId/);
     const controller = await source("../public/tpvPageController.js");
-    assert.match(controller, /case "REFUND":[\s\S]*?return registrarDevolucion\(\{[\s\S]*?saleId: optionalString\(payload\.saleId/);
+    assert.match(controller, /case "REFUND":[\s\S]*?throw new Error\("TPV_REFUND_DISABLED"\)/);
+    assert.doesNotMatch(controller, /return registrarDevolucion\(\{/);
     assert.match(controller, /idempotencyKey: key/);
     assert.doesNotMatch(sales, /CONFIRMADA|CONFIRMADO|SIMULATED/);
     assert.doesNotMatch(refunds, /CONFIRMADA|CONFIRMADO|SIMULATED|SYNTHETIC/);
