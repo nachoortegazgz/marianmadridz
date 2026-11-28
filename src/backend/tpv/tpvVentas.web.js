@@ -159,7 +159,7 @@ async function createSaleDraftOrder() {
     return {
         orderId: null,
         requiresReconciliation: true,
-        reason: "QA_EXTERNAL_SIDE_EFFECTS_DISABLED",
+        reason: "TPV_DRAFT_ORDER_NOT_CONFIGURED",
     };
 }
 
