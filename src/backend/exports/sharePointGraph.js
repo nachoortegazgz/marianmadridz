@@ -6,6 +6,30 @@ import { SECRETS } from "backend/mmSecrets";
 
 const GRAPH_ROOT = "https://graph.microsoft.com/v1.0";
 
+/** Checks secret presence without returning or logging any secret value. */
+export async function getSharePointConfigurationStatus() {
+    const requiredNames = [
+        SECRETS.GRAPH_TENANT_ID,
+        SECRETS.GRAPH_CLIENT_ID,
+        SECRETS.GRAPH_CLIENT_SECRET,
+        SECRETS.GRAPH_SITE_ID,
+        SECRETS.GRAPH_DRIVE_ID,
+        SECRETS.GRAPH_FOLDER_PATH,
+    ];
+    const checks = await Promise.all(requiredNames.map(async (name) => {
+        try {
+            const value = await getSecretValue(name);
+            return typeof value === "string" && value.trim().length > 0;
+        } catch (_) {
+            return false;
+        }
+    }));
+    return {
+        configured: checks.every(Boolean),
+        missingSecrets: requiredNames.filter((name, index) => !checks[index]),
+    };
+}
+
 function fail(code) {
     const error = new Error(code);
     error.code = code;
@@ -98,7 +122,7 @@ export async function uploadAndVerifySharePointPackage(artifact) {
     );
     if (site.body?.id !== driveId) throw fail("C3_GRAPH_DRIVE_SITE_MISMATCH");
 
-    const fileName = artifact.manifest.exportId + "-" + artifact.manifest.artifactId.slice(0, 12) + ".json";
+    const fileName = artifact.manifest.exportId + "-" + artifact.manifest.artifactId + ".json";
     const relativePath = [normalizedFolderPath, fileName].join("/");
     const encodedPath = encodePath(relativePath);
     const itemUrl = GRAPH_ROOT + "/drives/" + encodeURIComponent(driveId) + "/root:/" + encodedPath;
