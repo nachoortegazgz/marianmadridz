@@ -64,7 +64,7 @@ function _formatAEATDateTimeMadrid(date) {
             timeZone: "Europe/Madrid",
             timeZoneName: "longOffset",
         });
-        const match = /GMT([+-])(\\d{2}):?(\\d{2})/.exec(madridStr);
+        const match = /GMT([+-])(\d{2}):?(\d{2})/.exec(madridStr);
         if (match) return `${match[1]}${match[2]}:${match[3]}`;
         const localMadrid = new Date(dt.toLocaleString("en-US", { timeZone: "Europe/Madrid" }));
         const diffMinutes = Math.round((localMadrid - dt) / 60000);
