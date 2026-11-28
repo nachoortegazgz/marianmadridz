@@ -55,6 +55,14 @@ const ALLOWED_STAFF_ROLES = Object.freeze([
     ROL_WEBSITE.ESTILISTA,
 ]);
 
+// Roles autorizados para operar ventas y movimientos ordinarios del TPV.
+// La apertura/cierre, arqueos y cierres fiscales conservan guards ADMIN.
+const TPV_OPERATOR_ROLES = Object.freeze([
+    ROL_WEBSITE.ADMIN,
+    ROL_WEBSITE.GESTION,
+    ROL_WEBSITE.ESTILISTA,
+]);
+
 
 
 const RATE_LIMIT_CAS_ATTEMPTS = 12;
@@ -530,7 +538,7 @@ export async function getMyCajeroContext(traceId = null) {
     if (!memberInfo?.contactId) throw _createAccessDeniedError("CAJERO");
     const staff = await _resolveStaffByIdentity(memberInfo, traceId);
     const role = _readStaffRole(staff);
-    if (![ROL_WEBSITE.ADMIN, ROL_WEBSITE.GESTION].includes(role)) {
+    if (!TPV_OPERATOR_ROLES.includes(role)) {
         throw _createAccessDeniedError("CAJERO");
     }
     const memberId = String(memberInfo.memberId || "").trim();
@@ -549,6 +557,11 @@ export async function getMyCajeroContext(traceId = null) {
         operatorDisplayName: String(staff?.displayName || "").trim() || null,
         contactId: String(staff?.contactId || memberInfo.contactId || "").trim() || null,
     });
+}
+
+export async function requireTpvOperator(traceId = null) {
+    await getMyCajeroContext(traceId);
+    return true;
 }
 
 export async function requireCajero(traceId = null) {

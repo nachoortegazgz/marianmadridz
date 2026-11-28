@@ -102,6 +102,6 @@ test("product selection resolves a concrete Catalog V3 variant and fails closed 
     assert.match(html, /if \(variants\.length === 1\)[\s\S]*?selected\.varianteId/);
     assert.match(html, /typeof variant\.varianteId === "string"/);
     assert.match(catalog, /variant\.inventoryStatus\?\.inStock === true/);
-    assert.match(catalog, /preorderEnabled/);
+    assert.match(catalog, /variant\.inventoryStatus\s*\?\.preorderEnabled === true/);
     assert.match(catalog, /toMinorUnitsStrict\(raw, "CATALOG_PRICE"\)/);
 });

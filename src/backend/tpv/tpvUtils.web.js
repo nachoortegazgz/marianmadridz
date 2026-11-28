@@ -1,12 +1,12 @@
 import { Permissions, webMethod } from "wix-web-module";
-import { requireCajero } from "backend/security";
+import { requireTpvOperator } from "backend/security";
 import { makeTraceId } from "public/mmUtils";
 
 export const obtenerConfiguracionTPV = webMethod(
     Permissions.SiteMember,
     async () => {
         const traceId = makeTraceId("tpv-config");
-        await requireCajero(traceId);
+        await requireTpvOperator(traceId);
         return {
             status: "SUCCESS",
             data: {

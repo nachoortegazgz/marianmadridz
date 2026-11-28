@@ -381,10 +381,16 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
     assert.doesNotMatch(controller, /environment:|previewOnly:|syntheticOnly:|realPaymentsEnabled:|fiscalWritesEnabled:/);
     assert.doesNotMatch(config, /LEGACY_RUN_ID|TPVSANDBOX-DEV-/);
     assert.match(config, /TPV_EVENT_MOVEMENT_TYPES/);
-    for (const writer of [cash, movements, closures]) {
+    for (const writer of [cash, closures]) {
         assert.match(writer, /requireAdmin/);
     }
-    assert.match(sales, /requireCajero/);
+    const movementWriter = movements.slice(
+        movements.indexOf("export const registrarMovimientoCaja"),
+        movements.indexOf("export const obtenerMovimientosCaja")
+    );
+    assert.match(movementWriter, /requireTpvOperator\(traceId\)/);
+    assert.match(movements, /export const exportarMovimientosCaja[\s\S]*?requireAdmin\(traceId\)/);
+    assert.match(sales, /requireTpvOperator/);
 });
 
 test("TPV catalog uses native Wix Contacts and Bookings staff with MapaStaff resource mapping", async () => {
