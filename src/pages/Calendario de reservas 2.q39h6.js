@@ -1609,6 +1609,9 @@ async function handleBooking(
         // request. Keep the backend SiteMember permission as the security boundary.
         const memberSessionReady = await ensureBookingMemberSession();
         if (!memberSessionReady) {
+            // No booking request reached the backend; release this message ID
+            // so the visitor can retry after cancelling or reopening login.
+            activeBookingMessageId = "";
             reply(
                 MESSAGE_TYPES.BOOK,
                 resultError("AUTH_REQUIRED")
