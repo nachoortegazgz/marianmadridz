@@ -110,7 +110,9 @@ test("TPV widget exposes authorized physical and commercial capabilities indepen
     assert.match(html, /result\?\.persisted !== true/);
     assert.match(html, /response\.status === "PENDING"[\s\S]*?resolve\(response\)/);
     assert.doesNotMatch(html, /rejectStructured\(\{ code: response\.reason/);
-    assert.match(html, /Venta registrada\. Pago pendiente de confirmación\./);
+    assert.match(html, /Venta cobrada y registrada en Wix\./);
+    assert.match(html, /Pedido Wix registrado\. El cobro queda pendiente\./);
+    assert.match(html, /Operación registrada, pero requiere conciliación/);
     assert.doesNotMatch(html, /Importe de prueba añadido|Cambio simulado|Total simulado|pago simulado/);
     assert.match(html, /MODO CONSULTA/);
     assert.doesNotMatch(html, /testRuntimeAvailable|testReady|testCatalogReady|testPersisted|PRUEBA INTERNA|TPV_TEST_/);
@@ -392,7 +394,7 @@ test("TPV widget buttons are capability-aligned with authenticated backend opera
     assert.match(permissions, /searchCustomers: true/);
     assert.match(permissions, /readCashSummary: true/);
     assert.match(permissions, /readAudit: staff\.rolWebsite !== "ESTILISTA"/);
-    assert.match(permissions, /acceptPayment: false/);
+    assert.match(permissions, /acceptPayment: true/);
     assert.match(permissions, /printReceipt: false/);
     assert.match(html, /SESSION_REQUIRED_CAPABILITIES/);
     assert.match(html, /printLast: "printReceipt"/);
