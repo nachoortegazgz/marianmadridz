@@ -388,7 +388,7 @@ test("TPV WebMethods isolate synthetic test records from operational ledgers", a
         movements.indexOf("export const registrarMovimientoCaja"),
         movements.indexOf("export const obtenerMovimientosCaja")
     );
-    assert.match(movementWriter, /requireCajero\(traceId\)/);
+    assert.match(movementWriter, /requireTpvOperator\(traceId\)/);
     assert.match(movements, /export const exportarMovimientosCaja[\s\S]*?requireAdmin\(traceId\)/);
     assert.match(sales, /requireCajero/);
 });
