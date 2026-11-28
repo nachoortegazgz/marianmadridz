@@ -52,7 +52,7 @@ export const inicializarCaja = webMethod(
 
         try {
             await requireTpvOperator(traceId);
-            const result = await initializeTpvCaja();
+            const result = await initializeTpvCaja(traceId);
             return {
                 status: "SUCCESS",
                 data: {

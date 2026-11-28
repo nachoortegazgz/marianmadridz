@@ -381,12 +381,66 @@ function _virtualRecord(item) {
 }
 
 
-export async function initializeTpvCaja() {
+export async function initializeTpvCaja(traceId = null) {
+    const bootstrapTraceId = String(traceId || "TPV_CASH_REGISTER_BOOTSTRAP").trim();
+    return withCajaActualProjectionLock(bootstrapTraceId, async () => {
+        const existing = await _getCajaActual();
+        if (existing) {
+            assertTpvCajaIntegrity(existing, { allowBootstrap: true });
+            return { item: existing, created: false };
+        }
 
-    const existing = await _getCajaActual();
-    if (!existing) throw new Error("TPV_CASH_REGISTER_NOT_PRESEEDED");
-    assertTpvCajaIntegrity(existing, { allowBootstrap: true });
-    return { item: existing, created: false };
+        const now = new Date();
+        const bootstrap = {
+            _id: SINGLETONS.CAJA_ACTUAL_ITEM_ID,
+            singletonKey: SINGLETONS.CAJA_PRINCIPAL,
+            cashRegisterStatus: "CERRADA",
+            openingCashAmount: 0,
+            openingCardAmount: 0,
+            openingBizumAmount: 0,
+            openingOtherAmount: 0,
+            cashAmount: 0,
+            cardAmount: 0,
+            bizumAmount: 0,
+            otherAmount: 0,
+            expectedCash: 0,
+            countedCash: 0,
+            difference: 0,
+            sequenceCounters: {},
+            ticketSequence: 0,
+            snapshotSource: TPV_RUNTIME_POLICY.CASH_REGISTER_SOURCE,
+            conceptOperations: {
+                tpvRuntime: {
+                    sourceType: TPV_RUNTIME_POLICY.SOURCE_TYPE,
+                    siteId: TPV_RUNTIME_POLICY.SITE_ID,
+                    ledgerVersion: TPV_RUNTIME_POLICY.LEDGER_VERSION,
+                    schemaVersion: TPV_RUNTIME_POLICY.SCHEMA_VERSION,
+                },
+            },
+            traceId: bootstrapTraceId,
+            recordTimestamp: now,
+        };
+
+        let insertError = null;
+        try {
+            await insertItem(BUSINESS_COLLECTIONS.CAJA_ACTUAL, bootstrap);
+        } catch (error) {
+            insertError = error;
+        }
+
+        // Resolve an uncertain insert by reading the fixed singleton ID/key.
+        // Never replace an existing singleton or report success without read-back.
+        const saved = await _getCajaActual();
+        if (!saved) {
+            if (insertError) throw insertError;
+            throw new Error("TPV_CASH_REGISTER_BOOTSTRAP_READBACK_MISSING");
+        }
+        if (String(saved._id || "") !== SINGLETONS.CAJA_ACTUAL_ITEM_ID) {
+            throw new Error("TPV_CASH_REGISTER_SINGLETON_ID_MISMATCH");
+        }
+        assertTpvCajaIntegrity(saved, { allowBootstrap: true });
+        return { item: saved, created: !insertError, recovered: Boolean(insertError) };
+    });
 }
 
 export async function readTpvCajaSnapshot() {

@@ -173,3 +173,10 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - Indexa herramientas AEAT: SIF/VERI*FACTU, SII, IVA, censos, certificados, apoderamientos y expedientes.
 - Hallazgos estáticos altos C3-FINDING-001 (resumen y detalle pueden filtrar poblaciones diferentes) y C3-FINDING-002 (tipoFactura se etiqueta BORRADOR_INTERNO/R1 sin derivar de factura real). El paquete actual no es apto como libro fiscal oficial ni como paquete final de gestoría hasta corregir y probar.
 - **Estado:** diseño documental consolidado; SharePoint, gestoría, AEAT y E2E externos no verificados. No se ejecutaron pruebas de código ni mutaciones externas.
+
+
+## Bootstrap TPV singleton — 28-11-2026
+
+- Diagnóstico confirmado por read-only Wix CMS: CajaActual=0; el inicializador anterior no creaba el singleton y devolvía TPV_CASH_REGISTER_NOT_PRESEEDED.
+- Rama fix/tpv-caja-singleton-bootstrap-2026-11-28 añade creación backend del único item SINGLE_ITEM_ID bajo lock, con estado inicial CERRADA/0 €, contadores, validación y read-back.
+- No crea movimientos, apertura, cierre histórico ni cobros. Wix Runtime pendiente.
