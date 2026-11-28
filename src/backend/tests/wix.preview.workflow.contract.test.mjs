@@ -65,5 +65,5 @@ test("WIX-PREVIEW-06 TPV E2E performs business writes through the bridge without
     assert.ok(!runner.includes('invokeWidget(frame, "SESSION_CLOSE"'));
     assert.ok(!runner.includes("close-existing-session"));
     assert.ok(docs.includes("Sandbox está deshabilitado por defecto"));
-    assert.ok(docs.includes("Wix app collections"));
+    assert.ok(docs.includes("colecciones de aplicaciones Wix"));
 });
