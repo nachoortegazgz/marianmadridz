@@ -72,6 +72,8 @@ La documentación de Wix permite usar `@wix/ecom/orders.createOrder()` para regi
 4. Se reconcilian Wix Order Transactions, pedido y correlación local.
 5. Si el proveedor queda en timeout incierto, consultar el estado por su ID/idempotency key; nunca volver a cobrar por una respuesta perdida.
 
+Wix documenta un ejemplo específico de pago con lector POS dentro de su Payment Service Provider Service Plugin (`Create Transaction`). Es una vía oficial, pero requiere desarrollar/configurar el plugin PSP y un proveedor compatible; no es una API de terminal que el widget pueda invocar directamente. La decisión entre PSP plugin y SDK directo del proveedor depende del terminal elegido y de su disponibilidad en España.
+
 **Límite esencial:** Wix `orderTransactions.addPayments()` añade registros de pago al pedido, pero no efectúa el cargo. El estado global del pedido se recalcula de forma asíncrona. Un registro `PENDING` o `PENDING_MERCHANT` no se debe tratar como cobro confirmado. La tarjeta presencial requiere integración real con un PSP/terminal o un plugin de proveedor; no se inventa una pasarela ni se marca tarjeta como cobrada manualmente.
 
 **Pago mixto:** Wix admite hasta 50 registros de pago por pedido. El TPV debe soportar tender dividido una vez que el writer y la conciliación se basen en los registros nativos. Cada medio se confirma por separado; la suma aplicada debe igualar exactamente el total, y el cambio solo puede corresponder a efectivo. El bloqueo local V1 de un solo medio debe retirarse cuando exista esta implementación completa, no antes.
@@ -79,12 +81,14 @@ La documentación de Wix permite usar `@wix/ecom/orders.createOrder()` para regi
 ### 3.4 Reservas y servicios Bookings
 
 - La línea de servicio en un pedido Wix no demuestra por sí sola que una reserva existente haya quedado pagada o confirmada.
-- Para una cita existente, consultar Bookings V2 por contacto/bookingId y vincular explícitamente `bookingId` al pedido y a la transacción TPV.
-- Actualizar el estado de pago/checkout de Bookings mediante el método oficial que corresponda al flujo de reserva presencial, y leer de vuelta Bookings V2.
+- Para una cita existente, consultar Bookings Reader V2 por contacto/bookingId y vincular explícitamente `bookingId` al pedido y a la transacción TPV.
+- El widget TPV es un checkout propio. Para ese flujo, Wix documenta `bookings.confirmOrDeclineBooking(bookingId, { paymentStatus })`; tras el pago confirmado usar `PAID`, para un pago parcial `PARTIALLY_PAID` y para una intención no cobrada `NOT_PAID`. El método determina `CONFIRMED`, `PENDING` o `DECLINED` según la política del servicio y conflictos de agenda.
+- No invocar `confirmOrDeclineBooking` para una reserva procesada por Wix eCommerce Checkout: en ese flujo Wix sincroniza automáticamente Bookings con el `paymentStatus` del pedido.
 - Para una venta de servicio sin cita, crear la línea de servicio en el pedido Wix sin fabricar una reserva.
+- Leer de vuelta Bookings V2 y verificar bookingId, paymentStatus y status.
 - Nunca escribir una segunda reserva en CMS ni cambiar el estado nativo Bookings desde una proyección `CitasF2`.
 
-**Pendiente de contrato:** seleccionar y probar el flujo oficial de Bookings para cobrar presencialmente una reserva ya creada. No asumir que `Create Order` actualiza automáticamente `booking.paymentStatus`.
+
 
 ## 4. Devoluciones
 
@@ -193,6 +197,8 @@ Pruebas obligatorias de fallo: timeout después de Create Order, Add Payments ac
 - Inventory decrement: https://dev.wix.com/docs/api-reference/business-solutions/stores/catalog-v3/inventory-items-v3/bulk-decrement-inventory-items-by-variant-and-location
 - Invoices API: https://dev.wix.com/docs/api-reference/business-management/get-paid/invoices/invoices/introduction
 - Wix eCommerce architecture: https://dev.wix.com/docs/api-reference/business-solutions/e-commerce/architecture-data-flow
+- Bookings Confirm Or Decline Booking (custom checkout): https://dev.wix.com/docs/api-reference/business-solutions/bookings/bookings/bookings-writer-v2/confirm-or-decline-booking
+- Wix PSP Create Transaction (incluye ejemplo POS card reader): https://dev.wix.com/docs/api-reference/business-management/payments/payment-service-provider-service-plugin/transactions/create-transaction
 
 ### BOE
 - RD 1619/2012 (facturación): https://www.boe.es/eli/es/rd/2012/11/30/1619/con
