@@ -151,3 +151,16 @@ Estas evidencias corresponden a los HEAD de las PR indicadas. No demuestran Wix 
 - El dossier diferencia factura simplificada/ticket-factura de justificante de pago, proforma y recibo no-factura; incorpora formato oficial QR, URL, requisitos físicos, remisión AEAT, incidencias, idempotencia, arquitectura Wix/Velo y plan de pruebas.
 - **Estado: DOCUMENTADO; implementación no acreditada.** No hay evidencia de SIF/modalidad elegidos, declaración responsable, registro AEAT, QR fiscal, impresión Epson conforme ni remisión real.
 - No se ejecutaron pruebas: el cambio es exclusivamente documental. No se realizaron llamadas de escritura a AEAT ni mutaciones Wix.
+
+
+## Capa Externa — dossier operativo consolidado (28-11-2026)
+
+- Nuevo punto de entrada: [Dossier operativo maestro — Capa Externa](architecture/CAPA-EXTERNA-MASTER-DOSSIER.md).
+- Revisados el dossier Capa 3, auditoría de preparación export PR #641, VERI*FACTU/QR, esquema CMS físico y auditoría de persistencia operativa.
+- Añade matriz de correspondencia por capas/colecciones, estructura SharePoint con cinco bibliotecas, metadatos, nomenclatura, versionado, seguridad y permisos.
+- Añade criterios de integración con gestoría, datos que debe solicitarse, protocolo de acuse/importación y limitación de que no existe un estándar universal.
+- Añade nomenclatura PGC, grupos, cuentas potencialmente relevantes para peluquería/estética (no aprobadas) y advierte que la restricción de seis dígitos del writer es local, no requisito legal general.
+- Define informes derivados/inferidos y sus metadatos, límites y trazabilidad.
+- Indexa herramientas AEAT: SIF/VERI*FACTU, SII, IVA, censos, certificados, apoderamientos y expedientes.
+- Hallazgos estáticos altos C3-FINDING-001 (resumen y detalle pueden filtrar poblaciones diferentes) y C3-FINDING-002 (tipoFactura se etiqueta BORRADOR_INTERNO/R1 sin derivar de factura real). El paquete actual no es apto como libro fiscal oficial ni como paquete final de gestoría hasta corregir y probar.
+- **Estado:** diseño documental consolidado; SharePoint, gestoría, AEAT y E2E externos no verificados. No se ejecutaron pruebas de código ni mutaciones externas.
